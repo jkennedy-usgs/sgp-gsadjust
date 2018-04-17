@@ -1,3 +1,7 @@
+**This is the developoment branch of GSadjust. Code in this repository has not necessarily been reviewed by USGS.**
+
+**The approved preliminary software release is at** [https://github.com/usgs/sgp-gsadjust](https://github.com/usgs/sgp-gsadjust "USGS GSadjust repo")
+
 # GSadjust
 GSadjust is a cross-platform graphical interface for processing relative gravity surveys. It provides an interface for data selection, drift evaluation and correction, network adjustment, and integrating data from modern relative (Scintrex, ZLS) and absolute (Micro-g Lacoste) gravity meters. This software is a product of the USGS Southwest Gravity Program (http://go.usa.gov/xqBnQ).
 
@@ -5,7 +9,7 @@ GSadjust is public-domain software written for Python 3.5 and the PyQt5 framewor
 
 Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHub are welcome. 
 
-**NEW! Online help is available at https://jkennedy-usgs.github.io/GSadjust/**
+**Online help is available at [https://jkennedy-usgs.github.io/GSadjust/](https://jkennedy-usgs.github.io/GSadjust/)**
 
 **Installing GSadjust**
 

@@ -1278,7 +1278,11 @@ class MainProg(QtWidgets.QMainWindow):
                 if not line:
                     break
                 parts = line.split(" ")
-                datum = Datum(parts[0], float(parts[1]), float(parts[2]))
+                try:
+                    datum = Datum(parts[0], float(parts[1]), float(parts[2]))
+                except IndexError:
+                    show_message('Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
+                                 'space delimited', 'File read error')
                 self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
                 line = fh.readline()
                 logging.info('Absolute gravity data imported, station {}'.format(parts[0]))
@@ -1509,6 +1513,8 @@ class MainProg(QtWidgets.QMainWindow):
                 tide_correction_agnew(self, float(tc.lat.text()),
                                       float(tc.lon.text()),
                                       float(tc.elev.text()))
+            self.deltas_update_required()
+            self.adjust_update_required()
 
     def compute_gravity_change(self, full_table=False):
         """

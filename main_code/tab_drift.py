@@ -697,6 +697,7 @@ class TabDrift(QtWidgets.QWidget):
         # Plots vertical dashed lines showing delta-g's
         elif drift_type == 'roman':
             logging.info('Plotting Roman drift, Loop ' + obstreeloop.name)
+            self.axes_drift_single.cla()
             data = obstreeloop.checked_stations()
             models = self.calc_roman_dg(data)
 

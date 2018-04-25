@@ -1,0 +1,8 @@
+name: pytest
+dependencies:
+  - matplotlib
+  - numpy
+  - pyqt=5
+  - python=3.5
+  - scipy=0.19
+  - networkx

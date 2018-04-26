@@ -1,4 +1,4 @@
-**This is the developoment branch of GSadjust. Code in this repository has not necessarily been reviewed by USGS.**
+**This is the development branch of GSadjust. Code in this repository has not necessarily been reviewed by USGS.**
 
 **The approved preliminary software release is at** [https://github.com/usgs/sgp-gsadjust](https://github.com/usgs/sgp-gsadjust "USGS GSadjust repo")
 
@@ -13,37 +13,23 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 
 **Installing GSadjust**
 
-The easiest, most reliable way to install GSadjust is by using Conda to create a custom Python environment:
+The easiest, most reliable way to install GSadjust is using Conda to create a custom Python environment:
 
-1. Download and install the appropriate Miniconda installer for your platform (Windows, Mac, Linux):
+1. Download and install the appropriate Miniconda installer for your platform (Windows, Mac, Linux, 32 or (probably) 64-bit):
 [https://conda.io/miniconda.html](https://conda.io/miniconda.html "Miniconda download")
 (Any Python version (e.g., 2.7 or 3.6) is okay)
 
-2. Open a command window or terminal and create a new conda environment:
+2. Download (green button on this page) or use [Git](https://git-scm.com/downloads "Git download") to clone the sgp-gsadjust repository. If downloaded, unzip the sgp-gsadjust-master directory. 
+
+3. Open a command window or terminal in the sgp-gsadjust (or sgp-gsadjust-master) directory and create a new conda environment:
 
     ```
-    $> conda create -n pyg35 python=3.5 numpy scipy=0.19 pyqt=5 networkx matplotlib pywin32 git
+    conda env create --file environment.yml
     ```
 
-    This creates a new conda environment named pyg35 with the appropriate modules and versions. 
+    This creates a new conda environment named py35 with the appropriate python modules. 
 
-3. Activate the new python environment:
-
-    ```
-    $> activate pyg35
-    ```
-
-4. Navigate to the file location you'd like to create a GSadjust directory and pull the most recent GSadjust code:
-
-    ```
-    (pyg35) $> git clone https://github.com/jkennedy-usgs/GSadjust
-    ```
-
-5. Run GSadjust:
-
-    ```
-    (pyg35) $> python GSadjust/main_code/GSadjust.py
-    ```
+To run GSadjust on Windows, double-click gsadjust.bat in the sgp-gsadjust directory. This activates the conda environment and starts GSadjust. 
 
 ## Data selection interface
 * Select/deselect samples and stations

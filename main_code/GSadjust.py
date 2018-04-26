@@ -867,6 +867,7 @@ class MainProg(QtWidgets.QMainWindow):
             if self.tab_widget.currentIndex() == 1:
                 self.update_drift_tables_and_plots()
             elif self.tab_widget.currentIndex() == 2:
+                self.adjust_update_required()
                 self.tab_adjust.delta_view.update()
                 self.tab_adjust.delta_view.repaint()
 
@@ -1144,8 +1145,7 @@ class MainProg(QtWidgets.QMainWindow):
         if self.deltas_update_required_label.set is True:
             reply = QtWidgets.QMessageBox.question(self, 'Message',
                                                    'The Relative-gravity differences table on the Network Adjustment ' +
-                                                   'tab has not been updated since changing the drift-correction ' +
-                                                   'method. Proceed anyway?',
+                                                   'is out of date. Proceed anyway?',
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
             if reply == QtWidgets.QMessageBox.No:

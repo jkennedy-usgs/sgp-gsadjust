@@ -459,6 +459,7 @@ class ObsTreeSurvey(ObsTreeItem):
             # Run gravnet without calibration coefficient
             os.system('gravnet -D' + dg_file + ' -N' + self.name + ' -M2 ' + drift_term + ' -F' + fix_file)
 
+        # Read calibration coefficients
         if drift_term != '':
             meter_drift_params = []
             with open(self.name + '.met', 'r') as fid:
@@ -491,43 +492,9 @@ class ObsTreeSurvey(ObsTreeItem):
                     self.results_model.insertRows(AdjustedStation(sta, g, sd), 0)
             self.adjustment.adjustmentresults.avg_stdev = np.mean(all_sd)
 
-        dg_residuals = []
-
-        # match up residuals
-        for i in range(self.delta_model.rowCount()):
-            ind = self.delta_model.createIndex(i, 0)
-            chk = self.delta_model.data(ind, QtCore.Qt.CheckStateRole)
-            tempdelta = self.delta_model.data(ind, QtCore.Qt.UserRole)
-            if chk == 2:
-                try:
-                    adj_g1 = g_dic[tempdelta.sta1[:6]]
-                    adj_g2 = g_dic[tempdelta.sta2[:6]]
-                    adj_dg = adj_g2 - adj_g1
-                    tempdelta.residual = adj_dg - tempdelta.dg
-                    dg_residuals.append(tempdelta.residual)
-                except KeyError:
-                    show_message("Key error", "Key error")
-            else:
-                tempdelta.residual = -999.
-            self.delta_model.setData(ind, tempdelta, QtCore.Qt.UserRole)
-
-        datum_residuals = []
-        for i in range(self.datum_model.rowCount()):
-            ind = self.datum_model.createIndex(i, 0)
-            tempdatum = self.datum_model.data(ind, QtCore.Qt.UserRole)
-            if tempdatum.station[0:6] in g_dic.keys():
-                adj_g1 = g_dic[tempdatum.station[:6]]
-                residual = adj_g1 - (tempdatum.g - tempdatum.meas_height * tempdatum.gradient)
-                datum_residuals.append(residual)
-            else:
-                residual = -999
-            tempdatum.residual = residual
-            self.datum_model.setData(ind, tempdatum, QtCore.Qt.UserRole)
-
-        self.adjustment.adjustmentresults.min_dg_residual = np.min(dg_residuals)
-        self.adjustment.adjustmentresults.max_dg_residual = np.max(dg_residuals)
-        self.adjustment.adjustmentresults.min_datum_residual = np.min(datum_residuals)
-        self.adjustment.adjustmentresults.max_datum_residual = np.max(datum_residuals)
+        # Match up residuals with input data
+        self.adjustment.g_dic=g_dic
+        self.match_inversion_results(inversion_type='gravnet')
 
         # Add calibration coefficient and/or drift coefficients to output text
         self.adjustment.adjustmentresults.text = []
@@ -683,6 +650,7 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.Obs = Obs
         self.adjustment.S = S
         self.adjustment.dof = n_rel_obs + n_abs_obs - nb_x
+        self.adjustment.g_dic = dict()
         self.adjustment.python_lsq_inversion()
 
         # Populate results table
@@ -691,39 +659,9 @@ class ObsTreeSurvey(ObsTreeItem):
                 if val == i:
                     t = AdjustedStation(key, float(self.adjustment.X[i]), float(np.sqrt(self.adjustment.var[i])))
                     self.results_model.insertRows(t, 0)
+                    self.adjustment.g_dic[key] = float(self.adjustment.X[i])
 
-        # Reset residuals to all -999's
-        for i in range(self.delta_model.rowCount()):
-            ind = self.delta_model.createIndex(i, 0)
-            tempdelta = self.delta_model.data(ind, QtCore.Qt.UserRole)
-            tempdelta.residual = -999.
-            self.delta_model.setData(ind, tempdelta, QtCore.Qt.UserRole)
-
-        # Matchup adjustment residuals with observations
-        for i in range(n_rel_obs):
-            key = deltakeys[i]
-            resd = self.adjustment.r[i]
-            for ii in range(self.delta_model.rowCount()):
-                ind = self.delta_model.createIndex(ii, 0)
-                tempdelta = self.delta_model.data(ind, QtCore.Qt.UserRole)
-                if key == tempdelta.key:
-                    break
-            tempdelta.residual = float(resd[0])
-            self.delta_model.setData(ind, tempdelta, QtCore.Qt.UserRole)
-
-        datum_residuals = []
-        for i in range(self.datum_model.rowCount()):
-            ind = self.datum_model.createIndex(i, 0)
-            tempdatum = self.datum_model.data(ind, QtCore.Qt.UserRole)
-            if tempdatum.station in sta_dic_ls.keys():
-                adj_idx = sta_dic_ls[tempdatum.station]
-                adj_g1 = self.adjustment.X[adj_idx][0]
-                residual = adj_g1 - (tempdatum.g - tempdatum.meas_height * tempdatum.gradient)
-                datum_residuals.append(residual)
-            else:
-                residual = -999
-            tempdatum.residual = residual
-            self.datum_model.setData(ind, tempdatum, QtCore.Qt.UserRole)
+        self.match_inversion_results(inversion_type='numpy')
 
         # calculate and display statistics:
         self.adjustment.lsq_statistics()
@@ -781,6 +719,66 @@ class ObsTreeSurvey(ObsTreeItem):
                 for line in text_out:
                     fid.write(line)
             fid.close()
+
+    def match_inversion_results(self, inversion_type):
+        """
+        Populates delta and datum table residuals from inversion results
+        :param inversion_type: 'gravnet' or 'numpy'
+        """
+        from gui_objects import show_message
+        datum_residuals, dg_residuals = [], []
+        g_dic = self.adjustment.g_dic
+        # Reset residuals to all -999's
+        for i in range(self.delta_model.rowCount()):
+            ind = self.delta_model.createIndex(i, 0)
+            tempdelta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+            tempdelta.residual = -999.
+            self.delta_model.setData(ind, tempdelta, QtCore.Qt.UserRole)
+
+        # Matchup adjustment residuals with observations
+        for i in range(self.delta_model.rowCount()):
+            ind = self.delta_model.createIndex(i, 0)
+            chk = self.delta_model.data(ind, QtCore.Qt.CheckStateRole)
+            tempdelta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+            if chk == 2:
+                try:
+                    if inversion_type == 'gravnet':
+                        station1_name = tempdelta.sta1[:6]
+                        station2_name = tempdelta.sta2[:6]
+                    elif inversion_type == 'numpy':
+                        station1_name = tempdelta.sta1
+                        station2_name = tempdelta.sta2
+                    adj_g1 = g_dic[station1_name]
+                    adj_g2 = g_dic[station2_name]
+                    adj_dg = adj_g2 - adj_g1
+                    tempdelta.residual = adj_dg - tempdelta.dg
+                    dg_residuals.append(tempdelta.residual)
+                except KeyError:
+                    show_message("Key error", "Key error")
+            else:
+                tempdelta.residual = -999.
+            self.delta_model.setData(ind, tempdelta, QtCore.Qt.UserRole)
+
+        for i in range(self.datum_model.rowCount()):
+            ind = self.datum_model.createIndex(i, 0)
+            tempdatum = self.datum_model.data(ind, QtCore.Qt.UserRole)
+            if inversion_type == 'numpy':
+                station_name = tempdatum.station
+            elif inversion_type == 'gravnet':
+                station_name = tempdatum.station[0:6]
+            if station_name in g_dic.keys():
+                adj_g1 = g_dic[station_name]
+                residual = adj_g1 - (tempdatum.g - tempdatum.meas_height * tempdatum.gradient)
+                datum_residuals.append(residual)
+            else:
+                residual = -999
+            tempdatum.residual = residual
+            self.datum_model.setData(ind, tempdatum, QtCore.Qt.UserRole)
+
+        self.adjustment.adjustmentresults.min_dg_residual = np.min(dg_residuals)
+        self.adjustment.adjustmentresults.max_dg_residual = np.max(dg_residuals)
+        self.adjustment.adjustmentresults.min_datum_residual = np.min(datum_residuals)
+        self.adjustment.adjustmentresults.max_datum_residual = np.max(datum_residuals)
 
     def get_station_indices(self):
         """

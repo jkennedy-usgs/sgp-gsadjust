@@ -306,8 +306,7 @@ class ObsTreeSurvey(ObsTreeItem):
         When loading a workspace, repopulate PyQt models
         """
         temp = cls(simple_survey.name)
-        for delta in simple_survey.deltas:
-            temp.delta_model.insertRows(delta, 0)
+        temp.deltas = simple_survey.deltas
         for datum in simple_survey.datums:
             temp.datum_model.insertRows(datum, 0)
         temp.adjoptions = simple_survey.adjoptions
@@ -657,9 +656,12 @@ class ObsTreeSurvey(ObsTreeItem):
         for i in range(len(sta_dic_ls)):
             for key, val in sta_dic_ls.items():
                 if val == i:
-                    t = AdjustedStation(key, float(self.adjustment.X[i]), float(np.sqrt(self.adjustment.var[i])))
-                    self.results_model.insertRows(t, 0)
-                    self.adjustment.g_dic[key] = float(self.adjustment.X[i])
+                    try:
+                        t = AdjustedStation(key, float(self.adjustment.X[i]), float(np.sqrt(self.adjustment.var[i])))
+                        self.results_model.insertRows(t, 0)
+                        self.adjustment.g_dic[key] = float(self.adjustment.X[i])
+                    except:
+                        show_message("Bad variance in results", "Inversion error")
 
         self.match_inversion_results(inversion_type='numpy')
 
@@ -794,6 +796,28 @@ class ObsTreeSurvey(ObsTreeItem):
         for i in range(len(station_list)):
             sta_dic_ls[station_list[i]] = i
         return sta_dic_ls
+
+    def return_obstreestation(self, station_id):
+        """
+        returns ObsTreeStation object corresponding to delta_id
+        :param delta_id: tuple, (station_name, station_count)
+        :return: ObsTreeStation
+        """
+        for station in self.iter_stations():
+            if (station.station_name, station.station_count) == station_id:
+                return station
+
+    def populate_delta_model_from_workspace(self):
+        """
+        Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
+        PyQt objects after pickle.load().
+        :return:
+        """
+        for delta in self.deltas:
+            station1 = self.return_obstreestation(delta.sta1)
+            station2 = self.return_obstreestation(delta.sta2)
+            delta = data_objects.Delta(station1, station2, driftcorr=delta.driftcorr)
+            self.delta_model.insertRows(delta,0)
 
     def populate_delta_model(self, loop=None):
         """
@@ -1003,6 +1027,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             self.appendRow([obstreesurvey,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
+            obstreesurvey.populate_delta_model_from_workspace()
 
     def save_workspace(self, data_path):
         """

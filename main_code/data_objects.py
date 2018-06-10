@@ -599,7 +599,9 @@ class SimpleSurvey:
         self.datums = []
         for i in range(survey.delta_model.rowCount()):
             ind = survey.delta_model.createIndex(i, 0)
-            self.deltas.append(survey.delta_model.data(ind, QtCore.Qt.UserRole))
+            delta = survey.delta_model.data(ind, QtCore.Qt.UserRole)
+            simpledelta = SimpleDelta(delta)
+            self.deltas.append(simpledelta)
         for i in range(survey.datum_model.rowCount()):
             ind = survey.datum_model.createIndex(i, 0)
             self.datums.append(survey.datum_model.data(ind, QtCore.Qt.UserRole))
@@ -611,6 +613,15 @@ class SimpleSurvey:
         self.name = survey.name
         self.adjoptions = survey.adjustment.adjustmentoptions
 
+
+class SimpleDelta:
+    def __init__(self, delta):
+        self.sta1 = (delta.station1.station_name, delta.station1.station_count)
+        self.sta2 = (delta.station2.station_name, delta.station2.station_count)
+        self.adj_sd = delta.adj_sd
+        self.type = delta.type
+        self.ls_drift = delta.ls_drift
+        self.driftcorr = delta.driftcorr
 
 class SimpleLoop:
     """

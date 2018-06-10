@@ -854,7 +854,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     # TODO: Implement drag and drop.
     def __init__(self):
         super(ObsTreeModel, self).__init__()
-        self.stitem = None
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
 
@@ -1029,15 +1028,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                          QtGui.QStandardItem('0')])
             obstreesurvey.populate_delta_model_from_workspace()
 
-    def save_workspace(self, data_path):
-        """
-        Called when saving a workspace. Removes PyQt objects and calls pickle.dump
-        :param data_path: full path to save file
-        """
+    def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled
         workspace_data = self.obstree_export_data()
-
-        fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', data_path)
         if fname[-2:] != '.p':
             fname += '.p'
         with open(fname, "wb") as f:

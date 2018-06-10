@@ -18,7 +18,7 @@ from PyQt5 import QtWidgets
 from gui_objects import about_dialog
 
 
-class menus:
+class Menus:
     def __init__(self, mainProg):
         self.mainProg = mainProg
         """
@@ -59,9 +59,14 @@ class menus:
         self.mnFileClearWorkspace = self.create_action("Clear workspace",
                                                        slot=self.mainProg.workspace_clear,
                                                        enabled=True)
-        self.mnFileSaveWorkspace = self.create_action("Save workspace...",
+        self.mnFileSaveWorkspace = self.create_action("Save workspace",
+                                                      shortcut="Ctrl+s",
                                                       slot=self.mainProg.workspace_save,
                                                       enabled=False)
+        self.mnFileSaveWorkspaceAs = self.create_action("Save workspace as...",
+                                                        shortcut="F12",
+                                                        slot=self.mainProg.workspace_save_as,
+                                                        enabled=False)
         self.mnFileLoadWorkspaceAction = self.create_action("Load workspace...",
                                                             slot=self.mainProg.workspace_load)
         self.mnFileExitAction = self.create_action("&Exit", slot=self.mainProg.close_windows, tip="Exit App")
@@ -75,9 +80,10 @@ class menus:
                                        self.mnFileAppendLoop,
                                        self.mnFileAppendWorkspace,
                                        None,
-                                       self.mnFileClearWorkspace,
                                        self.mnFileSaveWorkspace,
+                                       self.mnFileSaveWorkspaceAs,
                                        self.mnFileLoadWorkspaceAction,
+                                       self.mnFileClearWorkspace,
                                        None,
                                        self.mnFileExitAction))
 
@@ -90,11 +96,13 @@ class menus:
                                                        tip="Choose tide correction method", enabled=False)
         # for ocean loading correction
         self.oceanLoadingCorrectionAction = self.create_action("&Ocean loading correction",
-                                                               shortcut="Ctrl+L", slot=self.mainProg.correction_ocean_loading,
+                                                               shortcut="Ctrl+L",
+                                                               slot=self.mainProg.correction_ocean_loading,
                                                                tip="Ocean loading corrections", enabled=False)
         # for atmospheric correction
         self.atmosphericCorrectionAction = self.create_action("&Atmospheric correction",
-                                                              shortcut="Ctrl+P", slot=self.mainProg.correction_atmospheric,
+                                                              shortcut="Ctrl+P",
+                                                              slot=self.mainProg.correction_atmospheric,
                                                               tip="Apply atmospheric correction by loading a data file",
                                                               enabled=False)
         self.mnEditComputeGravityChangeAction = self.create_action("&Compute gravity change",

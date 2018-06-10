@@ -130,7 +130,7 @@ from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTi
 from tab_network import TabAdjust
 from tab_drift import TabDrift
 from tab_data import TabData
-from menus import menus
+from menus import Menus
 from tide_correction import tide_correction_agnew
 
 """
@@ -175,24 +175,28 @@ class MainProg(QtWidgets.QMainWindow):
     dpi = 60  # resolution for data plots
     output_root_dir = None
     all_survey_data = None
+
+    # PyQt indexes
     currentSurveyIndex = None
     currentLoopIndex = None
     currentStationIndex = None
     currentLoopSurveyIndex = None
     currentStationLoopIndex = None
     currentStationSurveyIndex = None
-    treeviewpopMenu = None
+
+    obstreeview_popup_menu = None
     status_text = None
     menus, selmodel = None, None
     tab_data, tab_drift, tab_adjust = None, None, None
     station_model, station_coords = None, None
+    workspace_savename = None
 
     def __init__(self):
         super(MainProg, self).__init__()
         logging.info(
             'GSadjust session from computer ' + os.environ["COMPUTERNAME"] + ', ' + time.strftime('%H:%M %Y-%m-%d'))
 
-        self.menus = menus(self)
+        self.menus = Menus(self)
         self.setGeometry(50, 50, 350, 300)
         self.setWindowTitle('GSadjust')
 
@@ -261,8 +265,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnFileAppendLoop.setEnabled(True)
         self.menus.mnFileAppendSurvey.setEnabled(True)
         self.menus.mnFileAppendWorkspace.setEnabled(True)
-        self.menus.mnFileSaveWorkspace.setEnabled(True)
-        self.menus.mnFileSaveWorkspace.setEnabled(True)
+        self.menus.mnFileSaveWorkspaceAs.setEnabled(True)
         self.menus.mnEditTideCorrection.setEnabled(True)
         self.menus.mnEditCorrectRecordedTimeAction.setEnabled(True)
         self.menus.mnAdjUpdateDeltas.setEnabled(True)
@@ -706,13 +709,27 @@ class MainProg(QtWidgets.QMainWindow):
 
     def workspace_save(self):
         """
-        Saves campaigndata object using pickle.dump()
+        Saves data if a workspace has already been saved
+        """
+        self.obsTreeModel.save_workspace(self.workspace_savename)
+
+    def workspace_save_as(self):
+        """
+        Saves data object using pickle.dump()
         """
         if self.deltas_update_required_label.set is True:
             show_message('Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
                          'Adjustment tab is not up to date.', 'Workspace save error')
         else:
-            self.obsTreeModel.save_workspace(self.data_path)
+            try:
+                fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.data_path)
+                self.obsTreeModel.save_workspace(fname)
+                self.workspace_savename = fname
+                self.menus.mnFileSaveWorkspace.setEnabled(True)
+            except Exception as e:
+                show_message("Workspace save error", "Error")
+                logging.exception(e, exc_info=True)
+                self.menus.mnFileSaveWorkspace.setEnabled(False)
 
     def workspace_load(self):
         """
@@ -731,6 +748,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.currentStationLoopIndex = firstloop.index()
         self.currentStationSurveyIndex = firstsurvey.index()
         self.populate_coordinates()
+        self.menus.mnFileSaveWorkspace.setEnabled(True)
         self.menus.mnAdjAdjust.setEnabled(True)
         self.workspace_loaded = True
         self.update_all_drift_plots()
@@ -1078,13 +1096,13 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Right-click context menu on tree view
         """
-        self.treeviewpopMenu = QtWidgets.QMenu("Menu", self)
-        self.treeviewpopMenu.addAction(self.menus.mnDeleteSurvey)
-        self.treeviewpopMenu.addAction(self.menus.mnDeleteLoop)
-        self.treeviewpopMenu.addAction(None)
-        self.treeviewpopMenu.addAction(self.menus.mnStationDelete)
-        self.treeviewpopMenu.addAction(self.menus.mnStationDuplicate)
-        self.treeviewpopMenu.addAction(self.menus.mnDataNewLoop)
+        self.obstreeview_popup_menu = QtWidgets.QMenu("Menu", self)
+        self.obstreeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
+        self.obstreeview_popup_menu.addAction(self.menus.mnDeleteLoop)
+        self.obstreeview_popup_menu.addAction(None)
+        self.obstreeview_popup_menu.addAction(self.menus.mnStationDelete)
+        self.obstreeview_popup_menu.addAction(self.menus.mnStationDuplicate)
+        self.obstreeview_popup_menu.addAction(self.menus.mnDataNewLoop)
         # enable as appropriate
         indexes = self.data_treeview.selectedIndexes()
         if indexes:
@@ -1103,7 +1121,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.mnStationDuplicate.setEnabled(False)
                 self.menus.mnDataNewLoop.setEnabled(False)
 
-            self.treeviewpopMenu.exec_(self.data_treeview.mapToGlobal(point))
+            self.obstreeview_popup_menu.exec_(self.data_treeview.mapToGlobal(point))
 
     def status_bar_(self, status_string):
         """

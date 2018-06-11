@@ -811,12 +811,30 @@ class ObsTreeSurvey(ObsTreeItem):
         """
         Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
         PyQt objects after pickle.load().
-        :return:
         """
-        for delta in self.deltas:
-            station1 = self.return_obstreestation(delta.sta1)
-            station2 = self.return_obstreestation(delta.sta2)
-            delta = data_objects.Delta(station1, station2, driftcorr=delta.driftcorr)
+        # Need to recreate deltas from simpledeltas (PyQt ObsTreeStation objects are removed before pickling). Don't
+        # need to do the same for datums because they don't have any PyQt objects: datums can be pickled directly.
+        for simpledelta in self.deltas:
+            if type(simpledelta.sta2) is tuple and type(simpledelta.sta1) is tuple:
+                station1 = self.return_obstreestation(simpledelta.sta1)
+                station2 = self.return_obstreestation(simpledelta.sta2)
+                delta = data_objects.Delta(station1, station2,
+                                           driftcorr=simpledelta.driftcorr,
+                                           checked=simpledelta.checked,
+                                           ls_drift=simpledelta.ls_drift,
+                                           delta_type=simpledelta.type,
+                                           adj_stdev=simpledelta.adj_sd)
+            elif type(simpledelta.sta2) is list:
+                station_list = []
+                for station in simpledelta.sta2:
+                    obstreestation = self.return_obstreestation(station)
+                    station_list.append(obstreestation)
+                    delta = data_objects.Delta([], station_list,
+                                               driftcorr=simpledelta.driftcorr,
+                                               checked=simpledelta.checked,
+                                               ls_drift=simpledelta.ls_drift,
+                                               delta_type=simpledelta.type,
+                                               adj_stdev=simpledelta.adj_sd)
             self.delta_model.insertRows(delta,0)
 
     def populate_delta_model(self, loop=None):
@@ -1599,8 +1617,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 column = index.column()
                 if len(str(value)) > 0:
                     if column == DELTA_ADJ_SD:
-                        delta.adj_sd = float(value)
+                        delta.adj_stdev = float(value)
                     self.dataChanged.emit(index, index)
+                    self.signal_adjust_update_required.emit()
                 return True
         if role == QtCore.Qt.UserRole:
             self.deltas[index.row()] = value
@@ -1809,18 +1828,21 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
         """
         # channel list attributes aren't specified in advance, so don't worry whether it's Burris or CG5 data
         self.ChannelList_obj = ChannelList_obj
-        self.arraydata = np.concatenate((ChannelList_obj.station,
-                                         ChannelList_obj.oper,
-                                         ChannelList_obj.meter,
-                                         date2num(ChannelList_obj.t),
-                                         np.array(ChannelList_obj.grav),
-                                         np.array(ChannelList_obj.dial),
-                                         np.array(ChannelList_obj.feedback),
-                                         np.array(ChannelList_obj.etc),
-                                         np.array(ChannelList_obj.elev),
-                                         np.array(ChannelList_obj.lat),
-                                         np.array(ChannelList_obj.long))). \
-            reshape(len(ChannelList_obj.t), 11, order='F')
+        try:
+            self.arraydata = np.concatenate((ChannelList_obj.station,
+                                             ChannelList_obj.oper,
+                                             ChannelList_obj.meter,
+                                             date2num(ChannelList_obj.t),
+                                             np.array(ChannelList_obj.grav),
+                                             np.array(ChannelList_obj.dial),
+                                             np.array(ChannelList_obj.feedback),
+                                             np.array(ChannelList_obj.etc),
+                                             np.array(ChannelList_obj.elev),
+                                             np.array(ChannelList_obj.lat),
+                                             np.array(ChannelList_obj.long))). \
+                reshape(len(ChannelList_obj.t), 11, order='F')
+        except:
+            jeff = 1
 
     def rowCount(self, parent=None):
         return len(self.ChannelList_obj.t)

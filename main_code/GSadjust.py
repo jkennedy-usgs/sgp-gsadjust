@@ -1022,6 +1022,11 @@ class MainProg(QtWidgets.QMainWindow):
         indexes = indexes[0::3]
         for index in reversed(indexes):
             self.obsTreeModel.removeRow(index.row(), index.parent())
+        if index.row() > 0:
+            self.currentStationIndex = index.sibling(index.row()-1, 0)
+        else:
+            self.currentStationIndex = index.sibling(0, 0)
+        self.prep_station_plot()
 
     def duplicate_station(self):
         """
@@ -1029,6 +1034,9 @@ class MainProg(QtWidgets.QMainWindow):
         day and the start of the next day: when imported, it will appear as one station, but it should be two.
         """
         indexes = self.data_treeview.selectedIndexes()
+        if len(indexes) > 3:
+            show_message("Please select a single station when duplicating.", "GSadjust error")
+            return
         index = indexes[0]
         model = indexes[0].model()
         obstreeloop = model.itemFromIndex(indexes[0].parent())
@@ -1062,13 +1070,13 @@ class MainProg(QtWidgets.QMainWindow):
             model = indexes[0].model()
             obstreeloop = model.itemFromIndex(indexes[0].parent())
             obstreesurvey = obstreeloop.parent()
-            new_loop_name = str(obstreesurvey.rowCount() + 1)
+            new_loop_name = str(obstreesurvey.rowCount())
             # new loop, increment from loop parent
             new_obstreeloop = ObsTreeLoop(new_loop_name)
 
             # iterate over indexes
             # For whatever reason we can't just appendRow the 'itemFromIndex' directly. Instead, have to make a new
-            # ObsTreeItem and append that.
+            # ObsTreeItem and append that. Probably has to do with needing to call the __init__ method of the PyQt obj.
             logging.info('Loop {} added'.format(new_loop_name))
             first = True
             for idx in indexes:
@@ -1082,12 +1090,16 @@ class MainProg(QtWidgets.QMainWindow):
                                                QtGui.QStandardItem('a')])
                 if first:
                     new_obstreeloop.meter = obstreestation.meter[0]
+
                     first = False
             for idx in reversed(indexes):
                 if idx.column() == 0:
-                    obstreeloop.removeRow(idx.row())
+                    self.obsTreeModel.beginRemoveRows(idx.parent(),idx.row(),idx.row()+1)
+                    self.obsTreeModel.removeRow(idx.row(), idx.parent())
+                    self.obsTreeModel.endRemoveRows()
             obstreesurvey.appendRow(new_obstreeloop)
-
+            self.currentStationIndex = obstreesurvey.child(0,0).child(0,0).index()
+            self.prep_station_plot()
             self.obsTreeModel.layoutChanged.emit()
             self.data_treeview.expand(new_obstreeloop.index())
             self.update_drift_tables_and_plots()

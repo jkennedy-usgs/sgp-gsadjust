@@ -35,8 +35,7 @@ class TabAdjust(QtWidgets.QWidget):
         self.delta_view.setStyleSheet("""
             QTableView::indicator:checked{
                outline: 1px solid #1e5180;
-               }
-            """)
+               }""")
 
         # Datum (Abs. g) table (bottom left)
         self.datum_view = QtWidgets.QTableView()

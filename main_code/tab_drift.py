@@ -324,8 +324,7 @@ class TabDrift(QtWidgets.QWidget):
                 continue
             delta = Delta(prev_station,
                           station,
-                          driftcorr=0.0,
-                          sd=3)
+                          driftcorr=0.0)
             delta_table.insertRows(delta, 0)
             prev_station = station
         return delta_table
@@ -347,7 +346,6 @@ class TabDrift(QtWidgets.QWidget):
             delta = Delta(prev_station,
                           station,
                           driftcorr=0.0,
-                          sd=3,
                           ls_drift=(loop_name, self.drift_polydegree_combobox.currentIndex() - 1))
             delta_table.insertRows(delta, 0)
             prev_station = station

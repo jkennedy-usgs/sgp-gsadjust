@@ -142,12 +142,13 @@ class Delta:
     'lsit': a delta is calculated from a list of deltas. Used with the Roman method to average three-point deltas.
       self.station2 is a list. self.station1 is None.
     """
-    def __init__(self, sta1, sta2, driftcorr=0., sd=0., ls_drift=(None, None), delta_type='normal'):
+    def __init__(self, sta1, sta2, driftcorr=0., sd=3., ls_drift=(None, None), delta_type='normal', checked=2,
+                 adj_stdev=999):
         self.station1 = sta1
         self.station2 = sta2
         self.stdev = float(sd)
-        self.adj_sd = self.sd
-        self.checked = 2
+        self.adj_stdev = adj_stdev
+        self.checked = checked
         self.type = delta_type
         if type(sta2) is pyqt_models.ObsTreeStation:
             self.meter = sta2.meter[0]
@@ -169,6 +170,13 @@ class Delta:
     @property
     def key(self):
         return self.__hash__()  # self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
+
+    @property
+    def adj_sd(self):
+        if self.adj_stdev == 999:
+            return self.sd
+        else:
+            return self.adj_stdev
 
     @property
     def sd(self):
@@ -616,12 +624,18 @@ class SimpleSurvey:
 
 class SimpleDelta:
     def __init__(self, delta):
-        self.sta1 = (delta.station1.station_name, delta.station1.station_count)
-        self.sta2 = (delta.station2.station_name, delta.station2.station_count)
+        if type(delta.station2) is pyqt_models.ObsTreeStation:
+            self.sta1 = (delta.station1.station_name, delta.station1.station_count)
+            self.sta2 = (delta.station2.station_name, delta.station2.station_count)
+        elif type(delta.station2) is list:
+            self.station_list = []
+            for station in delta.station2:
+                self.append((station.station_name, station.station_count))
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift
         self.driftcorr = delta.driftcorr
+        self.checked = delta.checked
 
 class SimpleLoop:
     """

@@ -317,8 +317,8 @@ def date_method_dialog():
 def about_dialog():
     msg1 = '<html>GSadjust, a product of the USGS Southwest Gravity Program<br>' + \
            '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>' + \
-           '<br><br><a href ="https://github.com/jkennedy-usgs/GSadjust">' + \
-           'https://github.com/jkennedy-usgs/GSadjust</a>' + \
+           '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">' + \
+           'https://github.com/jkennedy-usgs/sgp-gsadjust</a>' + \
            '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
     _, ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
 

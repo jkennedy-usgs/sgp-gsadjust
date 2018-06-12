@@ -336,10 +336,10 @@ class ObsTreeSurvey(ObsTreeItem):
         return loops
 
     def populate(self, survey_data, name='0'):
-        logging.info('Survey added')
         obstreeloop = ObsTreeLoop(name)
         obstreeloop.populate(survey_data)
         self.appendRow([obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
+        logging.info('Survey added')
 
     def iter_stations(self):
         """
@@ -855,10 +855,18 @@ class ObsTreeSurvey(ObsTreeItem):
             for i in range(self.rowCount()):
                 loop = self.child(i)
                 if loop.checkState() == QtCore.Qt.Checked:
-                    for ii in range(loop.delta_model.rowCount()):
-                        if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
-                            delta = loop.delta_model.data(loop.delta_model.index(ii,0),role=QtCore.Qt.UserRole)
-                            self.delta_model.insertRows(delta, 0)
+                    try:
+                        for ii in range(loop.delta_model.rowCount()):
+                            if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
+                                delta = loop.delta_model.data(loop.delta_model.index(ii,0),role=QtCore.Qt.UserRole)
+                                self.delta_model.insertRows(delta, 0)
+                    except Exception as e:
+                        logging.exception(e, exc_info=True)
+                        # Sometimes the delta table isn't created when a workspace is loaded
+                        from gui_objects import show_message
+                        show_message("Error populating delta table. Please check the drift correction " +
+                                     "for survey " + self.name + ", loop " + loop.name,
+                                     "GSadjust error")
         return True
 
 class ObsTreeModel(QtGui.QStandardItemModel):

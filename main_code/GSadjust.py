@@ -454,6 +454,7 @@ class MainProg(QtWidgets.QMainWindow):
             fh = open(filename, 'r')
             logging.info("number of lines: {:d}".format(len([1 for line in open(filename, 'r')])))
             all_survey_data.meter_type = meter_type
+            # TODO: make meter-specific code separate methods
             if meter_type == 'Scintrex':
                 for line in fh:
                     i += 1
@@ -1098,10 +1099,10 @@ class MainProg(QtWidgets.QMainWindow):
                     self.obsTreeModel.removeRow(idx.row(), idx.parent())
                     self.obsTreeModel.endRemoveRows()
             obstreesurvey.appendRow(new_obstreeloop)
+            self.data_treeview.expand(new_obstreeloop.index())
+            self.obsTreeModel.layoutChanged.emit()
             self.currentStationIndex = obstreesurvey.child(0,0).child(0,0).index()
             self.prep_station_plot()
-            self.obsTreeModel.layoutChanged.emit()
-            self.data_treeview.expand(new_obstreeloop.index())
             self.update_drift_tables_and_plots()
 
     def treeview_context_menu(self, point):
@@ -1135,14 +1136,6 @@ class MainProg(QtWidgets.QMainWindow):
 
             self.obstreeview_popup_menu.exec_(self.data_treeview.mapToGlobal(point))
 
-    def status_bar_(self, status_string):
-        """
-        Status messages at bottom of window
-        :param status_string: String to display
-        """
-        self.status_text = QtWidgets.QLabel(status_string)
-        self.statusBar().addWidget(self.status_text, 1)
-
     def adjust_network(self):
         """
         Carries out network adjustment, updates output tables
@@ -1154,7 +1147,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.run_inversion(adj_type)
         if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
-            self.menus.mnEditComputeGravityChangeAction.setEnabled(True)
+            self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
 

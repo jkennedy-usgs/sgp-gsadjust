@@ -630,7 +630,7 @@ class SimpleDelta:
         elif type(delta.station2) is list:
             self.station_list = []
             for station in delta.station2:
-                self.append((station.station_name, station.station_count))
+                self.station_list.append((station.station_name, station.station_count))
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift

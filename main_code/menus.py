@@ -105,9 +105,6 @@ class Menus:
                                                               slot=self.mainProg.correction_atmospheric,
                                                               tip="Apply atmospheric correction by loading a data file",
                                                               enabled=False)
-        self.mnEditComputeGravityChangeAction = self.create_action("&Compute gravity change",
-                                                                   slot=self.mainProg.compute_gravity_change,
-                                                                   tip="Compute gravity change", enabled=False)
         # for correcting time
         self.mnEditCorrectRecordedTimeAction = self.create_action("&Correct recorded time",
                                                                   slot=self.mainProg.correction_recorded_time,
@@ -129,7 +126,6 @@ class Menus:
                          (self.mnEditTideCorrection,
                           self.oceanLoadingCorrectionAction,
                           self.atmosphericCorrectionAction,
-                          self.mnEditComputeGravityChangeAction,
                           self.mnEditCorrectRecordedTimeAction,
                           None,
                           self.mnEditLoops,
@@ -230,8 +226,13 @@ class Menus:
                                                            slot=self.mainProg.write_metadata_text)
         self.mnToolsWriteTabularOutput = self.create_action('Write tabular data',
                                                             slot=self.mainProg.write_tabular_data)
+        self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
+                                                                    slot=self.mainProg.compute_gravity_change,
+                                                                    tip="Compute gravity change", enabled=False)
         self.add_actions(self.mnTools, (self.mnToolsNetworkGraphCircular,
                                         self.mnToolsNetworkGraphMap,
+                                        None,
+                                        self.mnToolsComputeGravityChangeAction,
                                         None,
                                         self.mnToolsWriteMetadataText,
                                         self.mnToolsWriteTabularOutput))

@@ -410,6 +410,9 @@ class MainProg(QtWidgets.QMainWindow):
             self.workspace_clear()
 
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Open file', directory=self.data_path)
+        if fname[-2:] == '.p':
+            show_message('Please use "Open workspace... " to load a .p file', 'File load error')
+            return
         self.output_root_dir = os.path.dirname(fname)
         if fname:
             logging.info('Loading data file: %s', fname)
@@ -677,7 +680,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.currentLoopIndex = loop.index()
                 self.update_drift_tables_and_plots()
 
-    def append_workspace(self):
+    def workspace_append(self):
         """
         Append previously-saved workspace to current workspace.
         """
@@ -691,6 +694,9 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Clears all models and refreshes view.
         """
+        logging.info("Workspace cleared")
+        self.menus.mnFileSaveWorkspace.setEnabled(False)
+        self.menus.mnFileSaveWorkspaceAs.setEnabled(False)
         self.obsTreeModel = ObsTreeModel()
         self.data_treeview.setModel(None)
         self.data_treeview.update()
@@ -706,7 +712,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.delta_view.update()
         self.tab_adjust.datum_view.setModel(None)
         self.tab_adjust.datum_view.update()
-        self.tab_adjust.__init__()
+        self.tab_adjust.results_view.setModel(None)
+        self.tab_adjust.results_view.update()
+        self.tab_adjust.textAdjResults.clear()
+        # self.tab_adjust.__init__()
 
     def workspace_save(self):
         """
@@ -732,31 +741,87 @@ class MainProg(QtWidgets.QMainWindow):
                 logging.exception(e, exc_info=True)
                 self.menus.mnFileSaveWorkspace.setEnabled(False)
 
-    def workspace_load(self):
+    def workspace_open(self):
         """
         Loads campaigndata object from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
         pickled and are removed in workspace_save).
         """
-        self.obsTreeModel.load_workspace(self.data_path)
-        self.populate_coordinates()
-        firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-        firstloop = firstsurvey.child(0)
-        firststation = firstloop.child(0)
-        self.currentSurveyIndex = firstsurvey.index()
-        self.currentLoopIndex = firstloop.index()
-        self.currentStationIndex = firststation.index()
-        self.currentLoopSurveyIndex = firstsurvey.index()
-        self.currentStationLoopIndex = firstloop.index()
-        self.currentStationSurveyIndex = firstsurvey.index()
-        self.populate_coordinates()
-        self.menus.mnFileSaveWorkspace.setEnabled(True)
-        self.menus.mnAdjAdjust.setEnabled(True)
-        self.workspace_loaded = True
-        self.update_all_drift_plots()
-        self.update_adjust_tables()
-        self.init_gui()
-        self.deltas_update_not_required()
-        QtWidgets.QApplication.restoreOverrideCursor()
+        # Returns list of survey delta tables so they can be passed to populate_survey_deltatable()
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        delta_tables = self.obsTreeModel.load_workspace(self.data_path)
+        if delta_tables == []:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            return
+        else:
+            self.populate_coordinates()
+            firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+            firstloop = firstsurvey.child(0)
+            firststation = firstloop.child(0)
+            self.currentSurveyIndex = firstsurvey.index()
+            self.currentLoopIndex = firstloop.index()
+            self.currentStationIndex = firststation.index()
+            self.currentLoopSurveyIndex = firstsurvey.index()
+            self.currentStationLoopIndex = firstloop.index()
+            self.currentStationSurveyIndex = firstsurvey.index()
+            self.populate_coordinates()
+            self.menus.mnFileSaveWorkspace.setEnabled(True)
+            self.menus.mnAdjAdjust.setEnabled(True)
+            self.workspace_loaded = True
+            self.update_all_drift_plots()
+            # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
+            # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
+            # updated
+            self.populate_survey_deltatable(delta_tables)
+            self.update_adjust_tables()
+            self.init_gui()
+            self.deltas_update_not_required()
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+    def assemble_all_deltas(self):
+        deltas = []
+        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+            survey = self.obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(survey.rowCount()):
+                loop = survey.child(ii)
+                for i in range(loop.delta_model.rowCount()):
+                    delta = loop.delta_model.data(loop.delta_model.index(i, 0), role=QtCore.Qt.UserRole)
+                    deltas.append(delta)
+        return deltas
+
+    def return_delta_given_key(self, keys, deltas):
+        if len(keys) == 1:
+            key = keys[0]
+            for delta in deltas:
+                if not delta.sta1 is None:
+                    if key[0][0] == delta.station1.station_name and key[0][1] == delta.station1.station_count \
+                    and key[1][0] == delta.station2.station_name and key[1][1] == delta.station2.station_count:
+                        return delta
+        else:
+            for key in keys:
+                for delta in deltas:
+                    returndelta = False
+                    if
+
+    def populate_survey_deltatable(self, delta_tables):
+        deltas = self.assemble_all_deltas()
+        survey_count = 0
+        for delta_table in delta_tables:
+            survey = self.obsTreeModel.invisibleRootItem().child(survey_count)
+            for simpledelta in delta_table:
+                idx = 0
+                # If a normal data, just need to look for
+                if len(simpledelta.delta_list) == 1:
+                    delta = self.return_delta_given_key(simpledelta.delta_list[idx], deltas)
+                else:
+                    delta = self.return_delta_given_key(simpledelta.delta_list, deltas)
+                delta.adj_stdev = simpledelta.adj_sd
+                # delta.type = delta.type
+                # delta.ls_drift = delta.ls_drift
+                # delta.driftcorr = delta.driftcorr
+                delta.checked = simpledelta.checked
+                survey.delta_model.insertRows(delta, 0)
+
+
 
     def populate_coordinates(self):
         """
@@ -851,7 +916,8 @@ class MainProg(QtWidgets.QMainWindow):
             pass
         self.tab_adjust.results_view.setModel(self.tab_adjust.results_proxy_model)
         self.tab_adjust.results_view.setSortingEnabled(True)
-
+        self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
+        self.tab_adjust.datum_view.setModel(self.tab_adjust.datum_proxy_model)
         self.tab_adjust.textAdjResults.clear()
 
         try:
@@ -1715,15 +1781,15 @@ class MainProg(QtWidgets.QMainWindow):
         with open(fn, 'w') as fid:
             for i in range(self.obsTreeModel.rowCount()):
                 survey = self.obsTreeModel.invisibleRootItem().child(i)
-                datetemp = dt.datetime.utcfromtimestamp((int(survkey) - 719162) * 86400.)
-                datestr = datetemp.strftime(fmt)
+                # datetemp = dt.datetime.utcfromtimestamp((int(survey.name) - 719162) * 86400.)
+                # datestr = datetemp.strftime(fmt)
                 if survey.adjustment.adjustmentresults.text:  # check that there are results
                     if first:
                         fid.write('Attribute accuracy is evaluated from the least-squares network adjustment results. ')
                         first = False
                     results_written = True
                     fid.write('For the {} survey, the minimum and maximum gravity-difference residuals were {:0.1f} '
-                              'and {:0.1f} '.format(datestr,
+                              'and {:0.1f} '.format(survey.name,
                                                     survey.adjustment.adjustmentresults.min_dg_residual,
                                                     survey.adjustment.adjustmentresults.max_dg_residual))
                     fid.write(
@@ -1746,6 +1812,8 @@ class MainProg(QtWidgets.QMainWindow):
                         survey.adjustment.adjustmentresults.n_datums -
                         survey.adjustment.adjustmentresults.n_datums_notused,
                         survey.adjustment.adjustmentresults.n_datums))
+            logging.info('Metadata text written to file')
+
         if not results_written:
             show_message('No network adjustment results', 'Write error')
 

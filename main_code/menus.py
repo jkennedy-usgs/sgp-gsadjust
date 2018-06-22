@@ -54,7 +54,7 @@ class Menus:
                                                    self.mainProg.open_raw_data('chooseloop'),
                                                    enabled=False)
         self.mnFileAppendWorkspace = self.create_action("Append workspace...",
-                                                        slot=self.mainProg.append_workspace,
+                                                        slot=self.mainProg.workspace_append,
                                                         enabled=False)
         self.mnFileClearWorkspace = self.create_action("Clear workspace",
                                                        slot=self.mainProg.workspace_clear,
@@ -67,8 +67,8 @@ class Menus:
                                                         shortcut="F12",
                                                         slot=self.mainProg.workspace_save_as,
                                                         enabled=False)
-        self.mnFileLoadWorkspaceAction = self.create_action("Load workspace...",
-                                                            slot=self.mainProg.workspace_load)
+        self.mnFileLoadWorkspaceAction = self.create_action("Open workspace...",
+                                                            slot=self.mainProg.workspace_open)
         self.mnFileExitAction = self.create_action("&Exit", slot=self.mainProg.close_windows, tip="Exit App")
 
         # add actions to menu

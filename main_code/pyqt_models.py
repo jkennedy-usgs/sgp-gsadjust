@@ -839,7 +839,7 @@ class ObsTreeSurvey(ObsTreeItem):
 
     def populate_delta_model(self, loop=None):
         """
-        Copy deltas fromt he delta_model shown on the drift tab to the mdoel shown on the adjustment tab.
+        Copy deltas fromt he delta_model shown on the drift tab to the model shown on the adjustment tab.
         :param loop:
         :return:
         """
@@ -1033,11 +1033,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def load_workspace(self, data_path):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', data_path)
+        logging.info("Workspace loaded: " + fname)
+        delta_tables = []
         with open(fname, "rb") as f:
             data = pickle.load(f)
-        for survey in data:
-            obstreesurvey = ObsTreeSurvey.from_simplesurvey(survey)
-            for loop in survey.loops:
+        for simplesurvey in data:
+            obstreesurvey = ObsTreeSurvey.from_simplesurvey(simplesurvey)
+            for loop in simplesurvey.loops:
                 obstreeloop = ObsTreeLoop.from_simpleloop(loop)
                 # Call plot_drift to populate loop delta_models
                 for station in loop.stations:
@@ -1052,7 +1054,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             self.appendRow([obstreesurvey,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
-            obstreesurvey.populate_delta_model_from_workspace()
+            # obstreesurvey.populate_delta_model_from_workspace()
+            delta_tables.append(obstreesurvey.deltas)
+        return delta_tables
 
     def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled

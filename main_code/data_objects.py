@@ -605,6 +605,8 @@ class SimpleSurvey:
         self.loops = []
         self.deltas = []
         self.datums = []
+        # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
+        # loop delta_models; those are recreated when the workspace is loaded.
         for i in range(survey.delta_model.rowCount()):
             ind = survey.delta_model.createIndex(i, 0)
             delta = survey.delta_model.data(ind, QtCore.Qt.UserRole)
@@ -623,14 +625,26 @@ class SimpleSurvey:
 
 
 class SimpleDelta:
+    """
+    Here we remove the ObsTreeStation objects from the Delta object (because they can't be pickled). Store a reference
+    to the station name and station count so that when a workspace is loaded, the delta is recreated with the
+    appropriate stations.
+    """
     def __init__(self, delta):
+        # Normal delta
+        sta1 = None
+        sta2 = None
+        self.delta_list = []
         if type(delta.station2) is pyqt_models.ObsTreeStation:
-            self.sta1 = (delta.station1.station_name, delta.station1.station_count)
-            self.sta2 = (delta.station2.station_name, delta.station2.station_count)
+            sta1 = (delta.station1.station_name, delta.station1.station_count)
+            sta2 = (delta.station2.station_name, delta.station2.station_count)
+            self.delta_list.append((sta1, sta2))
+        # Roman delta (station2 is a list of deltas)
         elif type(delta.station2) is list:
-            self.station_list = []
-            for station in delta.station2:
-                self.station_list.append((station.station_name, station.station_count))
+            for subdelta in delta.station2:
+                # station_list is a list of tuples, each tuple is a tuple with station_name, station_count
+                self.delta_list.append(((subdelta.station1.station_name, subdelta.station1.station_count),
+                                        (subdelta.station2.station_name, subdelta.station2.station_count)))
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift

@@ -19,17 +19,19 @@ The easiest, most reliable way to install GSadjust is using Conda to create a cu
 [https://conda.io/miniconda.html](https://conda.io/miniconda.html "Miniconda download")
 (Any Python version (e.g., 2.7 or 3.6) is okay)
 
-2. Download (green button on this page) or use [Git](https://git-scm.com/downloads "Git download") to clone the sgp-gsadjust repository. If downloaded, unzip the sgp-gsadjust-master directory. 
-
-3. Open a command window or terminal in the sgp-gsadjust (or sgp-gsadjust-master) directory and create a new conda environment:
+2. Open a command window or terminal in the sgp-gsadjust (or sgp-gsadjust-master) directory and create a new conda environment:
 
     ```
     conda env create --file environment.yml
     ```
 
     This creates a new conda environment named py35 with the appropriate python modules. 
+    
+3. Activate the new Python environment by typing "activate py35" at the command line (only necessary if you've not previously installed git). 
 
-To run GSadjust on Windows, double-click gsadjust.bat in the sgp-gsadjust directory. This activates the conda environment and starts GSadjust. 
+4. Clone the sgp-gsadjust repository (type "git clone https://github.com/jkennedy-usgs/sgp-gsadjust" at the command line) in the directory where you'd like to store the source code. Alternatively, use the download link on the Github webpage. If downloaded, unzip the sgp-gsadjust-master directory. 
+
+To run GSadjust on Windows, double-click gsadjust.bat in the sgp-gsadjust directory. On Mac or Linux, run the XXXXX shell script. This activates the conda environment and starts GSadjust. 
 
 ## Data selection interface
 * Select/deselect samples and stations

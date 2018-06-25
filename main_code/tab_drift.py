@@ -150,6 +150,7 @@ class TabDrift(QtWidgets.QWidget):
         grid.addWidget(self.offset_slider, 5, 1)
         grid_widget.setLayout(grid)
         drift_control_sublayout.addWidget(grid_widget)
+
         self.tareTableView = QtWidgets.QTableView()
         self.tareTableView.clicked.connect(self.update_tares)
         self.tareTableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -549,7 +550,6 @@ class TabDrift(QtWidgets.QWidget):
                 self.axes_drift_single.text(0.35, 0.5, 'NO STATION REPEATS')
             self.drift_single_canvas.draw()
             data = obstreeloop.checked_stations()
-            # data = obstreeloop.all_stations()
             if drift_type == 'none':
                 delta_model = self.calc_none_dg(data)
             elif drift_type == 'netadj':
@@ -809,7 +809,16 @@ class TabDrift(QtWidgets.QWidget):
         self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
         self.mnDeleteTare.triggered.connect(self.delete_tare)
 
-    def delete_tare(self, idx):
+    def delete_tare(self, idxs):
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+        idxs = self.tareTableView.selectedIndexes()
+        if len(idxs) > 1:
+            return
+        else:
+            obstreeloop.tare_model.removeRow(idxs[0].row(), idxs[0].parent())
+            obstreeloop.tare_model.deleteTare(idxs[0])
+            # tare = obstreeloop.tare_model.data(idxs[0], role=QtCore.Qt.UserRole)
+            # obstreeloop.tare_mode.deleteTare(idxs[0])
         return
 
     @staticmethod

@@ -199,7 +199,7 @@ class ObsTreeLoop(ObsTreeItem):
                 temp_sta = data.extract_subset_idx(ind_start, ind_end)
                 obstreestation = ObsTreeStation(temp_sta, curr_sta, str(station_count_dic[curr_sta]))
                 obstreestation.meter_type = data.meter_type
-                logging.info('Station added: ' + curr_sta + str(station_count_dic[curr_sta]))
+                logging.info('Station added: ' + curr_sta + '(' + str(station_count_dic[curr_sta]) + ')')
                 self.appendRow([obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
             prev_sta = curr_sta
 
@@ -259,17 +259,9 @@ class ObsTreeLoop(ObsTreeItem):
                 data.append(station)
         return data
 
-    def all_stations(self):
-        data = []
-        for i in range(self.rowCount()):
-            station = self.child(i)
-            data.append(station)
-        return data
-
     def deltas(self):
         """
         Called when 'Populate delta table... menu item is selected. Applies SD settings in options.
-        :param selection: Specifies how many deltas to populate: 'all', 'selectedsurvey', or 'selectedloop'.
         """
         deltas = []
         table = self.delta_model
@@ -336,6 +328,12 @@ class ObsTreeSurvey(ObsTreeItem):
         return loops
 
     def populate(self, survey_data, name='0'):
+        """
+        Called from open_raw_data. Loads all survey_data into a single loop.
+        :param survey_data: data returned from read_raw_data_file
+        :param name: Survey name
+        :return: None
+        """
         obstreeloop = ObsTreeLoop(name)
         obstreeloop.populate(survey_data)
         self.appendRow([obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
@@ -343,7 +341,7 @@ class ObsTreeSurvey(ObsTreeItem):
 
     def iter_stations(self):
         """
-        Iterator
+        Iterator that returns stations
         :return: All of the stations in a campaign
         """
         for i in range(self.rowCount()):
@@ -757,6 +755,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     dg_residuals.append(tempdelta.residual)
                 except KeyError:
                     show_message("Key error", "Key error")
+                    return
             else:
                 tempdelta.residual = -999.
             self.delta_model.setData(ind, tempdelta, QtCore.Qt.UserRole)
@@ -1383,6 +1382,10 @@ class TareTableModel(QtCore.QAbstractTableModel):
                 return True
         if role == QtCore.Qt.UserRole:
             self.tares[index.row()] = value
+
+    def deleteTare(self, idx):
+        self.beginRemoveRows(idx, 0, 1)
+        self.endRemoveRows
 
     def clearTares(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())

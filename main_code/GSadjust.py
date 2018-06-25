@@ -387,9 +387,11 @@ class MainProg(QtWidgets.QMainWindow):
         """
         - Display a file opening window
         - Populate obsTreeModel
+        :param meter_type: 'choose' - if appending a survey to campaign
+                           'chooseloop' - if appending loop to survey
+                           'CG6', 'Burris', or 'Scintrex' - reading a raw data file
         """
         # open file
-        show_overwrite_dialog = False
         overwrite = False
         append_loop = False
         if 'loop' in meter_type:
@@ -399,15 +401,10 @@ class MainProg(QtWidgets.QMainWindow):
             if meter_type_dialog.msg.exec_():
                 meter_type = meter_type_dialog.meter_type
         elif self.obsTreeModel.invisibleRootItem().rowCount() > 0:
-            show_overwrite_dialog = True
-
-        if show_overwrite_dialog:
             overwrite_tree_dialog = Overwrite()
             if overwrite_tree_dialog.msg.exec_():
-                overwrite = overwrite_tree_dialog.overwrite
-
-        if overwrite:
-            self.workspace_clear()
+                if overwrite_tree_dialog.overwrite:
+                    self.workspace_clear()
 
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Open file', directory=self.data_path)
         if fname[-2:] == '.p':
@@ -431,7 +428,8 @@ class MainProg(QtWidgets.QMainWindow):
                 logging.exception(e, exc_info=True)
                 show_message('Failed to read raw data file', 'File error')
                 return
-            self.init_gui()
+            if not 'choose' in meter_type:
+                self.init_gui()
             self.prep_station_plot()
             if meter_type == 'Burris' or meter_type == 'CG6':
                 self.populate_coordinates()
@@ -800,7 +798,7 @@ class MainProg(QtWidgets.QMainWindow):
             for key in keys:
                 for delta in deltas:
                     returndelta = False
-                    if
+
 
     def populate_survey_deltatable(self, delta_tables):
         deltas = self.assemble_all_deltas()
@@ -990,7 +988,10 @@ class MainProg(QtWidgets.QMainWindow):
         if taredialog.exec_():
             new_tare_date = taredialog.dt_edit.dateTime()
             new_tare_value = taredialog.edit_box.text()
-        tare = Tare(new_tare_date.date(), new_tare_date.time(), new_tare_value)
+        try:
+            tare = Tare(new_tare_date.date(), new_tare_date.time(), new_tare_value)
+        except:
+            jeff = 1
         current_loop.tare_model.insertRows(tare)
         self.tab_drift.process_tares(current_loop)
         self.update_drift_tables_and_plots()

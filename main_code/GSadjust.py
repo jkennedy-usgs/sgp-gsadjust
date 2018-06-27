@@ -116,7 +116,6 @@ import webbrowser
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 import matplotlib.pyplot as plt
-import ctypes
 # For network graphs
 import networkx as nx  # networkx 1.9
 
@@ -147,17 +146,7 @@ Run in a conda env named pyg35
 $>activate pyg
 $>pyinstaller --onefile GSadjust.spec
 
-The next section manually loads mkl_mc.dll and mkl_def.dll, see
-https://github.com/pyinstaller/pyinstaller/wiki/Recipe-Win-Load-External-DLL
 """
-
-# Override dll search path.
-ctypes.windll.kernel32.SetDllDirectoryW(':\Shared\current\python\Miniconda3\envs\pyg35\Library\bin')
-# Init code to load external dll
-ctypes.CDLL('mkl_avx2.dll')
-ctypes.CDLL('mkl_def.dll')
-# Restore dll search path.
-ctypes.windll.kernel32.SetDllDirectoryW(None)
 
 
 class MainProg(QtWidgets.QMainWindow):
@@ -193,8 +182,6 @@ class MainProg(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainProg, self).__init__()
-        logging.info(
-            'GSadjust session from computer ' + os.environ["COMPUTERNAME"] + ', ' + time.strftime('%H:%M %Y-%m-%d'))
 
         self.menus = Menus(self)
         self.setGeometry(50, 50, 350, 300)
@@ -259,7 +246,7 @@ class MainProg(QtWidgets.QMainWindow):
         Called after loading a data file.
         """
         # Left panel: tree with data hierarchy (surveys, loops, stations)
-        self.obsTreeModel.setHorizontalHeaderLabels(['Name', 'Date', 'g (microGal)'])
+        self.obsTreeModel.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
 
         # Enable menus
         self.menus.mnFileAppendLoop.setEnabled(True)
@@ -584,10 +571,10 @@ class MainProg(QtWidgets.QMainWindow):
                                 oper = vals_temp[-1]
                         continue
                     # Numbers are columns in the imported file
-                    c_station, c_date, c_time, c_sd = 0, 1, 2, 4
-                    c_tiltx, c_tilty = 7, 8
-                    c_tide, c_tilt, c_temp = 10, 11, 12
-                    c_grav, c_elev, c_lat, c_long = 3, 18, 16, 17
+                    c_station, c_date, c_time, c_sd = 0, 1, 2, 5
+                    c_tiltx, c_tilty = 8, 9
+                    c_tide, c_tilt, c_temp = 11, 12, 13
+                    c_grav, c_elev, c_lat, c_long = 3, 19, 17, 18
 
                     date_temp = vals_temp[c_date].split('-')
                     time_temp = vals_temp[c_time].split(':')

@@ -731,8 +731,8 @@ class MainProg(QtWidgets.QMainWindow):
         Loads campaigndata object from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
         pickled and are removed in workspace_save).
         """
-        # Returns list of survey delta tables so they can be passed to populate_survey_deltatable()
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        # Returns list of survey delta tables so they can be passed to populate_survey_deltatable()
         delta_tables = self.obsTreeModel.load_workspace(self.data_path)
         if delta_tables == []:
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -755,7 +755,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.update_all_drift_plots()
             # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
             # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
-            # updated
+            # updated.
             self.populate_survey_deltatable(delta_tables)
             self.update_adjust_tables()
             self.init_gui()
@@ -763,6 +763,10 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
 
     def assemble_all_deltas(self):
+        """
+        Get all deltas from loop delta models.
+        :return: One long list of all deltas in a campaign.
+        """
         deltas = []
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
@@ -773,19 +777,16 @@ class MainProg(QtWidgets.QMainWindow):
                     deltas.append(delta)
         return deltas
 
-    def return_delta_given_key(self, keys, deltas):
-        if len(keys) == 1:
-            key = keys[0]
-            for delta in deltas:
-                if not delta.sta1 is None:
-                    if key[0][0] == delta.station1.station_name and key[0][1] == delta.station1.station_count \
-                    and key[1][0] == delta.station2.station_name and key[1][1] == delta.station2.station_count:
-                        return delta
-        else:
-            for key in keys:
-                for delta in deltas:
-                    returndelta = False
-
+    def return_delta_given_key(self, key, deltas):
+        """
+        Return a delta based on the staion name and station count of the comprising stations.
+        :param keys: a tuple or list, depending on the type of delta
+        :param deltas: List of deltas, as returned from assemble_all_deltas()
+        :return:
+        """
+        for delta in deltas:
+            if delta.key == key:
+                return delta
 
     def populate_survey_deltatable(self, delta_tables):
         deltas = self.assemble_all_deltas()
@@ -793,20 +794,10 @@ class MainProg(QtWidgets.QMainWindow):
         for delta_table in delta_tables:
             survey = self.obsTreeModel.invisibleRootItem().child(survey_count)
             for simpledelta in delta_table:
-                idx = 0
-                # If a normal data, just need to look for
-                if len(simpledelta.delta_list) == 1:
-                    delta = self.return_delta_given_key(simpledelta.delta_list[idx], deltas)
-                else:
-                    delta = self.return_delta_given_key(simpledelta.delta_list, deltas)
+                delta = self.return_delta_given_key(simpledelta.key, deltas)
                 delta.adj_stdev = simpledelta.adj_sd
-                # delta.type = delta.type
-                # delta.ls_drift = delta.ls_drift
-                # delta.driftcorr = delta.driftcorr
                 delta.checked = simpledelta.checked
                 survey.delta_model.insertRows(delta, 0)
-
-
 
     def populate_coordinates(self):
         """

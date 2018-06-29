@@ -806,39 +806,39 @@ class ObsTreeSurvey(ObsTreeItem):
             if (station.station_name, station.station_count) == station_id:
                 return station
 
-    def populate_delta_model_from_workspace(self):
-        """
-        Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
-        PyQt objects after pickle.load().
-        """
-        # Need to recreate deltas from simpledeltas (PyQt ObsTreeStation objects are removed before pickling). Don't
-        # need to do the same for datums because they don't have any PyQt objects: datums can be pickled directly.
-        for simpledelta in self.deltas:
-            if type(simpledelta.sta2) is tuple and type(simpledelta.sta1) is tuple:
-                station1 = self.return_obstreestation(simpledelta.sta1)
-                station2 = self.return_obstreestation(simpledelta.sta2)
-                delta = data_objects.Delta(station1, station2,
-                                           driftcorr=simpledelta.driftcorr,
-                                           checked=simpledelta.checked,
-                                           ls_drift=simpledelta.ls_drift,
-                                           delta_type=simpledelta.type,
-                                           adj_stdev=simpledelta.adj_sd)
-            elif type(simpledelta.sta2) is list:
-                station_list = []
-                for station in simpledelta.sta2:
-                    obstreestation = self.return_obstreestation(station)
-                    station_list.append(obstreestation)
-                    delta = data_objects.Delta([], station_list,
-                                               driftcorr=simpledelta.driftcorr,
-                                               checked=simpledelta.checked,
-                                               ls_drift=simpledelta.ls_drift,
-                                               delta_type=simpledelta.type,
-                                               adj_stdev=simpledelta.adj_sd)
-            self.delta_model.insertRows(delta,0)
+    # def populate_delta_model_from_workspace(self):
+    #     """
+    #     Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
+    #     PyQt objects after pickle.load().
+    #     """
+    #     # Need to recreate deltas from simpledeltas (PyQt ObsTreeStation objects are removed before pickling). Don't
+    #     # need to do the same for datums because they don't have any PyQt objects: datums can be pickled directly.
+    #     for simpledelta in self.deltas:
+    #         if type(simpledelta.sta2) is tuple and type(simpledelta.sta1) is tuple:
+    #             station1 = self.return_obstreestation(simpledelta.sta1)
+    #             station2 = self.return_obstreestation(simpledelta.sta2)
+    #             delta = data_objects.Delta(station1, station2,
+    #                                        driftcorr=simpledelta.driftcorr,
+    #                                        checked=simpledelta.checked,
+    #                                        ls_drift=simpledelta.ls_drift,
+    #                                        delta_type=simpledelta.type,
+    #                                        adj_stdev=simpledelta.adj_sd)
+    #         elif type(simpledelta.sta2) is list:
+    #             station_list = []
+    #             for station in simpledelta.sta2:
+    #                 obstreestation = self.return_obstreestation(station)
+    #                 station_list.append(obstreestation)
+    #                 delta = data_objects.Delta([], station_list,
+    #                                            driftcorr=simpledelta.driftcorr,
+    #                                            checked=simpledelta.checked,
+    #                                            ls_drift=simpledelta.ls_drift,
+    #                                            delta_type=simpledelta.type,
+    #                                            adj_stdev=simpledelta.adj_sd)
+    #         self.delta_model.insertRows(delta,0)
 
     def populate_delta_model(self, loop=None):
         """
-        Copy deltas fromt he delta_model shown on the drift tab to the model shown on the adjustment tab.
+        Copy deltas from the delta_model shown on the drift tab to the model shown on the adjustment tab.
         :param loop:
         :return:
         """

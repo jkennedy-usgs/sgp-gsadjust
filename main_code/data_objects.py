@@ -166,10 +166,17 @@ class Delta:
     def from_list(cls, list_of_deltas):
         return cls(None, list_of_deltas, delta_type='list')
 
-    # Used to match up adjustment results with observations
+    # Used to match up adjustment results with observations, and to store simple Deltas
     @property
     def key(self):
-        return self.__hash__()  # self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
+        if self.type is 'list':
+            return self.type + self.sta1 + self.sta2 + str(self.sta1_t)# self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
+        elif self.type is 'normal':
+            return self.type + \
+                   self.station1.station_name + \
+                   self.station1.station_count + \
+                   self.station2.station_name + \
+                   self.station2.station_count
 
     @property
     def adj_sd(self):
@@ -243,7 +250,7 @@ class Delta:
     @property
     def sta2_t(self):
         if self.type == 'three_point':
-            return self.station2.tmean
+            return self.station2[0].tmean
         elif self.type == 'list':
             return self.station2[0].station1.tmean
         else:
@@ -598,7 +605,7 @@ class SimpleSurvey:
     in the Qt models, so we can't just write the dics and ignore the Qt objects - they'll be recreated when the
     file loads.
 
-    This also serves to clear adjustment results, which we don't want to save.
+    This also clears adjustment results, which we don't want to save.
     """
 
     def __init__(self, survey):
@@ -634,17 +641,7 @@ class SimpleDelta:
         # Normal delta
         sta1 = None
         sta2 = None
-        self.delta_list = []
-        if type(delta.station2) is pyqt_models.ObsTreeStation:
-            sta1 = (delta.station1.station_name, delta.station1.station_count)
-            sta2 = (delta.station2.station_name, delta.station2.station_count)
-            self.delta_list.append((sta1, sta2))
-        # Roman delta (station2 is a list of deltas)
-        elif type(delta.station2) is list:
-            for subdelta in delta.station2:
-                # station_list is a list of tuples, each tuple is a tuple with station_name, station_count
-                self.delta_list.append(((subdelta.station1.station_name, subdelta.station1.station_count),
-                                        (subdelta.station2.station_name, subdelta.station2.station_count)))
+        self.key = delta.key
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift

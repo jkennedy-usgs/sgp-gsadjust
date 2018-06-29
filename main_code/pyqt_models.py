@@ -373,22 +373,22 @@ class ObsTreeSurvey(ObsTreeItem):
         # If using gravnet with netadj drift option (including drift term in the network adjustment), a single
         # drift model is used for all observations in the adjustment. Check that the method is set to netadj
         # for all loops, otherwise show an error message and return.
-        netadj = []
+        ls_degree = []
         for delta in self.adjustment.deltas:
-            netadj.append(delta.ls_drift)
-        unique_netadj = set(netadj)
-        if len(unique_netadj) > 1:
+            ls_degree.append(delta.ls_drift[1])
+        unique_ls = list(set(ls_degree))
+        if len(unique_ls) > 1:
             show_message('It appears that more than one polynomial degree was specified for different loops for the '
                          'network, or that some loops are not using the' +
                          ' adjutment drift option. When using Gravnet, all loops must have the same degree drift ' +
                          'model. Aborting.',
                          'Inversion error')
             return
-        if len(unique_netadj) == 1:
-            if list(unique_netadj)[0] == (None, None):
+        if len(unique_ls) == 1:
+            if unique_ls[0] is None:
                 drift_term = ''
             else:
-                drift_term = '-T' + str(delta.ls_drift[1])
+                drift_term = '-T' + str(unique_ls[0])
 
         # Remove old gravnet files
         try:
@@ -806,39 +806,39 @@ class ObsTreeSurvey(ObsTreeItem):
             if (station.station_name, station.station_count) == station_id:
                 return station
 
-    # def populate_delta_model_from_workspace(self):
-    #     """
-    #     Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
-    #     PyQt objects after pickle.load().
-    #     """
-    #     # Need to recreate deltas from simpledeltas (PyQt ObsTreeStation objects are removed before pickling). Don't
-    #     # need to do the same for datums because they don't have any PyQt objects: datums can be pickled directly.
-    #     for simpledelta in self.deltas:
-    #         if type(simpledelta.sta2) is tuple and type(simpledelta.sta1) is tuple:
-    #             station1 = self.return_obstreestation(simpledelta.sta1)
-    #             station2 = self.return_obstreestation(simpledelta.sta2)
-    #             delta = data_objects.Delta(station1, station2,
-    #                                        driftcorr=simpledelta.driftcorr,
-    #                                        checked=simpledelta.checked,
-    #                                        ls_drift=simpledelta.ls_drift,
-    #                                        delta_type=simpledelta.type,
-    #                                        adj_stdev=simpledelta.adj_sd)
-    #         elif type(simpledelta.sta2) is list:
-    #             station_list = []
-    #             for station in simpledelta.sta2:
-    #                 obstreestation = self.return_obstreestation(station)
-    #                 station_list.append(obstreestation)
-    #                 delta = data_objects.Delta([], station_list,
-    #                                            driftcorr=simpledelta.driftcorr,
-    #                                            checked=simpledelta.checked,
-    #                                            ls_drift=simpledelta.ls_drift,
-    #                                            delta_type=simpledelta.type,
-    #                                            adj_stdev=simpledelta.adj_sd)
-    #         self.delta_model.insertRows(delta,0)
+    def populate_delta_model_from_workspace(self):
+        """
+        Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
+        PyQt objects after pickle.load().
+        """
+        # Need to recreate deltas from simpledeltas (PyQt ObsTreeStation objects are removed before pickling). Don't
+        # need to do the same for datums because they don't have any PyQt objects: datums can be pickled directly.
+        for simpledelta in self.deltas:
+            if type(simpledelta.sta2) is tuple and type(simpledelta.sta1) is tuple:
+                station1 = self.return_obstreestation(simpledelta.sta1)
+                station2 = self.return_obstreestation(simpledelta.sta2)
+                delta = data_objects.Delta(station1, station2,
+                                           driftcorr=simpledelta.driftcorr,
+                                           checked=simpledelta.checked,
+                                           ls_drift=simpledelta.ls_drift,
+                                           delta_type=simpledelta.type,
+                                           adj_stdev=simpledelta.adj_sd)
+            elif type(simpledelta.sta2) is list:
+                station_list = []
+                for station in simpledelta.sta2:
+                    obstreestation = self.return_obstreestation(station)
+                    station_list.append(obstreestation)
+                    delta = data_objects.Delta([], station_list,
+                                               driftcorr=simpledelta.driftcorr,
+                                               checked=simpledelta.checked,
+                                               ls_drift=simpledelta.ls_drift,
+                                               delta_type=simpledelta.type,
+                                               adj_stdev=simpledelta.adj_sd)
+            self.delta_model.insertRows(delta,0)
 
     def populate_delta_model(self, loop=None):
         """
-        Copy deltas from the delta_model shown on the drift tab to the model shown on the adjustment tab.
+        Copy deltas fromt he delta_model shown on the drift tab to the model shown on the adjustment tab.
         :param loop:
         :return:
         """

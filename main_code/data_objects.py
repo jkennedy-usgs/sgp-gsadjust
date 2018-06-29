@@ -139,10 +139,13 @@ class Delta:
     'normal': calculated between two stations
     'three_point': calculated between one station, and an interpolated value betweeen two stations (Roman method).
       self.station2 is a tuple with two stations, self.station1 is a single station.
-    'lsit': a delta is calculated from a list of deltas. Used with the Roman method to average three-point deltas.
+    'list': a delta is calculated from a list of deltas. Used with the Roman method to average three-point deltas.
       self.station2 is a list. self.station1 is None.
+
+    ls_drift: records degree of least squares adjustment: they must be identical for all deltas to use Gravnet.
+      Its a tuple with (loop name, degree of drift polynomial).
     """
-    def __init__(self, sta1, sta2, driftcorr=0., sd=3., ls_drift=(None, None), delta_type='normal', checked=2,
+    def __init__(self, sta1, sta2, driftcorr=0., sd=3., ls_drift=None, delta_type='normal', checked=2,
                  adj_stdev=999):
         self.station1 = sta1
         self.station2 = sta2
@@ -160,7 +163,7 @@ class Delta:
             self.meter = sta2[1].meter[0]
         self.residual = -999.
         self.driftcorr = driftcorr
-        self.ls_drift = ls_drift  # If drift is included in network adjustment
+        self.ls_drift = ls_drift  # degree of drift, if included in network adjustment
 
     @classmethod
     def from_list(cls, list_of_deltas):

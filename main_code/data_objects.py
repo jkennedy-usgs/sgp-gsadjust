@@ -144,14 +144,15 @@ class Delta:
 
     ls_drift: records degree of least squares adjustment: they must be identical for all deltas to use Gravnet.
       Its a tuple with (loop name, degree of drift polynomial).
+    adj_sd: stores the standard deviation used in the adjusment, which may differ from the one initially associated
+            with the delta.
     """
-    def __init__(self, sta1, sta2, driftcorr=0., sd=3., ls_drift=None, delta_type='normal', checked=2,
-                 adj_stdev=999):
+    def __init__(self, sta1, sta2, driftcorr=0., ls_drift=None, delta_type='normal', checked=2,
+                 adj_sd=999):
         self.station1 = sta1
         self.station2 = sta2
-        self.stdev = float(sd)
-        self.adj_stdev = adj_stdev
         self.checked = checked
+        self.adj_sd = adj_sd
         self.type = delta_type
         if type(sta2) is pyqt_models.ObsTreeStation:
             self.meter = sta2.meter[0]
@@ -173,7 +174,7 @@ class Delta:
     @property
     def key(self):
         if self.type is 'list':
-            return self.type + self.sta1 + self.sta2 + str(self.sta1_t)# self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
+            return self.type + self.sta1 + self.sta2 + str(self.dg)# self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
         elif self.type is 'normal':
             return self.type + \
                    self.station1.station_name + \
@@ -182,22 +183,27 @@ class Delta:
                    self.station2.station_count
 
     @property
-    def adj_sd(self):
-        if self.adj_stdev == 999:
+    def sd_for_adjustment(self):
+        """
+        If the standard deviation hasn't changed (e.g., it's the default value 999), return the standard deviation
+        initially associated with the delta.
+        :return: float
+        """
+        if self.adj_sd == 999:
             return self.sd
         else:
-            return self.adj_stdev
+            return self.adj_sd
 
     @property
     def sd(self):
-        if type(self.station2) is list:
+        if self.type is 'list':
             s = [np.abs(delta.dg) for delta in self.station2]
             return np.std(s)
-        elif type(self.station2) is pyqt_models.ObsTreeStation:
+        elif self.type is 'normal':
             s = np.sqrt(self.station2.stdev**2 + self.station1.stdev**2)
             return s
-        else:
-            return self.stdev
+        elif self.type is 'three_point':
+            return 3.0
 
     @property
     def sta1(self):
@@ -645,7 +651,7 @@ class SimpleDelta:
         sta1 = None
         sta2 = None
         self.key = delta.key
-        self.adj_sd = delta.adj_sd
+        self.sd_for_adjustment = delta.sd_for_adjustment
         self.type = delta.type
         self.ls_drift = delta.ls_drift
         self.driftcorr = delta.driftcorr

@@ -374,8 +374,10 @@ class ObsTreeSurvey(ObsTreeItem):
         # drift model is used for all observations in the adjustment. Check that the method is set to netadj
         # for all loops, otherwise show an error message and return.
         ls_degree = []
+        drift_term = ''
         for delta in self.adjustment.deltas:
-            ls_degree.append(delta.ls_drift[1])
+            if delta.ls_drift is not None:
+                ls_degree.append(delta.ls_drift[1])
         unique_ls = list(set(ls_degree))
         if len(unique_ls) > 1:
             show_message('It appears that more than one polynomial degree was specified for different loops for the '
@@ -385,9 +387,7 @@ class ObsTreeSurvey(ObsTreeItem):
                          'Inversion error')
             return
         if len(unique_ls) == 1:
-            if unique_ls[0] is None:
-                drift_term = ''
-            else:
+            if unique_ls[0] is not None:
                 drift_term = '-T' + str(unique_ls[0])
 
         # Remove old gravnet files
@@ -425,7 +425,7 @@ class ObsTreeSurvey(ObsTreeItem):
                                                                             delta.sta1_t,
                                                                             delta.sta2_t,
                                                                             delta.dg / 1000, '0',
-                                                                            delta.adj_sd / 1000.))
+                                                                            delta.sd_for_adjustment / 1000.))
         # Write absolute-g (aka datum, aka fix) file
         fix_file = self.name + '_fix.txt'
         with open(fix_file, 'w') as fid:
@@ -577,15 +577,16 @@ class ObsTreeSurvey(ObsTreeItem):
         loop_ls_dict = dict()
         for delta in self.adjustment.deltas:
             ls_drift_list.append(delta.ls_drift)
-        ls_drift_dict = dict(set(ls_drift_list))
-        for i in range(self.rowCount()):
-            obstreeloop = self.child(i)
-            if obstreeloop.data(role=QtCore.Qt.CheckStateRole) == 2:
-                loop_ls_dict[obstreeloop.name] = obstreeloop.drift_method
-                if obstreeloop.drift_method == 'netadj':
-                    ls_degree = ls_drift_dict[obstreeloop.name]
-                    netadj_loop_keys[obstreeloop.name] = (ndrift, ls_degree)
-                    ndrift += ls_degree
+        if not all(v is None for v in ls_drift_list):
+            ls_drift_dict = dict(set(ls_drift_list))
+            for i in range(self.rowCount()):
+                obstreeloop = self.child(i)
+                if obstreeloop.data(role=QtCore.Qt.CheckStateRole) == 2:
+                    loop_ls_dict[obstreeloop.name] = obstreeloop.drift_method
+                    if obstreeloop.drift_method == 'netadj':
+                        ls_degree = ls_drift_dict[obstreeloop.name]
+                        netadj_loop_keys[obstreeloop.name] = (ndrift, ls_degree)
+                        ndrift += ls_degree
 
         # Initialize least squares matrices
         # number of unknowns                                                                   #
@@ -606,7 +607,7 @@ class ObsTreeSurvey(ObsTreeItem):
         for delta in self.adjustment.deltas:
             deltakeys.append(delta.__hash__())
             Obs[row] = delta.dg
-            P[row, row] = 1. / (delta.adj_sd ** 2)
+            P[row, row] = 1. / (delta.sd_for_adjustment ** 2)
             A[row, sta_dic_ls[delta.sta1]] = -1
             A[row, sta_dic_ls[delta.sta2]] = 1
 
@@ -619,7 +620,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     show_message('Key error. Do Datum station names match delta observations?', 'Inversion error')
 
             # Populate column(s) for drift, if included in network adjustment
-            if delta.ls_drift is not (0, 0):
+            if delta.ls_drift is not None:
                 loop_name = delta.ls_drift[0]
 
                 # It's possible for ls_drift to have been set, but the loop method to be something other than netadj
@@ -661,7 +662,14 @@ class ObsTreeSurvey(ObsTreeItem):
                     except:
                         show_message("Bad variance in results", "Inversion error")
 
-        self.match_inversion_results(inversion_type='numpy')
+        # Retrieve calibration coefficient(s)
+        cal_dic = dict()
+        if self.adjustment.adjustmentoptions.cal_coeff:
+            for k, v in self.adjustment.meter_dic.items():
+                cal_dic[k] = (float(1 - self.adjustment.X[len(sta_dic_ls) + v]),
+                              float(np.sqrt(self.adjustment.var[len(sta_dic_ls) + v])))
+
+        self.match_inversion_results('numpy', cal_dic)
 
         # calculate and display statistics:
         self.adjustment.lsq_statistics()
@@ -688,20 +696,21 @@ class ObsTreeSurvey(ObsTreeItem):
         else:
             text_out.append("Chi-test rejected\n")
         if self.adjustment.adjustmentoptions.cal_coeff:
-            for k, v in self.adjustment.meter_dic.items():
+            for k, v in cal_dic.items():
                 text_out.append("Calibration coefficient for meter {}: {:.4f} +/- {:.5f}".
-                                format(k,
-                                       float(1 - self.adjustment.X[len(sta_dic_ls) + v]),
-                                       float(np.sqrt(self.adjustment.var[len(sta_dic_ls) + v]))))
+                                format(k, v[0], v[1]))
         if netadj_loop_keys:
             text_out.append("Gravimeter drift coefficient(s):\n")
             for loop in netadj_loop_keys.items():  # this dict only has loops with netadj option
                 text_out.append("Loop " + loop[0] + ": ")
                 for i in range(loop[1][1]):  # degree of polynomial
-                    text_out.append(str(self.adjustment.X[len(sta_dic_ls) +
-                                                          n_meters +
-                                                          loop[1][0] +
-                                                          i][0]))
+                    text_out.append("Drift coefficient, degree {}: {:.3f}".
+                                format(i + 1,
+                                       self.adjustment.X[
+                                               len(sta_dic_ls) +
+                                               n_meters +
+                                               loop[1][0] +
+                                               i][0]))
 
         self.adjustment.adjustmentresults.text = text_out
 
@@ -720,7 +729,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     fid.write(line)
             fid.close()
 
-    def match_inversion_results(self, inversion_type):
+    def match_inversion_results(self, inversion_type, cal_dic):
         """
         Populates delta and datum table residuals from inversion results
         :param inversion_type: 'gravnet' or 'numpy'
@@ -751,7 +760,9 @@ class ObsTreeSurvey(ObsTreeItem):
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1
-                    tempdelta.residual = adj_dg - tempdelta.dg
+                    if tempdelta.meter in cal_dic:
+                        cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0]
+                    tempdelta.residual = adj_dg - cal_adj_dg
                     dg_residuals.append(tempdelta.residual)
                 except KeyError:
                     show_message("Key error", "Key error")
@@ -805,36 +816,6 @@ class ObsTreeSurvey(ObsTreeItem):
         for station in self.iter_stations():
             if (station.station_name, station.station_count) == station_id:
                 return station
-
-    def populate_delta_model_from_workspace(self):
-        """
-        Recreates survey (adjustment) delta model when loading a workspace. Need to do this so deltas refer to correct
-        PyQt objects after pickle.load().
-        """
-        # Need to recreate deltas from simpledeltas (PyQt ObsTreeStation objects are removed before pickling). Don't
-        # need to do the same for datums because they don't have any PyQt objects: datums can be pickled directly.
-        for simpledelta in self.deltas:
-            if type(simpledelta.sta2) is tuple and type(simpledelta.sta1) is tuple:
-                station1 = self.return_obstreestation(simpledelta.sta1)
-                station2 = self.return_obstreestation(simpledelta.sta2)
-                delta = data_objects.Delta(station1, station2,
-                                           driftcorr=simpledelta.driftcorr,
-                                           checked=simpledelta.checked,
-                                           ls_drift=simpledelta.ls_drift,
-                                           delta_type=simpledelta.type,
-                                           adj_stdev=simpledelta.adj_sd)
-            elif type(simpledelta.sta2) is list:
-                station_list = []
-                for station in simpledelta.sta2:
-                    obstreestation = self.return_obstreestation(station)
-                    station_list.append(obstreestation)
-                    delta = data_objects.Delta([], station_list,
-                                               driftcorr=simpledelta.driftcorr,
-                                               checked=simpledelta.checked,
-                                               ls_drift=simpledelta.ls_drift,
-                                               delta_type=simpledelta.type,
-                                               adj_stdev=simpledelta.adj_sd)
-            self.delta_model.insertRows(delta,0)
 
     def populate_delta_model(self, loop=None):
         """
@@ -1030,8 +1011,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             surveys.append(simple_survey)
         return surveys
 
-    def load_workspace(self, data_path):
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', data_path)
+    def load_workspace(self, fname):
         logging.info("Workspace loaded: " + fname)
         delta_tables = []
         with open(fname, "rb") as f:
@@ -1059,12 +1039,16 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled
-        workspace_data = self.obstree_export_data()
-        if fname[-2:] != '.p':
-            fname += '.p'
-        with open(fname, "wb") as f:
-            pickle.dump(workspace_data, f)
-        logging.info('Pickling workspace to {}'.format(fname))
+        try:
+            workspace_data = self.obstree_export_data()
+            if fname[-2:] != '.p':
+                fname += '.p'
+            with open(fname, "wb") as f:
+                pickle.dump(workspace_data, f)
+            logging.info('Pickling workspace to {}'.format(fname))
+        except Exception as e:
+            return False
+        return True
 
 
 class RomanTableModel(QtCore.QAbstractTableModel):
@@ -1599,7 +1583,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 elif column == DELTA_SD:
                     return QVariant("%0.1f" % delta.sd)
                 elif column == DELTA_ADJ_SD:
-                    return QVariant("%0.1f" % delta.adj_sd)
+                    return QVariant("%0.1f" % delta.sd_for_adjustment)
                 elif column == DELTA_RESIDUAL:
                     return QVariant("%0.1f" % delta.residual)
 
@@ -1632,7 +1616,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 column = index.column()
                 if len(str(value)) > 0:
                     if column == DELTA_ADJ_SD:
-                        delta.adj_stdev = float(value)
+                        delta.adj_sd = float(value)
                     self.dataChanged.emit(index, index)
                     self.signal_adjust_update_required.emit()
                 return True

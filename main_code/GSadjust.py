@@ -706,7 +706,11 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Saves data if a workspace has already been saved
         """
-        self.obsTreeModel.save_workspace(self.workspace_savename)
+        success = self.obsTreeModel.save_workspace(self.workspace_savename)
+        if success:
+            show_message('Workspace saved','')
+        else:
+            show_message("Workspace save error", "Error")
 
     def workspace_save_as(self):
         """
@@ -718,9 +722,14 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             try:
                 fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.data_path)
-                self.obsTreeModel.save_workspace(fname)
-                self.workspace_savename = fname
-                self.menus.mnFileSaveWorkspace.setEnabled(True)
+                success = self.obsTreeModel.save_workspace(fname)
+                if success:
+                    show_message('Workspace saved', '')
+                    self.workspace_savename = fname
+                    self.menus.mnFileSaveWorkspace.setEnabled(True)
+                else:
+                    show_message("Workspace save error", "Error")
+
             except Exception as e:
                 show_message("Workspace save error", "Error")
                 logging.exception(e, exc_info=True)
@@ -732,35 +741,53 @@ class MainProg(QtWidgets.QMainWindow):
         pickled and are removed in workspace_save).
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        # Returns list of survey delta tables so they can be passed to populate_survey_deltatable()
-        delta_tables = self.obsTreeModel.load_workspace(self.data_path)
-        if delta_tables == []:
-            QtWidgets.QApplication.restoreOverrideCursor()
-            return
-        else:
-            self.populate_coordinates()
-            firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-            firstloop = firstsurvey.child(0)
-            firststation = firstloop.child(0)
-            self.currentSurveyIndex = firstsurvey.index()
-            self.currentLoopIndex = firstloop.index()
-            self.currentStationIndex = firststation.index()
-            self.currentLoopSurveyIndex = firstsurvey.index()
-            self.currentStationLoopIndex = firstloop.index()
-            self.currentStationSurveyIndex = firstsurvey.index()
-            self.populate_coordinates()
-            self.menus.mnFileSaveWorkspace.setEnabled(True)
-            self.menus.mnAdjAdjust.setEnabled(True)
-            self.workspace_loaded = True
-            self.update_all_drift_plots()
-            # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
-            # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
-            # updated.
-            self.populate_survey_deltatable(delta_tables)
-            self.update_adjust_tables()
-            self.init_gui()
-            self.deltas_update_not_required()
-            QtWidgets.QApplication.restoreOverrideCursor()
+        # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
+        try:
+            fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
+            PBAR1 = ProgressBar(total=6, textmess='surveys')
+            PBAR1.show()
+            PBAR1.progressbar.setValue(1)
+            PBAR1.progressbar.setValue(2)
+            PBAR1.progressbar.setValue(3)
+            delta_tables = self.obsTreeModel.load_workspace(fname)
+
+            self.workspace_savename = fname
+            if delta_tables == []:
+                QtWidgets.QApplication.restoreOverrideCursor()
+                return
+            else:
+                firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+                firstloop = firstsurvey.child(0)
+                firststation = firstloop.child(0)
+                self.currentSurveyIndex = firstsurvey.index()
+                self.currentLoopIndex = firstloop.index()
+                self.currentStationIndex = firststation.index()
+                self.currentLoopSurveyIndex = firstsurvey.index()
+                self.currentStationLoopIndex = firstloop.index()
+                self.currentStationSurveyIndex = firstsurvey.index()
+                self.populate_coordinates()
+                self.menus.mnFileSaveWorkspace.setEnabled(True)
+                self.menus.mnAdjAdjust.setEnabled(True)
+                self.workspace_loaded = True
+                self.update_all_drift_plots()
+                PBAR1.progressbar.setValue(4)
+                # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
+                # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
+                # updated.
+                self.populate_survey_deltatable_from_simpledeltas(delta_tables)
+                self.update_adjust_tables()
+                PBAR1.progressbar.setValue(5)
+                self.init_gui()
+                self.deltas_update_not_required()
+                QtWidgets.QApplication.restoreOverrideCursor()
+                PBAR1.progressbar.setValue(6)
+
+        except Exception as e:
+            show_message("Workspace load error", "Error")
+
+
+
+
 
     def assemble_all_deltas(self):
         """
@@ -788,14 +815,14 @@ class MainProg(QtWidgets.QMainWindow):
             if delta.key == key:
                 return delta
 
-    def populate_survey_deltatable(self, delta_tables):
+    def populate_survey_deltatable_from_simpledeltas(self, delta_tables):
         deltas = self.assemble_all_deltas()
         survey_count = 0
         for delta_table in delta_tables:
             survey = self.obsTreeModel.invisibleRootItem().child(survey_count)
             for simpledelta in delta_table:
                 delta = self.return_delta_given_key(simpledelta.key, deltas)
-                delta.adj_stdev = simpledelta.adj_sd
+                delta.adj_sd = simpledelta.sd_for_adjustment
                 delta.checked = simpledelta.checked
                 survey.delta_model.insertRows(delta, 0)
 
@@ -1830,6 +1857,22 @@ class BoldDelegate(QtWidgets.QStyledItemDelegate):
         QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
 
 
+class ProgressBar(QtWidgets.QWidget):
+    """
+    define progress bar
+    """
+
+    def __init__(self, total=20, textmess='Progress'):
+        super(ProgressBar, self).__init__()
+        self.progressbar = QtWidgets.QProgressBar()
+        self.progressbar.setMinimum(1)
+        self.progressbar.setMaximum(total)
+        main_layout = QtWidgets.QGridLayout()
+        main_layout.addWidget(self.progressbar, 0, 1)
+        self.setLayout(main_layout)
+        self.setWindowTitle(textmess)
+
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     """ 
     Sends exceptions to log file
@@ -1844,6 +1887,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     filename = os.path.basename(filename)
     error = "{}: {}".format(exc_type.__name__, exc_value)
     logging.error(error + " at line {:d} of file {}".format(line, filename))
+
 
 
 def main():

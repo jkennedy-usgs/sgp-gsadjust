@@ -1594,23 +1594,32 @@ class MainProg(QtWidgets.QMainWindow):
                     g2.add_node(delta.sta2)
 
             H = nx.Graph(g1)
-
-            # edge width is proportional to number of delta-g's
-            edgewidth = []
-            for (u, v, d) in H.edges(data=True):
-                edgewidth.append(len(g1.get_edge_data(u, v)) * 2)
-
-            if shape == 'circular':
-                pos = nx.circular_layout(H)
-            elif shape == 'map':
-                pos = self.station_coords
-
-            nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
-            nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
-            nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
-            nx.draw_networkx_labels(H, pos)
             if not nx.is_connected(H):
-                plt.title('Network(s) are disconnected!')
+                gs = [H.subgraph(c) for c in nx.connected_components(H)]
+                for idx, g in enumerate(gs):
+                    plt.subplot(1, len(gs), idx+1)
+                    pos = nx.circular_layout(g)
+                    nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
+                    nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
+                    nx.draw_networkx_labels(g, pos)
+                    plt.title('Network(s) are disconnected!')
+            else:
+                # edge width is proportional to number of delta-g's
+                edgewidth = []
+                for (u, v, d) in H.edges(data=True):
+                    edgewidth.append(len(g1.get_edge_data(u, v)) * 2)
+
+                if shape == 'circular':
+                    pos = nx.circular_layout(H)
+                elif shape == 'map':
+                    pos = self.station_coords
+
+                nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
+                nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
+                nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
+                nx.draw_networkx_labels(H, pos)
+
+
             plt.show()
 
     def tide_correction_dialog(self):

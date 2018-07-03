@@ -182,7 +182,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_single_canvas.hide()
     
         lbls = QtWidgets.QHBoxLayout()
-        lbl1 = QtWidgets.QLabel("Gravity differences", self)
+        lbl1 = QtWidgets.QLabel("Relative-gravity differences (delta-g's)", self)
         lbls.addWidget(lbl1)
         self.cont_label_widget.setLayout(lbls)
         self.cont_label_widget.setFixedHeight(30)
@@ -191,7 +191,7 @@ class TabDrift(QtWidgets.QWidget):
     
         self.roman_label_widget = QtWidgets.QWidget()
         lbls = QtWidgets.QHBoxLayout()
-        lbl1 = QtWidgets.QLabel("Gravity differences", self)
+        lbl1 = QtWidgets.QLabel("Relative-gravity differences (delta-g's)", self)
         lbl2 = QtWidgets.QLabel("Average gravity differences", self)
         lbls.addWidget(lbl1)
         lbls.addWidget(lbl2)

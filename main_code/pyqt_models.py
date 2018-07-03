@@ -125,10 +125,12 @@ class ObsTreeStation(ObsTreeItem):
     def stdev(self):
         if self.sd[0] == -999:
             gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-            return float(np.std(gtmp))
+            if len(gtmp) == 1:
+                return 3.0
+            else:
+                return float(np.std(gtmp))
         else:
-            return np.sqrt(1. / sum(self._weights_()))
-
+            sd = np.sqrt(1. / sum(self._weights_()))
 
 class ObsTreeLoop(ObsTreeItem):
     """
@@ -649,8 +651,12 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.S = S
         self.adjustment.dof = n_rel_obs + n_abs_obs - nb_x
         self.adjustment.g_dic = dict()
-        self.adjustment.python_lsq_inversion()
-
+        try:
+            self.adjustment.python_lsq_inversion()
+        except Exception as e:
+            logging.exception(e, exc_info=True)
+            show_message("Singular matrix error", "Inversion error")
+            return
         # Populate results table
         for i in range(len(sta_dic_ls)):
             for key, val in sta_dic_ls.items():
@@ -729,7 +735,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     fid.write(line)
             fid.close()
 
-    def match_inversion_results(self, inversion_type, cal_dic):
+    def match_inversion_results(self, inversion_type, cal_dic=None):
         """
         Populates delta and datum table residuals from inversion results
         :param inversion_type: 'gravnet' or 'numpy'
@@ -754,14 +760,17 @@ class ObsTreeSurvey(ObsTreeItem):
                     if inversion_type == 'gravnet':
                         station1_name = tempdelta.sta1[:6]
                         station2_name = tempdelta.sta2[:6]
+                        cal_adj_dg = tempdelta.dg
                     elif inversion_type == 'numpy':
                         station1_name = tempdelta.sta1
                         station2_name = tempdelta.sta2
+                        if tempdelta.meter in cal_dic:
+                            cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0]
+                        else:
+                            cal_adj_dg = tempdelta.dg
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1
-                    if tempdelta.meter in cal_dic:
-                        cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0]
                     tempdelta.residual = adj_dg - cal_adj_dg
                     dg_residuals.append(tempdelta.residual)
                 except KeyError:
@@ -817,13 +826,14 @@ class ObsTreeSurvey(ObsTreeItem):
             if (station.station_name, station.station_count) == station_id:
                 return station
 
-    def populate_delta_model(self, loop=None):
+    def populate_delta_model(self, loop=None, clear=True):
         """
         Copy deltas fromt he delta_model shown on the drift tab to the model shown on the adjustment tab.
         :param loop:
         :return:
         """
-        self.delta_model.clearDeltas()
+        if clear:
+            self.delta_model.clearDeltas()
         # If just a single loop
         if type(loop) is ObsTreeLoop:
             for ii in range(loop.delta_model.rowCount()):
@@ -864,6 +874,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
 
     refreshView = QtCore.pyqtSignal()
+    nameChanged = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
@@ -965,6 +976,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                 m.station[iiii] = new_name
                         logging.info('Stations renamed from {} to {} in {}'.format(old_name, new_name,
                                                                                     rename_type))
+                        self.nameChanged.emit()
+
                 elif type(m) is ObsTreeLoop:
                     new_name = str(value)
                     old_name = m.name
@@ -1547,27 +1560,27 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             delta = self.deltas[index.row()]
             column = index.column()
             if role == QtCore.Qt.ForegroundRole:
+                brush = QtGui.QBrush(QtCore.Qt.black)
                 if delta.type is 'normal':
-                    if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
-                            delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
-                        brush = QtGui.QBrush(QtCore.Qt.black)
-                    else:
-                        if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2:
-                            if column == 0:
-                                brush = QtGui.QBrush(QtCore.Qt.darkGray)
-                            else:
-                                brush = QtGui.QBrush(QtCore.Qt.lightGray)
-                        elif delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
-                            if column == 1:
-                                brush = QtGui.QBrush(QtCore.Qt.darkGray)
-                            else:
-                                brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                    try:
+                        if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
+                                delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
+                            brush = QtGui.QBrush(QtCore.Qt.black)
                         else:
-                            brush = QtGui.QBrush(QtCore.Qt.lightGray)
-                elif delta.type is 'list' or delta.type is 'three_point':
-                    brush = QtGui.QBrush(QtCore.Qt.black)
-                else:
-                    brush = QtGui.QBrush(QtCore.Qt.black)
+                            if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2:
+                                if column == 0:
+                                    brush = QtGui.QBrush(QtCore.Qt.darkGray)
+                                else:
+                                    brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                            elif delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
+                                if column == 1:
+                                    brush = QtGui.QBrush(QtCore.Qt.darkGray)
+                                else:
+                                    brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                            else:
+                                brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                    except:
+                        catch=1
                 return brush
             if role == QtCore.Qt.DisplayRole:
                 if column == DELTA_STATION1:

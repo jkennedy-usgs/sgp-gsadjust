@@ -267,6 +267,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.data_treeview.setModel(self.obsTreeModel)
         self.obsTreeModel.dataChanged.connect(self.on_obs_checked_change)
         self.obsTreeModel.refreshView.connect(self.refresh_tables)
+        self.obsTreeModel.nameChanged.connect(self.deltas_update_required)
         self.selmodel = self.data_treeview.selectionModel()
         self.selmodel.selectionChanged.connect(self.on_obs_tree_change)
         # self.data_treeview.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
@@ -525,6 +526,8 @@ class MainProg(QtWidgets.QMainWindow):
                         all_survey_data.oper.append(vals_temp[c_oper])
 
                     date_temp = vals_temp[c_date].split('/')
+                    if int(date_temp[2]) > 999:
+                        date_temp = [date_temp[2], date_temp[0], date_temp[1]]
                     time_temp = vals_temp[c_time].split(':')
 
                     # fill object properties:
@@ -627,6 +630,11 @@ class MainProg(QtWidgets.QMainWindow):
         loop and divides station occupations separated by the time interval (or greater) into a loop. Useful primarily
         when several day's data is in a single file.
         """
+        # Clear survey delta table, it causes problems otherwise
+        self.clear_delta_model()
+
+        # Store the original current loop index so it can be restored.
+        original_loop_index = self.currentLoopIndex
 
         # Prompt user to select time threshold
         loopdialog = LoopTimeThresholdDialog()
@@ -637,14 +645,21 @@ class MainProg(QtWidgets.QMainWindow):
             # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
             loop_thresh = int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
 
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
         indexes = []
-
+        PBAR1 = ProgressBar(total=obstreeloop.rowCount()-1, textmess='surveys')
+        PBAR1.show()
+        PBAR1.progressbar.setValue(1)
+        QtWidgets.QApplication.processEvents()
         # Step through loop backward
+        pbar_idx = list(range(obstreeloop.rowCount()))
+        pbar_idx.reverse()
         for i in range(obstreeloop.rowCount()-1, 1, -1):
             station2 = obstreeloop.child(i)
             station1 = obstreeloop.child(i-1)
-
+            PBAR1.progressbar.setValue(pbar_idx[i])
+            QtWidgets.QApplication.processEvents()
             # Check time difference between successive stations
             tdiff = station2.tmean - station1.tmean
             if tdiff > loop_thresh:
@@ -652,7 +667,10 @@ class MainProg(QtWidgets.QMainWindow):
                     indexes.append(obstreeloop.child(ii).index())
                 self.new_loop_from_indexes(indexes)
                 indexes = []
+        self.currentLoopIndex = original_loop_index
+        self.deltas_update_required()
         self.obsTreeModel.layoutChanged.emit()
+        QtWidgets.QApplication.restoreOverrideCursor()
 
     def update_all_drift_plots(self):
         """
@@ -747,16 +765,18 @@ class MainProg(QtWidgets.QMainWindow):
             PBAR1 = ProgressBar(total=6, textmess='surveys')
             PBAR1.show()
             PBAR1.progressbar.setValue(1)
-            PBAR1.progressbar.setValue(2)
-            PBAR1.progressbar.setValue(3)
+            QtWidgets.QApplication.processEvents()
             delta_tables = self.obsTreeModel.load_workspace(fname)
-
+            PBAR1.progressbar.setValue(2)
+            QtWidgets.QApplication.processEvents()
             self.workspace_savename = fname
             if delta_tables == []:
                 QtWidgets.QApplication.restoreOverrideCursor()
                 return
             else:
                 firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+                PBAR1.progressbar.setValue(3)
+                QtWidgets.QApplication.processEvents()
                 firstloop = firstsurvey.child(0)
                 firststation = firstloop.child(0)
                 self.currentSurveyIndex = firstsurvey.index()
@@ -771,17 +791,19 @@ class MainProg(QtWidgets.QMainWindow):
                 self.workspace_loaded = True
                 self.update_all_drift_plots()
                 PBAR1.progressbar.setValue(4)
+                QtWidgets.QApplication.processEvents()
                 # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
                 # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
                 # updated.
                 self.populate_survey_deltatable_from_simpledeltas(delta_tables)
                 self.update_adjust_tables()
                 PBAR1.progressbar.setValue(5)
+                QtWidgets.QApplication.processEvents()
                 self.init_gui()
                 self.deltas_update_not_required()
                 QtWidgets.QApplication.restoreOverrideCursor()
                 PBAR1.progressbar.setValue(6)
-
+                QtWidgets.QApplication.processEvents()
         except Exception as e:
             show_message("Workspace load error", "Error")
 
@@ -822,6 +844,9 @@ class MainProg(QtWidgets.QMainWindow):
             survey = self.obsTreeModel.invisibleRootItem().child(survey_count)
             for simpledelta in delta_table:
                 delta = self.return_delta_given_key(simpledelta.key, deltas)
+                if delta == None:
+                    show_message("Delta not found: " + simpledelta.key, "Import error")
+                    continue
                 delta.adj_sd = simpledelta.sd_for_adjustment
                 delta.checked = simpledelta.checked
                 survey.delta_model.insertRows(delta, 0)
@@ -852,17 +877,37 @@ class MainProg(QtWidgets.QMainWindow):
         if populate_type == 'all':
             for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                 survey = self.obsTreeModel.invisibleRootItem().child(i)
-                table_updated = survey.populate_delta_model()
+                table_updated = survey.populate_delta_model(clear=True)
 
             # item = self.obsTreeModel.invisibleRootItem()
         elif populate_type == 'selectedsurvey':
             survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-            table_updated = survey.populate_delta_model()
+            table_updated = survey.populate_delta_model(clear=True)
 
         elif populate_type == 'selectedloop':
-            loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
-            survey = loop.parent()
-            table_updated = survey.populate_delta_model(loop)
+            selected_idx = self.data_treeview.selectedIndexes()
+            # There may be one, or multiple loops selected. If only one is selected, we'll populate the delta table
+            # based on the currentLoopIndex (which will be in bold but not necessarily highlighted).
+            if len(selected_idx) >= 4:
+                selected_items = []
+                for i in selected_idx:
+                    selected_items.append(self.obsTreeModel.itemFromIndex(i))
+                # selected_items will contain 3 entries for every tree view item (one for the name, plus 2 for
+                # g and std. dev. First, decimate to just the name entries
+                selected_items = selected_items[::3]
+                loops = [item for item in selected_items if type(item) == ObsTreeLoop]
+                first = True
+                for loop in loops:
+                    survey = loop.parent()
+                    if first:
+                        table_updated = survey.populate_delta_model(loop, clear=True)
+                        first = False
+                    else:
+                        table_updated = survey.populate_delta_model(loop, clear=False)
+            else:
+                loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
+                survey = loop.parent()
+                table_updated = survey.populate_delta_model(loop, clear=True)
 
         if table_updated:
             self.deltas_update_not_required()
@@ -1173,7 +1218,8 @@ class MainProg(QtWidgets.QMainWindow):
             obstreesurvey.appendRow(new_obstreeloop)
             self.data_treeview.expand(new_obstreeloop.index())
             self.obsTreeModel.layoutChanged.emit()
-            self.currentStationIndex = obstreesurvey.child(0,0).child(0,0).index()
+            self.currentLoopIndex = new_obstreeloop.index()
+            self.currentStationIndex = obstreeloop.child(0, 0).index()
             self.prep_station_plot()
             self.update_drift_tables_and_plots()
 
@@ -1563,6 +1609,8 @@ class MainProg(QtWidgets.QMainWindow):
             nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
             nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
             nx.draw_networkx_labels(H, pos)
+            if not nx.is_connected(H):
+                plt.title('Network(s) are disconnected!')
             plt.show()
 
     def tide_correction_dialog(self):

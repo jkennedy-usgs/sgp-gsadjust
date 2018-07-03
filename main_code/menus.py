@@ -161,7 +161,7 @@ class Menus:
                                                                  slot=lambda:
                                                                  self.mainProg.populate_deltamodel('selectedsurvey'),
                                                                  enabled=False)
-        self.mnAdjUpdateDeltasCurrentLoop = self.create_action("Populate delta table - selected loop",
+        self.mnAdjUpdateDeltasCurrentLoop = self.create_action("Populate delta table - selected loop(s)",
                                                                slot=lambda:
                                                                self.mainProg.populate_deltamodel('selectedloop'),
                                                                enabled=False)

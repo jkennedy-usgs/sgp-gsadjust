@@ -1602,7 +1602,7 @@ class MainProg(QtWidgets.QMainWindow):
                     nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
                     nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
                     nx.draw_networkx_labels(g, pos)
-                    plt.title('Network(s) are disconnected!')
+                    plt.title('Networks are disconnected!')
             else:
                 # edge width is proportional to number of delta-g's
                 edgewidth = []

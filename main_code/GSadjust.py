@@ -803,12 +803,9 @@ class MainProg(QtWidgets.QMainWindow):
                 self.deltas_update_not_required()
                 QtWidgets.QApplication.restoreOverrideCursor()
                 PBAR1.progressbar.setValue(6)
-                QtWidgets.QApplication.processEvents()
+                PBAR1.close()
         except Exception as e:
             show_message("Workspace load error", "Error")
-
-
-
 
 
     def assemble_all_deltas(self):

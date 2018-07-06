@@ -303,7 +303,7 @@ class ObsTreeSurvey(ObsTreeItem):
         temp.deltas = simple_survey.deltas
         for datum in simple_survey.datums:
             temp.datum_model.insertRows(datum, 0)
-        temp.adjoptions = simple_survey.adjoptions
+        temp.adjustment.adjustmentoptions = simple_survey.adjoptions
         return temp
 
     @property

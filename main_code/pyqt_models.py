@@ -75,6 +75,15 @@ class ObsTreeStation(ObsTreeItem):
         return self.station_name
 
     def _weights_(self):
+        """
+        weights for Scintrex data are calculated based on the sample standard deviation divided by the duration.
+        Neither of these are reported by the Burris meter.  Instead, duration is set to a constant (5) when the file
+        is read. Parameter sd is calculated from the multiple samples comprising a station. Therefore w is a constant
+        array if Burris data, variable if Scintrex.
+
+        TODO: test effect of weighting if Burris and Scintrex data are combined in a survey
+        :return:
+        """
         sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]
         w = np.array([1. / (sdtmp[i] * sdtmp[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
         return w
@@ -137,18 +146,60 @@ class ObsTreeStation(ObsTreeItem):
     def stdev(self):
         """
         The try-except block handles errors when all keepdata == 0.
+
+        The Scintrex meter reports an S.D. for each sample; the Burris meter does not report S.D. (with the Palm PDA,
+        it shows S.D. on the display but does not record it).
         """
         try:
-            if self.sd[0] == -999:
+            if self.sd[0] == -999:  # Burris meter: return the S.D. calculated from all the samples at a station
                 gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-                if len(gtmp) == 1:
+                if len(gtmp) == 1:  # Can't take S.D. if there's only one sample
                     return 3.0
                 else:
                     return float(np.std(gtmp))
-            else:
+            else:  # Scintrex: return the S.D. reported for each sample, normalized by weight.
                 sd = np.sqrt(1. / sum(self._weights_()))
         except:
             return -999
+
+    @property
+    def summary_str(self):
+        if self.tmean == -999:
+            tm = self.tmean
+        else:
+            tm = num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S')
+        summary_str = '{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n'.format(self.display_name,
+                                                        tm,
+                                                        self.oper[0],
+                                                        self.meter_type,
+                                                        self.lat[0],
+                                                        self.long[0],
+                                                        self.elev[0],
+                                                        self.gmean,
+                                                        self.stdev)
+        return summary_str
+
+    def iter_samples(self):
+        """
+        Iterator that returns print statements for each sample, used when writing adjustment summary
+        :return: All of the stations in a campaign
+        """
+        for i in range(len(self.raw_grav)):
+            if self.meter_type == 'Burris':
+                return_str = '{} {} {:0.2f} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
+                                                           self.station[i],
+                                                           self.raw_grav[i],
+                                                           self.grav[i],
+                                                           self.sd[i],
+                                                           self.etc[i])
+            else:
+                return_str = '{} {} {:0.2f} {} {}\n'.format(self.keepdata[i],
+                                                           self.station[i],
+                                                           self.raw_grav[i],
+                                                           self.sd[i],
+                                                           self.etc[i])
+            yield return_str
+
 
 class ObsTreeLoop(ObsTreeItem):
     """
@@ -164,6 +215,17 @@ class ObsTreeLoop(ObsTreeItem):
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
         self.meter = None  # Meter S/N, for the case where multiple meters are calibrated
+
+    def __str__(self):
+        return 'Drift method: {},  ' \
+               'Meter type: {},  ' \
+               'Continuous drift method: {}, ' \
+               'Continuous drift start/end method: {}, ' \
+               'Netadj method: {}\n'.format(self.drift_method,
+                                          self.meter_type,
+                                          self.drift_cont_method,
+                                          self.drift_cont_startend,
+                                          self.drift_netadj_method)
 
     @property
     def meter_type(self):
@@ -460,6 +522,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     '{} {:0.6f} {:0.3f}\n'.format(datum.station[:6], float(datum.g) / 1000., float(datum.sd) / 1000.))
 
         # Check if calibration coefficient is calculated
+        cal_dic = {}
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.unique_meters) > 1:
                 show_message("It appears more than one meter was used on the survey. Gravnet calculates a " +
@@ -478,16 +541,17 @@ class ObsTreeSurvey(ObsTreeItem):
                     line = fid.readline().split()
                     symbol = line[0]
                 meter_calib_params = fid.readline().split()
+                cal_dic[self.unique_meters[0]] = (float(meter_calib_params[0]) + 1, float(meter_calib_params[1]))
         else:
             # Run gravnet without calibration coefficient
             os.system('gravnet -D' + dg_file + ' -N' + self.name + ' -M2 ' + drift_term + ' -F' + fix_file)
 
-        # Read calibration coefficients
+        # Read drift coefficients
         if drift_term != '':
             meter_drift_params = []
             with open(self.name + '.met', 'r') as fid:
                 symbol = ''
-                while symbol != 'Coefficients':
+                while symbol != 'Coefficients':  # Indicates 'Coefficients of drift' in .met file
                     line = fid.readline().split()
                     symbol = line[0]
                 order = int(line[-1])
@@ -495,9 +559,9 @@ class ObsTreeSurvey(ObsTreeItem):
                     meter_drift_params.append(fid.readline().split())
 
         self.results_model.setData(0, 0, QtCore.Qt.UserRole)  # clears results table
-        g_dic = dict()
 
         # Read gravnet results
+        g_dic, sd_dic = {}, {}
         with open(self.name + '.gra', 'r') as fid:
             _ = fid.readline()  # Header line
             all_sd = []
@@ -512,12 +576,14 @@ class ObsTreeSurvey(ObsTreeItem):
                 all_sd.append(sd)
                 if len(parts) == 4:
                     g_dic[sta] = g
+                    sd_dic[sta] = sd
                     self.results_model.insertRows(AdjustedStation(sta, g, sd), 0)
             self.adjustment.adjustmentresults.avg_stdev = np.mean(all_sd)
 
         # Match up residuals with input data
         self.adjustment.g_dic=g_dic
-        self.match_inversion_results(inversion_type='gravnet')
+        self.adjustment.sd_dic = sd_dic
+        self.match_inversion_results(inversion_type='gravnet', cal_dic=cal_dic)
 
         # Add calibration coefficient and/or drift coefficients to output text
         self.adjustment.adjustmentresults.text = []
@@ -689,6 +755,7 @@ class ObsTreeSurvey(ObsTreeItem):
                         t = AdjustedStation(key, float(self.adjustment.X[i]), float(np.sqrt(self.adjustment.var[i])))
                         self.results_model.insertRows(t, 0)
                         self.adjustment.g_dic[key] = float(self.adjustment.X[i])
+                        self.adjustment.sd_dic[key] = float()
                     except:
                         show_message("Bad variance in results", "Inversion error")
 
@@ -784,14 +851,13 @@ class ObsTreeSurvey(ObsTreeItem):
                     if inversion_type == 'gravnet':
                         station1_name = tempdelta.sta1[:6]
                         station2_name = tempdelta.sta2[:6]
-                        cal_adj_dg = tempdelta.dg
                     elif inversion_type == 'numpy':
                         station1_name = tempdelta.sta1
                         station2_name = tempdelta.sta2
-                        if tempdelta.meter in cal_dic:
-                            cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0]
-                        else:
-                            cal_adj_dg = tempdelta.dg
+                    if tempdelta.meter in cal_dic:
+                        cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0]
+                    else:
+                        cal_adj_dg = tempdelta.dg
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1

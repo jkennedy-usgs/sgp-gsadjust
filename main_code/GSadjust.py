@@ -531,7 +531,6 @@ class MainProg(QtWidgets.QMainWindow):
                     time_temp = vals_temp[c_time].split(':')
 
                     # fill object properties:
-                    all_survey_data.line.append(0.)
                     all_survey_data.station.append(vals_temp[0])
                     all_survey_data.elev.append(float(vals_temp[c_elev]))
                     all_survey_data.lat.append(float(vals_temp[c_lat]))
@@ -1304,12 +1303,15 @@ class MainProg(QtWidgets.QMainWindow):
                     if chk == 2:  # Checkbox checked
                         delta = survey.delta_model.data(ind, QtCore.Qt.UserRole)
                         if delta.type == 'normal':
-                            if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
-                                    delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
-                                deltas.append(delta)
-                                adjustmentresults.n_deltas += 1
-                            else:
-                                adjustmentresults.n_deltas_notused += 1
+                            try:
+                                if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
+                                        delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
+                                    deltas.append(delta)
+                                    adjustmentresults.n_deltas += 1
+                                else:
+                                    adjustmentresults.n_deltas_notused += 1
+                            except:
+                                show_message("Delta station not found. Was it deleted?", "GSadjust error")
                         else:
                             deltas.append(delta)
                             adjustmentresults.n_deltas += 1
@@ -1337,12 +1339,12 @@ class MainProg(QtWidgets.QMainWindow):
                     self.clear_results_model()
                     if len(survey.adjustment.datums) == 0:
                         show_message(
-                            "At least one datum must be specified",
+                            "Survey {}: At least one datum must be specified".format(survey.name),
                             "Inversion error")
                         return
                     if len(survey.adjustment.deltas) == 0:
                         show_message(
-                            "At least one relative-gravity difference must be specified",
+                            "Survey {}: At least one relative-gravity difference must be specified".format(survey.name),
                             "Inversion error")
                     if adj_type == 'PyLSQ':
                         logging.info('Numpy inversion, Survey: {}'.format(survey.name))
@@ -1819,15 +1821,63 @@ class MainProg(QtWidgets.QMainWindow):
             table = [header] + table
             return table
 
+    def write_summary(self):
+        """
+        Write complete summary of data and adjustment, with the intent that the processing can be re-created later
+        """
+        fn = 'GSadjust_Summary_' + time.strftime("%Y%m%d-%H%M") + '.txt'
+        # Write header info
+        with open(fn, 'w') as fid:
+            fid.write('# GSadjust processing summary, {}\n#\n'.format(time.strftime("%Y%m%d-%H%M")))
+            fid.write('# Station data\n')
+            for i in range(self.obsTreeModel.rowCount()):
+                survey = self.obsTreeModel.invisibleRootItem().child(i)
+                for ii in range(survey.rowCount()):
+                    loop = survey.child(ii)
+                    fid.write('Survey {}, Loop {}\n'.format(survey.name, loop.name))
+                    for iii in range(loop.rowCount()):
+                        station = loop.child(iii)
+                        fid.write(station.summary_str)
+                        for sample_str in station.iter_samples():
+                            fid.write(sample_str)
+            fid.write('# Loop data\n')
+            for i in range(self.obsTreeModel.rowCount()):
+                survey = self.obsTreeModel.invisibleRootItem().child(i)
+                for ii in range(survey.rowCount()):
+                    loop = survey.child(ii)
+                    fid.write('Survey {}, Loop {}\n'.format(survey.name, loop.name))
+                    fid.write(str(loop))
+                    for delta in loop.delta_model.deltas:
+                        fid.write('{}\n'.format(delta))
+            fid.write('# Adjustment data\n')
+            for i in range(self.obsTreeModel.rowCount()):
+                survey = self.obsTreeModel.invisibleRootItem().child(i)
+                fid.write('# Adjustment options, survey: {}\n'.format(survey.name))
+                fid.write(str(survey.adjustment.adjustmentoptions))
+                fid.write('# Deltas in the adjustment, survey: {}\n'.format(survey.name))
+                for delta in survey.adjustment.deltas:
+                    fid.write('{}\n'.format(delta))
+                fid.write('# Datums in the adjustment, survey: {}\n'.format(survey.name))
+                for datum in survey.adjustment.datums:
+                    fid.write('{}\n'.format(datum))
+                fid.write('# Adjustment results, survey: {}\n'.format(survey.name))
+                fid.write(str(survey.adjustment.adjustmentresults))
+                fid.write('# Adjusted station values and std. dev., survey: {}\n'.format(survey.name))
+                for ii in range(survey.results_model.rowCount()):
+                    adj_sta = survey.results_model.data(survey.results_model.index(ii,0), role=QtCore.Qt.UserRole)
+                    fid.write('{}\n'.format(str(adj_sta)))
+
+
+
     def write_tabular_data(self):
         """
         Export gravity change table to csv file
         """
-        fn = 'GSadjust_TabularData' + time.strftime("%Y%m%d-%H%M") + '.csv'
+        fn = 'GSadjust_TabularData_' + time.strftime("%Y%m%d-%H%M") + '.csv'
         table = self.compute_gravity_change(full_table=True)
 
-        with open(fn, 'w') as g:
-            wr = csv.writer(g)
+        with open(fn, 'w') as fid:
+            wr = csv.writer(fid)
             for row in table:
                 wr.writerow(row)
 
@@ -1835,7 +1885,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Write metadata text to file. Useful for USGS data releases.
         """
-        fn = 'GSadjust_MetadataText' + time.strftime("%Y%m%d-%H%M") + '.txt'
+        fn = 'GSadjust_MetadataText_' + time.strftime("%Y%m%d-%H%M") + '.txt'
         results_written, first = False, False
         fmt = '%Y-%m-%d'
         with open(fn, 'w') as fid:

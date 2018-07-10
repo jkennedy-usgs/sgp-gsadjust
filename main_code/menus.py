@@ -226,6 +226,8 @@ class Menus:
                                                            slot=self.mainProg.write_metadata_text)
         self.mnToolsWriteTabularOutput = self.create_action('Write tabular data',
                                                             slot=self.mainProg.write_tabular_data)
+        self.mnToolsWriteSummary = self.create_action('Write adjustment summary',
+                                                      slot=self.mainProg.write_summary)
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
                                                                     slot=self.mainProg.compute_gravity_change,
                                                                     tip="Compute gravity change", enabled=False)
@@ -235,7 +237,8 @@ class Menus:
                                         self.mnToolsComputeGravityChangeAction,
                                         None,
                                         self.mnToolsWriteMetadataText,
-                                        self.mnToolsWriteTabularOutput))
+                                        self.mnToolsWriteTabularOutput,
+                                        self.mnToolsWriteSummary))
 
         #######################################################################
         # Help Menu

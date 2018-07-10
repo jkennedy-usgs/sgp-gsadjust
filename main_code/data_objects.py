@@ -42,7 +42,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from scipy.interpolate import interp1d
 from collections import OrderedDict
-from matplotlib.dates import date2num
+from matplotlib.dates import date2num, num2date
 import pyqt_models
 
 
@@ -277,11 +277,22 @@ class Delta:
 
     def __str__(self):
         if self.checked == 2:
-            in_use = 'x'
+            in_use = '1'
         else:
-            in_use = 'o'
-        return ' '.join([in_use, self.sta1, self.sta2, str(self.sta1_t), str(self.sta2_t),
-                         str(self.dg), str(self.sd)])
+            in_use = '0'
+        # Rarely a station time will be -999 (if all samples are unchecked)
+        if self.sta1_t != -999:
+            dt = num2date(self.sta1_t).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            dt = '-999'
+        return_str = '{} {} {} {} {:0.3f} {:0.3f} {:0.3f}'.format(in_use,
+                                                   self.sta1,
+                                                   self.sta2,
+                                                   dt,
+                                                   self.dg,
+                                                   self.sd,
+                                                   self.sd_for_adjustment)
+        return return_str
 
     def time(self):
         if type(self.station2) is pyqt_models.ObsTreeStation:
@@ -353,9 +364,9 @@ class Datum:
         Override the built-in method 'print' when applied to such object
         """
         if self.checked == 2:
-            in_use = 'x '
+            in_use = '1 '
         else:
-            in_use = 'o '
+            in_use = '0 '
         return in_use + self.station + ' ' + str(self.g) + ' ' + str(self.sd) + ' ' + self.date
 
 
@@ -373,6 +384,15 @@ class AdjustmentResults:
         self.text = None
 
 
+    def __str__(self):
+        return_str = ''
+        for attr in vars(self):
+            if attr != 'text':
+                return_str += '{}: {}\n'.format(attr, getattr(self,attr))
+        for line in self.text:
+            return_str += line
+        return return_str
+
 ###############################################################################
 class AdjustedStation:
     """
@@ -383,6 +403,9 @@ class AdjustedStation:
         self.station = station
         self.g = g
         self.sd = sd
+
+    def __str__(self):
+        return '{} {:0.2f} {:0.2f}'.format(self.station, self.g, self.sd)
 
 
 ###############################################################################
@@ -519,6 +542,11 @@ class AdjustmentOptions:
         self.cal_coeff = False
         self.adj_type = 'gravnet'
 
+    def __str__(self):
+        return_str = ''
+        for attr in vars(self):
+            return_str += '{}: {}\n'.format(attr, getattr(self,attr))
+        return return_str
 
 ###############################################################################
 class Adjustment:
@@ -560,6 +588,15 @@ class Adjustment:
         self.meter_dic = dict()
         self.deltas = []
         self.datums = []
+        self.g_dic = dict()
+        self.sd_dic = dict()
+
+    @property
+    def adjustment_gdic_str(self):
+        return_str = ''
+        for k, v in self.g_dic.items():
+            return_str += '{} {:0.2f} {:0.2f}\n'.format(k, v, self.sd_dic[k])
+        return return_str
 
     def python_lsq_inversion(self):
         """

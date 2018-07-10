@@ -9,7 +9,7 @@ GSadjust is public-domain software written for Python 3.5 and the PyQt5 framewor
 
 Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHub are welcome. 
 
-**Online help is available at [https://jkennedy-usgs.github.io/GSadjust/](https://jkennedy-usgs.github.io/GSadjust/)**
+**Online help is available at [https://jkennedy-usgs.github.io/sgp-gsadjust/](https://jkennedy-usgs.github.io/GSadjust/)**
 
 **Installing GSadjust**
 

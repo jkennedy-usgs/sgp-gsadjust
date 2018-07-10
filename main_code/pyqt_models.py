@@ -111,26 +111,44 @@ class ObsTreeStation(ObsTreeItem):
 
     @property
     def gmean(self):
-        gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-        gmean = sum(gtmp * self._weights_()) / sum(self._weights_())
-        return gmean
+        """
+        The try-except block handles errors when all keepdata == 0.
+        """
+        try:
+            gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+            gmean = sum(gtmp * self._weights_()) / sum(self._weights_())
+            return gmean
+        except:
+            return -999
 
     @property
     def tmean(self):
-        ttmp = np.array([date2num(self.t[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
-        tmean = sum(ttmp * self._weights_()) / sum(self._weights_())
-        return tmean
+        """
+        The try-except block handles errors when all keepdata == 0.
+        """
+        try:
+            ttmp = np.array([date2num(self.t[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
+            tmean = sum(ttmp * self._weights_()) / sum(self._weights_())
+            return tmean
+        except:
+            return -999
 
     @property
     def stdev(self):
-        if self.sd[0] == -999:
-            gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-            if len(gtmp) == 1:
-                return 3.0
+        """
+        The try-except block handles errors when all keepdata == 0.
+        """
+        try:
+            if self.sd[0] == -999:
+                gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+                if len(gtmp) == 1:
+                    return 3.0
+                else:
+                    return float(np.std(gtmp))
             else:
-                return float(np.std(gtmp))
-        else:
-            sd = np.sqrt(1. / sum(self._weights_()))
+                sd = np.sqrt(1. / sum(self._weights_()))
+        except:
+            return -999
 
 class ObsTreeLoop(ObsTreeItem):
     """
@@ -237,7 +255,13 @@ class ObsTreeLoop(ObsTreeItem):
                     if station.station_name == unique_station:
                         x.append(station.tmean)
                         y.append(station.gmean)
-            plot_data.append([x, y, unique_station])
+            new_x, new_y = [], []
+            # -999's can occur when all samples at a station are unchecked
+            for idx, i in enumerate(x):
+                if i != -999:
+                    new_x.append(i)
+                    new_y.append(y[idx])
+            plot_data.append([new_x, new_y, unique_station])
 
         # sort plot_data by initial x in each line
         plot_data_sorted = []

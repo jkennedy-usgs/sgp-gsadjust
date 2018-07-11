@@ -106,25 +106,6 @@ class ChannelList:
             setattr(templist, field, temp)
         return templist
 
-    def extract_subset_time(self, start_date, end_date):
-        """
-        Function for extracting shorter time series based on dates.
-        Provide a starting and ending dates and the function will return a ChannelList object with a subset of
-        the original.
-        :param start_date: list index of first value to return.
-        :param end_date: list index of last value to return.
-        :return: ChannelList subset
-        """
-        templist = ChannelList()
-        tsub = [t for t in self.t if date2num(start_date) <= date2num(t) <= date2num(end_date)]
-        indexes = [self.t.index(t) for t in tsub]
-        indexes.sort()
-        # Burris and Scintrex have different fields. This only subsets non-empty fields.
-        for field, value in self:
-            temp = [value[ind] for ind in indexes]
-            setattr(templist, field, temp)
-        return templist
-
 
 ###############################################################################
 class Delta:

@@ -32,26 +32,26 @@ class Menus:
         self.mnFileOpenScintrexFile = self.create_action("&Load raw CG-3/CG-5 data...",
                                                          shortcut="Ctrl+o",
                                                          slot=lambda meter='Scintrex':
-                                                         self.mainProg.open_raw_data('Scintrex'),
+                                                         self.mainProg.open_file_dialog('Scintrex'),
                                                          tip="Open data file",
                                                          enabled=True)
         self.mnFileOpenBurrisFile = self.create_action("Load raw &Burris data...",
                                                        shortcut="Ctrl+b",
                                                        slot=lambda meter='Burris':
-                                                       self.mainProg.open_raw_data('Burris'),
+                                                       self.mainProg.open_file_dialog('Burris'),
                                                        tip="Open data file",
                                                        enabled=True)
         self.mnFileOpenCG6File = self.create_action("Load raw CG-6 data file...",
                                                     shortcut="Ctrl+6",
-                                                    slot=lambda meter='CG6': self.mainProg.open_raw_data('CG6'),
+                                                    slot=lambda meter='CG6': self.mainProg.open_file_dialog('CG6'),
                                                     tip="Open data file",
                                                     enabled=True)
         self.mnFileAppendSurvey = self.create_action("Append survey to campaign...",
-                                                     slot=lambda meter='choose': self.mainProg.open_raw_data('choose'),
+                                                     slot=lambda meter='choose': self.mainProg.open_file_dialog('choose'),
                                                      enabled=False)
         self.mnFileAppendLoop = self.create_action("Append loop to current survey...",
                                                    slot=lambda meter='choose':
-                                                   self.mainProg.open_raw_data('chooseloop'),
+                                                   self.mainProg.open_file_dialog('chooseloop'),
                                                    enabled=False)
         self.mnFileAppendWorkspace = self.create_action("Append workspace...",
                                                         slot=self.mainProg.workspace_append,

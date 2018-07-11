@@ -371,30 +371,33 @@ class MainProg(QtWidgets.QMainWindow):
     ###########################################################################
     # Load/Open/Save routines
     ###########################################################################
-    def open_raw_data(self, meter_type):
+    def open_file_dialog(self, open_type):
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Open file', directory=self.data_path)
+        self.open_raw_data(fname, open_type)
+
+    def open_raw_data(self, fname, open_type):
         """
         - Display a file opening window
         - Populate obsTreeModel
-        :param meter_type: 'choose' - if appending a survey to campaign
+        :param open_type: 'choose' - if appending a survey to campaign
                            'chooseloop' - if appending loop to survey
                            'CG6', 'Burris', or 'Scintrex' - reading a raw data file
         """
         # open file
         overwrite = False
         append_loop = False
-        if 'loop' in meter_type:
+        if 'loop' in open_type:
             append_loop = True
-        if 'choose' in meter_type:
+        if 'choose' in open_type:
             meter_type_dialog = MeterType()
             if meter_type_dialog.msg.exec_():
-                meter_type = meter_type_dialog.meter_type
+                open_type = meter_type_dialog.meter_type
         elif self.obsTreeModel.invisibleRootItem().rowCount() > 0:
             overwrite_tree_dialog = Overwrite()
             if overwrite_tree_dialog.msg.exec_():
                 if overwrite_tree_dialog.overwrite:
                     self.workspace_clear()
 
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Open file', directory=self.data_path)
         if fname[-2:] == '.p':
             show_message('Please use "Open workspace... " to load a .p file', 'File load error')
             return
@@ -405,7 +408,7 @@ class MainProg(QtWidgets.QMainWindow):
             # populate a Campaign object
             e = None
             try:
-                self.all_survey_data = self.read_raw_data_file(fname, meter_type)
+                self.all_survey_data = self.read_raw_data_file(fname, open_type)
                 if append_loop:
                     obstreesurvey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
                     obstreesurvey.populate(self.all_survey_data, name=str(obstreesurvey.loop_count))
@@ -423,10 +426,10 @@ class MainProg(QtWidgets.QMainWindow):
             if e:
                 logging.exception(e, exc_info=True)
 
-            if not 'choose' in meter_type:
+            if not 'choose' in open_type:
                 self.init_gui()
             self.prep_station_plot()
-            if meter_type == 'Burris' or meter_type == 'CG6':
+            if open_type == 'Burris' or open_type == 'CG6':
                 self.populate_coordinates()
             self.workspace_loaded = True
             QtWidgets.QApplication.restoreOverrideCursor()

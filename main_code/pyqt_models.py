@@ -918,7 +918,7 @@ class ObsTreeSurvey(ObsTreeItem):
 
     def populate_delta_model(self, loop=None, clear=True):
         """
-        Copy deltas fromt he delta_model shown on the drift tab to the model shown on the adjustment tab.
+        Copy deltas from the delta_model shown on the drift tab to the model shown on the adjustment tab.
         :param loop:
         :return:
         """

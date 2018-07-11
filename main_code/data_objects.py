@@ -603,9 +603,8 @@ class Adjustment:
         Solve system of equations using numpy linalg.inv. Similar to LSQ inversion from Hwang et al (2002)
         """
         At = np.transpose(self.A)
-        St = np.transpose(self.S)
+        # St = np.transpose(self.S)
         N = At.dot(self.P).dot(self.A)
-
         # original solution:
         # self.X = np.linalg.inv(N+self.S.dot(St)).dot(At).dot(self.P).dot(self.Obs)
         self.X = np.linalg.inv(N).dot(At).dot(self.P).dot(self.Obs)
@@ -614,7 +613,6 @@ class Adjustment:
         self.VtPV = rt.dot(self.P).dot(self.r)
         var_post_norm = self.VtPV / self.dof
         self.SDaposteriori = np.sqrt(var_post_norm)
-
         cov_post = np.linalg.inv(N) * var_post_norm
         self.var = np.diagonal(cov_post)
 

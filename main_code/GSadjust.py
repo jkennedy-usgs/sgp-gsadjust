@@ -403,6 +403,7 @@ class MainProg(QtWidgets.QMainWindow):
             logging.info('Loading data file: %s', fname)
             self.data_path = os.path.dirname(str(fname))
             # populate a Campaign object
+            e = None
             try:
                 self.all_survey_data = self.read_raw_data_file(fname, meter_type)
                 if append_loop:
@@ -412,10 +413,16 @@ class MainProg(QtWidgets.QMainWindow):
                     obstreesurvey = ObsTreeSurvey(str(self.all_survey_data.t[0].date()))
                     obstreesurvey.populate(self.all_survey_data)
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
-            except Exception as e:
+            except IOError as e:
+                show_message('No file : {}'.format(fname), 'File error')
+            except ValueError as e:
+                show_message('Value error at line {:d}. Check raw data file: possible bad value?'.format(e.i), 'File error')
+            except IndexError as e:
+                show_message('Index error at line {:d}. Check raw data file: possible missing value?'.format(e.i),
+                             'File error')
+            if e:
                 logging.exception(e, exc_info=True)
-                show_message('Failed to read raw data file', 'File error')
-                return
+
             if not 'choose' in meter_type:
                 self.init_gui()
             self.prep_station_plot()
@@ -617,11 +624,13 @@ class MainProg(QtWidgets.QMainWindow):
             return all_survey_data
 
         except IOError:
-            show_message('No file : {}'.format(filename), 'File error')
-        except ValueError:
-            show_message('Read error at line {:d} : check raw data file'.format(i), 'File error')
-        except IndexError:
-            show_message('pb at line {:d} : check raw data file: possibly last line?'.format(i), 'File error')
+            raise
+        except ValueError as e:
+            e.i = i
+            raise e
+        except IndexError as e:
+            e.i = i
+            raise e
 
     def divide_survey(self):
         """

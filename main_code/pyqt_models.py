@@ -469,8 +469,8 @@ class ObsTreeSurvey(ObsTreeItem):
         unique_ls = list(set(ls_degree))
         if len(unique_ls) > 1:
             show_message('It appears that more than one polynomial degree was specified for different loops for the '
-                         'network, or that some loops are not using the' +
-                         ' adjutment drift option. When using Gravnet, all loops must have the same degree drift ' +
+                         'network, or that some loops are not using the ' +
+                         'adjustment drift option. When using Gravnet, all loops must have the same degree drift ' +
                          'model. Aborting.',
                          'Inversion error')
             return
@@ -971,42 +971,43 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def flags(self, QModelIndex):
         if not QModelIndex.isValid():
-            return QtCore.Qt.ItemIsEnabled
+            return QtCore.Qt.NoItemFlags
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | \
-               QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsDropEnabled | \
-               QtCore.Qt.ItemIsUserCheckable
+                QtCore.Qt.ItemIsEditable | \
+                QtCore.Qt.ItemIsUserCheckable
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
-        if role == QtCore.Qt.DisplayRole:
-            if index.column() > 0:
-                m = index.model().itemFromIndex(index.sibling(index.row(), 0))
-            else:
-                m = index.model().itemFromIndex(index)
-            if type(m) is ObsTreeStation:
+        if index.model() is not None:
+            if role == QtCore.Qt.DisplayRole:
+                if index.column() > 0:
+                    m = index.model().itemFromIndex(index.sibling(index.row(), 0))
+                else:
+                    m = index.model().itemFromIndex(index)
+                if type(m) is ObsTreeStation:
+                    if index.column() == 0:
+                        return m.display_name
+                    if index.column() == 1:
+                        return num2date(m.tmean).strftime('%Y-%m-%d %H:%M:%S')
+                    if index.column() == 2:
+                        return '%1.1f' % m.gmean
+                elif type(m) is ObsTreeLoop:
+                    if index.column() == 0:
+                        return m.name
+                    if index.column() == 1:
+                        return ''
+                    if index.column() == 2:
+                        return ''
+                elif type(m) is ObsTreeSurvey:
+                    if index.column() == 0:
+                        return m.name
+                    if index.column() == 1:
+                        return ''
+                    if index.column() == 2:
+                        return ''
+            elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
-                    return m.display_name
-                if index.column() == 1:
-                    return num2date(m.tmean).strftime('%Y-%m-%d %H:%M:%S')
-                if index.column() == 2:
-                    return '%1.1f' % m.gmean
-            elif type(m) is ObsTreeLoop:
-                if index.column() == 0:
-                    return m.name
-                if index.column() == 1:
-                    return None
-                if index.column() == 2:
-                    return None
-            elif type(m) is ObsTreeSurvey:
-                if index.column() == 0:
-                    return m.name
-                if index.column() == 1:
-                    return None
-                if index.column() == 2:
-                    return None
-        elif role == QtCore.Qt.CheckStateRole:
-            if index.column() == 0:
-                m = index.model().itemFromIndex(index)
-                return m.checkState()
+                    m = index.model().itemFromIndex(index)
+                    return m.checkState()
 
     def setData(self, index, value, role):
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:

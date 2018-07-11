@@ -1,5 +1,6 @@
 import pytest
 import pyqt_models
+import GSadjust
 
 
 @pytest.fixture
@@ -17,5 +18,10 @@ def obstreestation():
 
 @pytest.fixture
 def obstreesurvey():
-    a = pyqt_models.ObsTreeSurvey('test')
-    return a
+    filename = './test_BurrisData.txt'
+    meter_type = 'Burris'
+    obstreesurvey = pyqt_models.ObsTreeSurvey('test')
+    assert type(obstreesurvey) is pyqt_models.ObsTreeSurvey
+    data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
+    obstreesurvey.populate(data)
+    return obstreesurvey

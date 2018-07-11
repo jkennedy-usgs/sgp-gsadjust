@@ -17,11 +17,32 @@ def test_readfile_exceptions():
 def test_read_Burris():
     filename = './test_BurrisData.txt'
     meter_type = 'Burris'
-    # try:
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
-    # except Exception as e:
-    #     print('Exception')
-
     assert len(data.dial) == 497
     assert len(data.raw_grav) == 497
     assert len(data.corr_g) == 0
+    first_station = 'rg37'
+    for idx, el in enumerate(data.station):
+        if el != first_station:
+            first_station_data = data.raw_grav[:idx]
+            break
+    mean = sum(first_station_data) / len(first_station_data)
+    # This value calculated independently in Excel
+    assert abs(mean - 2775777) < 0.1
+
+def test_read_ScintrexCG6():
+    filename = './test_ScintrexCG5Data.txt'
+    meter_type = 'Scintrex'
+    data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
+    first_station = '1'
+    assert len(data.dial) == 0
+    assert len(data.keepdata) == 2096
+    assert len(data.raw_grav) == 2096
+    assert len(data.corr_g) == 0
+    for idx, el in enumerate(data.station):
+        if el != first_station:
+            first_station_data = data.raw_grav[:idx]
+            break
+    mean = sum(first_station_data) / len(first_station_data)
+    # This value calculated independently in Excel
+    assert abs(mean - 2639322) < 0.1

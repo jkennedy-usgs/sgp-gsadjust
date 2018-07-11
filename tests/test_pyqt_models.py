@@ -1,13 +1,16 @@
 import pytest
 import pytestqt
 import pyqt_models
-from test_fixture_pyqt import channellist
+import GSadjust
+from test_fixture_pyqt import channellist, obstreesurvey
 from PyQt5 import QtGui
 
-def test_create_ObsTreeSurvey():
-    a = pyqt_models.ObsTreeSurvey('test')
-    assert type(a) is pyqt_models.ObsTreeSurvey
-    assert a.name == 'test'
+def test_ObsTreeSurvey(obstreesurvey):
+    assert obstreesurvey.rowCount() == 1
+    assert obstreesurvey.name == 'test'
+    assert type(obstreesurvey.child(0)) == pyqt_models.ObsTreeLoop
+    assert obstreesurvey.child(0).rowCount() == 46
+    assert obstreesurvey.populate_delta_model() == True
 
 def test_create_ObsTreeStation(channellist):
     a = pyqt_models.ObsTreeStation(channellist, 'teststa', '1')

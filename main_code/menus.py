@@ -119,7 +119,7 @@ class Menus:
                                                       slot=self.mainProg.add_tare,
                                                       enabled=True)
         self.mnEditLoops = self.create_action("Divide selected loop into subloops...",
-                                              slot=self.mainProg.divide_survey,
+                                              slot=self.mainProg.get_loop_threshold,
                                               enabled=True)
         # add actions to menu
         self.add_actions(self.mnEdit,

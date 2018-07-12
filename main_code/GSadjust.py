@@ -125,6 +125,7 @@ from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
+from gui_objects import AddDatumFromList
 
 from tab_network import TabAdjust
 from tab_drift import TabDrift
@@ -373,7 +374,8 @@ class MainProg(QtWidgets.QMainWindow):
     ###########################################################################
     def open_file_dialog(self, open_type):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Open file', directory=self.data_path)
-        self.open_raw_data(fname, open_type)
+        if fname:
+            self.open_raw_data(fname, open_type)
 
     def open_raw_data(self, fname, open_type):
         """
@@ -635,7 +637,20 @@ class MainProg(QtWidgets.QMainWindow):
             e.i = i
             raise e
 
-    def divide_survey(self):
+    def get_loop_threshold(self):
+        # Prompt user to select time threshold
+        loopdialog = LoopTimeThresholdDialog()
+        loop_thresh = 0
+        if loopdialog.exec_():
+            loop_thresh = loopdialog.dt_edit.dateTime()
+            # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
+            # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
+            loop_thresh = int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
+        else:
+            return
+        self.divide_survey(loop_thresh)
+
+    def divide_survey(self, loop_thresh):
         """
         Called from "Divide loop..." menu command. Shows a dialog to specify a time interval, then scans the current
         loop and divides station occupations separated by the time interval (or greater) into a loop. Useful primarily
@@ -647,16 +662,6 @@ class MainProg(QtWidgets.QMainWindow):
         # Store the original current loop index so it can be restored.
         original_loop_index = self.currentLoopIndex
 
-        # Prompt user to select time threshold
-        loopdialog = LoopTimeThresholdDialog()
-        loop_thresh = 0
-        if loopdialog.exec_():
-            loop_thresh = loopdialog.dt_edit.dateTime()
-            # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
-            # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
-            loop_thresh = int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
-        else:
-            return
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
         indexes = []
@@ -780,52 +785,53 @@ class MainProg(QtWidgets.QMainWindow):
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
         try:
             fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
-            PBAR1 = ProgressBar(total=6, textmess='surveys')
-            PBAR1.show()
-            PBAR1.progressbar.setValue(1)
-            QtWidgets.QApplication.processEvents()
-            obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
-            for survey in obstreesurveys:
-                self.obsTreeModel.appendRow([survey,
-                                             QtGui.QStandardItem('0'),
-                                             QtGui.QStandardItem('0')])
-            PBAR1.progressbar.setValue(2)
-            QtWidgets.QApplication.processEvents()
-            self.workspace_savename = fname
-            if delta_tables == []:
-                QtWidgets.QApplication.restoreOverrideCursor()
-                return
-            else:
-                firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-                PBAR1.progressbar.setValue(3)
+            if fname:
+                PBAR1 = ProgressBar(total=6, textmess='surveys')
+                PBAR1.show()
+                PBAR1.progressbar.setValue(1)
                 QtWidgets.QApplication.processEvents()
-                firstloop = firstsurvey.child(0)
-                firststation = firstloop.child(0)
-                self.currentSurveyIndex = firstsurvey.index()
-                self.currentLoopIndex = firstloop.index()
-                self.currentStationIndex = firststation.index()
-                self.currentLoopSurveyIndex = firstsurvey.index()
-                self.currentStationLoopIndex = firstloop.index()
-                self.currentStationSurveyIndex = firstsurvey.index()
-                self.populate_coordinates()
-                self.menus.mnFileSaveWorkspace.setEnabled(True)
-                self.menus.mnAdjAdjust.setEnabled(True)
-                self.workspace_loaded = True
-                self.update_all_drift_plots()
-                PBAR1.progressbar.setValue(4)
+                obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
+                for survey in obstreesurveys:
+                    self.obsTreeModel.appendRow([survey,
+                                                 QtGui.QStandardItem('0'),
+                                                 QtGui.QStandardItem('0')])
+                PBAR1.progressbar.setValue(2)
                 QtWidgets.QApplication.processEvents()
-                # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
-                # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
-                # updated.
-                self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
-                self.update_adjust_tables()
-                PBAR1.progressbar.setValue(5)
-                QtWidgets.QApplication.processEvents()
-                self.init_gui()
-                self.deltas_update_not_required()
-                QtWidgets.QApplication.restoreOverrideCursor()
-                PBAR1.progressbar.setValue(6)
-                PBAR1.close()
+                self.workspace_savename = fname
+                if delta_tables == []:
+                    QtWidgets.QApplication.restoreOverrideCursor()
+                    return
+                else:
+                    firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+                    PBAR1.progressbar.setValue(3)
+                    QtWidgets.QApplication.processEvents()
+                    firstloop = firstsurvey.child(0)
+                    firststation = firstloop.child(0)
+                    self.currentSurveyIndex = firstsurvey.index()
+                    self.currentLoopIndex = firstloop.index()
+                    self.currentStationIndex = firststation.index()
+                    self.currentLoopSurveyIndex = firstsurvey.index()
+                    self.currentStationLoopIndex = firstloop.index()
+                    self.currentStationSurveyIndex = firstsurvey.index()
+                    self.populate_coordinates()
+                    self.menus.mnFileSaveWorkspace.setEnabled(True)
+                    self.menus.mnAdjAdjust.setEnabled(True)
+                    self.workspace_loaded = True
+                    self.update_all_drift_plots()
+                    PBAR1.progressbar.setValue(4)
+                    QtWidgets.QApplication.processEvents()
+                    # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
+                    # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
+                    # updated.
+                    self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
+                    self.update_adjust_tables()
+                    PBAR1.progressbar.setValue(5)
+                    QtWidgets.QApplication.processEvents()
+                    self.init_gui()
+                    self.deltas_update_not_required()
+                    QtWidgets.QApplication.restoreOverrideCursor()
+                    PBAR1.progressbar.setValue(6)
+                    PBAR1.close()
         except Exception as e:
             show_message("Workspace load error", "Error")
 
@@ -880,7 +886,7 @@ class MainProg(QtWidgets.QMainWindow):
                 loop = survey.child(ii)
                 for iii in range(loop.rowCount()):
                     station = loop.child(iii)
-                    self.station_coords[station.station_name] = (station.long[0], station.lat[0])
+                    self.station_coords[station.station_name] = (station.long[0], station.lat[0], station.elev[0])
 
     ###########################################################################
     # General routines
@@ -936,7 +942,7 @@ class MainProg(QtWidgets.QMainWindow):
     def activate_survey_or_loop(self, index):
         """
         Highlights active survey or loop in tree view.
-        :param index: PyQt index of newly-highlighted tree item.
+        :param index: PyQt index of newly-highlighted tree item, sent by doubleClicked event
         """
         item = self.obsTreeModel.itemFromIndex(index)
         # If a loop:
@@ -1378,7 +1384,7 @@ class MainProg(QtWidgets.QMainWindow):
                     self.adjust_update_not_required()
                 except Exception:
                     logging.exception("Inversion error")
-                    show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
+                    self.msg = show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
                                  "Inversion error")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -1510,16 +1516,13 @@ class MainProg(QtWidgets.QMainWindow):
                 delta = obstreesurvey.delta_model.data(ind, QtCore.Qt.UserRole)
                 stations.append(delta.sta1)
                 stations.append(delta.sta2)
-        stalist = list(set(stations))
-        stalist.sort()
-        text, ok = QtWidgets.QInputDialog.getItem(self,
-                                                  'Input Dialog',
-                                                  'Datum station:',
-                                                  stalist)
-        if ok:
-            d = Datum(str(text))
+        station_list = list(set(stations))
+        station_list.sort()
+        station = AddDatumFromList.add_datum(station_list)
+        if station:
+            d = Datum(str(station))
             self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(d, 0)
-            logging.info('Datum station added: {}'.format(text))
+            logging.info('Datum station added: {}'.format(station))
 
     def show_adjust_options(self):
         """
@@ -1635,7 +1638,10 @@ class MainProg(QtWidgets.QMainWindow):
                 if shape == 'circular':
                     pos = nx.circular_layout(H)
                 elif shape == 'map':
-                    pos = self.station_coords
+                    new_dict = {}
+                    for k,v in self.station_coords.items():
+                        new_dict[k] = (v[0], v[1])
+                    pos = new_dict
 
                 nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
                 nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
@@ -1717,12 +1723,13 @@ class MainProg(QtWidgets.QMainWindow):
         header1, header2 = [], []
         lat, lon, elev, all_g = [], [], [], []
         if full_table:
-            for station in unique_stations:
+            for station in unique_station_names:
                 station_g = []
                 g_header = []
-                lat.append(station.lat[0])
-                lon.append(station.long[0])
-                elev.append(station.elev[0])
+                coords = self.station_coords[station]
+                lat.append(coords[0])#station.lat[0])
+                lon.append(coords[1])#station.long[0])
+                elev.append(coords[2])#station.elev[0])
                 for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                     survey = self.obsTreeModel.invisibleRootItem().child(i)
                     station_found = False
@@ -1731,7 +1738,7 @@ class MainProg(QtWidgets.QMainWindow):
                     for i in range(survey.results_model.rowCount()):
                         adj_station = survey.results_model.data(survey.results_model.index(i, 0),
                                                                 role=QtCore.Qt.UserRole)
-                        if adj_station.station == station.station_name[:6]:
+                        if adj_station.station[:6] == station[:6]:
                             station_found = True
                             break
                     if station_found:

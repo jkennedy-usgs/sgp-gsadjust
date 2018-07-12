@@ -501,11 +501,11 @@ class ObsTreeSurvey(ObsTreeItem):
             if len(delta.sta1) > 6 or len(delta.sta2) > 6:
                 truncate_warning = True
         if truncate_warning:
-            show_message('One or more station names is longer than 6 characters. Names will be truncated to 6 '
+            self.msg = show_message('One or more station names is longer than 6 characters. Names will be truncated to 6 '
                          'characters in the Gravnet input file. Please verify that names will still be unique '
                          'after truncating.',
                          'Inversion warning')
-
+            jeff = 1
         # Write delta-g observation file
         dg_file = self.name + '_dg.obs'
         with open(dg_file, 'w') as fid:

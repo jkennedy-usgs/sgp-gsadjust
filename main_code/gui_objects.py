@@ -388,10 +388,12 @@ def show_message(message, title, icon=QtWidgets.QMessageBox.Warning):
     :param icon: Qt icon
     """
     msg = QtWidgets.QMessageBox()
+    msg.setAttribute(QtCore.Qt.WA_DeleteOnClose)
     msg.setIcon(icon)
     msg.setText(message)
     msg.setWindowTitle(title)
-    msg.exec_()
+    msg.show()
+    return msg
 
 
 def rename_dialog(old_name, new_name):
@@ -487,6 +489,21 @@ class TideCorrectionDialog(QtWidgets.QDialog):
             self.reject()
         else:
             self.accept()
+
+
+class AddDatumFromList(QtWidgets.QInputDialog):
+
+    @classmethod
+    def add_datum(cls, station_list):
+        dialog = cls()
+        text, ok = dialog.getItem(None,
+                                  'Input Dialog',
+                                  'Datum station:',
+                                  station_list)
+        if ok:
+            return text
+        else:
+            return None
 
 
 class LoopTimeThresholdDialog(QtWidgets.QDialog):

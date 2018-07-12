@@ -121,7 +121,7 @@ import networkx as nx  # networkx 1.9
 
 from data_objects import Datum, Tare, AdjustmentResults, ChannelList
 from pyqt_models import BurrisTableModel, ScintrexTableModel
-from pyqt_models import ObsTreeModel
+from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
@@ -655,7 +655,8 @@ class MainProg(QtWidgets.QMainWindow):
             # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
             # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
             loop_thresh = int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
-
+        else:
+            return
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
         indexes = []
@@ -861,7 +862,7 @@ class MainProg(QtWidgets.QMainWindow):
             for simpledelta in delta_table:
                 delta = self.return_delta_given_key(simpledelta.key, deltas)
                 if delta == None:
-                    show_message("Delta not found: " + simpledelta.key, "Import error")
+                    # show_message("Delta not found: " + simpledelta.key, "Import error")
                     continue
                 delta.adj_sd = simpledelta.sd_for_adjustment
                 delta.checked = simpledelta.checked
@@ -1058,6 +1059,8 @@ class MainProg(QtWidgets.QMainWindow):
             tare = Tare(new_tare_date.date(), new_tare_date.time(), new_tare_value)
         except:
             jeff = 1
+        if not hasattr(current_loop, 'tare_model'):
+            current_loop.tare_model = TareTableModel
         current_loop.tare_model.insertRows(tare)
         self.tab_drift.process_tares(current_loop)
         self.update_drift_tables_and_plots()
@@ -1356,6 +1359,7 @@ class MainProg(QtWidgets.QMainWindow):
                 survey.adjustment.adjustmentresults = adjustmentresults
 
                 try:
+                    survey.results_model.clearResults()
                     if len(survey.adjustment.datums) == 0:
                         show_message(
                             "Survey {}: At least one datum must be specified".format(survey.name),
@@ -1767,8 +1771,15 @@ class MainProg(QtWidgets.QMainWindow):
                     for ii in range(initial_survey.rowCount()):
                         initial_station = initial_survey.data(initial_survey.index(ii, 0),
                                                               role=QtCore.Qt.UserRole)
-                        # Iterate through, look for matching station
-                        if initial_station.station == station_name[:6]:
+                        # Iterate through, look for matching station. If statements deal with Gravnet, which truncates
+                        # station names to 6 characters
+                        if len(initial_station.station) > 6 and len(station_name) > 6:
+                            if initial_station.station == station_name:
+                                break
+                        elif len(initial_station.station) > 6:
+                            if initial_station.station[:6] == station_name:
+                                break
+                        elif initial_station.station == station_name:
                             break
                         else:
                             initial_station = None
@@ -1776,17 +1787,41 @@ class MainProg(QtWidgets.QMainWindow):
                         iteration_station = iteration_reference.data(iteration_reference.index(ii, 0),
                                                                      role=QtCore.Qt.UserRole)
                         # Iterate through, look for matching station
-                        if iteration_station.station == station_name[:6]:
+                        # if iteration_station.station == station_name[:6]:
+                        #     break
+                        # else:
+                        #     iteration_station = None
+
+                        if len(iteration_station.station) > 6 and len(station_name) > 6:
+                            if iteration_station.station == station_name:
+                                break
+                        elif len(iteration_station.station) > 6:
+                            if iteration_station.station[:6] == station_name:
+                                break
+                        elif iteration_station.station == station_name:
                             break
                         else:
                             iteration_station = None
+
                     for ii in range(compare_survey.rowCount()):
                         compare_station = compare_survey.data(compare_survey.index(ii, 0),
                                                               role=QtCore.Qt.UserRole)
-                        if compare_station.station == station_name[:6]:
+                        # if compare_station.station == station_name[:6]:
+                        #     break
+                        # else:
+                        #     compare_station = None
+
+                        if len(compare_station.station) > 6 and len(station_name) > 6:
+                            if compare_station.station == station_name:
+                                break
+                        elif len(compare_station.station) > 6:
+                            if compare_station.station[:6] == station_name:
+                                break
+                        elif compare_station.station == station_name:
                             break
                         else:
                             compare_station = None
+
                     if initial_station is not None and compare_station is not None:
                         if not full_table:
                             diff_cumulative.append("{:0.1f}".format(compare_station.g - initial_station.g))

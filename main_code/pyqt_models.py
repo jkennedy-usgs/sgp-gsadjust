@@ -67,6 +67,8 @@ class ObsTreeStation(ObsTreeItem):
         self.__dict__ = copy.deepcopy(k.__dict__)
         self.station_name = station_name
         self.station_count = station_count  # Records the number of times the station is occupied in a loop
+        if hasattr(k, 'checked'):
+            self.setCheckState(k.checked)
         # For legacy .p files
         # if len(self.corr_g) == 0:
         #     self.corr_g = self.raw_grav
@@ -240,6 +242,8 @@ class ObsTreeLoop(ObsTreeItem):
         temp.tare_model = TareTableModel()
         for tare in simple_loop.tares:
             temp.tare_model.insertRows(tare, 0)
+        if hasattr(simple_loop, 'checked'):
+            temp.setCheckState(simple_loop.checked)
         return temp
 
     def populate(self, data):
@@ -390,6 +394,8 @@ class ObsTreeSurvey(ObsTreeItem):
         for datum in simple_survey.datums:
             temp.datum_model.insertRows(datum, 0)
         temp.adjustment.adjustmentoptions = simple_survey.adjoptions
+        if hasattr(simple_survey,'checked'):
+            temp.setCheckState(simple_survey.checked)
         return temp
 
     @property
@@ -1129,6 +1135,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurvey = ObsTreeSurvey.from_simplesurvey(simplesurvey)
             for loop in simplesurvey.loops:
                 obstreeloop = ObsTreeLoop.from_simpleloop(loop)
+
                 # Call plot_drift to populate loop delta_models
                 for station in loop.stations:
                     if hasattr(station, 'station_name'):  # Sometimes blank stations are generated, not sure why?

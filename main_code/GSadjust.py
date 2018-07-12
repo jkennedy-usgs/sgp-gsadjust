@@ -1356,7 +1356,6 @@ class MainProg(QtWidgets.QMainWindow):
                 survey.adjustment.adjustmentresults = adjustmentresults
 
                 try:
-                    self.clear_results_model()
                     if len(survey.adjustment.datums) == 0:
                         show_message(
                             "Survey {}: At least one datum must be specified".format(survey.name),
@@ -1377,6 +1376,7 @@ class MainProg(QtWidgets.QMainWindow):
                     logging.exception("Inversion error")
                     show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
                                  "Inversion error")
+        self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
 
     def set_adj_sd(self, survey, ao):

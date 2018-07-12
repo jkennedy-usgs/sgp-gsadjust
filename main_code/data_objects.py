@@ -651,7 +651,7 @@ class SimpleSurvey:
             obstreeloop = survey.child(i)
             simpleloop = SimpleLoop(obstreeloop)
             self.loops.append(simpleloop)
-
+        self.checked = survey.checkState()
         self.name = survey.name
         self.adjoptions = survey.adjustment.adjustmentoptions
 
@@ -692,6 +692,7 @@ class SimpleLoop:
         for i in range(loop.rowCount()):
             station = SimpleStation(loop.child(i))
             self.stations.append(station)
+        self.checked = loop.checkState()
         self.delta_model = None
         self.tare_model = None
 
@@ -700,3 +701,4 @@ class SimpleStation:
     def __init__(self, obstreestation):
         self.__dict__ = obstreestation.__dict__
         self.cellcolor = None
+        self.checked = obstreestation.checkState()

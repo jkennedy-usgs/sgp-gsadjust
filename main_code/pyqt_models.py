@@ -1116,8 +1116,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         return surveys
 
     def load_workspace(self, fname):
+        """
+        Load previously-save (pickled) workspace. Need to recreate PyQt models from 'simple' data objects.
+        :param fname:
+        :return: ObsTreeSurvey and delta_table.
+        """
         logging.info("Workspace loaded: " + fname)
-        delta_tables = []
+        delta_tables, obstreesurveys = [], []
         with open(fname, "rb") as f:
             data = pickle.load(f)
         for simplesurvey in data:
@@ -1134,12 +1139,10 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 obstreesurvey.appendRow([obstreeloop,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
-            self.appendRow([obstreesurvey,
-                                         QtGui.QStandardItem('0'),
-                                         QtGui.QStandardItem('0')])
-            # obstreesurvey.populate_delta_model_from_workspace()
+
+            obstreesurveys.append(obstreesurvey)
             delta_tables.append(obstreesurvey.deltas)
-        return delta_tables
+        return (obstreesurveys, delta_tables)
 
     def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled

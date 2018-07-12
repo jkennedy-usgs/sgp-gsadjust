@@ -698,10 +698,16 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Append previously-saved workspace to current workspace.
         """
-        self.obsTreeModel.load_workspace(self.data_path)
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
+        obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
+        for survey in obstreesurveys:
+            self.obsTreeModel.appendRow([survey,
+                                         QtGui.QStandardItem('0'),
+                                         QtGui.QStandardItem('0')])
         self.update_all_drift_plots()
         self.populate_coordinates()
         self.workspace_loaded = True
+        self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
         QtWidgets.QApplication.restoreOverrideCursor()
 
     def workspace_clear(self):
@@ -777,7 +783,11 @@ class MainProg(QtWidgets.QMainWindow):
             PBAR1.show()
             PBAR1.progressbar.setValue(1)
             QtWidgets.QApplication.processEvents()
-            delta_tables = self.obsTreeModel.load_workspace(fname)
+            obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
+            for survey in obstreesurveys:
+                self.obsTreeModel.appendRow([survey,
+                                             QtGui.QStandardItem('0'),
+                                             QtGui.QStandardItem('0')])
             PBAR1.progressbar.setValue(2)
             QtWidgets.QApplication.processEvents()
             self.workspace_savename = fname
@@ -806,7 +816,7 @@ class MainProg(QtWidgets.QMainWindow):
                 # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
                 # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
                 # updated.
-                self.populate_survey_deltatable_from_simpledeltas(delta_tables)
+                self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
                 self.update_adjust_tables()
                 PBAR1.progressbar.setValue(5)
                 QtWidgets.QApplication.processEvents()
@@ -845,11 +855,9 @@ class MainProg(QtWidgets.QMainWindow):
             if delta.key == key:
                 return delta
 
-    def populate_survey_deltatable_from_simpledeltas(self, delta_tables):
+    def populate_survey_deltatable_from_simpledeltas(self, delta_tables, survey):
         deltas = self.assemble_all_deltas()
-        survey_count = 0
-        for delta_table in delta_tables:
-            survey = self.obsTreeModel.invisibleRootItem().child(survey_count)
+        for idx, delta_table in enumerate(delta_tables):
             for simpledelta in delta_table:
                 delta = self.return_delta_given_key(simpledelta.key, deltas)
                 if delta == None:
@@ -857,7 +865,7 @@ class MainProg(QtWidgets.QMainWindow):
                     continue
                 delta.adj_sd = simpledelta.sd_for_adjustment
                 delta.checked = simpledelta.checked
-                survey.delta_model.insertRows(delta, 0)
+                survey[idx].delta_model.insertRows(delta, 0)
 
     def populate_coordinates(self):
         """

@@ -41,7 +41,7 @@ def test_gui(qtbot, monkeypatch):
     qtbot.wait(1000)
     monkeypatch.setattr(gui_objects.AddDatumFromList, 'add_datum', classmethod(lambda *args: 'CDOT'))
     qtbot.keyClick(window, 'd', modifier=QtCore.Qt.ControlModifier)
-    qtbot.keyClick(window, '1', modifier=QtCore.Qt.ControlModifier)
+    window.adjust_network()
     qtbot.wait(1000)
     survey.msg.close()
 
@@ -50,5 +50,57 @@ def test_gui(qtbot, monkeypatch):
     assert len(survey.adjustment.adjustmentresults.text) == 22
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
+
+    test_workspace = 'test_workspace.p'
+    success = window.obsTreeModel.save_workspace(test_workspace)
+    assert success == True
+
+    window.workspace_clear()
+    assert window.obsTreeModel.rowCount() == 0
+
+    window.workspace_open(test_workspace)
+    survey = window.obsTreeModel.invisibleRootItem().child(0)
+    loop = survey.child(0)
+    assert loop.rowCount() == 12
+    assert survey.rowCount() == 3
+
+    window.menus.mnAdjPyLSQ.setChecked(True)
+    window.adjust_network()
+
+    window.adjust_network()
+    for line in survey.adjustment.adjustmentresults.text:
+        elems = line.split(' ')
+        if elems[0] == 'SD':
+            sd0 = float(elems[-1])
+
+    # Disable some observations, save workspace, clear and reload, verify that we get the same adjustment results
+    rows = [1,3,5]
+    for row in rows:
+        survey.delta_model.setData(survey.delta_model.index(row, 0), QtCore.Qt.Unchecked, role=QtCore.Qt.CheckStateRole)
+
+    window.adjust_network()
+    for line in survey.adjustment.adjustmentresults.text:
+        elems = line.split(' ')
+        if elems[0] == 'SD':
+            sd1 = float(elems[-1])
+
+    # Adjustment results should be different with some observations disabled
+    assert abs(sd0 - sd1) > 0.01
+
+    success = window.workspace_save()
+    assert success == True
+
+    window.workspace_clear()
+    assert window.obsTreeModel.rowCount() == 0
+
+    window.workspace_open(test_workspace)
+    window.adjust_network()
+    for line in survey.adjustment.adjustmentresults.text:
+        elems = line.split(' ')
+        if elems[0] == 'SD':
+            sd2 = float(elems[-1])
+
+    assert abs(sd1 - sd2) < 0.000001
+
     window.close()
     os.chdir(pwd)

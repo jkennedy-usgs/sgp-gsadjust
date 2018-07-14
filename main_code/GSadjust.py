@@ -181,6 +181,9 @@ class MainProg(QtWidgets.QMainWindow):
     station_model, station_coords = None, None
     workspace_savename = None
 
+    DOWN = 1
+    UP = -1
+
     def __init__(self):
         super(MainProg, self).__init__()
 
@@ -191,7 +194,7 @@ class MainProg(QtWidgets.QMainWindow):
         # tab_....s are populated with GUI elements in the tab_...() functions
         self.tab_data = TabData(self)
         self.tab_drift = TabDrift(self)
-        self.tab_adjust = TabAdjust()
+        self.tab_adjust = TabAdjust(self)
         self.tab_widget = QtWidgets.QTabWidget()
 
         self.tab_widget = QtWidgets.QTabWidget()
@@ -203,9 +206,25 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.treeview_widget = QtWidgets.QWidget()
         self.treeview_box = QtWidgets.QVBoxLayout()
-        self.treeview_box.addItem(QtWidgets.QSpacerItem(200, 42))
+        # self.treeview_box.addItem(QtWidgets.QSpacerItem(200, 42))
         self.data_treeview = QtWidgets.QTreeView()
 
+        self.move_station_up = QtWidgets.QAction(QtGui.QIcon('up.png'), 'Move survey up', self)
+        self.move_station_up.triggered.connect(slot=lambda: self.move_survey(self.UP))
+        self.move_station_down = QtWidgets.QAction(QtGui.QIcon('down.png'), 'Move survey down', self)
+        self.move_station_down.triggered.connect(slot=lambda: self.move_survey(self.DOWN))
+        self.toolbar = QtWidgets.QToolBar()
+        self.toolbar.addAction(self.move_station_up)
+        self.toolbar.addAction(self.move_station_down)
+
+        self.collapse_all = QtWidgets.QAction(QtGui.QIcon('ca.png'), 'Collapse all', self)
+        self.collapse_all.triggered.connect(slot=self.data_treeview.collapseAll)
+        self.expand_all = QtWidgets.QAction(QtGui.QIcon('ea.png'), 'Expand all', self)
+        self.expand_all.triggered.connect(slot=self.data_treeview.expandAll)
+        self.toolbar.addAction(self.collapse_all)
+        self.toolbar.addAction(self.expand_all)
+
+        self.treeview_box.addWidget(self.toolbar)
         self.treeview_box.addWidget(self.data_treeview)
         self.treeview_widget.setLayout(self.treeview_box)
 
@@ -393,15 +412,16 @@ class MainProg(QtWidgets.QMainWindow):
         if 'choose' in open_type:
             meter_type_dialog = MeterType()
             if meter_type_dialog.msg.exec_():
-                open_type = meter_type_dialog.meter_type
+                meter_type = meter_type_dialog.meter_type
         elif self.obsTreeModel.invisibleRootItem().rowCount() > 0:
             overwrite_tree_dialog = Overwrite()
             if overwrite_tree_dialog.msg.exec_():
                 if overwrite_tree_dialog.overwrite:
                     self.workspace_clear()
-
+        if not 'choose' in open_type:
+            meter_type = open_type
         if fname[-2:] == '.p':
-            show_message('Please use "Open workspace... " to load a .p file', 'File load error')
+            self.msg = show_message('Please use "Open workspace... " to load a .p file', 'File load error')
             return
         self.output_root_dir = os.path.dirname(fname)
         if fname:
@@ -410,7 +430,7 @@ class MainProg(QtWidgets.QMainWindow):
             # populate a Campaign object
             e = None
             try:
-                self.all_survey_data = self.read_raw_data_file(fname, open_type)
+                self.all_survey_data = self.read_raw_data_file(fname, meter_type)
                 if append_loop:
                     obstreesurvey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
                     obstreesurvey.populate(self.all_survey_data, name=str(obstreesurvey.loop_count))
@@ -419,11 +439,11 @@ class MainProg(QtWidgets.QMainWindow):
                     obstreesurvey.populate(self.all_survey_data)
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
             except IOError as e:
-                show_message('No file : {}'.format(fname), 'File error')
+                self.msg = show_message('No file : {}'.format(fname), 'File error')
             except ValueError as e:
-                show_message('Value error at line {:d}. Check raw data file: possible bad value?'.format(e.i), 'File error')
+                self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.format(e.i), 'File error')
             except IndexError as e:
-                show_message('Index error at line {:d}. Check raw data file: possible missing value?'.format(e.i),
+                self.msg = show_message('Index error at line {:d}. Check raw data file: possible missing value?'.format(e.i),
                              'File error')
             if e:
                 logging.exception(e, exc_info=True)
@@ -749,34 +769,41 @@ class MainProg(QtWidgets.QMainWindow):
         """
         success = self.obsTreeModel.save_workspace(self.workspace_savename)
         if success:
-            show_message('Workspace saved','')
+            self.msg = show_message('Workspace saved','')
+            return True
         else:
-            show_message("Workspace save error", "Error")
+            self.msg = show_message("Workspace save error", "Error")
+            return False
 
     def workspace_save_as(self):
         """
         Saves data object using pickle.dump()
         """
         if self.deltas_update_required_label.set is True:
-            show_message('Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
+            self.msg = show_message('Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
                          'Adjustment tab is not up to date.', 'Workspace save error')
         else:
             try:
                 fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.data_path)
                 success = self.obsTreeModel.save_workspace(fname)
                 if success:
-                    show_message('Workspace saved', '')
+                    self.msg = show_message('Workspace saved', '')
                     self.workspace_savename = fname
                     self.menus.mnFileSaveWorkspace.setEnabled(True)
                 else:
-                    show_message("Workspace save error", "Error")
+                    self.msg = show_message("Workspace save error", "Error")
 
             except Exception as e:
-                show_message("Workspace save error", "Error")
+                self.msg = show_message("Workspace save error", "Error")
                 logging.exception(e, exc_info=True)
                 self.menus.mnFileSaveWorkspace.setEnabled(False)
 
-    def workspace_open(self):
+    def workspace_open_getfile(self):
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
+        if fname:
+            self.workspace_open(fname)
+
+    def workspace_open(self, fname):
         """
         Loads campaigndata object from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
         pickled and are removed in workspace_save).
@@ -784,56 +811,54 @@ class MainProg(QtWidgets.QMainWindow):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
         try:
-            fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
-            if fname:
-                PBAR1 = ProgressBar(total=6, textmess='surveys')
-                PBAR1.show()
-                PBAR1.progressbar.setValue(1)
+            PBAR1 = ProgressBar(total=6, textmess='surveys')
+            PBAR1.show()
+            PBAR1.progressbar.setValue(1)
+            QtWidgets.QApplication.processEvents()
+            obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
+            for survey in obstreesurveys:
+                self.obsTreeModel.appendRow([survey,
+                                             QtGui.QStandardItem('0'),
+                                             QtGui.QStandardItem('0')])
+            PBAR1.progressbar.setValue(2)
+            QtWidgets.QApplication.processEvents()
+            self.workspace_savename = fname
+            if not delta_tables:
+                QtWidgets.QApplication.restoreOverrideCursor()
+                return
+            else:
+                firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+                PBAR1.progressbar.setValue(3)
                 QtWidgets.QApplication.processEvents()
-                obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
-                for survey in obstreesurveys:
-                    self.obsTreeModel.appendRow([survey,
-                                                 QtGui.QStandardItem('0'),
-                                                 QtGui.QStandardItem('0')])
-                PBAR1.progressbar.setValue(2)
+                firstloop = firstsurvey.child(0)
+                firststation = firstloop.child(0)
+                self.currentSurveyIndex = firstsurvey.index()
+                self.currentLoopIndex = firstloop.index()
+                self.currentStationIndex = firststation.index()
+                self.currentLoopSurveyIndex = firstsurvey.index()
+                self.currentStationLoopIndex = firstloop.index()
+                self.currentStationSurveyIndex = firstsurvey.index()
+                self.populate_coordinates()
+                self.menus.mnFileSaveWorkspace.setEnabled(True)
+                self.menus.mnAdjAdjust.setEnabled(True)
+                self.workspace_loaded = True
+                self.update_all_drift_plots()
+                PBAR1.progressbar.setValue(4)
                 QtWidgets.QApplication.processEvents()
-                self.workspace_savename = fname
-                if delta_tables == []:
-                    QtWidgets.QApplication.restoreOverrideCursor()
-                    return
-                else:
-                    firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-                    PBAR1.progressbar.setValue(3)
-                    QtWidgets.QApplication.processEvents()
-                    firstloop = firstsurvey.child(0)
-                    firststation = firstloop.child(0)
-                    self.currentSurveyIndex = firstsurvey.index()
-                    self.currentLoopIndex = firstloop.index()
-                    self.currentStationIndex = firststation.index()
-                    self.currentLoopSurveyIndex = firstsurvey.index()
-                    self.currentStationLoopIndex = firstloop.index()
-                    self.currentStationSurveyIndex = firstsurvey.index()
-                    self.populate_coordinates()
-                    self.menus.mnFileSaveWorkspace.setEnabled(True)
-                    self.menus.mnAdjAdjust.setEnabled(True)
-                    self.workspace_loaded = True
-                    self.update_all_drift_plots()
-                    PBAR1.progressbar.setValue(4)
-                    QtWidgets.QApplication.processEvents()
-                    # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
-                    # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
-                    # updated.
-                    self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
-                    self.update_adjust_tables()
-                    PBAR1.progressbar.setValue(5)
-                    QtWidgets.QApplication.processEvents()
-                    self.init_gui()
-                    self.deltas_update_not_required()
-                    QtWidgets.QApplication.restoreOverrideCursor()
-                    PBAR1.progressbar.setValue(6)
-                    PBAR1.close()
+                # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
+                # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
+                # updated.
+                self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
+                self.update_adjust_tables()
+                PBAR1.progressbar.setValue(5)
+                QtWidgets.QApplication.processEvents()
+                self.init_gui()
+                self.deltas_update_not_required()
+                QtWidgets.QApplication.restoreOverrideCursor()
+                PBAR1.progressbar.setValue(6)
+                PBAR1.close()
         except Exception as e:
-            show_message("Workspace load error", "Error")
+            self.msg = show_message("Workspace load error", "Error")
 
 
     def assemble_all_deltas(self):
@@ -1044,10 +1069,10 @@ class MainProg(QtWidgets.QMainWindow):
                         self.update_drift_tables_and_plots()
 
     def correction_ocean_loading(self):
-        show_message('Not implemented', 'Error')
+        self.msg = show_message('Not implemented', 'Error')
 
     def correction_atmospheric(self):
-        show_message('Not implemented', 'Error')
+        self.msg = show_message('Not implemented', 'Error')
 
     def add_tare(self):
         """
@@ -1144,7 +1169,7 @@ class MainProg(QtWidgets.QMainWindow):
                     fid.write('{:0.2f}'.format(-1 * delta.dg / self.verticalgradientinterval))
                     fid.write(' +/- {:0.2f}'.format(delta.sd / self.verticalgradientinterval))
         else:
-            show_message("Incorrect number of delta-g's (should be 1)", "Vertical gradient error")
+            self.msg = show_message("Incorrect number of delta-g's (should be 1)", "Vertical gradient error")
 
     def delete_selected(self):
         """
@@ -1178,7 +1203,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         indexes = self.data_treeview.selectedIndexes()
         if len(indexes) > 3:
-            show_message("Please select a single station when duplicating.", "GSadjust error")
+            self.msg = show_message("Please select a single station when duplicating.", "GSadjust error")
             return
         index = indexes[0]
         model = indexes[0].model()
@@ -1340,7 +1365,7 @@ class MainProg(QtWidgets.QMainWindow):
                                 else:
                                     adjustmentresults.n_deltas_notused += 1
                             except:
-                                show_message("Delta station not found. Was it deleted?", "GSadjust error")
+                                self.msg = show_message("Delta station not found. Was it deleted?", "GSadjust error")
                         else:
                             deltas.append(delta)
                             adjustmentresults.n_deltas += 1
@@ -1367,12 +1392,12 @@ class MainProg(QtWidgets.QMainWindow):
                 try:
                     survey.results_model.clearResults()
                     if len(survey.adjustment.datums) == 0:
-                        show_message(
+                        self.msg = show_message(
                             "Survey {}: At least one datum must be specified".format(survey.name),
                             "Inversion error")
                         return
                     if len(survey.adjustment.deltas) == 0:
-                        show_message(
+                        self.msg = show_message(
                             "Survey {}: At least one relative-gravity difference must be specified".format(survey.name),
                             "Inversion error")
                     if adj_type == 'PyLSQ':
@@ -1384,7 +1409,7 @@ class MainProg(QtWidgets.QMainWindow):
                     self.adjust_update_not_required()
                 except Exception:
                     logging.exception("Inversion error")
-                    self.msg = show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
+                    self.msg = self.msg = show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
                                  "Inversion error")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -1451,7 +1476,7 @@ class MainProg(QtWidgets.QMainWindow):
                 try:
                     datum = Datum(parts[0], float(parts[1]), float(parts[2]))
                 except IndexError:
-                    show_message('Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
+                    self.msg = show_message('Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
                                  'space delimited', 'File read error')
                 self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
                 line = fh.readline()
@@ -1498,9 +1523,13 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Instantiates a PyQt dialog to select a directory with .project.txt files.
         """
-        selectabsg = SelectAbsg()
+        if hasattr(self, 'abs_data_path'):
+            selectabsg = SelectAbsg(self.abs_data_path)
+        else:
+            selectabsg = SelectAbsg(self.data_path)
         if selectabsg.exec_():
             nds = selectabsg.new_datums
+            self.abs_data_path = selectabsg.path
         for nd in nds:
             self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(nd, 0)
 
@@ -1598,7 +1627,7 @@ class MainProg(QtWidgets.QMainWindow):
         delta_model = survey.delta_model
         edge_colors = []
         if delta_model.rowCount() == 0:
-            show_message('Delta table is empty. Unable to plot network graph', 'Plot error')
+            self.msg = show_message('Delta table is empty. Unable to plot network graph', 'Plot error')
         else:
             for i in range(delta_model.rowCount()):
                 ind = delta_model.index(i, 0)
@@ -1718,7 +1747,6 @@ class MainProg(QtWidgets.QMainWindow):
                     unique_station_names.add(station.station_name)
                     unique_stations.append(station)
         unique_station_names = sorted(unique_station_names)
-        unique_stations = sorted(unique_stations, key=lambda x: x.station_name)
         out_table_iteration, out_table_cumulative = [], []
         header1, header2 = [], []
         lat, lon, elev, all_g = [], [], [], []
@@ -1727,9 +1755,9 @@ class MainProg(QtWidgets.QMainWindow):
                 station_g = []
                 g_header = []
                 coords = self.station_coords[station]
-                lat.append(coords[0])#station.lat[0])
-                lon.append(coords[1])#station.long[0])
-                elev.append(coords[2])#station.elev[0])
+                lat.append(coords[0])
+                lon.append(coords[1])
+                elev.append(coords[2])
                 for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                     survey = self.obsTreeModel.invisibleRootItem().child(i)
                     station_found = False
@@ -1987,7 +2015,38 @@ class MainProg(QtWidgets.QMainWindow):
             logging.info('Metadata text written to file')
 
         if not results_written:
-            show_message('No network adjustment results', 'Write error')
+            self.msg = show_message('No network adjustment results', 'Write error')
+
+    def delete_datum(self):
+        """
+        Called when user right-clicks a datum and selects delete from the context menu
+        """
+        index = self.tab_adjust.datum_view.selectedIndexes()
+        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+        for idx in index.reverse:
+            survey.datum_model.removeRow(idx)
+        self.tab_adjust.datum_view.update()
+        return
+
+    def move_survey(self, direction=UP):
+        """
+        Used to move survey up or down in the tree view
+        :param direction: self.UP or self.DOWN (macros for 1 and -1)
+        :return:
+        """
+        if direction not in (self.DOWN, self.UP):
+            return
+
+        model = self.obsTreeModel
+        index = self.currentSurveyIndex
+        rowNum = index.row()
+        newRow = rowNum+direction
+        if not (0 <= newRow < model.rowCount()):
+            return False
+        survey = model.takeRow(rowNum)
+        model.insertRow(newRow, survey)
+        self.currentSurveyIndex = model.indexFromItem(survey[0])
+        return True
 
     ###########################################################################
     # Menus

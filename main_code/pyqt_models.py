@@ -1295,6 +1295,14 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         self.datums.append(datum)
         self.endInsertRows()
 
+    def removeRow(self, index):
+        datum = self.data(index, role=QtCore.Qt.UserRole)
+        self.beginRemoveRows(index, index.row(), 1)
+        self.datums.remove(datum)
+        self.endRemoveRows()
+        self.beginResetModel()
+        self.endResetModel()
+
     def rowCount(self, parent=None):
         return len(self.datums)
 
@@ -1395,6 +1403,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         self.beginResetModel()
         self.endResetModel()
         return QVariant()
+
 
 
 class TareTableModel(QtCore.QAbstractTableModel):
@@ -2095,3 +2104,19 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
                 else:
                     return "not implemented"
 
+class CustomSortingModel(QtCore.QSortFilterProxyModel):
+    def lessThan(self,left,right):
+
+        col = left.column()
+
+        dataleft = left.data()
+        dataright = right.data()
+
+        if col == 3:
+            dataleft = QtCore.QDate.fromString(dataleft, "MM/dd/yy").addYears(100)
+            dataright = QtCore.QDate.fromString(dataright, "MM/dd/yy").addYears(100)
+        elif not col == 0:
+            dataleft = float(dataleft)
+            dataright = float(dataright)
+
+        return dataleft < dataright

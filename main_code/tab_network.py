@@ -24,9 +24,10 @@ from PyQt5 import QtWidgets, QtCore
 # noinspection PyUnresolvedReferences
 class TabAdjust(QtWidgets.QWidget):
 
-    def __init__(self):
+    def __init__(self, parent):
         super(TabAdjust, self).__init__()
         # Delta table (top left)
+        self.parent = parent
         self.delta_view = QtWidgets.QTableView()
         self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
         self.delta_view.setModel(self.delta_proxy_model)
@@ -39,11 +40,17 @@ class TabAdjust(QtWidgets.QWidget):
 
         # Datum (Abs. g) table (bottom left)
         self.datum_view = QtWidgets.QTableView()
+        self.datum_view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.datum_view.customContextMenuRequested.connect(self.datum_context_menu)
         self.datum_proxy_model = QtCore.QSortFilterProxyModel(self)
         self.datum_view.setModel(self.datum_proxy_model)
         self.datum_view.setSortingEnabled(True)
 
-        self.results_popup_menu = QtWidgets.QMenu("Menu", self)
+        self.datum_popup_menu = QtWidgets.QMenu("Datum Popup Menu", self)
+        self.mnDeleteDatum = QtWidgets.QAction('Delete datum', self)
+        self.mnDeleteDatum.triggered.connect(self.parent.delete_datum)
+
+        self.results_popup_menu = QtWidgets.QMenu("Results Popup Menu", self)
         self.mnCopyResults = QtWidgets.QAction('Copy to clipboard', self)
         self.mnCopyResults.triggered.connect(self.copy_results)
 
@@ -85,6 +92,12 @@ class TabAdjust(QtWidgets.QWidget):
 
         layout_final.addWidget(main_layout)
         self.setLayout(layout_final)
+
+    def datum_context_menu(self, point):
+        selected = self.datum_view.selectedIndexes()
+        if selected:
+            self.datum_popup_menu.addAction(self.mnDeleteDatum)
+            self.datum_popup_menu.exec_(self.datum_view.mapToGlobal(point))
 
     def results_context_menu(self, point):
         """

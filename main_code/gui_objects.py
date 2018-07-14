@@ -25,7 +25,7 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
 
 from data_objects import Datum, AdjustmentOptions
-from pyqt_models import GravityChangeModel, DatumTableModel
+from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel
 import a10
 
 
@@ -617,7 +617,7 @@ class SelectAbsg(QtWidgets.QDialog):
     """
     Dialog to show absolute-gravity values from *.project.txt files. The user can select the files to import as Datums.
     """
-    def __init__(self):
+    def __init__(self, path):
         super(SelectAbsg, self).__init__()
         self.title = 'Select directory with Abs. g files (.project.txt)'
         self.left = 100
@@ -625,14 +625,16 @@ class SelectAbsg(QtWidgets.QDialog):
         self.width = 800
         self.height = 480
         self.new_datums = []
+        self.path = path
 
         self.splitter_window = QtWidgets.QSplitter(QtCore.Qt.Horizontal, self)
         self.tree_model = QtWidgets.QDirModel()
         self.tree = QtWidgets.QTreeView()
         self.table_model = DatumTableModel()
+        self.tree_model.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
         self.table = QtWidgets.QTableView()
 
-        self.ProxyModel = QtCore.QSortFilterProxyModel(self)
+        self.ProxyModel = CustomSortingModel(self)
         self.table.setModel(self.ProxyModel)
         self.table.setSortingEnabled(True)
         self.init_ui()
@@ -655,6 +657,8 @@ class SelectAbsg(QtWidgets.QDialog):
 
         # File-tree view and model
         self.tree.setModel(self.tree_model)
+        self.tree.expand(self.tree_model.index(self.path))
+        self.tree.scrollTo(self.tree_model.index(self.path))
         self.tree.setAnimated(False)
         self.tree.setIndentation(20)
         self.tree.setSortingEnabled(True)
@@ -725,8 +729,8 @@ class SelectAbsg(QtWidgets.QDialog):
         self.table_model.clearDatums()
         for i in idxs:
             if i.model().isDir(i):
-                pth = str(i.model().filePath(i))
-                for dirname, _, fileList in os.walk(pth):
+                path = str(i.model().filePath(i))
+                for dirname, _, fileList in os.walk(path):
                     for name in fileList:
                         if '.project.txt' in name:
                             files_found = True
@@ -739,6 +743,7 @@ class SelectAbsg(QtWidgets.QDialog):
                                           gradient=float(d.gradient),
                                           checked=0)
                             self.table_model.insertRows(datum, 1)
+                            self.path = path
         QtWidgets.QApplication.restoreOverrideCursor()
         if not files_found:
             show_message('No *.project.txt files found in the selected directories.', 'Import error')

@@ -68,7 +68,7 @@ class Menus:
                                                         slot=self.mainProg.workspace_save_as,
                                                         enabled=False)
         self.mnFileLoadWorkspaceAction = self.create_action("Open workspace...",
-                                                            slot=self.mainProg.workspace_open)
+                                                            slot=self.mainProg.workspace_open_getfile)
         self.mnFileExitAction = self.create_action("&Exit", slot=self.mainProg.close_windows, tip="Exit App")
 
         # add actions to menu
@@ -195,6 +195,8 @@ class Menus:
         #                                                slot=self.mainProg.plot_compare_datum_all,
         #                                                enabled=True)
 
+
+
         self.add_actions(self.mnAdj, (self.mnAdjOptions,
                                       self.mnAdjAdjust,
                                       None,
@@ -210,7 +212,7 @@ class Menus:
                                       self.mnAdjClearDatumTable,
                                       None,
                                       self.mnAdjPlotHist,
-                                      self.mnAdjCompareDatum))
+                                      self.mnAdjCompareDatum,))
 
         #######################################################################
         # Tools Menu

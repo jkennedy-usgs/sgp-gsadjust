@@ -6,27 +6,26 @@ FILES = ['channellist_testobj.p',
          'channellist_testobj.p',
          'channellist_testobj.p']
 
-@pytest.fixture(files=FILES)
-def channellist(file):
+@pytest.fixture()
+def test_channellist_obj(request):
     import pickle
-    fname = file#'channellist_testobj.p'
+    fname = request.param#'channellist_testobj.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
 
-def scintrex_channellist():
+@pytest.fixture()
+def channellist():
     import pickle
-    fname = 'channellist_testobj.p'
+    fname = 'channellist_burris.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
 
-def cg6_chanellist():
-    import pickle
-    fname = 'channellist_testobj.p'
-    with open(fname, "rb") as f:
-        cl = pickle.load(f)
-    return cl
+@pytest.fixture
+def obstreestation():
+    a = pyqt_models.ObsTreeStation(channellist(),'jeff',1)
+    return a
 
 @pytest.fixture
 def obstreestation():

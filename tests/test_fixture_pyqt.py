@@ -2,9 +2,26 @@ import pytest
 import pyqt_models
 import GSadjust
 
+FILES = ['channellist_testobj.p',
+         'channellist_testobj.p',
+         'channellist_testobj.p']
 
-@pytest.fixture
-def channellist():
+@pytest.fixture(files=FILES)
+def channellist(file):
+    import pickle
+    fname = file#'channellist_testobj.p'
+    with open(fname, "rb") as f:
+        cl = pickle.load(f)
+    return cl
+
+def scintrex_channellist():
+    import pickle
+    fname = 'channellist_testobj.p'
+    with open(fname, "rb") as f:
+        cl = pickle.load(f)
+    return cl
+
+def cg6_chanellist():
     import pickle
     fname = 'channellist_testobj.p'
     with open(fname, "rb") as f:

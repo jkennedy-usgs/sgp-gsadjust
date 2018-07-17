@@ -7,3 +7,5 @@ def test_channellist(channellist):
     mean = sum(test_data1.raw_grav) / len(test_data1.raw_grav)
     assert abs(mean - 3092327.454) < 0.001
 
+# def test_channellist_iter(channellist):
+#     for field in

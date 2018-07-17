@@ -104,12 +104,12 @@ class ObsTreeStation(ObsTreeItem):
     @property
     def grav(self):
         """
-        Applies tares to raw_grav
+        Applies tares and earth tide correction to raw_grav
         :return: List
         """
         # if len(self.corr_g) == 0:
         #     self.corr_g = self.raw_grav
-        data = np.array(self.raw_grav) + np.array(self.tare) + np.array(self.etc)
+        data = np.array(self.raw_grav) - np.array(self.tare) + np.array(self.etc)
         return data.tolist()
 
     @property
@@ -735,10 +735,14 @@ class ObsTreeSurvey(ObsTreeItem):
         # add datum observation (absolute station(s) or station(s) with fixed values)
         i = 0
         for datum in self.adjustment.datums:
-            A[n_rel_obs + i, sta_dic_ls[datum.station]] = 1
-            P[n_rel_obs + i, n_rel_obs + i] = 1. / datum.sd ** 2
-            Obs[n_rel_obs + i] = datum.g
-            i += 1
+            try:
+                A[n_rel_obs + i, sta_dic_ls[datum.station]] = 1
+                P[n_rel_obs + i, n_rel_obs + i] = 1. / datum.sd ** 2
+                Obs[n_rel_obs + i] = datum.g
+                i += 1
+            except KeyError as e:
+                show_message('Key error: {}'.format(e.args[0]), 'Inversion error')
+                return
 
         # Do the inversion
         self.adjustment.A = A

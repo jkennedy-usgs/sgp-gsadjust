@@ -636,7 +636,7 @@ class TabDrift(QtWidgets.QWidget):
                             yp = s(xs)
                             logging.info('Spline drift correction, tension={}'.format(self.tension_slider.value()))
                         except:
-                            show_message('Insufficient drift observations for spline method', 'Error')
+                            self.msg = show_message('Insufficient drift observations for spline method', 'Error')
                     elif method_key == 2:  # 1st order poly
                         z = np.polyfit(x0, drift_rate, 1)
                         p = np.poly1d(z)
@@ -690,7 +690,7 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_cont_canvastop.draw()
                 return delta_model
             else:
-                show_message('No data available for plotting', 'Plot error')
+                self.msg = show_message('No data available for plotting', 'Plot error')
     
         # Plots vertical dashed lines showing delta-g's
         elif drift_type == 'roman':

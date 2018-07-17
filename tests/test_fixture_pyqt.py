@@ -2,19 +2,29 @@ import pytest
 import pyqt_models
 import GSadjust
 
-FILES = ['channellist_testobj.p',
-         'channellist_testobj.p',
-         'channellist_testobj.p']
 
-@pytest.fixture()
-def test_channellist_obj(request):
+@pytest.fixture
+def test_channellist_fixture(request):
     import pickle
-    fname = request.param#'channellist_testobj.p'
+    fname = request.param  #'channellist_testobj.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
 
-@pytest.fixture()
+
+@pytest.fixture
+def test_twostations_fixture(request):
+    import pickle
+    fname = request.param
+    with open(fname, "rb") as f:
+        cl = pickle.load(f)
+    obstreesurvey = pyqt_models.ObsTreeSurvey('test')
+    obstreesurvey.populate(cl, name='test')
+    loop = obstreesurvey.child(0)
+    return (loop.child(0), loop.child(1))
+
+
+@pytest.fixture
 def channellist():
     import pickle
     fname = 'channellist_burris.p'

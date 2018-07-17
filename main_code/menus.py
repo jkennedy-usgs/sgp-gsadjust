@@ -150,8 +150,11 @@ class Menus:
         self.mnAdjOptions = self.create_action("Adjust options...",
                                                slot=self.mainProg.show_adjust_options,
                                                enabled=True)
-        self.mnAdjAdjust = self.create_action("&Adjust network",
-                                              shortcut="Ctrl+1", slot=self.mainProg.adjust_network,
+        self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",
+                                              shortcut="Ctrl+2", slot=lambda: self.mainProg.adjust_network('current'),
+                                              tip="Least-square drift adjustment", enabled=False)
+        self.mnAdjAdjust = self.create_action("&Adjust all surveys",
+                                              shortcut="Ctrl+1", slot=lambda:self.mainProg.adjust_network('all'),
                                               tip="Least-square drift adjustment", enabled=False)
         self.mnAdjUpdateDeltas = self.create_action("&Populate delta table - all surveys",
                                                     shortcut="Ctrl+A",
@@ -198,6 +201,7 @@ class Menus:
 
 
         self.add_actions(self.mnAdj, (self.mnAdjOptions,
+                                      self.mnAdjAdjustCurrent,
                                       self.mnAdjAdjust,
                                       None,
                                       self.mnAdjUpdateDeltas,

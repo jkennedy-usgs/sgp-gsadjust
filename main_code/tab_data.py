@@ -229,7 +229,7 @@ class TabData(QtWidgets.QWidget):
         Tilts: absolute value higher than threshold are set to keepdata=0
         """
         if obstreestation.meter_type == 'Burris':
-            show_message('Not implemented for Burris data', 'Data selection error')
+            self.msg = show_message('Not implemented for Burris data', 'Data selection error')
             return
         tilt_column1 = 3
         tilt_column2 = 4
@@ -251,7 +251,7 @@ class TabData(QtWidgets.QWidget):
         sd: sd values higher than threshold are set to keepdata=0
         """
         if obstreestation.meter_type == 'Burris':
-            show_message('Not implemented for Burris data', 'Data selection error')
+            self.msg = show_message('Not implemented for Burris data', 'Data selection error')
             return
         sd_column = 2
         sd_threshold = float(autoselec.val.text())
@@ -271,7 +271,7 @@ class TabData(QtWidgets.QWidget):
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(self.parent.currentStationIndex)
         if obstreestation.meter_type == 'Burris':
-            show_message('Not implemented for Burris data', 'Data selection error')
+            self.msg = show_message('Not implemented for Burris data', 'Data selection error')
             return
         dur_column = 6
         dur_threshold = float(autoselec.val.text())

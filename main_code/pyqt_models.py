@@ -161,6 +161,7 @@ class ObsTreeStation(ObsTreeItem):
                     return float(np.std(gtmp))
             else:  # Scintrex: return the S.D. reported for each sample, normalized by weight.
                 sd = np.sqrt(1. / sum(self._weights_()))
+                return sd
         except:
             return -999
 
@@ -444,6 +445,86 @@ class ObsTreeSurvey(ObsTreeItem):
                 obstreestation = obstreeloop.child(ii)
                 yield obstreestation
 
+    def run_inversion(self, adj_type='PyLSQ', write_out_files='n', output_root_dir='./', ):
+        """
+        Prepares inversion data and calls appropriate method.
+
+        Adds an AdjustmentResults object to each Adjustment object of each Survey.
+            -Counts n_deltas, n_deltas_notused, n_datums, n_datums_notused
+            -Corrects datum observations for gradient
+            -Runs inversion
+        :param adj_type: 'PyLSQ' (numpy) or 'Gravnet'
+        :param write_out_files: Write output files, 'y' or 'n'
+        :param output_root_dir: Where to write output files
+        """
+        from gui_objects import show_message
+        if self.data(role=QtCore.Qt.CheckStateRole) == 2:
+            deltas = []
+            datums = []
+            adjustmentresults = data_objects.AdjustmentResults()
+
+            # Form datasets for adjustment from selected table items, count number of deltas and datums (used when
+            # writing metadata about adjustment).
+            for ii in range(self.delta_model.rowCount()):
+                ind = self.delta_model.createIndex(ii, 0)
+                chk = self.delta_model.data(ind, QtCore.Qt.CheckStateRole)
+                if chk == 2:  # Checkbox checked
+                    delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+                    if delta.type == 'normal':
+                        try:
+                            if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
+                                    delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
+                                deltas.append(delta)
+                                adjustmentresults.n_deltas += 1
+                            else:
+                                adjustmentresults.n_deltas_notused += 1
+                        except:
+                            self.msg = show_message("Delta station not found. Was it deleted?", "GSadjust error")
+                    else:
+                        deltas.append(delta)
+                        adjustmentresults.n_deltas += 1
+                else:
+                    adjustmentresults.n_deltas_notused += 1
+
+            for ii in range(self.datum_model.rowCount()):
+                ind = self.datum_model.createIndex(ii, 0)
+                chk = self.datum_model.data(ind, QtCore.Qt.CheckStateRole)
+                if chk == 2:  # Checkbox checked
+                    # account for vertical gradient
+                    datum = copy.copy(self.datum_model.data(ind, QtCore.Qt.UserRole))
+                    if hasattr(datum, 'gradient'):
+                        datum.g = datum.g - datum.gradient * datum.meas_height
+                    datums.append(datum)
+                    adjustmentresults.n_datums += 1
+                else:
+                    adjustmentresults.n_datums_notused += 1
+
+            self.adjustment.deltas = deltas
+            self.adjustment.datums = datums
+            self.adjustment.adjustmentresults = adjustmentresults
+
+            try:
+                self.results_model.clearResults()
+                if len(self.adjustment.datums) == 0:
+                    self.msg = show_message(
+                        "Survey {}: At least one datum must be specified".format(self.name),
+                        "Inversion error")
+                    return
+                if len(self.adjustment.deltas) == 0:
+                    self.msg = show_message(
+                        "Survey {}: At least one relative-gravity difference must be specified".format(self.name),
+                        "Inversion error")
+                if adj_type == 'PyLSQ':
+                    logging.info('Numpy inversion, Survey: {}'.format(self.name))
+                    self.numpy_inversion(output_root_dir, write_out_files)
+                elif adj_type == 'Gravnet':
+                    logging.info('Gravnet inversion, Survey: {}'.format(self.name))
+                    self.gravnet_inversion()
+            except Exception:
+                logging.exception("Inversion error")
+                self.msg = self.msg = show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
+                             "Inversion error")
+
     def gravnet_inversion(self):
         """
         Writes input files for Gravnet.exe, runs the executable, and reads in the results
@@ -460,7 +541,7 @@ class ObsTreeSurvey(ObsTreeItem):
                 dir_changed = True
             # not found at all: error
             else:
-                show_message('Gravnet.exe not found, aborting', 'Inversion error')
+                self.msg = show_message('Gravnet.exe not found, aborting', 'Inversion error')
                 logging.error('Inversion error, Gravnet.exe not found')
                 return
 
@@ -474,7 +555,7 @@ class ObsTreeSurvey(ObsTreeItem):
                 ls_degree.append(delta.ls_drift[1])
         unique_ls = list(set(ls_degree))
         if len(unique_ls) > 1:
-            show_message('It appears that more than one polynomial degree was specified for different loops for the '
+            self.msg = show_message('It appears that more than one polynomial degree was specified for different loops for the '
                          'network, or that some loops are not using the ' +
                          'adjustment drift option. When using Gravnet, all loops must have the same degree drift ' +
                          'model. Aborting.',
@@ -531,12 +612,12 @@ class ObsTreeSurvey(ObsTreeItem):
         cal_dic = {}
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.unique_meters) > 1:
-                show_message("It appears more than one meter was used on the survey. Gravnet calculates a " +
+                self.msg = show_message("It appears more than one meter was used on the survey. Gravnet calculates a " +
                              "calibration coefficient for a single meter only. Use Numpy inversion " +
                              "to calculate meter-specific calibration coefficients",
                              "Inversion warning")
             if len(self.adjustment.datums) == 1:
-                show_message("Two or more datum observations are required to calculate a calibration coefficient." +
+                self.msg = show_message("Two or more datum observations are required to calculate a calibration coefficient." +
                              " Aborting.", "Inversion warning")
                 return
             # Run gravnet with calibration coefficient
@@ -635,7 +716,7 @@ class ObsTreeSurvey(ObsTreeItem):
 
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.adjustment.datums) == 1:
-                show_message("Two or more datum observations are required to calculate a calibration coefficient." +
+                self.msg = show_message("Two or more datum observations are required to calculate a calibration coefficient." +
                              " Aborting.", "Inversion warning")
                 return
             n_meters = len(self.unique_meters)
@@ -715,7 +796,7 @@ class ObsTreeSurvey(ObsTreeItem):
                 try:
                     A[row, self.adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
                 except:
-                    show_message('Key error. Do Datum station names match delta observations?', 'Inversion error')
+                    self.msg = show_message('Key error. Do Datum station names match delta observations?', 'Inversion error')
 
             # Populate column(s) for drift, if included in network adjustment
             if delta.ls_drift is not None:
@@ -741,7 +822,7 @@ class ObsTreeSurvey(ObsTreeItem):
                 Obs[n_rel_obs + i] = datum.g
                 i += 1
             except KeyError as e:
-                show_message('Key error: {}'.format(e.args[0]), 'Inversion error')
+                self.msg = show_message('Key error: {}'.format(e.args[0]), 'Inversion error')
                 return
 
         # Do the inversion
@@ -755,7 +836,7 @@ class ObsTreeSurvey(ObsTreeItem):
             self.adjustment.python_lsq_inversion()
         except Exception as e:
             logging.exception(e, exc_info=True)
-            show_message("Singular matrix error", "Inversion error")
+            self.msg = show_message("Singular matrix error", "Inversion error")
             return
         # Populate results table
         for i in range(len(sta_dic_ls)):
@@ -767,7 +848,7 @@ class ObsTreeSurvey(ObsTreeItem):
                         self.adjustment.g_dic[key] = float(self.adjustment.X[i])
                         self.adjustment.sd_dic[key] = float()
                     except:
-                        show_message("Bad variance in results", "Inversion error")
+                        self.msg = show_message("Bad variance in results", "Inversion error")
 
         # Retrieve calibration coefficient(s)
         cal_dic = dict()
@@ -874,7 +955,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     tempdelta.residual = adj_dg - cal_adj_dg
                     dg_residuals.append(tempdelta.residual)
                 except KeyError:
-                    show_message("Key error", "Key error")
+                    self.msg = show_message("Key error", "Key error")
                     return
             else:
                 tempdelta.residual = -999.
@@ -954,7 +1035,7 @@ class ObsTreeSurvey(ObsTreeItem):
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded
                         from gui_objects import show_message
-                        show_message("Error populating delta table. Please check the drift correction " +
+                        self.msg = show_message("Error populating delta table. Please check the drift correction " +
                                      "for survey " + self.name + ", loop " + loop.name,
                                      "GSadjust error")
         return True
@@ -999,7 +1080,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     if index.column() == 1:
                         return num2date(m.tmean).strftime('%Y-%m-%d %H:%M:%S')
                     if index.column() == 2:
-                        return '%1.1f' % m.gmean
+                        return '{:.1f} ± {:.1f}'.format(m.gmean, m.stdev)
                 elif type(m) is ObsTreeLoop:
                     if index.column() == 0:
                         return m.name

@@ -433,6 +433,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.all_survey_data = self.read_raw_data_file(fname, meter_type)
                 if append_loop:
                     obstreesurvey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+                    # Loads all survey data into a single loop.
                     obstreesurvey.populate(self.all_survey_data, name=str(obstreesurvey.loop_count))
                 else:
                     obstreesurvey = ObsTreeSurvey(str(self.all_survey_data.t[0].date()))
@@ -648,6 +649,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             return all_survey_data
 
+        # Returning e like this allows exceptions to be tested in pytest
         except IOError:
             raise
         except ValueError as e:
@@ -841,6 +843,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.populate_coordinates()
                 self.menus.mnFileSaveWorkspace.setEnabled(True)
                 self.menus.mnAdjAdjust.setEnabled(True)
+                self.menus.mnAdjAdjustCurrent.setEnabled(True)
                 self.workspace_loaded = True
                 self.update_all_drift_plots()
                 PBAR1.progressbar.setValue(4)
@@ -963,6 +966,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.update_adjust_tables()
         self.menus.mnAdjClearDeltaTable.enabled = True
         self.menus.mnAdjAdjust.setEnabled(True)
+        self.menus.mnAdjAdjustCurrent.setEnabled(True)
 
     def activate_survey_or_loop(self, index):
         """
@@ -1304,7 +1308,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             self.obstreeview_popup_menu.exec_(self.data_treeview.mapToGlobal(point))
 
-    def adjust_network(self):
+    def adjust_network(self, how_many='all'):
         """
         Carries out network adjustment, updates output tables
         """
@@ -1313,24 +1317,6 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             adj_type = 'Gravnet'
 
-        self.run_inversion(adj_type)
-        if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
-            self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
-        self.statusBar().showMessage("Network adjustment complete")
-        self.update_adjust_tables()
-
-    def run_inversion(self, adj_type='PyLSQ', write_out_files='n', output_root_dir='./', ):
-        """
-        Prepares inversion data and calls appropriate method.
-
-        Adds an AdjustmentResults object to each Adjustment object of each Survey.
-            -Counts n_deltas, n_deltas_notused, n_datums, n_datums_notused
-            -Corrects datum observations for gradient
-            -Runs inversion
-        :param adj_type: 'PyLSQ' (numpy) or 'Gravnet'
-        :param write_out_files: Write output files, 'y' or 'n'
-        :param output_root_dir: Where to write output files
-        """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Collect checked items into adjustment object
         if self.deltas_update_required_label.set is True:
@@ -1342,77 +1328,21 @@ class MainProg(QtWidgets.QMainWindow):
             if reply == QtWidgets.QMessageBox.No:
                 return
 
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            if survey.data(role=QtCore.Qt.CheckStateRole) == 2:
-                deltas = []
-                datums = []
-                adjustmentresults = AdjustmentResults()
-
-                # Form datasets for adjustment from selected table items, count number of deltas and datums (used when
-                # writing metadata about adjustment).
-                for ii in range(survey.delta_model.rowCount()):
-                    ind = survey.delta_model.createIndex(ii, 0)
-                    chk = survey.delta_model.data(ind, QtCore.Qt.CheckStateRole)
-                    if chk == 2:  # Checkbox checked
-                        delta = survey.delta_model.data(ind, QtCore.Qt.UserRole)
-                        if delta.type == 'normal':
-                            try:
-                                if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
-                                        delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
-                                    deltas.append(delta)
-                                    adjustmentresults.n_deltas += 1
-                                else:
-                                    adjustmentresults.n_deltas_notused += 1
-                            except:
-                                self.msg = show_message("Delta station not found. Was it deleted?", "GSadjust error")
-                        else:
-                            deltas.append(delta)
-                            adjustmentresults.n_deltas += 1
-                    else:
-                        adjustmentresults.n_deltas_notused += 1
-
-                for ii in range(survey.datum_model.rowCount()):
-                    ind = survey.datum_model.createIndex(ii, 0)
-                    chk = survey.datum_model.data(ind, QtCore.Qt.CheckStateRole)
-                    if chk == 2:  # Checkbox checked
-                        # account for vertical gradient
-                        datum = copy.copy(survey.datum_model.data(ind, QtCore.Qt.UserRole))
-                        if hasattr(datum, 'gradient'):
-                            datum.g = datum.g - datum.gradient * datum.meas_height
-                        datums.append(datum)
-                        adjustmentresults.n_datums += 1
-                    else:
-                        adjustmentresults.n_datums_notused += 1
-
-                survey.adjustment.deltas = deltas
-                survey.adjustment.datums = datums
-                survey.adjustment.adjustmentresults = adjustmentresults
-
-                try:
-                    survey.results_model.clearResults()
-                    if len(survey.adjustment.datums) == 0:
-                        self.msg = show_message(
-                            "Survey {}: At least one datum must be specified".format(survey.name),
-                            "Inversion error")
-                        return
-                    if len(survey.adjustment.deltas) == 0:
-                        self.msg = show_message(
-                            "Survey {}: At least one relative-gravity difference must be specified".format(survey.name),
-                            "Inversion error")
-                    if adj_type == 'PyLSQ':
-                        logging.info('Numpy inversion, Survey: {}'.format(survey.name))
-                        survey.numpy_inversion(output_root_dir, write_out_files)
-                    elif adj_type == 'Gravnet':
-                        logging.info('Gravnet inversion, Survey: {}'.format(survey.name))
-                        survey.gravnet_inversion()
-                    self.adjust_update_not_required()
-                except Exception:
-                    logging.exception("Inversion error")
-                    self.msg = self.msg = show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
-                                 "Inversion error")
+        if how_many=='all':
+            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+                obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
+                obstreesurvey.run_inversion(adj_type)
+        elif how_many=='current':
+            obstreesurvey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+            obstreesurvey.run_inversion(adj_type)
+        if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
+            self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
+        self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
+
+        self.adjust_update_not_required()
+
 
     def set_adj_sd(self, survey, ao):
         """
@@ -2023,7 +1953,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         index = self.tab_adjust.datum_view.selectedIndexes()
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        for idx in index.reverse:
+        for idx in reversed(index):
             survey.datum_model.removeRow(idx)
         self.tab_adjust.datum_view.update()
         return

@@ -163,7 +163,7 @@ class AdjustOptions(QtWidgets.QDialog):
             self.setWindowTitle('Network adjustment options')
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
-            show_message('Please load a survey first', 'Network adjustment options')
+            self.msg = show_message('Please load a survey first', 'Network adjustment options')
 
     def set_adjust_options(self):
         if self.drift_temp_chk.isChecked():
@@ -289,7 +289,7 @@ def copy_cells_to_clipboard(table):
         sys_clip = QtWidgets.QApplication.clipboard()
         sys_clip.setText(clipboard)
     else:
-        show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
+        self.msg = show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
 
 
 def date_method_dialog():
@@ -746,4 +746,4 @@ class SelectAbsg(QtWidgets.QDialog):
                             self.path = path
         QtWidgets.QApplication.restoreOverrideCursor()
         if not files_found:
-            show_message('No *.project.txt files found in the selected directories.', 'Import error')
+            self.msg = show_message('No *.project.txt files found in the selected directories.', 'Import error')

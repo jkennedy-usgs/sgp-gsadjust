@@ -1035,8 +1035,6 @@ class ObsTreeSurvey(ObsTreeItem):
             for i in range(self.rowCount()):
                 loop = self.child(i)
                 if loop.checkState() == QtCore.Qt.Checked:
-                    if loop.delta_model is None:
-                        self.model().plotDrift.emit()
                     try:
                         for ii in range(loop.delta_model.rowCount()):
 
@@ -1066,9 +1064,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
 
-    refreshView = QtCore.pyqtSignal()
-    nameChanged = QtCore.pyqtSignal()
-    plotDrift = QtCore.pyqtSignal()
+    signal_refresh_view = QtCore.pyqtSignal()
+    signal_name_changed = QtCore.pyqtSignal()
+    signal_plot_drift = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
@@ -1091,7 +1089,10 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     if index.column() == 0:
                         return m.display_name
                     if index.column() == 1:
-                        return num2date(m.tmean).strftime('%Y-%m-%d %H:%M:%S')
+                        if m.tmean != -999:
+                            return num2date(m.tmean).strftime('%Y-%m-%d %H:%M:%S')
+                        else:
+                            return m.tmean
                     if index.column() == 2:
                         return '{:.1f} ± {:.1f}'.format(m.gmean, m.stdev)
                 elif type(m) is ObsTreeLoop:
@@ -1122,7 +1123,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 m.setCheckState(QtCore.Qt.Unchecked)
             self.dataChanged.emit(index, index)
             self.layoutChanged.emit()
-            self.refreshView.emit()
+            self.signal_refresh_view.emit()
             return True
 
         if role == QtCore.Qt.EditRole:
@@ -1171,7 +1172,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                 m.station[iiii] = new_name
                         logging.info('Stations renamed from {} to {} in {}'.format(old_name, new_name,
                                                                                     rename_type))
-                        self.nameChanged.emit()
+                        self.signal_name_changed.emit()
 
                 elif type(m) is ObsTreeLoop:
                     new_name = str(value)
@@ -1905,7 +1906,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                           hierarchy
     """
 
-    updateCoordinates = QtCore.pyqtSignal()
+    signal_update_coordinates = QtCore.pyqtSignal()
     signal_adjust_update_required = QtCore.pyqtSignal()
 
     def __init__(self, ChannelList_obj, parent=None):
@@ -2040,8 +2041,10 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
         self.createArrayData(ChannelList_obj)
         self.arraydata = None
 
-    updateCoordinates = QtCore.pyqtSignal()
+    signal_update_coordinates = QtCore.pyqtSignal()
     signal_adjust_update_required = QtCore.pyqtSignal()
+    signal_uncheck_station = QtCore.pyqtSignal()
+    signal_check_station = QtCore.pyqtSignal()
 
     def createArrayData(self, ChannelList_obj):
         """
@@ -2118,9 +2121,12 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
 
             if value == QtCore.Qt.Checked:
                 self.ChannelList_obj.keepdata[index.row()] = 1
+                self.signal_check_station.emit()
             elif value == QtCore.Qt.Unchecked:
                 self.unchecked[index] = value
                 self.ChannelList_obj.keepdata[index.row()] = 0
+                if not any(self.ChannelList_obj.keepdata):
+                    self.signal_uncheck_station.emit()
             self.signal_adjust_update_required.emit()
             self.dataChanged.emit(index, index)
             return True
@@ -2138,11 +2144,11 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                     if index.column() == 9:  # Lat
                         self.arraydata[index.row()][index.column()] = float(value)
                         attr = 'lat'
-                        self.updateCoordinates.emit()
+                        self.signal_update_coordinates.emit()
                     if index.column() == 10:  # Long
                         self.arraydata[index.row()][index.column()] = float(value)
                         attr = 'long'
-                        self.updateCoordinates.emit()
+                        self.signal_update_coordinates.emit()
                     if attr is not None:
                         self.dataChanged.emit(index, index)
                         return True

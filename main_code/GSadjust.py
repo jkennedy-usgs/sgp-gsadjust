@@ -116,6 +116,7 @@ import webbrowser
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 import matplotlib.pyplot as plt
+from matplotlib.dates import date2num
 # For network graphs
 import networkx as nx  # networkx 1.9
 from matplotlib.dates import num2date
@@ -286,8 +287,8 @@ class MainProg(QtWidgets.QMainWindow):
         # Resize, expand tree view
         self.data_treeview.setModel(self.obsTreeModel)
         self.obsTreeModel.dataChanged.connect(self.on_obs_checked_change)
-        self.obsTreeModel.refreshView.connect(self.refresh_tables)
-        self.obsTreeModel.nameChanged.connect(self.deltas_update_required)
+        self.obsTreeModel.signal_refresh_view.connect(self.refresh_tables)
+        self.obsTreeModel.signal_name_changed.connect(self.deltas_update_required)
         self.selmodel = self.data_treeview.selectionModel()
         self.selmodel.selectionChanged.connect(self.on_obs_tree_change)
         # self.data_treeview.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
@@ -382,11 +383,21 @@ class MainProg(QtWidgets.QMainWindow):
         elif obstreeloop.meter_type == 'Burris':
             self.station_model = BurrisTableModel(station)
         self.station_model.dataChanged.connect(self.prep_station_plot)
-        self.station_model.updateCoordinates.connect(self.populate_coordinates)
+        self.station_model.signal_update_coordinates.connect(self.populate_coordinates)
         self.station_model.signal_adjust_update_required.connect(self.adjust_update_required)
+        self.station_model.signal_uncheck_station.connect(self.uncheck_station)
+        self.station_model.signal_check_station.connect(self. check_station)
         self.tab_data.data_view.setModel(self.station_model)
         self.obsTreeModel.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
+
+    def uncheck_station(self):
+        obstreestation = self.obsTreeModel.itemFromIndex(self.currentStationIndex)
+        obstreestation.setCheckState(0)
+
+    def check_station(self):
+        obstreestation = self.obsTreeModel.itemFromIndex(self.currentStationIndex)
+        obstreestation.setCheckState(2)
 
     ###########################################################################
     # Load/Open/Save routines
@@ -436,7 +447,7 @@ class MainProg(QtWidgets.QMainWindow):
                     # Loads all survey data into a single loop.
                     obstreesurvey.populate(self.all_survey_data, name=str(obstreesurvey.loop_count))
                 else:
-                    obstreesurvey = ObsTreeSurvey(str(self.all_survey_data.t[0].date()))
+                    obstreesurvey = ObsTreeSurvey(str(num2date(self.all_survey_data.t[0]).date()))
                     obstreesurvey.populate(self.all_survey_data)
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
             except IOError as e:
@@ -516,12 +527,12 @@ class MainProg(QtWidgets.QMainWindow):
                     all_survey_data.meter_etc.append(float(vals_temp3[8]) * 1000.)
                     all_survey_data.dur.append(int(vals_temp3[9]))
                     all_survey_data.rej.append(int(vals_temp3[10]))
-                    all_survey_data.t.append(dt.datetime(int(vals_temp4[3]),
+                    all_survey_data.t.append(date2num(dt.datetime(int(vals_temp4[3]),
                                                          int(vals_temp1[1]),
                                                          int(vals_temp1[2]),
                                                          int(vals_temp3[11]),
                                                          int(vals_temp2[1]),
-                                                         int(vals_temp4[0])))
+                                                         int(vals_temp4[0]))))
                     if meter:
                         all_survey_data.meter.append(meter)
                     else:
@@ -583,12 +594,12 @@ class MainProg(QtWidgets.QMainWindow):
                     all_survey_data.temp.append(0.)
                     all_survey_data.dur.append(5)
                     all_survey_data.rej.append(5)
-                    all_survey_data.t.append(dt.datetime(int(date_temp[0]),
+                    all_survey_data.t.append(date2num(dt.datetime(int(date_temp[0]),
                                                          int(date_temp[1]),
                                                          int(date_temp[2]),
                                                          int(time_temp[0]),
                                                          int(time_temp[1]),
-                                                         int(time_temp[2])))
+                                                         int(time_temp[2]))))
                     all_survey_data.keepdata.append(1)
                 all_survey_data.meter_type = meter_type
 
@@ -631,12 +642,12 @@ class MainProg(QtWidgets.QMainWindow):
                     all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.)
                     all_survey_data.dur.append(5)
                     all_survey_data.rej.append(5)
-                    all_survey_data.t.append(dt.datetime(int(date_temp[0]),
+                    all_survey_data.t.append(date2num(dt.datetime(int(date_temp[0]),
                                                          int(date_temp[1]),
                                                          int(date_temp[2]),
                                                          int(time_temp[0]),
                                                          int(time_temp[1]),
-                                                         int(time_temp[2])))
+                                                         int(time_temp[2]))))
                     if meter:
                         all_survey_data.meter.append(meter)
                     else:
@@ -852,7 +863,6 @@ class MainProg(QtWidgets.QMainWindow):
             # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
             # updated.
             self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
-            self.connect_loops_to_signal()
             self.update_adjust_tables()
             PBAR1.progressbar.setValue(5)
             QtWidgets.QApplication.processEvents()
@@ -864,12 +874,6 @@ class MainProg(QtWidgets.QMainWindow):
         # except Exception as e:
         #     self.msg = show_message("Workspace load error", "Error")
 
-    def connect_loops_to_signal(self):
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                loop.model().plotDrift.connect(self.tab_drift.plot_drift)
 
     def assemble_all_deltas(self):
         """

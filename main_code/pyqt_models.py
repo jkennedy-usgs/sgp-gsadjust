@@ -226,7 +226,6 @@ class ObsTreeLoop(ObsTreeItem):
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
         self.meter = None  # Meter S/N, for the case where multiple meters are calibrated
 
-    # plotDrift=QtCore.pyqtSignal()
 
     def __str__(self):
         return 'Drift method: {},  ' \
@@ -1066,7 +1065,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     signal_refresh_view = QtCore.pyqtSignal()
     signal_name_changed = QtCore.pyqtSignal()
-    signal_plot_drift = QtCore.pyqtSignal()
+    signal_delta_update_required = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
@@ -1119,8 +1118,12 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             m = index.model().itemFromIndex(index)
             if value == QtCore.Qt.Checked:
                 m.setCheckState(QtCore.Qt.Checked)
+                if type(m) is ObsTreeLoop:
+                    self.signal_delta_update_required.emit()
             else:
                 m.setCheckState(QtCore.Qt.Unchecked)
+                if type(m) is ObsTreeLoop:
+                    self.signal_delta_update_required.emit()
             self.dataChanged.emit(index, index)
             self.layoutChanged.emit()
             self.signal_refresh_view.emit()

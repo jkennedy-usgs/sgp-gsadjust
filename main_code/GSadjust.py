@@ -289,6 +289,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.dataChanged.connect(self.on_obs_checked_change)
         self.obsTreeModel.signal_refresh_view.connect(self.refresh_tables)
         self.obsTreeModel.signal_name_changed.connect(self.deltas_update_required)
+        self.obsTreeModel.signal_delta_update_required.connect(self.deltas_update_required)
         self.selmodel = self.data_treeview.selectionModel()
         self.selmodel.selectionChanged.connect(self.on_obs_tree_change)
         # self.data_treeview.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
@@ -780,6 +781,10 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Saves data if a workspace has already been saved
         """
+        if self.deltas_update_required_label.set is True:
+            self.msg = show_message('Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
+                         'Adjustment tab is not up to date.', 'Workspace save error')
+            return False
         success = self.obsTreeModel.save_workspace(self.workspace_savename)
         if success:
             self.msg = show_message('Workspace saved','')
@@ -898,20 +903,23 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         for delta in deltas:
-            if delta.key == key:
+            # Sometimes they differ by a little bit (1e-8)
+            if delta.key[0:len(key)-5] == key[0:len(key)-5]:
                 return delta
+        return None
 
     def populate_survey_deltatable_from_simpledeltas(self, delta_tables, surveys):
         deltas = self.assemble_all_deltas()
         for idx, delta_table in enumerate(delta_tables):
             for simpledelta in delta_table:
+                i = 0
                 try:
                     if simpledelta.type == 'normal':
                         station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
                         station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
                         d = Delta(station1, station2)
                     elif simpledelta.type == 'list':
-                        if ~hasattr(simpledelta, 'key'):
+                        if not hasattr(simpledelta, 'key'):
                             list_of_deltas = []
                             for delta in simpledelta.sta2:
 
@@ -927,12 +935,15 @@ class MainProg(QtWidgets.QMainWindow):
                                 d = self.return_delta_given_key(simpledelta.key, deltas)
                             except:
                                 jeff = 1
+                            if not d:
+                                jeff = 1
                     # delta =
                     # if delta == None:
                     #     # show_message("Delta not found: " + simpledelta.key, "Import error")
                     #     continue
                     d.adj_sd = simpledelta.sd_for_adjustment
                     d.checked = simpledelta.checked
+                    i+=1
                     surveys[idx].delta_model.insertRows(d, 0)
                 except:
                     jeff = 1

@@ -86,9 +86,12 @@ class ObsTreeStation(ObsTreeItem):
         TODO: test effect of weighting if Burris and Scintrex data are combined in a survey
         :return:
         """
-        sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]
-        w = np.array([1. / (sdtmp[i] * sdtmp[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
-        return w
+        if self.meter_type == 'Burris':
+            return [1 for i in self.keepdata if i == 1]
+        else:
+            sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]
+            w = np.array([1. / (sdtmp[i] * sdtmp[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
+            return w
 
     @classmethod
     def from_station(cls, station):
@@ -142,7 +145,7 @@ class ObsTreeStation(ObsTreeItem):
         The try-except block handles errors when all keepdata == 0.
         """
         try:
-            ttmp = np.array([date2num(self.t[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
+            ttmp = np.array([self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
             tmean = sum(ttmp * self._weights_()) / sum(self._weights_())
             return tmean
         except:
@@ -222,6 +225,8 @@ class ObsTreeLoop(ObsTreeItem):
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
         self.meter = None  # Meter S/N, for the case where multiple meters are calibrated
+
+    # plotDrift=QtCore.pyqtSignal()
 
     def __str__(self):
         return 'Drift method: {},  ' \
@@ -1030,8 +1035,11 @@ class ObsTreeSurvey(ObsTreeItem):
             for i in range(self.rowCount()):
                 loop = self.child(i)
                 if loop.checkState() == QtCore.Qt.Checked:
+                    if loop.delta_model is None:
+                        self.model().plotDrift.emit()
                     try:
                         for ii in range(loop.delta_model.rowCount()):
+
                             if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
                                 delta = loop.delta_model.data(loop.delta_model.index(ii,0),role=QtCore.Qt.UserRole)
                                 self.delta_model.insertRows(delta, 0)
@@ -1060,6 +1068,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     refreshView = QtCore.pyqtSignal()
     nameChanged = QtCore.pyqtSignal()
+    plotDrift = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
@@ -1229,6 +1238,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 for station in loop.stations:
                     if hasattr(station, 'station_name'):  # Sometimes blank stations are generated, not sure why?
                         obstreestation = ObsTreeStation(station, station.station_name, station.station_count)
+                        if type(obstreestation.t[0]) == dt.datetime:
+                            obstreestation.t = [date2num(i) for i in obstreestation.t]
                         obstreeloop.appendRow([obstreestation,
                                                QtGui.QStandardItem('0'),
                                                QtGui.QStandardItem('0')])
@@ -1912,7 +1923,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
         self.ChannelList_obj = ChannelList_obj
         self.arraydata = np.concatenate((ChannelList_obj.station,
                                          np.array(ChannelList_obj.t),
-                                         (date2num(ChannelList_obj.t) - date2num(ChannelList_obj.t[0])) * 24 * 60,
+                                         (ChannelList_obj.t - ChannelList_obj.t[0]) * 24 * 60,
                                          np.array(ChannelList_obj.grav),
                                          np.array(ChannelList_obj.sd), ChannelList_obj.tiltx,
                                          ChannelList_obj.tilty, ChannelList_obj.temp, ChannelList_obj.dur,
@@ -2043,7 +2054,7 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
             self.arraydata = np.concatenate((ChannelList_obj.station,
                                              ChannelList_obj.oper,
                                              ChannelList_obj.meter,
-                                             date2num(ChannelList_obj.t),
+                                             ChannelList_obj.t,
                                              np.array(ChannelList_obj.grav),
                                              np.array(ChannelList_obj.dial),
                                              np.array(ChannelList_obj.feedback),

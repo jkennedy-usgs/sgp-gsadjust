@@ -118,7 +118,7 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 import matplotlib.pyplot as plt
 # For network graphs
 import networkx as nx  # networkx 1.9
-
+from matplotlib.dates import num2date
 from data_objects import Datum, Tare, AdjustmentResults, ChannelList, Delta
 from pyqt_models import BurrisTableModel, ScintrexTableModel
 from pyqt_models import ObsTreeModel, TareTableModel
@@ -812,57 +812,64 @@ class MainProg(QtWidgets.QMainWindow):
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
-        try:
-            PBAR1 = ProgressBar(total=6, textmess='surveys')
-            PBAR1.show()
-            PBAR1.progressbar.setValue(1)
+        # try:
+        PBAR1 = ProgressBar(total=6, textmess='surveys')
+        PBAR1.show()
+        PBAR1.progressbar.setValue(1)
+        QtWidgets.QApplication.processEvents()
+        obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
+        for survey in obstreesurveys:
+            self.obsTreeModel.appendRow([survey,
+                                         QtGui.QStandardItem('0'),
+                                         QtGui.QStandardItem('0')])
+        PBAR1.progressbar.setValue(2)
+        QtWidgets.QApplication.processEvents()
+        self.workspace_savename = fname
+        if not delta_tables:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            return
+        else:
+            firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+            PBAR1.progressbar.setValue(3)
             QtWidgets.QApplication.processEvents()
-            obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
-            for survey in obstreesurveys:
-                self.obsTreeModel.appendRow([survey,
-                                             QtGui.QStandardItem('0'),
-                                             QtGui.QStandardItem('0')])
-            PBAR1.progressbar.setValue(2)
+            firstloop = firstsurvey.child(0)
+            firststation = firstloop.child(0)
+            self.currentSurveyIndex = firstsurvey.index()
+            self.currentLoopIndex = firstloop.index()
+            self.currentStationIndex = firststation.index()
+            self.currentLoopSurveyIndex = firstsurvey.index()
+            self.currentStationLoopIndex = firstloop.index()
+            self.currentStationSurveyIndex = firstsurvey.index()
+            self.populate_coordinates()
+            self.menus.mnFileSaveWorkspace.setEnabled(True)
+            self.menus.mnAdjAdjust.setEnabled(True)
+            self.menus.mnAdjAdjustCurrent.setEnabled(True)
+            self.workspace_loaded = True
+            self.update_all_drift_plots()
+            PBAR1.progressbar.setValue(4)
             QtWidgets.QApplication.processEvents()
-            self.workspace_savename = fname
-            if not delta_tables:
-                QtWidgets.QApplication.restoreOverrideCursor()
-                return
-            else:
-                firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-                PBAR1.progressbar.setValue(3)
-                QtWidgets.QApplication.processEvents()
-                firstloop = firstsurvey.child(0)
-                firststation = firstloop.child(0)
-                self.currentSurveyIndex = firstsurvey.index()
-                self.currentLoopIndex = firstloop.index()
-                self.currentStationIndex = firststation.index()
-                self.currentLoopSurveyIndex = firstsurvey.index()
-                self.currentStationLoopIndex = firstloop.index()
-                self.currentStationSurveyIndex = firstsurvey.index()
-                self.populate_coordinates()
-                self.menus.mnFileSaveWorkspace.setEnabled(True)
-                self.menus.mnAdjAdjust.setEnabled(True)
-                self.menus.mnAdjAdjustCurrent.setEnabled(True)
-                self.workspace_loaded = True
-                self.update_all_drift_plots()
-                PBAR1.progressbar.setValue(4)
-                QtWidgets.QApplication.processEvents()
-                # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
-                # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
-                # updated.
-                self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
-                self.update_adjust_tables()
-                PBAR1.progressbar.setValue(5)
-                QtWidgets.QApplication.processEvents()
-                self.init_gui()
-                self.deltas_update_not_required()
-                QtWidgets.QApplication.restoreOverrideCursor()
-                PBAR1.progressbar.setValue(6)
-                PBAR1.close()
-        except Exception as e:
-            self.msg = show_message("Workspace load error", "Error")
+            # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
+            # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
+            # updated.
+            self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
+            self.connect_loops_to_signal()
+            self.update_adjust_tables()
+            PBAR1.progressbar.setValue(5)
+            QtWidgets.QApplication.processEvents()
+            self.init_gui()
+            self.deltas_update_not_required()
+            QtWidgets.QApplication.restoreOverrideCursor()
+            PBAR1.progressbar.setValue(6)
+            PBAR1.close()
+        # except Exception as e:
+        #     self.msg = show_message("Workspace load error", "Error")
 
+    def connect_loops_to_signal(self):
+        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+            survey = self.obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(survey.rowCount()):
+                loop = survey.child(ii)
+                loop.model().plotDrift.connect(self.tab_drift.plot_drift)
 
     def assemble_all_deltas(self):
         """
@@ -1110,7 +1117,7 @@ class MainProg(QtWidgets.QMainWindow):
         new_tare_date, new_tare_value = 0, 0
         current_loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
         obstreestation = current_loop.child(0)
-        default_time = obstreestation.t[0]
+        default_time = num2date(obstreestation.t[0])
         taredialog = AddTareDialog(default_time)
         if taredialog.exec_():
             new_tare_date = taredialog.dt_edit.dateTime()
@@ -1393,7 +1400,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def clear_delta_model(self):
         """
-        Remove all deltas from delta model shown on network adjustment tab.
+        Remove all deltas from survey delta model shown on network adjustment tab.
         """
         self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).delta_model.clearDeltas()
         self.deltas_update_required()

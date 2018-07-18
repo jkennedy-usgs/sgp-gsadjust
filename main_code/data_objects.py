@@ -36,7 +36,7 @@ unauthorized use of the software.
 """
 import numpy as np
 import datetime as dt
-import pickle
+import copy
 import logging
 from PyQt5 import QtCore, QtWidgets
 
@@ -692,7 +692,10 @@ class SimpleLoop:
     """
 
     def __init__(self, loop):
-        self.__dict__ = loop.__dict__
+        for k, v in loop.__dict__.items():
+            if not type(v) == pyqt_models.DeltaTableModel and not type(v) == pyqt_models.TareTableModel:
+                setattr(self, k, v)
+        # self.__dict__ = copy.deepcopy(loop.__dict__)
         self.stations = []
         self.tares = []
         if loop.tare_model is not None:

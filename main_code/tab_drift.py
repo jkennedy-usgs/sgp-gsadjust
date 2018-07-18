@@ -499,11 +499,14 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_cont_canvasbot.draw()
         self.drift_cont_canvastop.draw()
 
-    def plot_drift(self, obstreeloop=None, update=False):
+    def plot_drift(self, obstreeloop=None, update=True):
         """
         Catch-all function to plot drift
         :param obstreeloop: Can either specify a loop, or by default use the currentLoopIndex.
         """
+        # TODO: plotting and calculating delta-gs is entertwined. To be efficient when loading many loops,
+        # I use update to indicate lines that are run only if the plots are visible. If the plotting and
+        # delta-g code were better separated, update wouldn't be needed.
         offset = 0
         if type(obstreeloop) is not ObsTreeLoop:
             obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
@@ -525,7 +528,8 @@ class TabDrift(QtWidgets.QWidget):
         if drift_type == 'none' or drift_type == 'netadj':
             # none, netadj, and roman all use axes_drift_single
             delta_model = None
-            self.axes_drift_single.cla()
+            if update:
+                self.axes_drift_single.cla()
             logging.info('Plotting drift - no correction, Loop ' + obstreeloop.name)
             # Get data for plotting
             for line in plot_data:
@@ -533,9 +537,10 @@ class TabDrift(QtWidgets.QWidget):
                     # Make values relative to first station value
                     y = [f - line[1][0] + offset for f in line[1]]
                     x = [f for f in line[0]]
-                    a = self.axes_drift_single.plot(x, y, '.-', picker=5)
-                    a[0].name = line[2]
-                    offset += self.offset_slider.value()
+                    if update:
+                        a = self.axes_drift_single.plot(x, y, '.-', picker=5)
+                        a[0].name = line[2]
+                        offset += self.offset_slider.value()
     
             # Plot
             if plot_data and not no_data and update:
@@ -545,7 +550,7 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_fig.canvas.mpl_connect('pick_event',
                                                   lambda event: self.show_line_label(event, self.axes_drift_single))
                 self.plot_tares(self.axes_drift_single, obstreeloop)
-            else:
+            elif update:
                 self.axes_drift_single.cla()
                 self.axes_drift_single.text(0.35, 0.5, 'NO STATION REPEATS')
             if update:
@@ -589,11 +594,12 @@ class TabDrift(QtWidgets.QWidget):
                             drift_x.append(xmean)
                             drift_time.append(dt.datetime.utcfromtimestamp((xmean - 719163) * 86400.))
                             # Plot horizontal extent
-                            if self.drift_plot_hz_extent.isChecked():
+                            if self.drift_plot_hz_extent.isChecked() and update:
                                 self.axes_drift_cont_lower.plot([x[idx], x[idx - 1]], [dr, dr], '-', color='0.5')
-                    a = self.axes_drift_cont_upper.plot(x, y, '.-', picker=5)
-                    a[0].name = line[2]
-                    offset += self.offset_slider.value()
+                    if update:
+                        a = self.axes_drift_cont_upper.plot(x, y, '.-', picker=5)
+                        a[0].name = line[2]
+                        offset += self.offset_slider.value()
     
             # Plot
             if plot_data:
@@ -685,11 +691,12 @@ class TabDrift(QtWidgets.QWidget):
                     yp = np.append(yp_temp, yp2)
                 data = obstreeloop.checked_stations()
                 delta_model = self.calc_cont_dg(xp, yp, data)
-                self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
-                self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
-                self.axes_drift_cont_lower.plot(xp, yp, 'k-')
-                self.drift_cont_canvasbot.draw()
-                self.drift_cont_canvastop.draw()
+                if update:
+                    self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
+                    self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
+                    self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                    self.drift_cont_canvasbot.draw()
+                    self.drift_cont_canvastop.draw()
                 return delta_model
             else:
                 self.msg = show_message('No data available for plotting', 'Plot error')
@@ -697,7 +704,8 @@ class TabDrift(QtWidgets.QWidget):
         # Plots vertical dashed lines showing delta-g's
         elif drift_type == 'roman':
             logging.info('Plotting Roman drift, Loop ' + obstreeloop.name)
-            self.axes_drift_single.cla()
+            if update:
+                self.axes_drift_single.cla()
             data = obstreeloop.checked_stations()
             models = self.calc_roman_dg(data)
 
@@ -711,14 +719,16 @@ class TabDrift(QtWidgets.QWidget):
                     a[0].name = line[2]
     
             for line in models[2]:
-                self.axes_drift_single.plot(line[0], line[1], '--')
-            if plot_data:
+                if update:
+                    self.axes_drift_single.plot(line[0], line[1], '--')
+            if plot_data and update:
                 self.axes_drift_single.xaxis.set_major_formatter(DateFormatter('%H:%M'))
-            self.axes_drift_single.yaxis.set_label_text('Change in gravity since initial \nstation occupation, ' +
-                                                        'in microGal')
-            self.drift_fig.canvas.mpl_connect('pick_event',
-                                              lambda event: self.show_line_label(event, self.axes_drift_single))
-            self.drift_single_canvas.draw()
+            if update:
+                self.axes_drift_single.yaxis.set_label_text('Change in gravity since initial \nstation occupation, ' +
+                                                            'in microGal')
+                self.drift_fig.canvas.mpl_connect('pick_event',
+                                                  lambda event: self.show_line_label(event, self.axes_drift_single))
+                self.drift_single_canvas.draw()
             return models
 
     @staticmethod

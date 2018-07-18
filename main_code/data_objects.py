@@ -664,9 +664,19 @@ class SimpleDelta:
     """
     def __init__(self, delta):
         # Normal delta
-        sta1 = None
-        sta2 = None
-        self.key = delta.key
+        if delta.type == 'normal':
+            self.sta1 = delta.station1.key
+            self.sta2 = delta.station2.key
+        elif delta.type == 'list':
+            self.sta1 = None
+            self.sta2 = []
+            for threepoint in delta.station2:
+                stations = []
+                stations.append(threepoint.station1.key)
+                stations.append(threepoint.station2[0].key)
+                stations.append(threepoint.station2[1].key)
+            self.sta2.append(stations)
+        # self.key = delta.key
         self.sd_for_adjustment = delta.sd_for_adjustment
         self.type = delta.type
         self.ls_drift = delta.ls_drift

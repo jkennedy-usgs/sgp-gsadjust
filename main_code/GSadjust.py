@@ -119,7 +119,7 @@ import matplotlib.pyplot as plt
 # For network graphs
 import networkx as nx  # networkx 1.9
 
-from data_objects import Datum, Tare, AdjustmentResults, ChannelList
+from data_objects import Datum, Tare, AdjustmentResults, ChannelList, Delta
 from pyqt_models import BurrisTableModel, ScintrexTableModel
 from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
@@ -720,7 +720,7 @@ class MainProg(QtWidgets.QMainWindow):
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
                 self.currentLoopIndex = loop.index()
-                self.update_drift_tables_and_plots()
+                self.update_drift_tables_and_plots(update=False)
 
     def workspace_append(self):
         """
@@ -890,17 +890,41 @@ class MainProg(QtWidgets.QMainWindow):
             if delta.key == key:
                 return delta
 
-    def populate_survey_deltatable_from_simpledeltas(self, delta_tables, survey):
+    def populate_survey_deltatable_from_simpledeltas(self, delta_tables, surveys):
         deltas = self.assemble_all_deltas()
         for idx, delta_table in enumerate(delta_tables):
             for simpledelta in delta_table:
-                delta = self.return_delta_given_key(simpledelta.key, deltas)
-                if delta == None:
-                    # show_message("Delta not found: " + simpledelta.key, "Import error")
-                    continue
-                delta.adj_sd = simpledelta.sd_for_adjustment
-                delta.checked = simpledelta.checked
-                survey[idx].delta_model.insertRows(delta, 0)
+                try:
+                    if simpledelta.type == 'normal':
+                        station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
+                        station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
+                        d = Delta(station1, station2)
+                    elif simpledelta.type == 'list':
+                        if ~hasattr(simpledelta, 'key'):
+                            list_of_deltas = []
+                            for delta in simpledelta.sta2:
+
+                                station1 = surveys[idx].return_obstreestation(delta[0])
+                                station2 = [surveys[idx].return_obstreestation(delta[1]),
+                                            surveys[idx].return_obstreestation(delta[2])]
+                                tpd = Delta(station1, station2, delta_type='three_point')
+                                list_of_deltas.append(tpd)
+                            d = Delta.from_list(list_of_deltas)
+                        # This section is necessary to load older .p versions. It's much slower than the above section.
+                        else:
+                            try:
+                                d = self.return_delta_given_key(simpledelta.key, deltas)
+                            except:
+                                jeff = 1
+                    # delta =
+                    # if delta == None:
+                    #     # show_message("Delta not found: " + simpledelta.key, "Import error")
+                    #     continue
+                    d.adj_sd = simpledelta.sd_for_adjustment
+                    d.checked = simpledelta.checked
+                    surveys[idx].delta_model.insertRows(d, 0)
+                except:
+                    jeff = 1
 
     def populate_coordinates(self):
         """
@@ -1026,13 +1050,14 @@ class MainProg(QtWidgets.QMainWindow):
         except:
             pass
 
-    def update_drift_tables_and_plots(self):
+    def update_drift_tables_and_plots(self, update=True):
         """
-        Update tables based on which survey is selected in tree view
+        Creates plots, which in turn calculates delta-gs. It needs to be done for each loop when loading a workspace.
+        IUpdates tables and plots based on which survey is selected in tree view
         """
         drift_method = self.obsTreeModel.itemFromIndex(self.currentLoopIndex).drift_method
         self.tab_drift.driftmethod_comboboxbox.setCurrentIndex(self.drift_lookup[drift_method])
-        self.tab_drift.set_drift_method()
+        self.tab_drift.set_drift_method(update)
 
     def refresh_tables(self):
         """

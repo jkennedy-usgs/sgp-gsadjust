@@ -499,7 +499,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_cont_canvasbot.draw()
         self.drift_cont_canvastop.draw()
 
-    def plot_drift(self, obstreeloop=None):
+    def plot_drift(self, obstreeloop=None, update=False):
         """
         Catch-all function to plot drift
         :param obstreeloop: Can either specify a loop, or by default use the currentLoopIndex.
@@ -538,7 +538,7 @@ class TabDrift(QtWidgets.QWidget):
                     offset += self.offset_slider.value()
     
             # Plot
-            if plot_data and not no_data:
+            if plot_data and not no_data and update:
                 self.axes_drift_single.xaxis.set_major_formatter(DateFormatter('%H:%M'))
                 self.axes_drift_single.yaxis.set_label_text('Change in gravity since initial \nstation occupation, ' +
                                                             'in microGal')
@@ -548,7 +548,8 @@ class TabDrift(QtWidgets.QWidget):
             else:
                 self.axes_drift_single.cla()
                 self.axes_drift_single.text(0.35, 0.5, 'NO STATION REPEATS')
-            self.drift_single_canvas.draw()
+            if update:
+                self.drift_single_canvas.draw()
             data = obstreeloop.checked_stations()
             if drift_type == 'none':
                 delta_model = self.calc_none_dg(data)
@@ -596,20 +597,21 @@ class TabDrift(QtWidgets.QWidget):
     
             # Plot
             if plot_data:
-                self.axes_drift_cont_upper.xaxis.set_major_formatter(DateFormatter('%H:%M'))
-                self.axes_drift_cont_lower.xaxis.set_major_formatter(DateFormatter('%H:%M'))
-                self.drift_cont_plot = self.axes_drift_cont_lower.plot(drift_time, drift_rate, '.', picker=2)
-                xticks = self.axes_drift_cont_upper.get_xticks()
-                self.axes_drift_cont_lower.set_xticks(xticks)
-                xlims = self.axes_drift_cont_upper.get_xlim()
-                self.axes_drift_cont_lower.set_xlim(xlims)
-                self.axes_drift_cont_lower.yaxis.set_label_text('Drift rate,\nin microGal/hr')
-                self.axes_drift_cont_upper.yaxis.set_label_text('Drift, in microGal\n(arbitrary offset)')
-                self.drift_cont_figtop.canvas.mpl_connect('pick_event',
-                                                          lambda event: self.show_line_label
-                                                          (event, self.axes_drift_cont_upper))
-                self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
-                self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
+                if update:
+                    self.axes_drift_cont_upper.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+                    self.axes_drift_cont_lower.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+                    self.drift_cont_plot = self.axes_drift_cont_lower.plot(drift_time, drift_rate, '.', picker=2)
+                    xticks = self.axes_drift_cont_upper.get_xticks()
+                    self.axes_drift_cont_lower.set_xticks(xticks)
+                    xlims = self.axes_drift_cont_upper.get_xlim()
+                    self.axes_drift_cont_lower.set_xlim(xlims)
+                    self.axes_drift_cont_lower.yaxis.set_label_text('Drift rate,\nin microGal/hr')
+                    self.axes_drift_cont_upper.yaxis.set_label_text('Drift, in microGal\n(arbitrary offset)')
+                    self.drift_cont_figtop.canvas.mpl_connect('pick_event',
+                                                              lambda event: self.show_line_label
+                                                              (event, self.axes_drift_cont_upper))
+                    self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
+                    self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
 
                 # Interpolate drift model: polynomial, spline, etc. at xp number of points. xp needs to remain
                 # relatively low to maintain performance.
@@ -729,7 +731,7 @@ class TabDrift(QtWidgets.QWidget):
         for i in range(model.columnCount()):
             delta_view.showColumn(i)
 
-    def set_drift_method(self):
+    def set_drift_method(self, update=True):
         """
         Called from update_drift_tables_and_plots + callback from GUI
         """
@@ -746,18 +748,20 @@ class TabDrift(QtWidgets.QWidget):
         logging.info('Drift method set to ' + method)
         orig_method = obstreeloop.drift_method
         obstreeloop.drift_method = method
-        if method == 'none':
-            self.drift_none()
-        if method == 'netadj':
-            self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
-            self.drift_adjust()
-        if method == 'roman':
-            self.drift_roman()
-        if method == 'continuous':
-            self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
-            self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
-            self.drift_continuous()
-        model = self.plot_drift()
+        # These control the visibility of different tables
+        if update:
+            if method == 'none':
+                self.drift_none()
+            if method == 'netadj':
+                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
+                self.drift_adjust()
+            if method == 'roman':
+                self.drift_roman()
+            if method == 'continuous':
+                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
+                self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
+                self.drift_continuous()
+        model = self.plot_drift(update=update)
 
         if method != orig_method or self.parent.workspace_loaded:
             # Leave the status bar hollow if a workspace was loaded

@@ -102,6 +102,10 @@ class ObsTreeStation(ObsTreeItem):
         return temp
 
     @property
+    def key(self):
+        return (self.station_name, self.station_count)
+
+    @property
     def grav(self):
         """
         Applies tares and earth tide correction to raw_grav

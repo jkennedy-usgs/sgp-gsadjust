@@ -14,7 +14,7 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from gui_objects import about_dialog
 
 
@@ -152,10 +152,12 @@ class Menus:
                                                enabled=True)
         self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",
                                               shortcut="Ctrl+2", slot=lambda: self.mainProg.adjust_network('current'),
-                                              tip="Least-square drift adjustment", enabled=False)
+                                              tip="Adjust current survey", enabled=False,
+                                              icon=QtGui.QIcon('ac.png'))
         self.mnAdjAdjust = self.create_action("&Adjust all surveys",
                                               shortcut="Ctrl+1", slot=lambda:self.mainProg.adjust_network('all'),
-                                              tip="Least-square drift adjustment", enabled=False)
+                                              tip="Adjust all surveys", enabled=False,
+                                              icon=QtGui.QIcon('aa.png'))
         self.mnAdjUpdateDeltas = self.create_action("&Populate delta table - all surveys",
                                                     shortcut="Ctrl+A",
                                                     slot=lambda: self.mainProg.populate_deltamodel('all'),
@@ -234,12 +236,16 @@ class Menus:
                                                             slot=self.mainProg.write_tabular_data)
         self.mnToolsWriteSummary = self.create_action('Write adjustment summary',
                                                       slot=self.mainProg.write_summary)
+        self.mnToolsPlotObservedAdjustedAbs = self.create_action("Plot observed vs adjusted datum",
+                                                                 slot=self.mainProg.plot_datum_comparison,
+                                                                 enabled=False)
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
                                                                     slot=self.mainProg.compute_gravity_change,
                                                                     tip="Compute gravity change", enabled=False)
         self.add_actions(self.mnTools, (self.mnToolsNetworkGraphCircular,
                                         self.mnToolsNetworkGraphMap,
                                         None,
+                                        self.mnToolsPlotObservedAdjustedAbs,
                                         self.mnToolsComputeGravityChangeAction,
                                         None,
                                         self.mnToolsWriteMetadataText,
@@ -265,7 +271,7 @@ class Menus:
         """
         action = QtWidgets.QAction(text, self.mainProg)
         if icon is not None:
-            action.setIcon(QtWidgets.QIcon(":/{}.png".format(icon)))
+            action.setIcon(icon)
         if shortcut is not None:
             action.setShortcut(shortcut)
         if tip is not None:

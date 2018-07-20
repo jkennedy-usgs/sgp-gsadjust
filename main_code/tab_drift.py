@@ -20,6 +20,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import DateFormatter
 from scipy.interpolate import UnivariateSpline
 from matplotlib.figure import Figure
+from matplotlib.dates import date2num
 import logging
 import numpy as np
 import datetime as dt
@@ -151,19 +152,22 @@ class TabDrift(QtWidgets.QWidget):
         grid_widget.setLayout(grid)
         drift_control_sublayout.addWidget(grid_widget)
 
-        self.tareTableView = QtWidgets.QTableView()
-        self.tareTableView.clicked.connect(self.update_tares)
-        self.tareTableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.tareTableView.customContextMenuRequested.connect(self.tare_context_menu)
+        self.tare_view = QtWidgets.QTableView()
+        self.tare_view.clicked.connect(self.update_tares)
+        self.tare_view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tare_view.customContextMenuRequested.connect(self.tare_context_menu)
         self.resultsProxyModel = QtCore.QSortFilterProxyModel(self)
-        self.init_tares_popup_menu()
+
+        self.tare_popup_menu = QtWidgets.QMenu("tare Popup Menu", self)
+        self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
+        self.mnDeleteTare.triggered.connect(self.parent.delete_tare)
     
         lbl = QtWidgets.QLabel("Tares")
         lbl.setFont(QtGui.QFont("Times", 11, QtGui.QFont.Bold))
         lbl.setFixedHeight(30)
         drift_control_sublayout.addItem(QtWidgets.QSpacerItem(40, 42))
         drift_control_sublayout.addWidget(lbl)
-        drift_control_sublayout.addWidget(self.tareTableView)
+        drift_control_sublayout.addWidget(self.tare_view)
 
         control_subwidget = QtWidgets.QWidget()
         control_subwidget.setLayout(drift_control_sublayout)
@@ -751,25 +755,25 @@ class TabDrift(QtWidgets.QWidget):
         tare_model = obstreeloop.tare_model
         if tare_model:
             tare_model.dataChanged.connect(self.update_tares)
-        self.tareTableView.setModel(tare_model)
+        self.tare_view.setModel(tare_model)
 
         inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
         method = inv_drift_lookup[method_key]
         logging.info('Drift method set to ' + method)
         orig_method = obstreeloop.drift_method
         obstreeloop.drift_method = method
+        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
+        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
+        self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
         # These control the visibility of different tables
         if update:
             if method == 'none':
                 self.drift_none()
             if method == 'netadj':
-                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
                 self.drift_adjust()
             if method == 'roman':
                 self.drift_roman()
             if method == 'continuous':
-                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
-                self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
                 self.drift_continuous()
         model = self.plot_drift(update=update)
 
@@ -812,28 +816,39 @@ class TabDrift(QtWidgets.QWidget):
         Right-click context menu on tare table
         :param point: PyQt reference to click point, determines where to show popup.
         """
-        self.tarepopMenu = QtWidgets.QMenu("Menu", self)
-        self.tarepopMenu.addAction(self.mnDeleteTare)
-        self.tarepopMenu.exec_(self.tareTableView.mapToGlobal(point))
-    
-    def init_tares_popup_menu(self):
-        """
-        Right-click menu on results table
-        """
-        self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
-        self.mnDeleteTare.triggered.connect(self.delete_tare)
+        selected = self.tare_view.selectedIndexes()
+        if selected:
+            self.tare_popup_menu.addAction(self.mnDeleteTare)
+            self.tare_popup_menu.exec_(self.tare_view.mapToGlobal(point))
 
-    def delete_tare(self, idxs):
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
-        idxs = self.tareTableView.selectedIndexes()
-        if len(idxs) > 1:
-            return
-        else:
-            obstreeloop.tare_model.removeRow(idxs[0].row(), idxs[0].parent())
-            obstreeloop.tare_model.deleteTare(idxs[0])
-            # tare = obstreeloop.tare_model.data(idxs[0], role=QtCore.Qt.UserRole)
-            # obstreeloop.tare_mode.deleteTare(idxs[0])
-        return
+    #     self.tarepopMenu = QtWidgets.QMenu("Menu", self)
+    #     self.tarepopMenu.addAction(self.mnDeleteTare)
+    #     self.tarepopMenu.exec_(self.tare_view.mapToGlobal(point))
+    #
+    # def datum_context_menu(self, point):
+    #     selected = self.datum_view.selectedIndexes()
+    #     if selected:
+    #         self.datum_popup_menu.addAction(self.mnDeleteDatum)
+    #         self.datum_popup_menu.exec_(self.datum_view.mapToGlobal(point))
+    
+    # def init_tares_popup_menu(self):
+    #     """
+    #     Right-click menu on results table
+    #     """
+    #     self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
+    #     self.mnDeleteTare.triggered.connect(self.delete_tare)
+    #
+    # def delete_tare(self, idxs):
+    #     obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+    #     idxs = self.tare_view.selectedIndexes()
+    #     if len(idxs) > 1:
+    #         return
+    #     else:
+    #         obstreeloop.tare_model.removeRow(idxs[0].row(), idxs[0].parent())
+    #         obstreeloop.tare_model.deleteTare(idxs[0])
+    #         # tare = obstreeloop.tare_model.data(idxs[0], role=QtCore.Qt.UserRole)
+    #         # obstreeloop.tare_mode.deleteTare(idxs[0])
+    #     return
 
     @staticmethod
     def process_tares(obstreeloop):
@@ -849,7 +864,7 @@ class TabDrift(QtWidgets.QWidget):
             for tare in obstreeloop.tare_model.tares:
                 if tare.checked == 2:
                     qdt = QtCore.QDateTime(tare.date, tare.time)
-                    tare_dt = qdt.toPyDateTime()
+                    tare_dt = date2num(qdt.toPyDateTime())
                     for idx, t in enumerate(obstreestation.t):
                         if t > tare_dt:
                             obstreestation.tare[idx] += tare.tare

@@ -126,6 +126,7 @@ from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
+from gui_objects import DatumComparisonFigure
 from gui_objects import AddDatumFromList
 
 from tab_network import TabAdjust
@@ -222,8 +223,15 @@ class MainProg(QtWidgets.QMainWindow):
         self.collapse_all.triggered.connect(slot=self.data_treeview.collapseAll)
         self.expand_all = QtWidgets.QAction(QtGui.QIcon('ea.png'), 'Expand all', self)
         self.expand_all.triggered.connect(slot=self.data_treeview.expandAll)
+
+        # self.adjust_current = QtWidgets.QAction(QtGui.QIcon('ac.png'), 'Collapse all', self)
+        # self.adjust_current.triggered.connect(slot=self.data_treeview.collapseAll)
+        # self.adjust_all = QtWidgets.QAction(QtGui.QIcon('aa.png'), 'Expand all', self)
+        # self.adjust_all.triggered.connect(slot=self.data_treeview.expandAll)
         self.toolbar.addAction(self.collapse_all)
         self.toolbar.addAction(self.expand_all)
+        self.toolbar.addAction(self.menus.mnAdjAdjustCurrent)
+        self.toolbar.addAction(self.menus.mnAdjAdjust)
 
         self.treeview_box.addWidget(self.toolbar)
         self.treeview_box.addWidget(self.data_treeview)
@@ -868,6 +876,8 @@ class MainProg(QtWidgets.QMainWindow):
             # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
             # updated.
             self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
+            for survey in obstreesurveys:
+                self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
             self.update_adjust_tables()
             PBAR1.progressbar.setValue(5)
             QtWidgets.QApplication.processEvents()
@@ -917,16 +927,26 @@ class MainProg(QtWidgets.QMainWindow):
                     if simpledelta.type == 'normal':
                         station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
                         station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
-                        d = Delta(station1, station2)
+                        d = Delta(station1, station2,
+                                  adj_sd=simpledelta.adj_sd,
+                                  driftcorr=simpledelta.driftcorr,
+                                  ls_drift=simpledelta.ls_drift,
+                                  delta_type=simpledelta.type,
+                                  checked=simpledelta.checked)
                     elif simpledelta.type == 'list':
                         if not hasattr(simpledelta, 'key'):
                             list_of_deltas = []
                             for delta in simpledelta.sta2:
 
                                 station1 = surveys[idx].return_obstreestation(delta[0])
-                                station2 = [surveys[idx].return_obstreestation(delta[1]),
-                                            surveys[idx].return_obstreestation(delta[2])]
-                                tpd = Delta(station1, station2, delta_type='three_point')
+                                station2 = (surveys[idx].return_obstreestation(delta[1]),
+                                            surveys[idx].return_obstreestation(delta[2]))
+                                tpd = Delta(station1, station2,
+                                  adj_sd=simpledelta.adj_sd,
+                                  driftcorr=simpledelta.driftcorr,
+                                  ls_drift=simpledelta.ls_drift,
+                                  delta_type='three_point',
+                                  checked=simpledelta.checked)
                                 list_of_deltas.append(tpd)
                             d = Delta.from_list(list_of_deltas)
                         # This section is necessary to load older .p versions. It's much slower than the above section.
@@ -934,19 +954,13 @@ class MainProg(QtWidgets.QMainWindow):
                             try:
                                 d = self.return_delta_given_key(simpledelta.key, deltas)
                             except:
-                                jeff = 1
-                            if not d:
-                                jeff = 1
-                    # delta =
-                    # if delta == None:
-                    #     # show_message("Delta not found: " + simpledelta.key, "Import error")
-                    #     continue
-                    d.adj_sd = simpledelta.sd_for_adjustment
-                    d.checked = simpledelta.checked
+                                return
+                    # d.adj_sd = simpledelta.sd_for_adjustment
+                    # d.checked = simpledelta.checked
                     i+=1
                     surveys[idx].delta_model.insertRows(d, 0)
                 except:
-                    jeff = 1
+                    self.msg = show_message('Import error', 'Import error')
 
     def populate_coordinates(self):
         """
@@ -975,11 +989,13 @@ class MainProg(QtWidgets.QMainWindow):
             for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                 survey = self.obsTreeModel.invisibleRootItem().child(i)
                 table_updated = survey.populate_delta_model(clear=True)
+                self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
             # item = self.obsTreeModel.invisibleRootItem()
         elif populate_type == 'selectedsurvey':
             survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
             table_updated = survey.populate_delta_model(clear=True)
+            self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
         elif populate_type == 'selectedloop':
             selected_idx = self.data_treeview.selectedIndexes()
@@ -1005,6 +1021,7 @@ class MainProg(QtWidgets.QMainWindow):
                 loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
                 survey = loop.parent()
                 table_updated = survey.populate_delta_model(loop, clear=True)
+            self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
         if table_updated:
             self.deltas_update_not_required()
@@ -1140,7 +1157,7 @@ class MainProg(QtWidgets.QMainWindow):
         try:
             tare = Tare(new_tare_date.date(), new_tare_date.time(), new_tare_value)
         except:
-            jeff = 1
+            return
         if not hasattr(current_loop, 'tare_model'):
             current_loop.tare_model = TareTableModel
         current_loop.tare_model.insertRows(tare)
@@ -1384,6 +1401,7 @@ class MainProg(QtWidgets.QMainWindow):
             obstreesurvey.run_inversion(adj_type)
         if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
             self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
+            self.menus.mnToolsPlotObservedAdjustedAbs.setEnabled(True)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -1536,15 +1554,18 @@ class MainProg(QtWidgets.QMainWindow):
         """
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
         adjust_options = AdjustOptions(survey.__str__(), survey.adjustment.adjustmentoptions)
-
         if adjust_options.exec_():
             if adjust_options.surveys_to_update == 'single':
-                survey.adjustment.adjustmentoptions = adjust_options.ao
+                # Not sure why the deepcopy is necessary. Without it, all of the survey.adjustmentoptions
+                # reference the same object.
+                ao = copy.deepcopy(adjust_options.ao)
+                survey.adjustment.adjustmentoptions = ao
                 self.set_adj_sd(survey, adjust_options.ao)
             elif adjust_options.surveys_to_update == 'all':
                 for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+                    ao = copy.deepcopy(adjust_options.ao)
                     survey = self.obsTreeModel.invisibleRootItem().child(i)
-                    survey.adjustment.adjustmentoptions = adjust_options.ao
+                    survey.adjustment.adjustmentoptions = ao
                     self.set_adj_sd(survey, adjust_options.ao)
 
     def plot_compare_datum_to_adjusted(self):
@@ -1754,8 +1775,10 @@ class MainProg(QtWidgets.QMainWindow):
                         station_g.append('-999')
                 all_g.append(station_g)
 
+        dates = []
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
+            dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
             diff_cumulative = []
             diff_iteration = []
             if full_table:
@@ -1874,7 +1897,9 @@ class MainProg(QtWidgets.QMainWindow):
         if not full_table:
             header = ['station'] + header1 + header2
             table = out_table
-            GravityChangeTable(self, table, header)
+            # GravityChangeTable(self, table, header)
+            gravity_change_table = GravityChangeTable(self, table, header, dates)
+            # gravity_change_table.exec_()
         else:
             header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
             # transpose table
@@ -1934,7 +1959,8 @@ class MainProg(QtWidgets.QMainWindow):
                     adj_sta = survey.results_model.data(survey.results_model.index(ii,0), role=QtCore.Qt.UserRole)
                     fid.write('{}\n'.format(str(adj_sta)))
 
-
+    def plot_datum_comparison(self):
+        plot = DatumComparisonFigure(self.obsTreeModel)
 
     def write_tabular_data(self):
         """
@@ -1993,6 +2019,19 @@ class MainProg(QtWidgets.QMainWindow):
 
         if not results_written:
             self.msg = show_message('No network adjustment results', 'Write error')
+
+    def delete_tare(self):
+        """
+        Called when user right-clicks a datum and selects delete from the context menu
+        """
+        index = self.tab_drift.tare_view.selectedIndexes()
+        loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
+        for idx in reversed(index):
+            loop.tare_model.removeRow(idx)
+        self.tab_drift.tare_view.update()
+        self.tab_drift.process_tares(self.obsTreeModel.itemFromIndex(self.currentLoopIndex))
+        self.update_drift_tables_and_plots()
+        return
 
     def delete_datum(self):
         """
@@ -2104,7 +2143,7 @@ def main():
 
 
 # Import here to avoid circular import error
-from gui_objects import show_message, date_method_dialog, SelectAbsg, AdjustOptions
+from gui_objects import show_message, DateMethodDialog, SelectAbsg, AdjustOptions
 
 if __name__ == '__main__':
     main()

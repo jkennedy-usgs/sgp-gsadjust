@@ -106,7 +106,7 @@ class ObsTreeStation(ObsTreeItem):
 
     @property
     def key(self):
-        return (self.station_name, self.station_count)
+        return (self.station_name, self.tmean)
 
     @property
     def grav(self):
@@ -594,7 +594,6 @@ class ObsTreeSurvey(ObsTreeItem):
                          'characters in the Gravnet input file. Please verify that names will still be unique '
                          'after truncating.',
                          'Inversion warning')
-            jeff = 1
         # Write delta-g observation file
         dg_file = self.name + '_dg.obs'
         with open(dg_file, 'w') as fid:
@@ -1012,8 +1011,10 @@ class ObsTreeSurvey(ObsTreeItem):
         :return: ObsTreeStation
         """
         for station in self.iter_stations():
-            if (station.station_name, station.station_count) == station_id:
-                return station
+            if (station.station_name) == station_id[0]:
+                if abs(station.tmean - station_id[1]) < 0.001:
+                    return station
+        return None
 
     def populate_delta_model(self, loop=None, clear=True):
         """
@@ -1125,7 +1126,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 if type(m) is ObsTreeLoop:
                     self.signal_delta_update_required.emit()
             self.dataChanged.emit(index, index)
-            self.layoutChanged.emit()
+            # self.layoutChanged.emit()
             self.signal_refresh_view.emit()
             return True
 
@@ -1138,7 +1139,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     new_name = str(value)
                     if new_name is not m.station_name:
                         rename_type = gui_objects.rename_dialog(old_name, new_name)
-                        if rename_type is 'Loop':
+                        if rename_type == 'Loop':
                             loop = m.parent()
                             for i in range(loop.rowCount()):
                                 item = loop.child(i, 0)
@@ -1146,7 +1147,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                     item.station_name = new_name
                                     for iiii in range(len(item.station)):
                                         item.station[iiii] = new_name
-                        if rename_type is 'Survey':
+                        if rename_type == 'Survey':
                             loop = m.parent()
                             survey = loop.parent()
                             for i in range(survey.rowCount()):
@@ -1157,7 +1158,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                         item.station_name = new_name
                                         for iiii in range(len(item.station)):
                                             item.station[iiii] = new_name
-                        if rename_type is 'Campaign':
+                        if rename_type == 'Campaign':
                             campaign = index.model().invisibleRootItem()
                             for i in range(campaign.rowCount()):
                                 survey = campaign.child(i, 0)
@@ -1169,7 +1170,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                             item.station_name = new_name
                                             for iiii in range(len(item.station)):
                                                 item.station[iiii] = new_name
-                        if rename_type is 'Station':
+                        if rename_type == 'Station':
                             m.station_name = new_name
                             for iiii in range(len(m.station)):
                                 m.station[iiii] = new_name
@@ -1250,7 +1251,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 obstreesurvey.appendRow([obstreeloop,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
-
             obstreesurveys.append(obstreesurvey)
             delta_tables.append(obstreesurvey.deltas)
         return (obstreesurveys, delta_tables)
@@ -1540,6 +1540,14 @@ class TareTableModel(QtCore.QAbstractTableModel):
         self.tares.append(tare)
         self.endInsertRows()
 
+    def removeRow(self, index):
+        tare = self.data(index, role=QtCore.Qt.UserRole)
+        self.beginRemoveRows(index, index.row(), 1)
+        self.tares.remove(tare)
+        self.endRemoveRows()
+        self.beginResetModel()
+        self.endResetModel()
+
     def rowCount(self, parent=None):
         return len(self.tares)
 
@@ -1775,7 +1783,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             column = index.column()
             if role == QtCore.Qt.ForegroundRole:
                 brush = QtGui.QBrush(QtCore.Qt.black)
-                if delta.type is 'normal':
+                if delta.type == 'normal':
                     try:
                         if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
                                 delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
@@ -2070,7 +2078,7 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                                              np.array(ChannelList_obj.long))). \
                 reshape(len(ChannelList_obj.t), 11, order='F')
         except:
-            jeff = 1
+            return
 
     def rowCount(self, parent=None):
         return len(self.ChannelList_obj.t)

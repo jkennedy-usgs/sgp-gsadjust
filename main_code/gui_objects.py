@@ -23,7 +23,8 @@ import datetime as dt
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
-
+import matplotlib.pyplot as plt
+from matplotlib.dates import date2num
 from data_objects import Datum, AdjustmentOptions
 from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel
 import a10
@@ -289,10 +290,10 @@ def copy_cells_to_clipboard(table):
         sys_clip = QtWidgets.QApplication.clipboard()
         sys_clip.setText(clipboard)
     else:
-        self.msg = show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
+        msg = show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
 
 
-def date_method_dialog():
+def DateMethodDialog():
     """
     Dialog to select data import method - all data into one survey of with dates contained in a second file.
     :return: String indicating survey import type ('choose' or 'single')
@@ -334,41 +335,114 @@ def VerticalGradientDialog(default_interval):
             return default_interval
 
 
-def GravityChangeTable(MainProg, table, header, full_table=False):
+class DatumComparisonFigure(QtWidgets.QDialog):
+    def __init__(self, obsTreeModel):
+        super(DatumComparisonFigure, self).__init__()
+        datum_names = []
+        for i in range(obsTreeModel.rowCount()):
+            survey = obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(survey.datum_model.rowCount()):
+                datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                datum_names.append(datum.station)
+
+        unique_datum_names = list(set(datum_names))
+
+        xdata_all, ydata_obs_all, ydata_adj_all = [], [], []
+        for name in unique_datum_names:
+            xdata, ydata_obs, ydata_adj = [], [], []
+            for i in range(obsTreeModel.rowCount()):
+                survey = obsTreeModel.invisibleRootItem().child(i)
+                for ii in range(survey.datum_model.rowCount()):
+                    datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                    if datum.station == name:
+                        xdata.append(date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d')))
+                        ydata_obs.append(datum.g)
+                        ydata_adj.append(datum.g + datum.residual)
+            ydata_obs = [i - ydata_obs[0] for i in ydata_obs]
+            ydata_adj = [i - ydata_adj[0] for i in ydata_adj]
+            xdata_all.append(xdata)
+            ydata_obs_all.append(ydata_obs)
+            ydata_adj_all.append(ydata_adj)
+        self.plot_datum_window(xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names)
+
+    def plot_datum_window(self, xdata_all, ydata_obs_all, ydata_adj_all, names):
+        fig = plt.figure(figsize=(13, 8))
+        i = 0
+        for xdata, ydata_obs, ydata_adj in zip(xdata_all, ydata_obs_all, ydata_adj_all):
+            a = plt.plot(xdata, ydata_obs, '-o', label=names[i] + '_obs')
+            line_color = a[0].get_color()
+            b = plt.plot(xdata, ydata_adj, '--o', c=line_color, label=names[i] + '_adj')
+            i += 1
+        fig.show()
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+
+
+class GravityChangeTable(QtWidgets.QDialog):
     """
     Floating window to show gravity-change results
     :param MainProg:
     :param table:
     :param header:
     """
-    gravity_change_window = QtWidgets.QWidget()
-    gravity_change_window.model = GravityChangeModel(table, header)
-    gravity_change_window.table = QtWidgets.QTableView()
-    gravity_change_window.table.setModel(gravity_change_window.model)
+    def __init__(self, MainProg, table, header, dates=None, full_table=False):
+        super(GravityChangeTable, self).__init__()
+        self.table = table
+        self.header = header
+        self.dates = dates
+        gravity_change_window = QtWidgets.QWidget()
+        gravity_change_window.model = GravityChangeModel(table, header)
+        gravity_change_window.table = QtWidgets.QTableView()
+        gravity_change_window.table.setModel(gravity_change_window.model)
 
-    # Create buttons and actions
-    gravity_change_window.btn1 = QtWidgets.QPushButton('Copy to clipboard')
-    gravity_change_window.btn1.clicked.connect(lambda: copy_cells_to_clipboard(MainProg.popup.table))
-    if not full_table:
-        gravity_change_window.btn2 = QtWidgets.QPushButton('Show full table')
-        gravity_change_window.btn2.clicked.connect(lambda: show_full_table(MainProg))
-    else:
-        gravity_change_window.btn2 = QtWidgets.QPushButton('Show simple table')
-        gravity_change_window.btn2.clicked.connect(lambda: MainProg.compute_gravity_change())
+        # Create buttons and actions
+        gravity_change_window.btn0 = QtWidgets.QPushButton('Plot')
+        gravity_change_window.btn0.clicked.connect(lambda: self.plot_change_window())
+        gravity_change_window.btn1 = QtWidgets.QPushButton('Copy to clipboard')
+        gravity_change_window.btn1.clicked.connect(lambda: copy_cells_to_clipboard(MainProg.popup.table))
+        if not full_table:
+            gravity_change_window.btn2 = QtWidgets.QPushButton('Show full table')
+            gravity_change_window.btn2.clicked.connect(lambda: show_full_table(MainProg))
+        else:
+            gravity_change_window.btn2 = QtWidgets.QPushButton('Show simple table')
+            gravity_change_window.btn2.clicked.connect(lambda: MainProg.compute_gravity_change())
 
-    # Locations
-    vbox = QtWidgets.QVBoxLayout()
-    vbox.addWidget(gravity_change_window.table)
-    hbox = QtWidgets.QHBoxLayout()
-    hbox.addStretch(0)
-    hbox.addWidget(gravity_change_window.btn1)
-    hbox.addWidget(gravity_change_window.btn2)
-    vbox.addLayout(hbox)
-    gravity_change_window.setLayout(vbox)
-    gravity_change_window.setWindowTitle('Gravity Change')
-    gravity_change_window.setGeometry(200, 200, 600, 800)
-    MainProg.popup = gravity_change_window
-    MainProg.popup.show()
+        # Locations
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addWidget(gravity_change_window.table)
+        hbox = QtWidgets.QHBoxLayout()
+        hbox.addStretch(0)
+        # Only show plot button on simple table
+        if self.dates:
+            hbox.addWidget(gravity_change_window.btn0)
+        hbox.addWidget(gravity_change_window.btn1)
+        hbox.addWidget(gravity_change_window.btn2)
+        vbox.addLayout(hbox)
+        gravity_change_window.setLayout(vbox)
+        gravity_change_window.setWindowTitle('Gravity Change')
+        gravity_change_window.setGeometry(200, 200, 600, 800)
+        MainProg.popup = gravity_change_window
+        MainProg.popup.show()
+
+    def plot_change_window(self):
+        plt.figure(figsize=(12,8))
+        cmap = plt.cm.get_cmap('gist_ncar')
+        nrows = len(self.dates)
+        nstations = len(self.table[0])
+        stations = self.table[0]
+        # iterate through each station
+        for i in range(nstations):
+            xdata, ydata = [self.dates[0]], [0]
+            for idx, row in enumerate(self.table[1:nrows]):
+                if not row[i] == '-999':
+                    xdata.append(self.dates[idx+1])
+                    ydata.append(float(row[i])+ydata[-1])
+
+            plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
+            plt.hold
+        plt.ylabel('Gravity change, in µGal')
+        plt.show()
+        plt.legend(loc="upper left", bbox_to_anchor=(1,1))
+        return
 
 
 def show_full_table(MainProg):
@@ -376,7 +450,8 @@ def show_full_table(MainProg):
     table = MainProg.compute_gravity_change(full_table=True)
     header = table[0]
     tp_table = list(zip(*table[1:]))
-    GravityChangeTable(MainProg, tp_table, header, full_table=True)
+    # GravityChangeTable(MainProg, tp_table, header, full_table=True)
+    gravity_change_table = GravityChangeTable(MainProg, tp_table, header, full_table=True)
     return
 
 

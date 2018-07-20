@@ -135,13 +135,13 @@ class Delta:
         self.checked = checked
         self.adj_sd = adj_sd
         self.type = delta_type
-        if type(sta2) is pyqt_models.ObsTreeStation:
+        if self.type=='normal':
             self.meter = sta2.meter[0]
         # Roman correction: list of deltas
-        elif type(sta2) is list:
+        elif self.type=='list':
             self.meter = sta2[0].meter
         # Roman correction: single dg
-        elif type(sta2) is tuple:
+        elif self.type=='three_point':
             self.meter = sta2[1].meter[0]
         self.residual = -999.
         self.driftcorr = driftcorr
@@ -154,9 +154,9 @@ class Delta:
     # Used to match up adjustment results with observations, and to store simple Deltas
     @property
     def key(self):
-        if self.type is 'list':
+        if self.type == 'list':
             return self.type + self.sta1 + self.sta2 + str(self.dg)# self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
-        elif self.type is 'normal':
+        elif self.type == 'normal':
             return self.type + \
                    self.station1.station_name + \
                    self.station1.station_count + \
@@ -177,13 +177,16 @@ class Delta:
 
     @property
     def sd(self):
-        if self.type is 'list':
-            s = [np.abs(delta.dg) for delta in self.station2]
-            return np.std(s)
-        elif self.type is 'normal':
+        if self.type == 'list':
+            if len(self.station2) > 1:
+                s = [np.abs(delta.dg) for delta in self.station2]
+                return np.std(s)
+            else:
+                return 3.0
+        elif self.type == 'normal':
             s = np.sqrt(self.station2.stdev**2 + self.station1.stdev**2)
             return s
-        elif self.type is 'three_point':
+        elif self.type == 'three_point':
             return 3.0
 
     @property
@@ -675,9 +678,9 @@ class SimpleDelta:
                 stations.append(threepoint.station1.key)
                 stations.append(threepoint.station2[0].key)
                 stations.append(threepoint.station2[1].key)
-            self.sta2.append(stations)
+                self.sta2.append(stations)
         # self.key = delta.key
-        self.sd_for_adjustment = delta.sd_for_adjustment
+        self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift
         self.driftcorr = delta.driftcorr

@@ -49,6 +49,7 @@ class TabData(QtWidgets.QWidget):
 
     dpi = 100
 
+
     def __init__(self, parent):
         super(TabData, self).__init__()
         self.parent = parent
@@ -155,34 +156,34 @@ class TabData(QtWidgets.QWidget):
         series = np.array(station.grav)
         series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
         if meter_type == 'Scintrex' or meter_type == 'CG6':
-            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal')
+            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal', '1')
             # tiltx channel
             series = np.array(station.tiltx)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'tilt X', 'arcsec')
+            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'tilt X', 'arcsec', '2')
             # tilty channel
             series = np.array(station.tilty)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'tilt Y', 'arcsec')
-
+            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'tilt Y', 'arcsec', '3')
             # SD channel
             series = np.array(station.sd)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'standard deviation', '$\mu$gal')
+            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'standard deviation', '$\mu$gal', '4')
         elif meter_type == 'Burris':
-            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal')
+            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal', '1')
             # tiltx channel
             series = np.array(station.feedback)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'Feedback', 'mV')
+            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'Feedback', 'mV', '2')
             # tilty channel
             series = np.array(station.etc)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'Earth TIde Correction', 'microGal')
+            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'Earth TIde Correction', 'microGal', '3')
             # SD channel
             series = np.array(station.tiltx)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Tilt Correction', 'microGal')
+            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Tilt Correction', 'microGal', '4')
+            self.data_canvas.draw()
         return True
 
     def clear_axes(self):
@@ -192,7 +193,7 @@ class TabData(QtWidgets.QWidget):
         self.axes_data_UR.clear()
         self.data_canvas.draw()
 
-    def set_plot(self, axe, seriex, seriey, seriex_selec, seriey_selec, serie_type, serie_unit):
+    def set_plot(self, axe, seriex, seriey, seriex_selec, seriey_selec, serie_type, serie_unit, plot_location):
         """
         plot data samples from relative-gravity meter at a single station (gravity, tilt, temp., etc.).
         :param axe: Axes on which to plot
@@ -204,14 +205,16 @@ class TabData(QtWidgets.QWidget):
         :param serie_unit: Data units for y-axis label
         :return:
         """
-        axe.clear()
+        axe.cla()
         axe.grid(True)
-        if serie_type == 'gravity' and seriey_selec:
+        xfmt = DateFormatter('%H:%M')
+        # It should be possible to just set_data on the plot object returned from axe.plot, but I couldn't figure it out
+        if serie_type == 'gravity' and seriey_selec:  # Plot horizontal line at mean g
             mean_g = np.mean(seriey_selec)
             axe.plot([seriex[0], seriex[len(seriex) - 1]], [mean_g, mean_g], 'o-', color='b', label=serie_type)
 
-        axe.plot(seriex, seriey, 'o-', color='k', label=serie_type)
-        axe.plot(seriex_selec, seriey_selec, 'o-', color='b', label=serie_type)
+        setattr(self, 'plot1_' + plot_location, axe.plot(seriex, seriey.tolist(), 'o-', color='k', label=serie_type))
+        setattr(self, 'plot2_' + plot_location, axe.plot(seriex_selec, seriey_selec, 'o-', color='b', label=serie_type))
         axe.set_ylabel(serie_unit, size='x-small')
         axe.set_title(serie_type, size='x-small')
         labels = axe.get_xticklabels() + axe.get_yticklabels()
@@ -220,7 +223,8 @@ class TabData(QtWidgets.QWidget):
         xfmt = DateFormatter('%H:%M')
         axe.xaxis.set_major_formatter(xfmt)
         plt.setp(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
-        self.data_canvas.draw()
+
+        # self.data_canvas.draw()
 
     # All of these check/uncheck routines are very slow. Why?
     def autoselect_tilt(self, autoselec):

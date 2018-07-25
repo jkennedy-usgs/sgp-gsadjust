@@ -129,7 +129,7 @@ class Delta:
             with the delta.
     """
     def __init__(self, sta1, sta2, driftcorr=0., ls_drift=None, delta_type='normal', checked=2,
-                 adj_sd=999):
+                 adj_sd=999, cal_coeff=1):
         self.station1 = sta1
         self.station2 = sta2
         self.checked = checked
@@ -146,6 +146,7 @@ class Delta:
         self.residual = -999.
         self.driftcorr = driftcorr
         self.ls_drift = ls_drift  # degree of drift, if included in network adjustment
+        self.cal_coeff = cal_coeff
 
     @classmethod
     def from_list(cls, list_of_deltas):
@@ -216,20 +217,22 @@ class Delta:
 
     @property
     def dg(self):
+        dg = None
         # Roman correction: dg requires three station-observations
         if self.type == 'three_point':
             sta2_dg = self.station2[1].gmean - self.station2[0].gmean
             time_prorate = (self.station1.tmean - self.station2[0].tmean)/(self.station2[1].tmean -
                                                                            self.station2[0].tmean)
             dg = (self.station2[0].gmean + sta2_dg * time_prorate) - self.station1.gmean
-            return dg
         # Roman correction: return average of individual deltas
         elif self.type == 'list':
-            dg = [np.abs(delta.dg) for delta in self.station2]
-            return np.mean(dg)
+            dg_all = [np.abs(delta.dg) for delta in self.station2]
+            dg = np.mean(dg_all)
         # Normal delta
         else:
-            return self.station2.gmean - self.station1.gmean - self.driftcorr
+            dg = self.station2.gmean - self.station1.gmean - self.driftcorr
+
+        return dg
 
     @property
     def sta1_t(self):
@@ -525,6 +528,8 @@ class AdjustmentOptions:
         self.woutfiles = False
         self.cal_coeff = False
         self.adj_type = 'gravnet'
+        self.specify_cal_coeff = False
+        self.meter_cal_dict = None
 
     def __str__(self):
         return_str = ''

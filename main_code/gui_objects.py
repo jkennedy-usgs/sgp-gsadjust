@@ -26,7 +26,7 @@ import logging
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 from data_objects import Datum, AdjustmentOptions
-from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel
+from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel, MeterCalibrationModel
 import a10
 
 
@@ -103,8 +103,8 @@ class AdjustOptions(QtWidgets.QDialog):
     """
     Dialog to set network adjustment options.
     """
-    def __init__(self, survey_str, options):
-        super(AdjustOptions, self).__init__()
+    def __init__(self, survey_str, options, parent=None):
+        super(AdjustOptions, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
         self.ao = options
         self.surveys_to_update = ''
@@ -113,9 +113,15 @@ class AdjustOptions(QtWidgets.QDialog):
         self.sigma_factor_chk = QtWidgets.QCheckBox('Std. dev. multiplier')
         self.sigma_add_chk = QtWidgets.QCheckBox('Add to std. dev.')
         self.sigma_min_chk = QtWidgets.QCheckBox('Minimum std. dev.')
-        self.cal_coeff_chk = QtWidgets.QCheckBox('Include relative meter calibration coefficient')
+        self.cal_coeff_chk = QtWidgets.QCheckBox('Calculate relative meter calibration coefficient')
+        self.cal_coeff_chk.stateChanged.connect(self.calc_cal_coeff_checked_or_unchecked)
         self.alpha_text = QtWidgets.QLabel('Significance level for global model test')
         self.woutfiles_chk = QtWidgets.QCheckBox('Write output files')
+        self.cal_coeff_specify_chk = QtWidgets.QCheckBox('Specify calibration coefficient')
+        self.cal_coeff_specify_chk.stateChanged.connect(self.specify_cal_coeff_checked_or_unchecked)
+
+        self.cal_coeff_table = QtWidgets.QTableView()
+
         self.drift_temp_edit = QtWidgets.QLineEdit(str(self.ao.model_temp_degree))
         self.sigma_factor_edit = QtWidgets.QLineEdit(str(self.ao.sigma_factor))
         self.sigma_add_edit = QtWidgets.QLineEdit(str(self.ao.sigma_add))
@@ -130,6 +136,19 @@ class AdjustOptions(QtWidgets.QDialog):
             self.sigma_add_chk.setChecked(self.ao.use_sigma_add)
             self.sigma_min_chk.setChecked(self.ao.use_sigma_min)
             self.cal_coeff_chk.setChecked(self.ao.cal_coeff)
+            try:
+                self.cal_coeff_specify_chk.setChecked(self.ao.specify_cal_coeff)
+            except:
+                self.ao.specify_cal_coeff = False
+            if not hasattr(self.ao, 'meter_cal_dict'):
+                self.ao.meter_cal_dict = self.parent().populate_cal_model()
+            elif self.ao.meter_cal_dict is None:
+                self.ao.meter_cal_dict = self.parent().populate_cal_model()
+            self.cal_coeff_model = MeterCalibrationModel()
+            for k, v in self.ao.meter_cal_dict.items():
+                self.cal_coeff_model.appendRow([QtGui.QStandardItem(k), QtGui.QStandardItem(str(v))])
+
+            self.cal_coeff_table.setModel(self.cal_coeff_model)
             self.woutfiles_chk.setChecked(self.ao.woutfiles)
 
             # create buttons and actions
@@ -155,16 +174,33 @@ class AdjustOptions(QtWidgets.QDialog):
             grid.addWidget(self.sigma_min_chk, 4, 0)
             grid.addWidget(self.sigma_min_edit, 4, 1)
             grid.addWidget(self.cal_coeff_chk, 5, 0)
-            grid.addWidget(self.alpha_text, 6, 0)
-            grid.addWidget(self.alpha_edit, 6, 1)
-            grid.addWidget(self.woutfiles_chk, 7, 0)
-            grid.addWidget(buttonBox, 8, 0)
+            grid.addWidget(self.cal_coeff_specify_chk, 6, 0)
+            grid.addWidget(self.cal_coeff_table, 7, 0)
+            grid.addWidget(self.alpha_text, 8, 0)
+            grid.addWidget(self.alpha_edit, 8, 1)
+            grid.addWidget(self.woutfiles_chk, 9, 0)
+            grid.addWidget(buttonBox, 10, 0)
 
             self.setLayout(grid)
             self.setWindowTitle('Network adjustment options')
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
             self.msg = show_message('Please load a survey first', 'Network adjustment options')
+
+    def calc_cal_coeff_checked_or_unchecked(self, state):
+        if state == 2:  # checked
+            self.cal_coeff_specify_chk.setEnabled(False)
+            self.cal_coeff_table.setEnabled(False)
+        else:
+            self.cal_coeff_specify_chk.setEnabled(True)
+            self.cal_coeff_table.setEnabled(True)
+
+    def specify_cal_coeff_checked_or_unchecked(self, state):
+        if state == 2:  # checked
+            self.cal_coeff_chk.setEnabled(False)
+        else:
+            self.cal_coeff_chk.setEnabled(True)
+
 
     def set_adjust_options(self):
         if self.drift_temp_chk.isChecked():
@@ -189,8 +225,18 @@ class AdjustOptions(QtWidgets.QDialog):
             self.ao.use_sigma_min = False
         if self.cal_coeff_chk.isChecked():
             self.ao.cal_coeff = True
+            self.ao.specify_cal_coeff = False
         else:
             self.ao.cal_coeff = False
+        if self.cal_coeff_specify_chk.isChecked():
+            self.ao.specify_cal_coeff = True
+            self.ao.cal_coeff = False
+            for i in range(self.cal_coeff_model.rowCount()):
+                meter = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i,0))
+                calval = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i,1))
+                self.ao.meter_cal_dict[meter.text()] = float(calval.text())
+        else:
+            self.ao.specify_cal_coeff = False
         self.ao.alpha = float(self.alpha_edit.text())
         if self.woutfiles_chk.isChecked():
             self.ao.woutfiles = True

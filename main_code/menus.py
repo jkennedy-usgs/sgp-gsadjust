@@ -145,7 +145,7 @@ class Menus:
         self.mnAdjtype.addAction(self.mnAdjPyLSQ)
         self.mnAdjGravnet = actiongroup_adjustmenttype.addAction(self.create_action('Gravnet', checkable=True))
         self.mnAdjtype.addAction(self.mnAdjGravnet)
-        self.mnAdjGravnet.setChecked(True)
+        self.mnAdjPyLSQ.setChecked(True)
 
         self.mnAdjOptions = self.create_action("Adjust options...",
                                                slot=self.mainProg.show_adjust_options,
@@ -193,9 +193,12 @@ class Menus:
         self.mnAdjPlotHist = self.create_action("Plot residual histogram",
                                                 shortcut="Ctrl+H", slot=self.mainProg.plot_adjust_residual_histogram,
                                                 enabled=True)
-        self.mnAdjCompareDatum = self.create_action("Plot adjusted datum vs. measured",
-                                                    slot=self.mainProg.plot_compare_datum_to_adjusted,
-                                                    enabled=True)
+        self.mnAdjPlotCompareDatum = self.create_action("Plot adjusted datum vs. measured",
+                                                        slot=self.mainProg.plot_compare_datum_to_adjusted,
+                                                        enabled=False)
+        self.mnAdjPlotObservedAdjustedAbs = self.create_action("Plot adjusted datum vs. measured (time series)",
+                                                               slot=self.mainProg.plot_datum_comparison,
+                                                               enabled=False)
         # self.mnAdjCompareAllDatum = self.create_action("Plot absolute vs. relative offset",
         #                                                slot=self.mainProg.plot_compare_datum_all,
         #                                                enabled=True)
@@ -218,7 +221,9 @@ class Menus:
                                       self.mnAdjClearDatumTable,
                                       None,
                                       self.mnAdjPlotHist,
-                                      self.mnAdjCompareDatum,))
+                                      self.mnAdjPlotCompareDatum,
+                                      self.mnAdjPlotObservedAdjustedAbs,
+                                      ))
 
         #######################################################################
         # Tools Menu
@@ -236,17 +241,16 @@ class Menus:
                                                             slot=self.mainProg.write_tabular_data)
         self.mnToolsWriteSummary = self.create_action('Write adjustment summary',
                                                       slot=self.mainProg.write_summary)
-        self.mnToolsPlotObservedAdjustedAbs = self.create_action("Plot observed vs adjusted datum",
-                                                                 slot=self.mainProg.plot_datum_comparison,
-                                                                 enabled=False)
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
                                                                     slot=self.mainProg.compute_gravity_change,
                                                                     tip="Compute gravity change", enabled=False)
+        self.mnToolsLOO = self.create_action("Leave one out analysis", slot=self.mainProg.analysis_LOO,
+                                             enabled=False)
         self.add_actions(self.mnTools, (self.mnToolsNetworkGraphCircular,
                                         self.mnToolsNetworkGraphMap,
                                         None,
-                                        self.mnToolsPlotObservedAdjustedAbs,
                                         self.mnToolsComputeGravityChangeAction,
+                                        self.mnToolsLOO,
                                         None,
                                         self.mnToolsWriteMetadataText,
                                         self.mnToolsWriteTabularOutput,

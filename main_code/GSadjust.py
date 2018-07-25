@@ -408,6 +408,16 @@ class MainProg(QtWidgets.QMainWindow):
         obstreestation = self.obsTreeModel.itemFromIndex(self.currentStationIndex)
         obstreestation.setCheckState(2)
 
+    def populate_cal_model(self):
+        meter_list = {}
+        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+            survey = self.obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(survey.rowCount()):
+                loop = survey.child(ii)
+                if not loop.meter in meter_list:
+                    meter_list[loop.meter] = 1.000
+        return meter_list
+
     ###########################################################################
     # Load/Open/Save routines
     ###########################################################################
@@ -868,6 +878,11 @@ class MainProg(QtWidgets.QMainWindow):
             self.menus.mnFileSaveWorkspace.setEnabled(True)
             self.menus.mnAdjAdjust.setEnabled(True)
             self.menus.mnAdjAdjustCurrent.setEnabled(True)
+            self.menus.mnToolsLOO.setEnabled(False)
+            self.menus.mnToolsComputeGravityChangeAction.setEnabled(False)
+            self.menus.mnAdjPlotCompareDatum.setEnabled(False)
+            self.menus.mnAdjPlotObservedAdjustedAbs.setEnabled(False)
+
             self.workspace_loaded = True
             self.update_all_drift_plots()
             PBAR1.progressbar.setValue(4)
@@ -1401,13 +1416,85 @@ class MainProg(QtWidgets.QMainWindow):
             obstreesurvey.run_inversion(adj_type)
         if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
             self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
-            self.menus.mnToolsPlotObservedAdjustedAbs.setEnabled(True)
+            self.menus.mnToolsLOO.setEnabled(True)
+            self.menus.mnAdjPlotObservedAdjustedAbs.setEnabled(True)
+            self.menus.mnAdjPlotCompareDatum.setEnabled(True)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
 
         self.adjust_update_not_required()
 
+    def analysis_LOO(self):
+        # Get list of datum stations for all surveys
+        PBAR1 = ProgressBar(total=self.obsTreeModel.invisibleRootItem().rowCount(), textmess='Adjusting surveys')
+        PBAR1.show()
+
+        datums = self.obsTreeModel.datums()
+        # Loop over surveys
+        x_all, adj_g_all, obs_g_all = [], [], []
+        ctr = 0
+        for station in datums:
+            PBAR1.progressbar.setValue(ctr)
+            ctr += 1
+            QtWidgets.QApplication.processEvents()
+            station_adj_g = []
+            station_obs_g = []
+            x_data = []
+
+            # Iterate through surveys
+            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+
+                # If datum is in survey, uncheck it and do inversion
+                obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
+                done = False
+                adj_g = None
+                for ii in range(obstreesurvey.datum_model.rowCount()):
+                    if not done:
+                        idx = obstreesurvey.datum_model.index(ii, 0)
+                        datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+                        if datum.station == station:
+                            checkstate = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.CheckStateRole)
+                            obstreesurvey.datum_model.setData(idx, 0, QtCore.Qt.CheckStateRole)
+                            if self.menus.mnAdjPyLSQ.isChecked():
+                                adj_type = 'PyLSQ'
+                            else:
+                                adj_type = 'Gravnet'
+                            obstreesurvey.run_inversion(adj_type)
+                            # Restore check state
+                            obstreesurvey.datum_model.setData(idx, checkstate, QtCore.Qt.CheckStateRole)
+                            for iii in range(obstreesurvey.results_model.rowCount()):
+                                idx = obstreesurvey.results_model.index(iii, 0)
+                                adj_station = obstreesurvey.results_model.data(idx, role=QtCore.Qt.UserRole)
+
+                                if adj_station.station == station:
+                                    adj_g = adj_station.g + (datum.gradient * datum.meas_height)
+                                    done = True
+                                    break
+                if adj_g:
+                    station_adj_g.append(adj_g)
+                    station_obs_g.append(datum.g)
+                    x_data.append(dt.datetime.strptime(obstreesurvey.name, '%Y-%m-%d'))
+
+            # Store results
+            x_all.append(x_data)
+            adj_g_all.append(station_adj_g)
+            obs_g_all.append(station_obs_g)
+        # Plot results
+        fig = plt.figure(figsize=(13, 8))
+        fig.hold
+        i = 0
+        for x, adj_g, obs_g in zip(x_all, adj_g_all, obs_g_all):
+
+            y1 = [y - obs_g[0] for y in obs_g]
+            y2 = [y - adj_g[0] for y in adj_g]
+
+            a = plt.plot(x, y1, '-o', label=datums[i] + '_obs')
+            line_color = a[0].get_color()
+            b = plt.plot(x, y2, '--o', c=line_color, label=datums[i] + '_adj')
+            i += 1
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+        fig.show()
 
     def set_adj_sd(self, survey, ao):
         """
@@ -1553,7 +1640,7 @@ class MainProg(QtWidgets.QMainWindow):
         Instantiates PyQt dialog to set adjustment options
         """
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        adjust_options = AdjustOptions(survey.__str__(), survey.adjustment.adjustmentoptions)
+        adjust_options = AdjustOptions(survey.__str__(), survey.adjustment.adjustmentoptions, parent=self)
         if adjust_options.exec_():
             if adjust_options.surveys_to_update == 'single':
                 # Not sure why the deepcopy is necessary. Without it, all of the survey.adjustmentoptions
@@ -2143,7 +2230,7 @@ def main():
 
 
 # Import here to avoid circular import error
-from gui_objects import show_message, DateMethodDialog, SelectAbsg, AdjustOptions
+from gui_objects import show_message, SelectAbsg, AdjustOptions
 
 if __name__ == '__main__':
     main()

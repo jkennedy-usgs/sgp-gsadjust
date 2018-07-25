@@ -473,13 +473,23 @@ class ObsTreeSurvey(ObsTreeItem):
 
             # Form datasets for adjustment from selected table items, count number of deltas and datums (used when
             # writing metadata about adjustment).
+            specify_cal_coeff = False
+            cal_dic = None
+            if self.adjustment.adjustmentoptions.specify_cal_coeff:
+                specify_cal_coeff = True
+                cal_dic = self.adjustment.adjustmentoptions.meter_cal_dict
             for ii in range(self.delta_model.rowCount()):
                 ind = self.delta_model.createIndex(ii, 0)
                 chk = self.delta_model.data(ind, QtCore.Qt.CheckStateRole)
                 if chk == 2:  # Checkbox checked
                     delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+                    if specify_cal_coeff:
+                        delta.cal_coeff = cal_dic[delta.meter]
+                    else:
+                        delta.cal_coeff = 1
                     if delta.type == 'normal':
                         try:
+                            # Don't include deltas in which one of the stations has been unchecked
                             if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
                                     delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
                                 deltas.append(delta)
@@ -599,11 +609,11 @@ class ObsTreeSurvey(ObsTreeItem):
         with open(dg_file, 'w') as fid:
             fid.write('start, end, difference (mgal), mjd (from), mjd (to),' +
                       ' reading (from, CU), reading (to, CU), standard deviation (mgal)\n')
-            # Gravnet station names are limited to 6 characters
+            # Gravnet station names are limited to 6 characters; units are mGal
             for delta in self.adjustment.deltas:
                 fid.write('{} {} {:0.6f} {} {} {:0.6f} {} {:0.6f}\n'.format(delta.sta1[:6],
                                                                             delta.sta2[:6],
-                                                                            delta.dg / 1000.,
+                                                                            delta.dg / 1000. * delta.cal_coeff,
                                                                             delta.sta1_t,
                                                                             delta.sta2_t,
                                                                             delta.dg / 1000, '0',
@@ -635,7 +645,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     line = fid.readline().split()
                     symbol = line[0]
                 meter_calib_params = fid.readline().split()
-                cal_dic[self.unique_meters[0]] = (float(meter_calib_params[0]) + 1, float(meter_calib_params[1]))
+                cal_dic[self.unique_meters[0]] = (1 + float(meter_calib_params[0]), float(meter_calib_params[1]))
         else:
             # Run gravnet without calibration coefficient
             os.system('gravnet -D' + dg_file + ' -N' + self.name + ' -M2 ' + drift_term + ' -F' + fix_file)
@@ -792,7 +802,7 @@ class ObsTreeSurvey(ObsTreeItem):
         # Populate least squares matrices
         for delta in self.adjustment.deltas:
             deltakeys.append(delta.__hash__())
-            Obs[row] = delta.dg
+            Obs[row] = delta.dg * delta.cal_coeff
             P[row, row] = 1. / (delta.sd_for_adjustment ** 2)
             A[row, sta_dic_ls[delta.sta1]] = -1
             A[row, sta_dic_ls[delta.sta2]] = 1
@@ -892,7 +902,7 @@ class ObsTreeSurvey(ObsTreeItem):
             text_out.append("Chi-test rejected\n")
         if self.adjustment.adjustmentoptions.cal_coeff:
             for k, v in cal_dic.items():
-                text_out.append("Calibration coefficient for meter {}: {:.4f} +/- {:.5f}".
+                text_out.append("Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".
                                 format(k, v[0], v[1]))
         if netadj_loop_keys:
             text_out.append("Gravimeter drift coefficient(s):\n")
@@ -928,6 +938,8 @@ class ObsTreeSurvey(ObsTreeItem):
         """
         Populates delta and datum table residuals from inversion results
         :param inversion_type: 'gravnet' or 'numpy'
+        cal_dic: has an entry for each meter if a calibration coefficient was calculated. Different than
+                 delta.cal_coeff, which is an a priori specified coefficient.
         """
         from gui_objects import show_message
         datum_residuals, dg_residuals = [], []
@@ -953,9 +965,9 @@ class ObsTreeSurvey(ObsTreeItem):
                         station1_name = tempdelta.sta1
                         station2_name = tempdelta.sta2
                     if tempdelta.meter in cal_dic:
-                        cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0]
+                        cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0] * tempdelta.cal_coeff
                     else:
-                        cal_adj_dg = tempdelta.dg
+                        cal_adj_dg = tempdelta.dg * tempdelta.cal_coeff
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1
@@ -1253,7 +1265,18 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                          QtGui.QStandardItem('0')])
             obstreesurveys.append(obstreesurvey)
             delta_tables.append(obstreesurvey.deltas)
+
         return (obstreesurveys, delta_tables)
+
+    def datums(self):
+        datum_list = []
+        for i in range(self.rowCount()):
+            obstreesurvey = self.itemFromIndex(self.index(i, 0))
+            for ii in range(obstreesurvey.datum_model.rowCount()):
+                idx = obstreesurvey.datum_model.index(ii, 0)
+                datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+                datum_list.append(datum.station)
+        return list(set(datum_list))
 
     def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled
@@ -2222,10 +2245,11 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
                     return "not implemented"
 
 class CustomSortingModel(QtCore.QSortFilterProxyModel):
+    """
+    Used to sort by date in importAbsG dialog
+    """
     def lessThan(self,left,right):
-
         col = left.column()
-
         dataleft = left.data()
         dataright = right.data()
 
@@ -2237,3 +2261,9 @@ class CustomSortingModel(QtCore.QSortFilterProxyModel):
             dataright = float(dataright)
 
         return dataleft < dataright
+
+class MeterCalibrationModel(QtGui.QStandardItemModel):
+    def __init__(self):
+        super(MeterCalibrationModel, self).__init__()
+        self.setColumnCount(2)
+        self.setHorizontalHeaderLabels(['Meter', 'Calibration factor'])

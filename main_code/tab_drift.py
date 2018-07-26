@@ -321,7 +321,7 @@ class TabDrift(QtWidgets.QWidget):
         :return: PyQt DeltaTableModel
         """
         first = True
-        delta_table = DeltaTableModel()
+        delta_model = DeltaTableModel()
         for station in data:
             if first:
                 first = False
@@ -330,9 +330,9 @@ class TabDrift(QtWidgets.QWidget):
             delta = Delta(prev_station,
                           station,
                           driftcorr=0.0)
-            delta_table.insertRows(delta, 0)
+            delta_model.insertRows(delta, 0)
             prev_station = station
-        return delta_table
+        return delta_model
     
     def calc_netadj_dg(self, data, loop_name):
         """
@@ -342,7 +342,7 @@ class TabDrift(QtWidgets.QWidget):
         :return: PyQt DeltaTableModel
         """
         first = True
-        delta_table = DeltaTableModel()
+        delta_model = DeltaTableModel()
         for station in data:
             if first:
                 first = False
@@ -352,9 +352,9 @@ class TabDrift(QtWidgets.QWidget):
                           station,
                           driftcorr=0.0,
                           ls_drift=(loop_name, self.drift_polydegree_combobox.currentIndex() - 1))
-            delta_table.insertRows(delta, 0)
+            delta_model.insertRows(delta, 0)
             prev_station = station
-        return delta_table
+        return delta_model
 
     @staticmethod
     def calc_cont_dg(xp, yp, data):
@@ -365,9 +365,10 @@ class TabDrift(QtWidgets.QWidget):
         :param data: plot_data list
         :return: PyQt DeltaTableModel
         """
-        delta_table = DeltaTableModel()
+        delta_model = DeltaTableModel()
         first = True
         ypsum = [0]
+        delta_list = []
         for x, drift_rate in zip(xp, yp):
             if first:
                 first = False
@@ -393,9 +394,10 @@ class TabDrift(QtWidgets.QWidget):
             delta = Delta(prev_station,
                           station,
                           driftcorr=drift2 - drift1)
-            delta_table.insertRows(delta, 0)
+            delta_list.append(delta)
+            delta_model.insertRows(delta, 0)
             prev_station = station
-        return delta_table
+        return delta_model
 
     @staticmethod
     def calc_roman_dg(data):

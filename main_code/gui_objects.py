@@ -381,9 +381,9 @@ def VerticalGradientDialog(default_interval):
             return default_interval
 
 
-class DatumComparisonFigure(QtWidgets.QDialog):
+class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
     def __init__(self, obsTreeModel):
-        super(DatumComparisonFigure, self).__init__()
+        super(FigureDatumComparisonTimeSeries, self).__init__()
         datum_names = []
         for i in range(obsTreeModel.rowCount()):
             survey = obsTreeModel.invisibleRootItem().child(i)
@@ -419,8 +419,11 @@ class DatumComparisonFigure(QtWidgets.QDialog):
             line_color = a[0].get_color()
             b = plt.plot(xdata, ydata_adj, '--o', c=line_color, label=names[i] + '_adj')
             i += 1
-        fig.show()
         plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+        plt.ylabel('Relative gravity, in \u00b5Gal')
+        plt.axes().xaxis_date()
+        fig.show()
+
 
 
 class GravityChangeTable(QtWidgets.QDialog):

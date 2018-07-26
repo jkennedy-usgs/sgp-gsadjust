@@ -211,9 +211,9 @@ class TabData(QtWidgets.QWidget):
         # It should be possible to just set_data on the plot object returned from axe.plot, but I couldn't figure it out
         if serie_type == 'gravity' and seriey_selec:  # Plot horizontal line at mean g
             mean_g = np.mean(seriey_selec)
-            axe.plot([seriex[0], seriex[len(seriex) - 1]], [mean_g, mean_g], 'o-', color='b', label=serie_type)
+            axe.plot([seriex[0], seriex[-1]], [mean_g, mean_g], 'o-', color='b', label=serie_type)
 
-        setattr(self, 'plot1_' + plot_location, axe.plot(seriex, seriey.tolist(), 'o-', color='k', label=serie_type))
+        setattr(self, 'plot1_' + plot_location, axe.plot(seriex, seriey, 'o-', color='k', label=serie_type))
         setattr(self, 'plot2_' + plot_location, axe.plot(seriex_selec, seriey_selec, 'o-', color='b', label=serie_type))
         axe.set_ylabel(serie_unit, size='x-small')
         axe.set_title(serie_type, size='x-small')
@@ -223,8 +223,20 @@ class TabData(QtWidgets.QWidget):
         xfmt = DateFormatter('%H:%M')
         axe.xaxis.set_major_formatter(xfmt)
         plt.setp(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
+        # Scale y axis to mean +/- 10. If a larger range is needed, color the axis red as a warning.
+        if serie_type == 'gravity':
+            g_range_pos = max(seriey) - mean_g
+            g_range_neg = mean_g - min(seriey)
+            if g_range_neg <= 10 and g_range_pos <= 10:
+                axe.set_ylim(mean_g-10, mean_g+10)
+                axe.yaxis.label.set_color('black')
+                axe.spines['left'].set_color('black')
+                axe.tick_params(axis='y', colors='black')
+            else:
+                axe.yaxis.label.set_color('red')
+                axe.spines['left'].set_color('red')
+                axe.tick_params(axis='y', colors='red')
 
-        # self.data_canvas.draw()
 
     # All of these check/uncheck routines are very slow. Why?
     def autoselect_tilt(self, autoselec):

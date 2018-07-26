@@ -126,7 +126,7 @@ from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
-from gui_objects import DatumComparisonFigure
+from gui_objects import FigureDatumComparisonTimeSeries
 from gui_objects import AddDatumFromList
 
 from tab_network import TabAdjust
@@ -689,75 +689,12 @@ class MainProg(QtWidgets.QMainWindow):
             e.i = i
             raise e
 
-    def get_loop_threshold(self):
-        # Prompt user to select time threshold
-        loopdialog = LoopTimeThresholdDialog()
-        loop_thresh = 0
-        if loopdialog.exec_():
-            loop_thresh = loopdialog.dt_edit.dateTime()
-            # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
-            # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
-            loop_thresh = int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
-        else:
-            return
-        self.divide_survey(loop_thresh)
-
-    def divide_survey(self, loop_thresh):
-        """
-        Called from "Divide loop..." menu command. Shows a dialog to specify a time interval, then scans the current
-        loop and divides station occupations separated by the time interval (or greater) into a loop. Useful primarily
-        when several day's data is in a single file.
-        """
-        # Clear survey delta table, it causes problems otherwise
-        self.clear_delta_model()
-
-        # Store the original current loop index so it can be restored.
-        original_loop_index = self.currentLoopIndex
-
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
-        indexes = []
-        PBAR1 = ProgressBar(total=obstreeloop.rowCount()-1, textmess='surveys')
-        PBAR1.show()
-        PBAR1.progressbar.setValue(1)
-        QtWidgets.QApplication.processEvents()
-        # Step through loop backward
-        pbar_idx = list(range(obstreeloop.rowCount()))
-        pbar_idx.reverse()
-        for i in range(obstreeloop.rowCount()-1, 1, -1):
-            station2 = obstreeloop.child(i)
-            station1 = obstreeloop.child(i-1)
-            PBAR1.progressbar.setValue(pbar_idx[i])
-            QtWidgets.QApplication.processEvents()
-            # Check time difference between successive stations
-            tdiff = station2.tmean - station1.tmean
-            if tdiff > loop_thresh:
-                for ii in range(i, obstreeloop.rowCount()):
-                    indexes.append(obstreeloop.child(ii).index())
-                self.new_loop_from_indexes(indexes)
-                indexes = []
-        self.currentLoopIndex = original_loop_index
-        self.deltas_update_required()
-        self.obsTreeModel.layoutChanged.emit()
-        QtWidgets.QApplication.restoreOverrideCursor()
-
-    def update_all_drift_plots(self):
-        """
-        Updates drift_tab plots and delta_models, even if not in view.
-        """
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                self.currentLoopIndex = loop.index()
-                self.update_drift_tables_and_plots(update=False)
-
     def workspace_append(self):
         """
         Append previously-saved workspace to current workspace.
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
-        obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
+        obstreesurveys, delta_models = self.obsTreeModel.load_workspace(fname)
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow([survey,
                                          QtGui.QStandardItem('0'),
@@ -765,7 +702,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_all_drift_plots()
         self.populate_coordinates()
         self.workspace_loaded = True
-        self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
+        self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
         QtWidgets.QApplication.restoreOverrideCursor()
 
     def workspace_clear(self):
@@ -847,19 +784,23 @@ class MainProg(QtWidgets.QMainWindow):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
         # try:
+        QtWidgets.QApplication.processEvents()
+        obstreesurveys, delta_models = self.obsTreeModel.load_workspace(fname)
+        if obstreesurveys:
+            self.workspace_savename = fname
+            self.populate_obstreemodel(obstreesurveys, delta_models)
+
+    def populate_obstreemodel(self, obstreesurveys, delta_models):
         PBAR1 = ProgressBar(total=6, textmess='surveys')
         PBAR1.show()
         PBAR1.progressbar.setValue(1)
-        QtWidgets.QApplication.processEvents()
-        obstreesurveys, delta_tables = self.obsTreeModel.load_workspace(fname)
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow([survey,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
         PBAR1.progressbar.setValue(2)
         QtWidgets.QApplication.processEvents()
-        self.workspace_savename = fname
-        if not delta_tables:
+        if not delta_models:
             QtWidgets.QApplication.restoreOverrideCursor()
             return
         else:
@@ -890,7 +831,7 @@ class MainProg(QtWidgets.QMainWindow):
             # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
             # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
             # updated.
-            self.populate_survey_deltatable_from_simpledeltas(delta_tables, obstreesurveys)
+            self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
             for survey in obstreesurveys:
                 self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
             self.update_adjust_tables()
@@ -933,10 +874,10 @@ class MainProg(QtWidgets.QMainWindow):
                 return delta
         return None
 
-    def populate_survey_deltatable_from_simpledeltas(self, delta_tables, surveys):
+    def populate_survey_deltatable_from_simpledeltas(self, delta_models, surveys):
         deltas = self.assemble_all_deltas()
-        for idx, delta_table in enumerate(delta_tables):
-            for simpledelta in delta_table:
+        for idx, delta_model in enumerate(delta_models):
+            for simpledelta in delta_model:
                 i = 0
                 try:
                     if simpledelta.type == 'normal':
@@ -1079,6 +1020,17 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.obsTreeModel.layoutChanged.emit()
 
+    def update_all_drift_plots(self):
+        """
+        Updates drift_tab plots and delta_models, even if not in view.
+        """
+        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+            survey = self.obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(survey.rowCount()):
+                loop = survey.child(ii)
+                self.currentLoopIndex = loop.index()
+                self.update_drift_tables_and_plots(update=False)
+
     def update_adjust_tables(self):
         """
         Update delta-g and datum tables after selecting a new survey in the tree view
@@ -1157,28 +1109,6 @@ class MainProg(QtWidgets.QMainWindow):
     def correction_atmospheric(self):
         self.msg = show_message('Not implemented', 'Error')
 
-    def add_tare(self):
-        """
-        Opens a dialog to add tare to loop tare_model.
-        """
-        new_tare_date, new_tare_value = 0, 0
-        current_loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
-        obstreestation = current_loop.child(0)
-        default_time = num2date(obstreestation.t[0])
-        taredialog = AddTareDialog(default_time)
-        if taredialog.exec_():
-            new_tare_date = taredialog.dt_edit.dateTime()
-            new_tare_value = taredialog.edit_box.text()
-        try:
-            tare = Tare(new_tare_date.date(), new_tare_date.time(), new_tare_value)
-        except:
-            return
-        if not hasattr(current_loop, 'tare_model'):
-            current_loop.tare_model = TareTableModel
-        current_loop.tare_model.insertRows(tare)
-        self.tab_drift.process_tares(current_loop)
-        self.update_drift_tables_and_plots()
-
     def correction_recorded_time(self):
         """
         Correct all times from an offset: when GMT time entered in relative gravimeter is bad.
@@ -1254,6 +1184,51 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             self.msg = show_message("Incorrect number of delta-g's (should be 1)", "Vertical gradient error")
 
+    def add_tare(self):
+        """
+        Opens a dialog to add tare to loop tare_model.
+        """
+        new_tare_date, new_tare_value = 0, 0
+        current_loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
+        obstreestation = current_loop.child(0)
+        default_time = num2date(obstreestation.t[0])
+        taredialog = AddTareDialog(default_time)
+        if taredialog.exec_():
+            new_tare_date = taredialog.dt_edit.dateTime()
+            new_tare_value = taredialog.edit_box.text()
+        try:
+            tare = Tare(new_tare_date.date(), new_tare_date.time(), new_tare_value)
+        except:
+            return
+        if not hasattr(current_loop, 'tare_model'):
+            current_loop.tare_model = TareTableModel
+        current_loop.tare_model.insertRows(tare)
+        self.tab_drift.process_tares(current_loop)
+        self.update_drift_tables_and_plots()
+
+    def clear_delta_model(self):
+        """
+        Remove all deltas from survey delta model shown on network adjustment tab.
+        """
+        self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).delta_model.clearDeltas()
+        self.deltas_update_required()
+        self.update_adjust_tables()
+
+    def clear_datum_model(self):
+        """
+        Remove all datums from datum model shown on network adjustment tab.
+        :return:
+        """
+        self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.clearDatums()
+        self.update_adjust_tables()
+
+    def clear_results_model(self):
+        """
+        Remove all results from results model shown on network adjustment tab.
+        """
+        self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).results_model.clearResults()
+        self.update_adjust_tables()
+
     def delete_selected(self):
         """
         Remove loop or survey from tree view
@@ -1278,6 +1253,82 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             self.currentStationIndex = index.sibling(0, 0)
         self.prep_station_plot()
+
+    def delete_tare(self):
+        """
+        Called when user right-clicks a datum and selects delete from the context menu
+        """
+        index = self.tab_drift.tare_view.selectedIndexes()
+        loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
+        for idx in reversed(index):
+            loop.tare_model.removeRow(idx)
+        self.tab_drift.tare_view.update()
+        self.tab_drift.process_tares(self.obsTreeModel.itemFromIndex(self.currentLoopIndex))
+        self.update_drift_tables_and_plots()
+        return
+
+    def delete_datum(self):
+        """
+        Called when user right-clicks a datum and selects delete from the context menu
+        """
+        index = self.tab_adjust.datum_view.selectedIndexes()
+        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+        for idx in reversed(index):
+            survey.datum_model.removeRow(idx)
+        self.tab_adjust.datum_view.update()
+        return
+
+    def get_loop_threshold(self):
+        # Prompt user to select time threshold
+        loopdialog = LoopTimeThresholdDialog()
+        loop_thresh = 0
+        if loopdialog.exec_():
+            loop_thresh = loopdialog.dt_edit.dateTime()
+            # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
+            # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
+            loop_thresh = int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
+        else:
+            return
+        self.divide_survey(loop_thresh)
+
+    def divide_survey(self, loop_thresh):
+        """
+        Called from "Divide loop..." menu command. Shows a dialog to specify a time interval, then scans the current
+        loop and divides station occupations separated by the time interval (or greater) into a loop. Useful primarily
+        when several day's data is in a single file.
+        """
+        # Clear survey delta table, it causes problems otherwise
+        self.clear_delta_model()
+
+        # Store the original current loop index so it can be restored.
+        original_loop_index = self.currentLoopIndex
+
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
+        indexes = []
+        PBAR1 = ProgressBar(total=obstreeloop.rowCount()-1, textmess='surveys')
+        PBAR1.show()
+        PBAR1.progressbar.setValue(1)
+        QtWidgets.QApplication.processEvents()
+        # Step through loop backward
+        pbar_idx = list(range(obstreeloop.rowCount()))
+        pbar_idx.reverse()
+        for i in range(obstreeloop.rowCount()-1, 1, -1):
+            station2 = obstreeloop.child(i)
+            station1 = obstreeloop.child(i-1)
+            PBAR1.progressbar.setValue(pbar_idx[i])
+            QtWidgets.QApplication.processEvents()
+            # Check time difference between successive stations
+            tdiff = station2.tmean - station1.tmean
+            if tdiff > loop_thresh:
+                for ii in range(i, obstreeloop.rowCount()):
+                    indexes.append(obstreeloop.child(ii).index())
+                self.new_loop_from_indexes(indexes)
+                indexes = []
+        self.currentLoopIndex = original_loop_index
+        self.deltas_update_required()
+        self.obsTreeModel.layoutChanged.emit()
+        QtWidgets.QApplication.restoreOverrideCursor()
 
     def duplicate_station(self):
         """
@@ -1304,6 +1355,26 @@ class MainProg(QtWidgets.QMainWindow):
         logging.info("Station duplicated: {}, Survey: {}, Loop: {} ".format(new_obstreestation.station_name,
                                                                             obstreesurvey.name,
                                                                             obstreeloop.name))
+
+    def move_survey(self, direction=UP):
+        """
+        Used to move survey up or down in the tree view
+        :param direction: self.UP or self.DOWN (macros for 1 and -1)
+        :return:
+        """
+        if direction not in (self.DOWN, self.UP):
+            return
+
+        model = self.obsTreeModel
+        index = self.currentSurveyIndex
+        rowNum = index.row()
+        newRow = rowNum+direction
+        if not (0 <= newRow < model.rowCount()):
+            return False
+        survey = model.takeRow(rowNum)
+        model.insertRow(newRow, survey)
+        self.currentSurveyIndex = model.indexFromItem(survey[0])
+        return True
 
     def new_loop(self):
         """
@@ -1424,392 +1495,6 @@ class MainProg(QtWidgets.QMainWindow):
         QtWidgets.QApplication.restoreOverrideCursor()
 
         self.adjust_update_not_required()
-
-    def analysis_LOO(self):
-        # Get list of datum stations for all surveys
-        PBAR1 = ProgressBar(total=self.obsTreeModel.invisibleRootItem().rowCount(), textmess='Adjusting surveys')
-        PBAR1.show()
-
-        datums = self.obsTreeModel.datums()
-        # Loop over surveys
-        x_all, adj_g_all, obs_g_all = [], [], []
-        ctr = 0
-        for station in datums:
-            PBAR1.progressbar.setValue(ctr)
-            ctr += 1
-            QtWidgets.QApplication.processEvents()
-            station_adj_g = []
-            station_obs_g = []
-            x_data = []
-
-            # Iterate through surveys
-            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-
-                # If datum is in survey, uncheck it and do inversion
-                obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
-                done = False
-                adj_g = None
-                for ii in range(obstreesurvey.datum_model.rowCount()):
-                    if not done:
-                        idx = obstreesurvey.datum_model.index(ii, 0)
-                        datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
-                        if datum.station == station:
-                            checkstate = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.CheckStateRole)
-                            obstreesurvey.datum_model.setData(idx, 0, QtCore.Qt.CheckStateRole)
-                            if self.menus.mnAdjPyLSQ.isChecked():
-                                adj_type = 'PyLSQ'
-                            else:
-                                adj_type = 'Gravnet'
-                            obstreesurvey.run_inversion(adj_type)
-                            # Restore check state
-                            obstreesurvey.datum_model.setData(idx, checkstate, QtCore.Qt.CheckStateRole)
-                            for iii in range(obstreesurvey.results_model.rowCount()):
-                                idx = obstreesurvey.results_model.index(iii, 0)
-                                adj_station = obstreesurvey.results_model.data(idx, role=QtCore.Qt.UserRole)
-
-                                if adj_station.station == station:
-                                    adj_g = adj_station.g + (datum.gradient * datum.meas_height)
-                                    done = True
-                                    break
-                if adj_g:
-                    station_adj_g.append(adj_g)
-                    station_obs_g.append(datum.g)
-                    x_data.append(dt.datetime.strptime(obstreesurvey.name, '%Y-%m-%d'))
-
-            # Store results
-            x_all.append(x_data)
-            adj_g_all.append(station_adj_g)
-            obs_g_all.append(station_obs_g)
-        # Plot results
-        fig = plt.figure(figsize=(13, 8))
-        fig.hold
-        i = 0
-        for x, adj_g, obs_g in zip(x_all, adj_g_all, obs_g_all):
-
-            y1 = [y - obs_g[0] for y in obs_g]
-            y2 = [y - adj_g[0] for y in adj_g]
-
-            a = plt.plot(x, y1, '-o', label=datums[i] + '_obs')
-            line_color = a[0].get_color()
-            b = plt.plot(x, y2, '--o', c=line_color, label=datums[i] + '_adj')
-            i += 1
-        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
-        fig.show()
-
-    def set_adj_sd(self, survey, ao):
-        """
-        Update delta table based on parameters in net. adj. options
-        :param survey: For which to set delta-g sd
-        :param ao: AdjustmentOptions object
-        """
-        for i in range(survey.delta_model.rowCount()):
-            ind = survey.delta_model.createIndex(i, 6)
-            delta = survey.delta_model.data(ind, role=QtCore.Qt.UserRole)
-            additive = 0
-            factor = 1
-            if ao.use_sigma_add:
-                additive = ao.sigma_add
-            if ao.use_sigma_factor:
-                factor = ao.sigma_factor
-            if ao.use_sigma_min:
-                sigma = max(ao.sigma_min, delta.sd * factor + additive)
-            else:
-                sigma = delta.sd * factor + additive
-            survey.delta_model.setData(ind, sigma, role=QtCore.Qt.EditRole)
-        self.update_adjust_tables()
-
-    def clear_delta_model(self):
-        """
-        Remove all deltas from survey delta model shown on network adjustment tab.
-        """
-        self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).delta_model.clearDeltas()
-        self.deltas_update_required()
-        self.update_adjust_tables()
-
-    def clear_datum_model(self):
-        """
-        Remove all datums from datum model shown on network adjustment tab.
-        :return:
-        """
-        self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.clearDatums()
-        self.update_adjust_tables()
-
-    def clear_results_model(self):
-        """
-        Remove all results from results model shown on network adjustment tab.
-        """
-        self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).results_model.clearResults()
-        self.update_adjust_tables()
-
-    def import_abs_g_simple(self):
-        """
-        Imports absolute data from three column file, station g stdev. Adds rows to datum_model
-        """
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None,
-                                                         'Open file (3 columns, space delimited, station-g-std. dev.)',
-                                                         self.data_path)
-        logging.info('Importing absolute gravity data from {}'.format(fname))
-        with open(fname, "r") as fh:
-            line = fh.readline()
-            while True:
-                if not line:
-                    break
-                parts = line.split(" ")
-                try:
-                    datum = Datum(parts[0], float(parts[1]), float(parts[2]))
-                except IndexError:
-                    self.msg = show_message('Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
-                                 'space delimited', 'File read error')
-                self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
-                line = fh.readline()
-                logging.info('Absolute gravity data imported, station {}'.format(parts[0]))
-
-    def import_abs_g_complete(self):
-        """
-        Imports absolute gravity data as output by A10_parse.py. Adds rows to datum_model
-        """
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open A10_parse.py output file',
-                                                         self.data_path)
-        logging.info('Importing absolute gravity data from {}'.format(fname))
-        fh = open(fname, 'r')
-
-        # Read header line
-        line = fh.readline()
-        parts = line.split("\t")
-        g_idx, n_idx, s_idx, d_idx, th_idx = None, None, None, None, None
-        if 'Gravity' in parts:
-            g_idx = parts.index('Gravity')
-        if 'Station Name' in parts:
-            n_idx = parts.index('Station Name')
-        if 'Set Scatter' in parts:
-            s_idx = parts.index('Set Scatter')
-        if 'Date' in parts:
-            d_idx = parts.index('Date')
-        if 'Transfer Height' in parts:
-            th_idx = parts.index('Transfer Height')
-        if 'Gradient' in parts:
-            gr_idx = parts.index('Gradient')
-
-            while True:
-                line = fh.readline()
-                if not line:
-                    break
-                if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
-                    parts = line.split("\t")
-                    datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
-                                  meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
-                    self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
-                    logging.info('Absolute gravity data imported, station {}'.format(parts[n_idx]))
-
-    def import_abs_g_direct(self):
-        """
-        Instantiates a PyQt dialog to select a directory with .project.txt files.
-        """
-        if hasattr(self, 'abs_data_path'):
-            selectabsg = SelectAbsg(self.abs_data_path)
-        else:
-            selectabsg = SelectAbsg(self.data_path)
-        if selectabsg.exec_():
-            nds = selectabsg.new_datums
-            self.abs_data_path = selectabsg.path
-        for nd in nds:
-            self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(nd, 0)
-
-    def add_datum_manually(self):
-        """
-        Opens PyQt dialog to select an existing station to assign a datum value
-        """
-        stations = []
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(obstreesurvey.delta_model.rowCount()):
-                ind = obstreesurvey.delta_model.createIndex(ii, 0)
-                delta = obstreesurvey.delta_model.data(ind, QtCore.Qt.UserRole)
-                stations.append(delta.sta1)
-                stations.append(delta.sta2)
-        station_list = list(set(stations))
-        station_list.sort()
-        station = AddDatumFromList.add_datum(station_list)
-        if station:
-            d = Datum(str(station))
-            self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(d, 0)
-            logging.info('Datum station added: {}'.format(station))
-
-    def show_adjust_options(self):
-        """
-        Instantiates PyQt dialog to set adjustment options
-        """
-        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        adjust_options = AdjustOptions(survey.__str__(), survey.adjustment.adjustmentoptions, parent=self)
-        if adjust_options.exec_():
-            if adjust_options.surveys_to_update == 'single':
-                # Not sure why the deepcopy is necessary. Without it, all of the survey.adjustmentoptions
-                # reference the same object.
-                ao = copy.deepcopy(adjust_options.ao)
-                survey.adjustment.adjustmentoptions = ao
-                self.set_adj_sd(survey, adjust_options.ao)
-            elif adjust_options.surveys_to_update == 'all':
-                for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-                    ao = copy.deepcopy(adjust_options.ao)
-                    survey = self.obsTreeModel.invisibleRootItem().child(i)
-                    survey.adjustment.adjustmentoptions = ao
-                    self.set_adj_sd(survey, adjust_options.ao)
-
-    def plot_compare_datum_to_adjusted(self):
-        """
-        Bar plot of difference between specified datum (in datum table) and adjustment result.
-        """
-        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        results = survey.results_model
-        diff, lbl = [], []
-        for i in range(survey.datum_model.rowCount()):
-            idx = survey.datum_model.index(i, 0)
-            input_datum = survey.datum_model.data(idx, role=QtCore.Qt.UserRole)
-            input_name = input_datum.station
-            for ii in range(results.rowCount()):
-                if results.data(results.index(ii, 0), role=QtCore.Qt.DisplayRole) == input_name:
-                    adj_g = results.data(results.index(ii, 1), role=QtCore.Qt.DisplayRole)
-                    diff.append(float(adj_g) - (input_datum.g - input_datum.meas_height * input_datum.gradient))
-                    lbl.append(input_name)
-        fig, ax = plt.subplots()
-        ind = np.arange(len(diff))
-        ax.bar(ind, diff)
-        ax.set_title('Adj. datum - input datum (microGal)')
-        ax.set_xticks(ind + 0.4)
-        ax.set_xticklabels(lbl)
-        plt.show()
-
-    def plot_adjust_residual_histogram(self):
-        """
-        Matplotlib histogram of delta-g residuals
-        """
-        # the histogram of the data
-        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        nrows = survey.delta_model.rowCount()
-        rlist = []
-        for i in range(nrows):
-            idx = survey.delta_model.index(i, 7)
-            results = survey.delta_model.data(idx, role=QtCore.Qt.DisplayRole)
-            d = float(results.value())
-            if d > -998:
-                rlist.append(float(results.value()))
-
-        plt.hist(rlist, 20, facecolor='green', alpha=0.75)
-        plt.xlabel('Residual (microGal)')
-        plt.ylabel('Count')
-        plt.grid(True)
-        plt.show()
-
-    def plot_network_graph(self, shape='circular'):
-        """
-        Networkx plot of network. If shape == 'map', accurate coordinates must be present in the input file.
-        :param shape: 'circular' or 'map'
-        """
-        g1 = nx.MultiGraph()
-        g2 = nx.MultiGraph()
-        stations = []
-        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        delta_model = survey.delta_model
-        edge_colors = []
-        if delta_model.rowCount() == 0:
-            self.msg = show_message('Delta table is empty. Unable to plot network graph', 'Plot error')
-        else:
-            for i in range(delta_model.rowCount()):
-                ind = delta_model.index(i, 0)
-                delta = delta_model.data(ind, role=QtCore.Qt.UserRole)
-                chk = delta_model.data(ind, QtCore.Qt.CheckStateRole)
-                if chk == 2:
-                    edge_colors.append('k')
-                    g1.add_edge(delta.sta1, delta.sta2, key=ind)
-                else:
-                    edge_colors.append('r')
-                    g2.add_edge(delta.sta1, delta.sta2, key=ind)
-                if delta.sta1 not in stations:
-                    stations.append(delta.sta1)
-                    g1.add_node(delta.sta1)
-                    g2.add_node(delta.sta1)
-                if delta.sta2 not in stations:
-                    stations.append(delta.sta2)
-                    g1.add_node(delta.sta2)
-                    g2.add_node(delta.sta2)
-
-            H = nx.Graph(g1)
-            if not nx.is_connected(H):
-                gs = [H.subgraph(c) for c in nx.connected_components(H)]
-                for idx, g in enumerate(gs):
-                    plt.subplot(1, len(gs), idx+1)
-                    pos = nx.circular_layout(g)
-                    nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
-                    nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
-                    nx.draw_networkx_labels(g, pos)
-                    plt.title('Networks are disconnected!')
-            else:
-                # edge width is proportional to number of delta-g's
-                edgewidth = []
-                for (u, v, d) in H.edges(data=True):
-                    edgewidth.append(len(g1.get_edge_data(u, v)) * 2)
-
-                if shape == 'circular':
-                    pos = nx.circular_layout(H)
-                elif shape == 'map':
-                    new_dict = {}
-                    for k,v in self.station_coords.items():
-                        new_dict[k] = (v[0], v[1])
-                    pos = new_dict
-
-                nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
-                nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
-                nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
-                nx.draw_networkx_labels(H, pos)
-
-
-            plt.show()
-
-    def tide_correction_dialog(self):
-        """
-        Opens dialog to specify correction type
-        """
-        correction_type = None
-        tide_correction_dialog = TideCorrectionDialog()
-        if tide_correction_dialog.msg.exec_():
-            correction_type = tide_correction_dialog.correction_type
-        if correction_type == 'Cancel':
-            return
-        elif correction_type == 'Agnew':
-            lat, lon, elev = [], [], []
-            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-                survey = self.obsTreeModel.invisibleRootItem().child(i)
-                for ii in range(survey.rowCount()):
-                    loop = survey.child(ii)
-                    for iii in range(loop.rowCount()):
-                        station = loop.child(iii)
-                        lat += station.lat
-                        lon += station.long
-                        elev += station.elev
-            try:
-                lat.remove(0.0)
-            except ValueError:
-                pass
-            try:
-                lon.remove(0.0)
-            except ValueError:
-                pass
-            try:
-                elev.remove(0.0)
-            except ValueError:
-                pass
-
-            lat = np.mean(list(lat))
-            lon = np.mean(list(lon))
-            elev = np.mean(list(elev))
-
-            tc = TideCoordinatesDialog(lat, lon, elev)
-            if tc.exec_():
-                tide_correction_agnew(self, float(tc.lat.text()),
-                                      float(tc.lon.text()),
-                                      float(tc.elev.text()))
-            self.deltas_update_required()
-            self.adjust_update_required()
 
     def compute_gravity_change(self, full_table=False):
         """
@@ -1984,9 +1669,7 @@ class MainProg(QtWidgets.QMainWindow):
         if not full_table:
             header = ['station'] + header1 + header2
             table = out_table
-            # GravityChangeTable(self, table, header)
             gravity_change_table = GravityChangeTable(self, table, header, dates)
-            # gravity_change_table.exec_()
         else:
             header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
             # transpose table
@@ -1999,6 +1682,384 @@ class MainProg(QtWidgets.QMainWindow):
             table = [list(i) for i in zip(*table)]
             table = [header] + table
             return table
+
+    def analysis_LOO(self):
+        """
+        Leave one out analysis. For each datum station, this repeats the network adjustment for each survey, but with
+        the datum station excluded. Results are sent to plot_LOO_analysis, which generates a line plot of the measured
+        datum time series and the corresponding adjusted time series.
+        :return:
+        """
+        # Get list of datum stations for all surveys
+        PBAR1 = ProgressBar(total=self.obsTreeModel.invisibleRootItem().rowCount(), textmess='Adjusting surveys')
+        PBAR1.show()
+
+        datums = self.obsTreeModel.datums()
+        # Loop over surveys
+        x_all, adj_g_all, obs_g_all = [], [], []
+        ctr = 0
+        for station in datums:
+            PBAR1.progressbar.setValue(ctr)
+            ctr += 1
+            QtWidgets.QApplication.processEvents()
+            station_adj_g = []
+            station_obs_g = []
+            x_data = []
+
+            # Iterate through surveys
+            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+
+                # If datum is in survey, uncheck it and do inversion
+                obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
+                done = False
+                adj_g = None
+                for ii in range(obstreesurvey.datum_model.rowCount()):
+                    if not done:
+                        idx = obstreesurvey.datum_model.index(ii, 0)
+                        datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+                        if datum.station == station:
+                            checkstate = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.CheckStateRole)
+                            obstreesurvey.datum_model.setData(idx, 0, QtCore.Qt.CheckStateRole)
+                            if self.menus.mnAdjPyLSQ.isChecked():
+                                adj_type = 'PyLSQ'
+                            else:
+                                adj_type = 'Gravnet'
+                            obstreesurvey.run_inversion(adj_type)
+                            # Restore check state
+                            obstreesurvey.datum_model.setData(idx, checkstate, QtCore.Qt.CheckStateRole)
+                            for iii in range(obstreesurvey.results_model.rowCount()):
+                                idx = obstreesurvey.results_model.index(iii, 0)
+                                adj_station = obstreesurvey.results_model.data(idx, role=QtCore.Qt.UserRole)
+
+                                if adj_station.station == station:
+                                    adj_g = adj_station.g + (datum.gradient * datum.meas_height)
+                                    done = True
+                                    break
+                if adj_g:
+                    station_adj_g.append(adj_g)
+                    station_obs_g.append(datum.g)
+                    x_data.append(dt.datetime.strptime(obstreesurvey.name, '%Y-%m-%d'))
+
+            # Store results
+            x_all.append(x_data)
+            adj_g_all.append(station_adj_g)
+            obs_g_all.append(station_obs_g)
+        self.plot_LOO_analysis(x_all, adj_g_all, obs_g_all, datums)
+
+
+    def set_adj_sd(self, survey, ao):
+        """
+        Update delta table based on parameters in net. adj. options
+        :param survey: For which to set delta-g sd
+        :param ao: AdjustmentOptions object
+        """
+        for i in range(survey.delta_model.rowCount()):
+            ind = survey.delta_model.createIndex(i, 6)
+            delta = survey.delta_model.data(ind, role=QtCore.Qt.UserRole)
+            additive = 0
+            factor = 1
+            if ao.use_sigma_add:
+                additive = ao.sigma_add
+            if ao.use_sigma_factor:
+                factor = ao.sigma_factor
+            if ao.use_sigma_min:
+                sigma = max(ao.sigma_min, delta.sd * factor + additive)
+            else:
+                sigma = delta.sd * factor + additive
+            survey.delta_model.setData(ind, sigma, role=QtCore.Qt.EditRole)
+        self.update_adjust_tables()
+
+    def import_abs_g_simple(self):
+        """
+        Imports absolute data from three column file, station g stdev. Adds rows to datum_model
+        """
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None,
+                                                         'Open file (3 columns, space delimited, station-g-std. dev.)',
+                                                         self.data_path)
+        logging.info('Importing absolute gravity data from {}'.format(fname))
+        with open(fname, "r") as fh:
+            line = fh.readline()
+            while True:
+                if not line:
+                    break
+                parts = line.split(" ")
+                try:
+                    datum = Datum(parts[0], float(parts[1]), float(parts[2]))
+                except IndexError:
+                    self.msg = show_message('Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
+                                 'space delimited', 'File read error')
+                self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
+                line = fh.readline()
+                logging.info('Absolute gravity data imported, station {}'.format(parts[0]))
+
+    def import_abs_g_complete(self):
+        """
+        Imports absolute gravity data as output by A10_parse.py. Adds rows to datum_model
+        """
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open A10_parse.py output file',
+                                                         self.data_path)
+        logging.info('Importing absolute gravity data from {}'.format(fname))
+        fh = open(fname, 'r')
+
+        # Read header line
+        line = fh.readline()
+        parts = line.split("\t")
+        g_idx, n_idx, s_idx, d_idx, th_idx = None, None, None, None, None
+        if 'Gravity' in parts:
+            g_idx = parts.index('Gravity')
+        if 'Station Name' in parts:
+            n_idx = parts.index('Station Name')
+        if 'Set Scatter' in parts:
+            s_idx = parts.index('Set Scatter')
+        if 'Date' in parts:
+            d_idx = parts.index('Date')
+        if 'Transfer Height' in parts:
+            th_idx = parts.index('Transfer Height')
+        if 'Gradient' in parts:
+            gr_idx = parts.index('Gradient')
+
+            while True:
+                line = fh.readline()
+                if not line:
+                    break
+                if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
+                    parts = line.split("\t")
+                    datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
+                                  meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
+                    self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
+                    logging.info('Absolute gravity data imported, station {}'.format(parts[n_idx]))
+
+    def import_abs_g_direct(self):
+        """
+        Instantiates a PyQt dialog to select a directory with .project.txt files.
+        """
+        if hasattr(self, 'abs_data_path'):
+            selectabsg = SelectAbsg(self.abs_data_path)
+        else:
+            selectabsg = SelectAbsg(self.data_path)
+        if selectabsg.exec_():
+            nds = selectabsg.new_datums
+            self.abs_data_path = selectabsg.path
+        for nd in nds:
+            self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(nd, 0)
+
+    def add_datum_manually(self):
+        """
+        Opens PyQt dialog to select an existing station to assign a datum value
+        """
+        stations = []
+        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+            obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(obstreesurvey.delta_model.rowCount()):
+                ind = obstreesurvey.delta_model.createIndex(ii, 0)
+                delta = obstreesurvey.delta_model.data(ind, QtCore.Qt.UserRole)
+                stations.append(delta.sta1)
+                stations.append(delta.sta2)
+        station_list = list(set(stations))
+        station_list.sort()
+        station = AddDatumFromList.add_datum(station_list)
+        if station:
+            d = Datum(str(station))
+            self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(d, 0)
+            logging.info('Datum station added: {}'.format(station))
+
+    def show_adjust_options(self):
+        """
+        Instantiates PyQt dialog to set adjustment options
+        """
+        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+        adjust_options = AdjustOptions(survey.__str__(), survey.adjustment.adjustmentoptions, parent=self)
+        if adjust_options.exec_():
+            if adjust_options.surveys_to_update == 'single':
+                # Not sure why the deepcopy is necessary. Without it, all of the survey.adjustmentoptions
+                # reference the same object.
+                ao = copy.deepcopy(adjust_options.ao)
+                survey.adjustment.adjustmentoptions = ao
+                self.set_adj_sd(survey, adjust_options.ao)
+            elif adjust_options.surveys_to_update == 'all':
+                for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+                    ao = copy.deepcopy(adjust_options.ao)
+                    survey = self.obsTreeModel.invisibleRootItem().child(i)
+                    survey.adjustment.adjustmentoptions = ao
+                    self.set_adj_sd(survey, adjust_options.ao)
+
+    def plot_compare_datum_to_adjusted(self):
+        """
+        Bar plot of difference between specified datum (in datum table) and adjustment result.
+        """
+        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+        results = survey.results_model
+        diff, lbl = [], []
+        for i in range(survey.datum_model.rowCount()):
+            idx = survey.datum_model.index(i, 0)
+            input_datum = survey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+            input_name = input_datum.station
+            for ii in range(results.rowCount()):
+                if results.data(results.index(ii, 0), role=QtCore.Qt.DisplayRole) == input_name:
+                    adj_g = results.data(results.index(ii, 1), role=QtCore.Qt.DisplayRole)
+                    diff.append(float(adj_g) - (input_datum.g - input_datum.meas_height * input_datum.gradient))
+                    lbl.append(input_name)
+        fig, ax = plt.subplots()
+        ind = np.arange(len(diff))
+        ax.bar(ind, diff)
+        ax.set_title('Adj. datum - input datum (microGal)')
+        ax.set_xticks(ind + 0.4)
+        ax.set_xticklabels(lbl)
+        plt.show()
+
+    def plot_adjust_residual_histogram(self):
+        """
+        Matplotlib histogram of delta-g residuals
+        """
+        # the histogram of the data
+        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+        nrows = survey.delta_model.rowCount()
+        rlist = []
+        for i in range(nrows):
+            idx = survey.delta_model.index(i, 7)
+            results = survey.delta_model.data(idx, role=QtCore.Qt.DisplayRole)
+            d = float(results.value())
+            if d > -998:
+                rlist.append(float(results.value()))
+
+        plt.hist(rlist, 20, facecolor='green', alpha=0.75)
+        plt.xlabel('Residual (microGal)')
+        plt.ylabel('Count')
+        plt.grid(True)
+        plt.show()
+
+    def plot_LOO_analysis(self, x_all, adj_g_all, obs_g_all, datums):
+        """
+        Plot results from leave-one-out analysis.
+        """
+        fig = plt.figure(figsize=(13, 8))
+        fig.hold
+        i = 0
+        for x, adj_g, obs_g in zip(x_all, adj_g_all, obs_g_all):
+            y1 = [y - obs_g[0] for y in obs_g]
+            y2 = [y - adj_g[0] for y in adj_g]
+
+            a = plt.plot(x, y1, '-o', label=datums[i] + '_obs')
+            line_color = a[0].get_color()
+            b = plt.plot(x, y2, '--o', c=line_color, label=datums[i] + '_adj')
+            i += 1
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+        fig.show()
+
+    def plot_network_graph(self, shape='circular'):
+        """
+        Networkx plot of network. If shape == 'map', accurate coordinates must be present in the input file.
+        :param shape: 'circular' or 'map'
+        """
+        g1 = nx.MultiGraph()
+        g2 = nx.MultiGraph()
+        stations = []
+        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+        delta_model = survey.delta_model
+        edge_colors = []
+        if delta_model.rowCount() == 0:
+            self.msg = show_message('Delta table is empty. Unable to plot network graph', 'Plot error')
+        else:
+            for i in range(delta_model.rowCount()):
+                ind = delta_model.index(i, 0)
+                delta = delta_model.data(ind, role=QtCore.Qt.UserRole)
+                chk = delta_model.data(ind, QtCore.Qt.CheckStateRole)
+                if chk == 2:
+                    edge_colors.append('k')
+                    g1.add_edge(delta.sta1, delta.sta2, key=ind)
+                else:
+                    edge_colors.append('r')
+                    g2.add_edge(delta.sta1, delta.sta2, key=ind)
+                if delta.sta1 not in stations:
+                    stations.append(delta.sta1)
+                    g1.add_node(delta.sta1)
+                    g2.add_node(delta.sta1)
+                if delta.sta2 not in stations:
+                    stations.append(delta.sta2)
+                    g1.add_node(delta.sta2)
+                    g2.add_node(delta.sta2)
+
+            H = nx.Graph(g1)
+            if not nx.is_connected(H):
+                gs = [H.subgraph(c) for c in nx.connected_components(H)]
+                for idx, g in enumerate(gs):
+                    plt.subplot(1, len(gs), idx+1)
+                    pos = nx.circular_layout(g)
+                    nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
+                    nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
+                    nx.draw_networkx_labels(g, pos)
+                    plt.title('Networks are disconnected!')
+            else:
+                # edge width is proportional to number of delta-g's
+                edgewidth = []
+                for (u, v, d) in H.edges(data=True):
+                    edgewidth.append(len(g1.get_edge_data(u, v)) * 2)
+
+                if shape == 'circular':
+                    pos = nx.circular_layout(H)
+                elif shape == 'map':
+                    new_dict = {}
+                    for k,v in self.station_coords.items():
+                        new_dict[k] = (v[0], v[1])
+                    pos = new_dict
+
+                nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
+                nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
+                nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
+                nx.draw_networkx_labels(H, pos)
+            plt.show()
+
+    def plot_datum_comparison_timeseries(self):
+        """
+        Creating a PyQt window heree in preparation for eventually having a tabbed plot window with various diagnostics
+        """
+        plot = FigureDatumComparisonTimeSeries(self.obsTreeModel)
+
+    def tide_correction_dialog(self):
+        """
+        Opens dialog to specify correction type
+        """
+        correction_type = None
+        tide_correction_dialog = TideCorrectionDialog()
+        if tide_correction_dialog.msg.exec_():
+            correction_type = tide_correction_dialog.correction_type
+        if correction_type == 'Cancel':
+            return
+        elif correction_type == 'Agnew':
+            lat, lon, elev = [], [], []
+            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+                survey = self.obsTreeModel.invisibleRootItem().child(i)
+                for ii in range(survey.rowCount()):
+                    loop = survey.child(ii)
+                    for iii in range(loop.rowCount()):
+                        station = loop.child(iii)
+                        lat += station.lat
+                        lon += station.long
+                        elev += station.elev
+            try:
+                lat.remove(0.0)
+            except ValueError:
+                pass
+            try:
+                lon.remove(0.0)
+            except ValueError:
+                pass
+            try:
+                elev.remove(0.0)
+            except ValueError:
+                pass
+
+            lat = np.mean(list(lat))
+            lon = np.mean(list(lon))
+            elev = np.mean(list(elev))
+
+            tc = TideCoordinatesDialog(lat, lon, elev)
+            if tc.exec_():
+                tide_correction_agnew(self, float(tc.lat.text()),
+                                      float(tc.lon.text()),
+                                      float(tc.elev.text()))
+            self.deltas_update_required()
+            self.adjust_update_required()
 
     def write_summary(self):
         """
@@ -2045,9 +2106,6 @@ class MainProg(QtWidgets.QMainWindow):
                 for ii in range(survey.results_model.rowCount()):
                     adj_sta = survey.results_model.data(survey.results_model.index(ii,0), role=QtCore.Qt.UserRole)
                     fid.write('{}\n'.format(str(adj_sta)))
-
-    def plot_datum_comparison(self):
-        plot = DatumComparisonFigure(self.obsTreeModel)
 
     def write_tabular_data(self):
         """
@@ -2106,50 +2164,6 @@ class MainProg(QtWidgets.QMainWindow):
 
         if not results_written:
             self.msg = show_message('No network adjustment results', 'Write error')
-
-    def delete_tare(self):
-        """
-        Called when user right-clicks a datum and selects delete from the context menu
-        """
-        index = self.tab_drift.tare_view.selectedIndexes()
-        loop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
-        for idx in reversed(index):
-            loop.tare_model.removeRow(idx)
-        self.tab_drift.tare_view.update()
-        self.tab_drift.process_tares(self.obsTreeModel.itemFromIndex(self.currentLoopIndex))
-        self.update_drift_tables_and_plots()
-        return
-
-    def delete_datum(self):
-        """
-        Called when user right-clicks a datum and selects delete from the context menu
-        """
-        index = self.tab_adjust.datum_view.selectedIndexes()
-        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
-        for idx in reversed(index):
-            survey.datum_model.removeRow(idx)
-        self.tab_adjust.datum_view.update()
-        return
-
-    def move_survey(self, direction=UP):
-        """
-        Used to move survey up or down in the tree view
-        :param direction: self.UP or self.DOWN (macros for 1 and -1)
-        :return:
-        """
-        if direction not in (self.DOWN, self.UP):
-            return
-
-        model = self.obsTreeModel
-        index = self.currentSurveyIndex
-        rowNum = index.row()
-        newRow = rowNum+direction
-        if not (0 <= newRow < model.rowCount()):
-            return False
-        survey = model.takeRow(rowNum)
-        model.insertRow(newRow, survey)
-        self.currentSurveyIndex = model.indexFromItem(survey[0])
-        return True
 
     ###########################################################################
     # Menus

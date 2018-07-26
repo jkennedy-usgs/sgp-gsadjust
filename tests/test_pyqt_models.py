@@ -2,8 +2,9 @@ import pytest
 import pytestqt
 import pyqt_models
 import GSadjust
-from test_fixture_pyqt import channellist, obstreesurvey
+from test_fixture_pyqt import channellist, obstreesurvey, list_of_deltas
 from PyQt5 import QtGui
+
 
 def test_ObsTreeSurvey(obstreesurvey):
     assert obstreesurvey.rowCount() == 1
@@ -28,5 +29,12 @@ def test_obstreemodel(qtmodeltester, channellist):
     loop1.appendRow([sta3, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
     surv1.appendRow([loop1, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
     model.appendRow([surv1, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
+
+    qtmodeltester.check(model)
+
+def test_deltatablemodel(qtmodeltester, list_of_deltas):
+    model = pyqt_models.DeltaTableModel()
+    for delta in list_of_deltas:
+        model.insertRows(delta, 0)
 
     qtmodeltester.check(model)

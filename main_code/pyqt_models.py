@@ -1757,9 +1757,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
     """
 
     def __init__(self):
-        super(DeltaTableModel, self).__init__()
-        self.deltas = []
-        self.disabled_list = []
+        super(DeltaTableModel, self).__init__(parent=None)
+        self._deltas = []
+        self._disabled_list = []
 
     signal_adjust_update_required = QtCore.pyqtSignal()
 
@@ -1791,18 +1791,28 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def insertRows(self, delta, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
-        self.deltas.append(delta)
+        self._deltas.append(delta)
         self.endInsertRows()
 
     def rowCount(self, parent=None):
-        return len(self.deltas)
+        if parent is None:
+            return len(self._deltas)
+        elif parent.isValid():
+            return 0
+        else:
+            return len(self._deltas)
 
     def columnCount(self, parent=None):
-        return 8
+        if parent is None:
+            return 8
+        elif parent.isValid():
+            return 0
+        else:
+            return 8
 
     def data(self, index, role):
         if index.isValid():
-            delta = self.deltas[index.row()]
+            delta = self._deltas[index.row()]
             column = index.column()
             if role == QtCore.Qt.ForegroundRole:
                 brush = QtGui.QBrush(QtCore.Qt.black)
@@ -1858,19 +1868,19 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         QtCore.Qt.Checked or QtCore.Qt.Unchecked
         """
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
-            delta = self.deltas[index.row()]
+            delta = self._deltas[index.row()]
             if value == QtCore.Qt.Checked:
                 delta.checked = 2
-                if index.row() in self.disabled_list:
-                    self.disabled_list.remove(index.row())
+                if index.row() in self._disabled_list:
+                    self._disabled_list.remove(index.row())
             elif value == QtCore.Qt.Unchecked:
                 delta.checked = 0
-                self.disabled_list.append(index.row())
+                self._disabled_list.append(index.row())
             self.signal_adjust_update_required.emit()
             return True
         if role == QtCore.Qt.EditRole:
             if index.isValid() and 0 <= index.row():
-                delta = self.deltas[index.row()]
+                delta = self._deltas[index.row()]
                 column = index.column()
                 if len(str(value)) > 0:
                     if column == DELTA_ADJ_SD:
@@ -1879,11 +1889,11 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     self.signal_adjust_update_required.emit()
                 return True
         if role == QtCore.Qt.UserRole:
-            self.deltas[index.row()] = value
+            self._deltas[index.row()] = value
 
     def clearDeltas(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
-        self.deltas = []
+        self._deltas = []
         self.endRemoveRows()
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
@@ -1895,7 +1905,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         self.endResetModel()
         return QVariant()
 
-    def flags(self, index):
+    def flags(self, QModelIndex):
+        if not QModelIndex.isValid():
+            return QtCore.Qt.NoItemFlags
         return QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled | \
                QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsSelectable
 

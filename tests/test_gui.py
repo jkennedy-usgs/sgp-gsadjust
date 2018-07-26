@@ -21,6 +21,7 @@ def test_gui(qtbot, monkeypatch):
 
     # Divide into loops
     window.divide_survey(8/24)
+    qtbot.wait(2000)
     survey = window.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0)
     assert loop.rowCount() == 12
@@ -42,16 +43,14 @@ def test_gui(qtbot, monkeypatch):
     monkeypatch.setattr(gui_objects.AddDatumFromList, 'add_datum', classmethod(lambda *args: 'CDOT'))
     qtbot.keyClick(window, 'd', modifier=QtCore.Qt.ControlModifier)
     window.adjust_network()
-    qtbot.wait(1000)
-    survey.msg.close()
 
     # Verify gravnet input
     assert survey.results_model.rowCount() == 30
-    assert len(survey.adjustment.adjustmentresults.text) == 22
+    assert len(survey.adjustment.adjustmentresults.text) == 14  # number of lines in Numpy output
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
 
-    test_workspace = 'test_workspace.p'
+    test_workspace = 'test1.p'
     success = window.obsTreeModel.save_workspace(test_workspace)
     assert success == True
 
@@ -101,6 +100,6 @@ def test_gui(qtbot, monkeypatch):
             sd2 = float(elems[-1])
 
     assert abs(sd1 - sd2) < 0.000001
-
+    os.remove(test_workspace)
     window.close()
     os.chdir(pwd)

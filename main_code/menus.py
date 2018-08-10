@@ -41,7 +41,7 @@ class Menus:
                                                        self.mainProg.open_file_dialog('Burris'),
                                                        tip="Open data file",
                                                        enabled=True)
-        self.mnFileOpenCG6File = self.create_action("Load raw CG-6 data file...",
+        self.mnFileOpenCG6File = self.create_action("Load raw CG-6 data...",
                                                     shortcut="Ctrl+6",
                                                     slot=lambda meter='CG6': self.mainProg.open_file_dialog('CG6'),
                                                     tip="Open data file",

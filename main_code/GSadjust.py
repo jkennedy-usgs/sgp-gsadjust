@@ -774,6 +774,10 @@ class MainProg(QtWidgets.QMainWindow):
     def workspace_open_getfile(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
         if fname:
+            if fname[-2:] != '.p':
+                self.msg = show_message('Saved workspaces should have a .p extension. ' +
+                                        'Please use "Open raw...data" to load a data file', 'File load error')
+                return
             self.workspace_open(fname)
 
     def workspace_open(self, fname):
@@ -863,7 +867,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def return_delta_given_key(self, key, deltas):
         """
-        Return a delta based on the staion name and station count of the comprising stations.
+        Return a delta based on thS\e staion name and station count of the comprising stations.
         :param keys: a tuple or list, depending on the type of delta
         :param deltas: List of deltas, as returned from assemble_all_deltas()
         :return:
@@ -883,12 +887,15 @@ class MainProg(QtWidgets.QMainWindow):
                     if simpledelta.type == 'normal':
                         station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
                         station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
-                        d = Delta(station1, station2,
-                                  adj_sd=simpledelta.adj_sd,
-                                  driftcorr=simpledelta.driftcorr,
-                                  ls_drift=simpledelta.ls_drift,
-                                  delta_type=simpledelta.type,
-                                  checked=simpledelta.checked)
+                        if station1 is not None and station2 is not None:
+                            d = Delta(station1, station2,
+                                      adj_sd=simpledelta.adj_sd,
+                                      driftcorr=simpledelta.driftcorr,
+                                      ls_drift=simpledelta.ls_drift,
+                                      delta_type=simpledelta.type,
+                                      checked=simpledelta.checked)
+                        else:
+                            logging.error('')
                     elif simpledelta.type == 'list':
                         if not hasattr(simpledelta, 'key'):
                             list_of_deltas = []

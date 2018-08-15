@@ -516,6 +516,7 @@ class TabDrift(QtWidgets.QWidget):
         offset = 0
         if type(obstreeloop) is not ObsTreeLoop:
             obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+            obstreesurvey = obstreeloop.parent()
         drift_type = obstreeloop.drift_method
         plot_data = obstreeloop.get_data_for_plot()
 
@@ -560,6 +561,7 @@ class TabDrift(QtWidgets.QWidget):
                 self.axes_drift_single.cla()
                 self.axes_drift_single.text(0.35, 0.5, 'NO STATION REPEATS')
             if update:
+                self.axes_drift_single.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                 self.drift_single_canvas.draw()
             data = obstreeloop.checked_stations()
             if drift_type == 'none':
@@ -701,6 +703,7 @@ class TabDrift(QtWidgets.QWidget):
                     self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                     self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
                     self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                    self.axes_dirft_cont_upper.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                     self.drift_cont_canvasbot.draw()
                     self.drift_cont_canvastop.draw()
                 return delta_model
@@ -734,6 +737,7 @@ class TabDrift(QtWidgets.QWidget):
                                                             'in microGal')
                 self.drift_fig.canvas.mpl_connect('pick_event',
                                                   lambda event: self.show_line_label(event, self.axes_drift_single))
+                self.axes_drift_single.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                 self.drift_single_canvas.draw()
             return models
 
@@ -749,7 +753,8 @@ class TabDrift(QtWidgets.QWidget):
 
     def set_drift_method(self, update=True):
         """
-        Called from update_drift_tables_and_plots + callback from GUI
+        Called from update_drift_tables_and_plots + callback from GUI. Initiates plotting on drift tab.
+        :param update: Boolean, controls if plots are updated. For performance, it's set to false when loading a file
         """
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
         method_key = self.driftmethod_comboboxbox.currentIndex()

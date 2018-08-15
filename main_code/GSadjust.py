@@ -435,30 +435,41 @@ class MainProg(QtWidgets.QMainWindow):
                            'CG6', 'Burris', or 'Scintrex' - reading a raw data file
         """
         # open file
-        overwrite = False
         append_loop = False
         if 'loop' in open_type:
             append_loop = True
+
+        # The case when "append survey' or 'append loop' is called: accomadate the rare instance of combining meter
+        # types on a survey
         if 'choose' in open_type:
             meter_type_dialog = MeterType()
-            if meter_type_dialog.msg.exec_():
+            test = meter_type_dialog.exec_()
+            if test == 1:
                 meter_type = meter_type_dialog.meter_type
+
+        # Otherwise, 'Load raw....' was called. We know the meter type, but need to ask about appending or overwriting
+        # the existing data (only if there is existing data).
         elif self.obsTreeModel.invisibleRootItem().rowCount() > 0:
             overwrite_tree_dialog = Overwrite()
-            if overwrite_tree_dialog.msg.exec_():
-                if overwrite_tree_dialog.overwrite:
-                    self.workspace_clear()
-        if not 'choose' in open_type:
+            if overwrite_tree_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                self.workspace_clear()
+            else:
+                return
+
+        if 'choose' not in open_type:
             meter_type = open_type
+
         if fname[-2:] == '.p':
             self.msg = show_message('Please use "Open workspace... " to load a .p file', 'File load error')
             return
-        self.output_root_dir = os.path.dirname(fname)
+
         if fname:
+            self.output_root_dir = os.path.dirname(fname)
             logging.info('Loading data file: %s', fname)
             self.data_path = os.path.dirname(str(fname))
+
             # populate a Campaign object
-            e = None
+            err = None
             try:
                 self.all_survey_data = self.read_raw_data_file(fname, meter_type)
                 if append_loop:
@@ -472,12 +483,13 @@ class MainProg(QtWidgets.QMainWindow):
             except IOError as e:
                 self.msg = show_message('No file : {}'.format(fname), 'File error')
             except ValueError as e:
-                self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.format(e.i), 'File error')
+                self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.
+                                        format(e.i), 'File error')
             except IndexError as e:
-                self.msg = show_message('Index error at line {:d}. Check raw data file: possible missing value?'.format(e.i),
-                             'File error')
-            if e:
-                logging.exception(e, exc_info=True)
+                self.msg = show_message('Index error at line {:d}. Check raw data file: possible missing value?'.
+                                        format(e.i), 'File error')
+            if err:
+                logging.exception(err, exc_info=True)
 
             if not 'choose' in open_type:
                 self.init_gui()
@@ -772,13 +784,26 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.mnFileSaveWorkspace.setEnabled(False)
 
     def workspace_open_getfile(self):
+        """
+        Gets filename to open and asks whether to  append or overwrite, if applicable.
+        :return:
+        """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
         if fname:
             if fname[-2:] != '.p':
                 self.msg = show_message('Saved workspaces should have a .p extension. ' +
                                         'Please use "Open raw...data" to load a data file', 'File load error')
                 return
-            self.workspace_open(fname)
+
+            if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
+                overwrite_tree_dialog = Overwrite()
+                if overwrite_tree_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                    self.workspace_clear()
+                    self.workspace_open(fname)
+                else:
+                    return
+            else:
+                self.workspace_open(fname)
 
     def workspace_open(self, fname):
         """
@@ -1438,13 +1463,13 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Right-click context menu on tree view
         """
-        self.obstreeview_popup_menu = QtWidgets.QMenu("Menu", self)
-        self.obstreeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
-        self.obstreeview_popup_menu.addAction(self.menus.mnDeleteLoop)
-        self.obstreeview_popup_menu.addAction(None)
-        self.obstreeview_popup_menu.addAction(self.menus.mnStationDelete)
-        self.obstreeview_popup_menu.addAction(self.menus.mnStationDuplicate)
-        self.obstreeview_popup_menu.addAction(self.menus.mnDataNewLoop)
+        self.data_treeview_popup_menu = QtWidgets.QMenu("Menu", self)
+        self.data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
+        self.data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
+        self.data_treeview_popup_menu.addAction(None)
+        self.data_treeview_popup_menu.addAction(self.menus.mnStationDelete)
+        self.data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
+        self.data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
         # enable as appropriate
         indexes = self.data_treeview.selectedIndexes()
         if indexes:
@@ -1463,7 +1488,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.mnStationDuplicate.setEnabled(False)
                 self.menus.mnDataNewLoop.setEnabled(False)
 
-            self.obstreeview_popup_menu.exec_(self.data_treeview.mapToGlobal(point))
+            self.data_treeview_popup_menu.exec_(self.data_treeview.mapToGlobal(point))
 
     def adjust_network(self, how_many='all'):
         """

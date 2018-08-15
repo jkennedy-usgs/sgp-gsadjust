@@ -56,35 +56,33 @@ class ApplyTimeCorrection(QtWidgets.QDialog):
             self.accept()
 
 
-class Overwrite(QtWidgets.QDialog):
+class Overwrite(QtWidgets.QMessageBox):
     def __init__(self):
         super(Overwrite, self).__init__()
         self.overwrite = False
-        self.msg = QtWidgets.QMessageBox()
-        self.msg.setText("Overwrite or append to existing data?")
-        self.msg.addButton(QtWidgets.QPushButton('Overwrite'), QtWidgets.QMessageBox.YesRole)
-        self.msg.addButton(QtWidgets.QPushButton('Append'), QtWidgets.QMessageBox.YesRole)
-        self.msg.buttonClicked.connect(self.onClicked)
+        # self.msg = QtWidgets.QMessageBox()
+        self.setText("Overwrite existing data?")
+        self.addButton(QtWidgets.QPushButton('Overwrite'), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton('Cancel'), QtWidgets.QMessageBox.RejectRole)
+        self.buttonClicked.connect(self.onClicked)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):
         if btn.text() == 'Overwrite':
-            self.overwrite = True
+            self.accept()
         else:
-            self.overwrite = False
-        self.accept()
+            self.reject()
 
 
-class MeterType(QtWidgets.QDialog):
+class MeterType(QtWidgets.QMessageBox):
     def __init__(self):
         super(MeterType, self).__init__()
-        self.msg = QtWidgets.QMessageBox()
-        self.msg.setText("Choose meter file to import")
-        self.msg.addButton(QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole)
-        self.msg.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
-        self.msg.addButton(QtWidgets.QPushButton(' Burris '), QtWidgets.QMessageBox.YesRole)
-        self.msg.addButton(QtWidgets.QPushButton(' Cancel '), QtWidgets.QMessageBox.RejectRole)
-        self.msg.buttonClicked.connect(self.onClicked)
+        self.setText("Choose meter file to import")
+        self.addButton(QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(' Burris '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(' Cancel '), QtWidgets.QMessageBox.RejectRole)
+        self.buttonClicked.connect(self.onClicked)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):

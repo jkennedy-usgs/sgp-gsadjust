@@ -1952,15 +1952,19 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                           hierarchy
     """
 
-    signal_update_coordinates = QtCore.pyqtSignal()
-    signal_adjust_update_required = QtCore.pyqtSignal()
 
     def __init__(self, ChannelList_obj, parent=None):
-        self.__headers = ["station", "date/time", "t (mn)", u"g (\u00b5gal)", u"sd (\u00b5gal)",
-                          "tiltx", "tilty", "temp (K)", "dur (s)", "rej"]
         QtCore.QAbstractTableModel.__init__(self, parent)
+        self.__headers = ["Station", "Date", u"g (\u00b5gal)", u"sd (\u00b5gal)",
+                          "X Tilt", "Y Tilt", "Temp (K)", "dur (s)", "rej"]
         self.unchecked = {}
         self.createArrayData(ChannelList_obj)
+
+    signal_update_coordinates = QtCore.pyqtSignal()
+    signal_adjust_update_required = QtCore.pyqtSignal()
+    signal_uncheck_station = QtCore.pyqtSignal()
+    signal_check_station = QtCore.pyqtSignal()
+
 
     def createArrayData(self, ChannelList_obj):
         """
@@ -1970,11 +1974,10 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
         self.ChannelList_obj = ChannelList_obj
         self.arraydata = np.concatenate((ChannelList_obj.station,
                                          np.array(ChannelList_obj.t),
-                                         (ChannelList_obj.t - ChannelList_obj.t[0]) * 24 * 60,
                                          np.array(ChannelList_obj.grav),
                                          np.array(ChannelList_obj.sd), ChannelList_obj.tiltx,
                                          ChannelList_obj.tilty, ChannelList_obj.temp, ChannelList_obj.dur,
-                                         ChannelList_obj.rej)).reshape(len(ChannelList_obj.t), 10, order='F')
+                                         ChannelList_obj.rej)).reshape(len(ChannelList_obj.t), 9, order='F')
 
     def rowCount(self, parent=None):
         return len(self.ChannelList_obj.t)
@@ -1994,15 +1997,15 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             # view definition
             row = index.row()
             column = index.column()
-            if self.__headers[column] == "t (mn)":
-                strdata = "%2.1f" % self.arraydata[row][column]
+            if self.__headers[column] == 'Date':
+                strdata = num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S')
             elif self.__headers[column] == "rej":
-                strdata = "%2.0f" % self.arraydata[row][column]
+                strdata = "%2.0f" % float(self.arraydata[row][column])
             elif self.__headers[column] == "dur (s)":
-                strdata = "%3.0f" % self.arraydata[row][column]
+                strdata = "%3.0f" % float(self.arraydata[row][column])
             elif self.__headers[column] == u"g (\u00b5gal)" or \
                     self.__headers[column] == u"sd (\u00b5gal)":
-                strdata = "%8.0f" % self.arraydata[row][column]
+                strdata = "%8.0f" % float(self.arraydata[row][column])
             else:
                 strdata = str(self.arraydata[row][column])
             return strdata
@@ -2031,9 +2034,12 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
             if value == QtCore.Qt.Checked:
                 self.ChannelList_obj.keepdata[index.row()] = 1
+                self.signal_check_station.emit()
             elif value == QtCore.Qt.Unchecked:
                 self.unchecked[index] = value
                 self.ChannelList_obj.keepdata[index.row()] = 0
+                if not any(self.ChannelList_obj.keepdata):
+                    self.signal_uncheck_station.emit()
             self.signal_adjust_update_required.emit()
             self.dataChanged.emit(index, index)
             return True
@@ -2137,8 +2143,6 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                 strdata = str(self.arraydata[row][column])
                 if self.__headers[column] == "Date":
                     strdata = num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S')
-                if self.__headers[column] == u"g (µGal)":
-                    strdata = "%0.1f" % self.arraydata[row][column]
                 if self.__headers[column] == u"Tide corr.":
                     strdata = "%0.1f" % float(self.arraydata[row][column])
                 return strdata

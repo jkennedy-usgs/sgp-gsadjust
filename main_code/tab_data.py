@@ -169,6 +169,7 @@ class TabData(QtWidgets.QWidget):
             series = np.array(station.sd)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
             self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'standard deviation', '$\mu$gal', '4')
+
         elif meter_type == 'Burris':
             self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal', '1')
             # tiltx channel
@@ -183,7 +184,7 @@ class TabData(QtWidgets.QWidget):
             series = np.array(station.tiltx)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
             self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Tilt Correction', 'microGal', '4')
-            self.data_canvas.draw()
+        self.data_canvas.draw()
         return True
 
     def clear_axes(self):

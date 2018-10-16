@@ -703,7 +703,7 @@ class TabDrift(QtWidgets.QWidget):
                     self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                     self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
                     self.axes_drift_cont_lower.plot(xp, yp, 'k-')
-                    self.axes_dirft_cont_upper.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
+                    self.axes_drift_cont_upper.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                     self.drift_cont_canvasbot.draw()
                     self.drift_cont_canvastop.draw()
                 return delta_model
@@ -754,7 +754,7 @@ class TabDrift(QtWidgets.QWidget):
     def set_drift_method(self, update=True):
         """
         Called from update_drift_tables_and_plots + callback from GUI. Initiates plotting on drift tab.
-        :param update: Boolean, controls if plots are updated. For performance, it's set to false when loading a file
+        :param update: Boolean or int, controls if plots are updated. For performance, it's set to false when loading a file
         """
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
         method_key = self.driftmethod_comboboxbox.currentIndex()
@@ -773,7 +773,9 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
         self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
         # These control the visibility of different tables
-        if update:
+        # update is an int (index of menu item) when this function is called from the
+        #  menu-item callback
+        if type(update) is int or update is True:
             if method == 'none':
                 self.drift_none()
             if method == 'netadj':
@@ -970,7 +972,6 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_polydegree_combobox.setEnabled(False)
         self.drift_cont_startendcombobox.setEnabled(False)
         self.drift_plot_hz_extent.setEnabled(False)
-
         self.dg_samples_view.hide()
 
     def drift_combobox_updated(self):

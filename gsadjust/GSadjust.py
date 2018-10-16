@@ -820,7 +820,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.populate_obstreemodel(obstreesurveys, delta_models)
 
     def populate_obstreemodel(self, obstreesurveys, delta_models):
-        PBAR1 = ProgressBar(total=6, textmess='surveys')
+        PBAR1 = ProgressBar(total=6, textmess='Loading workspace')
         PBAR1.show()
         PBAR1.progressbar.setValue(1)
         for survey in obstreesurveys:
@@ -945,8 +945,12 @@ class MainProg(QtWidgets.QMainWindow):
                                 return
                     # d.adj_sd = simpledelta.sd_for_adjustment
                     # d.checked = simpledelta.checked
-                    i+=1
-                    surveys[idx].delta_model.insertRows(d, 0)
+                    if d:
+                        i+=1
+                        surveys[idx].delta_model.insertRows(d, 0)
+                    else:  # unable to create delta
+                        self.msg = show_message('Error populating delta table. Please update delta table on Adjust tab',
+                                                'Import error')
                 except:
                     self.msg = show_message('Import error', 'Import error')
 
@@ -1194,27 +1198,28 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Dialog that queries user for the distance over which vertical gradient is measured.
         """
-        interval = VerticalGradientDialog(self.verticalgradientinterval)
+        interval = VerticalGradientDialog(self.vertical_gradient_interval)
         self.vertical_gradient_interval = interval
 
     def vertical_gradient_write(self):
         """
-        Writes a .grd file with two values: gradient and standard deviation.
+        Writes a .grd file with two values: gradient and standard deviation. Only works when Roman drift method
+        is used.
         """
         deltamodel = self.tab_drift.delta_view.model()
         if deltamodel.rowCount() == 1:
-            stationname = self.obsTreeModel(self.currentLoopIndex).child(0).name
-            defaultfile = self.data_path + '\\\\' + stationname + '.grd'
-            file_name = QtWidgets.QFileDialog.getSaveFileName(None, 'Vertical gradient file to write',
-                                                         defaultfile,
-                                                         selectedFilter='*.grd')
+            stationname = self.obsTreeModel.itemFromIndex(self.currentLoopIndex).child(0).name
+            defaultfile = self.data_path + '/' + stationname + '.grd'
+            file_name, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Vertical gradient file to write',
+                                                         defaultfile)
             if file_name:
-                delta = deltamodel.deltas[0]
+                delta = deltamodel.data(deltamodel.index(0,0), role=QtCore.Qt.UserRole)
                 with open(file_name, 'w') as fid:
-                    fid.write('{:0.2f}'.format(-1 * delta.dg / self.verticalgradientinterval))
-                    fid.write(' +/- {:0.2f}'.format(delta.sd / self.verticalgradientinterval))
+                    fid.write('{:0.2f}'.format(-1 * delta.dg / self.vertical_gradient_interval))
+                    fid.write(' +/- {:0.2f}'.format(delta.sd / self.vertical_gradient_interval))
         else:
-            self.msg = show_message("Incorrect number of delta-g's (should be 1)", "Vertical gradient error")
+            self.msg = show_message("Incorrect number of delta-g's (should be 1; try the Roman method)",
+                                    "Vertical gradient error")
 
     def add_tare(self):
         """

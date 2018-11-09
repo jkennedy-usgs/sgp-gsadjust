@@ -2251,7 +2251,7 @@ class MainProg(QtWidgets.QMainWindow):
                 if confirm == QtWidgets.QMessageBox.Yes:
                     self.update_from_github()
             elif show_uptodate_msg:
-                msg = "GSadjust already up to date."
+                msg = "GSadjust is up to date."
                 QtWidgets.QMessageBox.information(self, "No Update Needed", msg)
 
         except BaseException as e:

@@ -270,6 +270,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.showNormal()
         self.setWindowState(QtCore.Qt.WindowMaximized)
 
+        self.install_dir = os.path.dirname(os.getcwd())
+
     def init_gui(self):
         """
         Called after loading a data file.
@@ -2217,6 +2219,75 @@ class MainProg(QtWidgets.QMainWindow):
         Shows compiled help file created using Dr. Explain
         """
         webbrowser.open('file://' + os.path.realpath('../dist/help/index.htm'))
+
+
+    def check_for_updates(self, e=None, show_uptodate_msg=True):
+        """
+        Check if the usgs_root repo is at the same commit as this installation
+        Parameters
+        ----------
+        e : qt event
+
+        show_uptodate_msg : bool
+           Whether to display a msg if no updates found
+        Returns
+        -------
+        None
+        """
+        try:
+            from git import Repo
+            # install_dir = utils.get_install_dname('pymdwizard')
+            repo = Repo(self.install_dir)
+            fetch = [r for r in repo.remotes if r.name == 'origin'][0].fetch()
+            master = [f for f in fetch if f.name == 'origin/master'][0]
+
+            if repo.head.commit != master.commit:
+                msg = "An update(s) are available for GSadjust.\n"
+                msg += "Would you like to install these now?"
+
+                confirm = QtWidgets.QMessageBox.question(self, "Updates Available", msg,
+                                                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                if confirm == QtWidgets.QMessageBox.Yes:
+                    self.update_from_github()
+            elif show_uptodate_msg:
+                msg = "GSadjust already up to date."
+                QtWidgets.QMessageBox.information(self, "No Update Needed", msg)
+
+        except BaseException as e:
+            if show_uptodate_msg:
+                msg = 'Problem Encountered Updating from GitHub\n\nError Message:\n'
+                msg += str(e)
+                QtWidgets.QMessageBox.information(self, "Update results", msg)
+
+    def update_from_github(self):
+        """
+        Merge the latest version of the Wizard into the local repo
+        Returns
+        -------
+        None
+        """
+
+        try:
+            from git import Repo
+            # install_dir = utils.get_install_dname('pymdwizard')
+            repo = Repo(self.install_dir)
+            fetch = [r for r in repo.remotes if r.name == 'origin'][0].fetch()
+            master = [f for f in fetch if f.name == 'origin/master'][0]
+
+            merge_msg = repo.git.merge(master.name)
+
+            msg = 'Updated Successfully from GitHub.'
+            QtWidgets.QMessageBox.information(self, "Update results", msg)
+        except BaseException as e:
+            msg = 'Problem Encountered Updating from GitHub\n\n' \
+                  'Please upgrade to the latest release by reinstalling the ' \
+                  'application from GitHub ' \
+                  '\n(https://github.com/usgs/fort-pymdwizard/releases)\n\n' \
+                  'Error Message:\n'
+            msg += str(e)
+            QtWidgets.QMessageBox.information(self, "Update results", msg)
+
+        QtWidgets.QApplication.restoreOverrideCursor()
 
 
 class BoldDelegate(QtWidgets.QStyledItemDelegate):

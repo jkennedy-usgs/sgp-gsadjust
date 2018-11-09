@@ -264,9 +264,12 @@ class Menus:
                                              slot=self.mainProg.show_help)
         self.mnHelpAbout = self.create_action('About',
                                               slot=about_dialog)
+        self.mnHelpCheckForUpdates = self.create_action('Check for updates...',
+                                                        slot=self.mainProg.check_for_updates)
         self.add_actions(self.mnHelp, (self.mnHelpHelp,
+                                       self.mnHelpAbout,
                                        None,
-                                       self.mnHelpAbout))
+                                       self.mnHelpCheckForUpdates))
 
     def create_action(self, text, slot=None, shortcut=None, icon=None, tip=None, checkable=False,
                       signal="triggered()", enabled=True):

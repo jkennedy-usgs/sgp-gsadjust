@@ -271,6 +271,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.setWindowState(QtCore.Qt.WindowMaximized)
 
         self.install_dir = os.path.dirname(os.getcwd())
+        self.check_for_updates(show_uptodate_msg=False)
 
     def init_gui(self):
         """
@@ -2242,8 +2243,8 @@ class MainProg(QtWidgets.QMainWindow):
             master = [f for f in fetch if f.name == 'origin/master'][0]
 
             if repo.head.commit != master.commit:
-                msg = "An update(s) are available for GSadjust.\n"
-                msg += "Would you like to install these now?"
+                msg = "An update is available for GSadjust.\n"
+                msg += "Would you like to install now?"
 
                 confirm = QtWidgets.QMessageBox.question(self, "Updates Available", msg,
                                                          QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)

@@ -25,6 +25,11 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
+from matplotlib.widgets import Slider
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+# from mpl_toolkits.basemap import Basemap
+from functools import partial
 from data_objects import Datum, AdjustmentOptions
 from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel, MeterCalibrationModel
 import a10
@@ -73,6 +78,105 @@ class Overwrite(QtWidgets.QMessageBox):
         else:
             self.reject()
 
+class CoordinatesTable(QtWidgets.QDialog):
+    """
+    Shows table of coordinates, which can be edited or copy/pasted. Coordinates provided by self.coords(), called
+    by the calling routine.
+    """
+    def __init__(self, coords):
+        super(CoordinatesTable, self).__init__()
+        vlayout = QtWidgets.QVBoxLayout()
+
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+        self.setWindowTitle('Station coordinates')
+
+        ok_button = QtWidgets.QPushButton("Ok")
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+
+        # Button under table
+        button_box = QtWidgets.QWidget()
+        bbox_layout = QtWidgets.QHBoxLayout()
+        bbox_layout.addStretch(1)
+        bbox_layout.addWidget(cancel_button)
+        bbox_layout.addWidget(ok_button)
+        button_box.setLayout(bbox_layout)
+
+        self.table = QtWidgets.QTableWidget()
+        self.table.setSizeAdjustPolicy(
+            QtWidgets.QAbstractScrollArea.AdjustToContents)
+        vlayout.addWidget(self.table)
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(['Station', 'Latitude', 'Longitude', 'Elevation'])
+        for k, v in coords.items():
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            table_item_station = QtWidgets.QTableWidgetItem(k)
+            table_item_lat = QtWidgets.QTableWidgetItem(str(v[0]))
+            table_item_long = QtWidgets.QTableWidgetItem(str(v[1]))
+            table_item_elev = QtWidgets.QTableWidgetItem(str(v[2]))
+            self.table.setItem(row, 0, table_item_station)
+            self.table.setItem(row, 1, table_item_lat)
+            self.table.setItem(row, 2, table_item_long)
+            self.table.setItem(row, 3, table_item_elev)
+
+        self.table.setSortingEnabled(True)
+        self.table.resizeColumnsToContents()
+        # self.adjustSize()
+
+        vlayout.addWidget(button_box)
+        self.setLayout(vlayout)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.setSizePolicy(sizePolicy)
+
+
+    def keyPressEvent(self, e):
+        """
+        Handle copy/paste. Without this, the default is to copy only one cell. No sanity checks.
+        :param e: key pressed
+        :return: None
+        """
+        if e.modifiers() & QtCore.Qt.ControlModifier:
+            selected = self.table.selectedRanges()
+            if e.key() == QtCore.Qt.Key_C:  # copy
+                s = ''
+                for r in range(selected[0].topRow(), selected[0].bottomRow()+1):
+                    row_text = ''
+                    for c in range(self.table.columnCount()):
+                        row_text += self.table.item(r, c).text() + '\t'
+                    rt = row_text[:-1]  # Remove trailing \t
+                    rt += '\n'
+                    s += rt
+                sys_clip = QtWidgets.QApplication.clipboard()
+                sys_clip.setText(s)
+
+            if e.key() == QtCore.Qt.Key_V:
+                sys_clip = QtWidgets.QApplication.clipboard()
+                s = sys_clip.text()
+                rows = s.split('\n')
+                for idx, r in enumerate(rows):
+                    elems = r.split('\t')
+                    table_item_station = QtWidgets.QTableWidgetItem(elems[0])
+                    table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
+                    table_item_long = QtWidgets.QTableWidgetItem(elems[2])
+                    table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
+                    self.table.setItem(idx, 0, table_item_station)
+                    self.table.setItem(idx, 1, table_item_lat)
+                    self.table.setItem(idx, 2, table_item_long)
+                    self.table.setItem(idx, 3, table_item_elev)
+
+    def coords(self):
+        """
+        Puts table coordinates into a dict.
+        :return: A dict with key = station name, value = tuple[lat, long, elev)
+        """
+        c = dict()
+        for i in range(self.table.rowCount()):
+            c[self.table.item(i,0).text()] = (float(self.table.item(i, 1).text()),
+                                       float(self.table.item(i, 2).text()),
+                                       float(self.table.item(i, 3).text()))
+        return c
 
 class MeterType(QtWidgets.QMessageBox):
     def __init__(self):
@@ -436,12 +540,15 @@ class GravityChangeTable(QtWidgets.QDialog):
         self.table = table
         self.header = header
         self.dates = dates
+        self.coords = MainProg.station_coords
         gravity_change_window = QtWidgets.QWidget()
         gravity_change_window.model = GravityChangeModel(table, header)
         gravity_change_window.table = QtWidgets.QTableView()
         gravity_change_window.table.setModel(gravity_change_window.model)
 
         # Create buttons and actions
+        gravity_change_window.btn00= QtWidgets.QPushButton('Map')
+        gravity_change_window.btn00.clicked.connect(self.map_change_window)
         gravity_change_window.btn0 = QtWidgets.QPushButton('Plot')
         gravity_change_window.btn0.clicked.connect(lambda: self.plot_change_window())
         gravity_change_window.btn1 = QtWidgets.QPushButton('Copy to clipboard')
@@ -460,6 +567,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         hbox.addStretch(0)
         # Only show plot button on simple table
         if self.dates:
+            hbox.addWidget(gravity_change_window.btn00)
             hbox.addWidget(gravity_change_window.btn0)
         hbox.addWidget(gravity_change_window.btn1)
         hbox.addWidget(gravity_change_window.btn2)
@@ -470,19 +578,57 @@ class GravityChangeTable(QtWidgets.QDialog):
         MainProg.popup = gravity_change_window
         MainProg.popup.show()
 
+    def map_change_window(self):
+
+        self.win = Window(self.table, self.coords, self.header)
+        self.win.show()
+        # self.plot_window = QtWidgets.QDialog()
+        # layout = QtWidgets.QVBoxLayout()
+        # self.fig = Figure((12.0, 8.0), facecolor='white')
+        # self.canvas = FigureCanvas(self.fig)
+        # self.axes = self.fig.add_subplot(111)
+        # layout.addWidget(self.canvas)
+        #
+        # # fig = plt.figure(figsize=(12, 8))
+        # n_cols = (len(self.table) - 1)/2
+        # stations = self.table[0]
+        # x, y, d = [], [], []
+        # data = self.table[1]
+        # for idx, sta in enumerate(stations):
+        #     datum = float(data[idx])
+        #     if datum > -998:
+        #         x.append(self.coords[sta][0])
+        #         y.append(self.coords[sta][1])
+        #         d.append(datum)
+        # self.axes.scatter(x, y, c=d, s=500)
+        # # self.fig.colorbar()
+        # # sldr = Slider(self.ax, 'name', 0., 5., valinit=0., valfmt="%i")
+        # # sldr.on_changed(partial(self.set_slider, sldr))
+        # self.plot_window.show()
+
+    def set_slider(self, val):
+        self.val = round(val)
+        # self.poly.xy[2] = self.val, 1
+        # self.poly.xy[3] = self.val, 0
+        self.valtext.set_text(self.valfmt % self.val)
+
+
     def plot_change_window(self):
-        plt.figure(figsize=(12,8))
+        plt.figure(figsize=(12, 8))
         cmap = plt.cm.get_cmap('gist_ncar')
         nrows = len(self.dates)
         nstations = len(self.table[0])
         stations = self.table[0]
         # iterate through each station
         for i in range(nstations):
-            xdata, ydata = [self.dates[0]], [0]
+            xdata, ydata = [], []
             for idx, row in enumerate(self.table[1:nrows]):
                 if not row[i] == '-999':
+                    if not ydata:
+                        ydata.append(0)
+                    else:
+                        ydata.append(float(row[i]) + ydata[-1])
                     xdata.append(self.dates[idx+1])
-                    ydata.append(float(row[i])+ydata[-1])
 
             plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
             plt.hold
@@ -491,6 +637,85 @@ class GravityChangeTable(QtWidgets.QDialog):
         plt.legend(loc="upper left", bbox_to_anchor=(1,1))
         return
 
+class Window(QtWidgets.QDialog):
+    def __init__(self, table, coords, header, parent=None):
+        super(Window, self).__init__(parent)
+
+        # a figure instance to plot on
+        self.figure = Figure()
+        self.table = table
+        self.coords = coords
+        self.header = header
+        # this is the Canvas Widget that displays the `figure`
+        # it takes the `figure` instance as a parameter to __init__
+        self.canvas = FigureCanvas(self.figure)
+
+        # this is the Navigation widget
+        # it takes the Canvas widget and a parent
+        # self.toolbar = NavigationToolbar(self.canvas, self)
+
+        # Just some button connected to `plot` method
+        self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.slider.setRange(1, (len(self.table) - 1)/2)
+        self.slider.setValue(1)
+        self.slider.valueChanged.connect(self.plot)
+        self.slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+
+        self.plot_title = QtWidgets.QLabel(self.header[1])
+        # set the layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.canvas)
+        layout.addWidget(self.plot_title)
+        layout.addWidget(self.slider)
+        self.setLayout(layout)
+
+    def plot(self):
+        jeff = 1
+        # from mpl_toolkits.basemap import Basemap
+        # ax = self.figure.add_subplot(111)
+        # map = Basemap(projection='ortho',
+        #               lat_0=0, lon_0=0)
+        #
+        # map.drawmapboundary(fill_color='aqua')
+        # map.fillcontinents(color='coral', lake_color='aqua')
+        # map.drawcoastlines()
+        #
+        # lons = [0, 10, -20, -20]
+        # lats = [0, -10, 40, -20]
+        #
+        # x, y = map(lons, lats)
+        #
+        # map.scatter(x, y, marker='D', color='m')
+        # plt.show()
+        # self.canvas.draw()
+
+        #
+        # ''' plot some random stuff '''
+        # # random data
+        # slider_idx =  int(self.slider.value())
+        #
+        # # create an axis
+        # ax = self.figure.add_subplot(111)
+        #
+        # # discards the old graph
+        # ax.clear()
+        #
+        # # plot data
+        # stations = self.table[0]
+        # x, y, d = [], [], []
+        # data = self.table[slider_idx]
+        # for idx, sta in enumerate(stations):
+        #     datum = float(data[idx])
+        #     if datum > -998:
+        #         x.append(self.coords[sta][0])
+        #         y.append(self.coords[sta][1])
+        #         d.append(datum)
+        # ax.scatter(x, y, c=d, s=200, vmin=-20, vmax=20)
+        # self.plot_title.setText(self.header[slider_idx])
+        # # ax.plot(data, '*-')
+        #
+        # # refresh canvas
+        # self.canvas.draw()
 
 def show_full_table(MainProg):
     MainProg.popup.close()

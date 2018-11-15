@@ -95,16 +95,22 @@ class Menus:
                                                        shortcut="Ctrl+T", slot=self.mainProg.tide_correction_dialog,
                                                        tip="Choose tide correction method", enabled=False)
         # for ocean loading correction
-        self.oceanLoadingCorrectionAction = self.create_action("&Ocean loading correction",
-                                                               shortcut="Ctrl+L",
-                                                               slot=self.mainProg.correction_ocean_loading,
-                                                               tip="Ocean loading corrections", enabled=False)
+        self.mnEditOceanLoadingCorrectionAction = self.create_action("&Ocean loading correction",
+                                                                     shortcut="Ctrl+L",
+                                                                     slot=self.mainProg.correction_ocean_loading,
+                                                                     tip="Ocean loading corrections", enabled=False)
         # for atmospheric correction
-        self.atmosphericCorrectionAction = self.create_action("&Atmospheric correction",
-                                                              shortcut="Ctrl+P",
-                                                              slot=self.mainProg.correction_atmospheric,
-                                                              tip="Apply atmospheric correction by loading a data file",
-                                                              enabled=False)
+        self.mnEditAtmosphericCorrectionAction = self.create_action("&Atmospheric correction",
+                                                                    shortcut="Ctrl+P",
+                                                                    slot=self.mainProg.correction_atmospheric,
+                                                                    tip="Apply atmospheric correction by loading a data file",
+                                                                    enabled=False)
+        self.mnEditShowCoordinates = self.create_action("Show station coordinates",
+                                                        slot=self.mainProg.show_station_coordinates,
+                                                        enabled=False)
+        self.mnEditLoadCoordinates = self.create_action("Load station coordinates",
+                                                        slot=self.mainProg.load_station_coordinates,
+                                                        enabled=False)
         # for correcting time
         self.mnEditCorrectRecordedTimeAction = self.create_action("&Correct recorded time",
                                                                   slot=self.mainProg.correction_recorded_time,
@@ -124,9 +130,12 @@ class Menus:
         # add actions to menu
         self.add_actions(self.mnEdit,
                          (self.mnEditTideCorrection,
-                          self.oceanLoadingCorrectionAction,
-                          self.atmosphericCorrectionAction,
+                          self.mnEditOceanLoadingCorrectionAction,
+                          self.mnEditAtmosphericCorrectionAction,
                           self.mnEditCorrectRecordedTimeAction,
+                          None,
+                          self.mnEditShowCoordinates,
+                          self.mnEditLoadCoordinates,
                           None,
                           self.mnEditLoops,
                           self.mnEditAddTareDialog,
@@ -244,7 +253,7 @@ class Menus:
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
                                                                     slot=self.mainProg.compute_gravity_change,
                                                                     tip="Compute gravity change", enabled=False)
-        self.mnToolsLOO = self.create_action("Leave one out analysis", slot=self.mainProg.analysis_LOO,
+        self.mnToolsLOO = self.create_action("Adjusted vs. observed datum...", slot=self.mainProg.adjusted_vs_observed_datum_analysis,
                                              enabled=False)
         self.add_actions(self.mnTools, (self.mnToolsNetworkGraphCircular,
                                         self.mnToolsNetworkGraphMap,

@@ -127,7 +127,7 @@ from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
 from gui_objects import FigureDatumComparisonTimeSeries
-from gui_objects import AddDatumFromList
+from gui_objects import AddDatumFromList, CoordinatesTable
 
 from tab_network import TabAdjust
 from tab_drift import TabDrift
@@ -287,6 +287,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnFileSaveWorkspaceAs.setEnabled(True)
         self.menus.mnEditTideCorrection.setEnabled(True)
         self.menus.mnEditCorrectRecordedTimeAction.setEnabled(True)
+        self.menus.mnEditShowCoordinates.setEnabled(True)
+        self.menus.mnEditLoadCoordinates.setEnabled(True)
         self.menus.mnAdjUpdateDeltas.setEnabled(True)
         self.menus.mnAdjUpdateDeltasCurrentSurvey.setEnabled(True)
         self.menus.mnAdjUpdateDeltasCurrentLoop.setEnabled(True)
@@ -745,6 +747,9 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.setModel(None)
         self.tab_adjust.results_view.update()
         self.tab_adjust.textAdjResults.clear()
+
+        self.menus.mnEditLoadCoordinates.setEnabled(False)
+        self.menus.mnEditShowCoordinates.setEnabled(False)
         # self.tab_adjust.__init__()
 
     def workspace_save(self):
@@ -876,7 +881,6 @@ class MainProg(QtWidgets.QMainWindow):
             PBAR1.close()
         # except Exception as e:
         #     self.msg = show_message("Workspace load error", "Error")
-
 
     def assemble_all_deltas(self):
         """
@@ -1022,7 +1026,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.deltas_update_not_required()
             self.adjust_update_required()
             self.update_adjust_tables()
-        self.menus.mnAdjClearDeltaTable.enabled = True
+        self.menus.mnAdjClearDeltaTable.setEnabled(True)
         self.menus.mnAdjAdjust.setEnabled(True)
         self.menus.mnAdjAdjustCurrent.setEnabled(True)
 
@@ -1314,7 +1318,8 @@ class MainProg(QtWidgets.QMainWindow):
         index = self.tab_adjust.datum_view.selectedIndexes()
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
         for idx in reversed(index):
-            survey.datum_model.removeRow(idx)
+            self.tab_adjust.datum_proxy_model.removeRow(idx.row(), idx.parent())
+            # survey.datum_model.removeRow(idx)
         self.tab_adjust.datum_view.update()
         return
 
@@ -1723,7 +1728,7 @@ class MainProg(QtWidgets.QMainWindow):
             table = [header] + table
             return table
 
-    def analysis_LOO(self):
+    def adjusted_vs_observed_datum_analysis(self):
         """
         Leave one out analysis. For each datum station, this repeats the network adjustment for each survey, but with
         the datum station excluded. Results are sent to plot_LOO_analysis, which generates a line plot of the measured
@@ -1785,7 +1790,6 @@ class MainProg(QtWidgets.QMainWindow):
             adj_g_all.append(station_adj_g)
             obs_g_all.append(station_obs_g)
         self.plot_LOO_analysis(x_all, adj_g_all, obs_g_all, datums)
-
 
     def set_adj_sd(self, survey, ao):
         """
@@ -2020,11 +2024,20 @@ class MainProg(QtWidgets.QMainWindow):
                     g2.add_node(delta.sta2)
 
             H = nx.Graph(g1)
+
+            if shape == 'circular':
+                pos = nx.circular_layout(H)
+            elif shape == 'map':
+                new_dict = {}
+                for k, v in self.station_coords.items():
+                    new_dict[k] = (v[0], v[1])
+                pos = new_dict
+
             if not nx.is_connected(H):
                 gs = [H.subgraph(c) for c in nx.connected_components(H)]
                 for idx, g in enumerate(gs):
                     plt.subplot(1, len(gs), idx+1)
-                    pos = nx.circular_layout(g)
+                    # pos = nx.circular_layout(g)
                     nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
                     nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
                     nx.draw_networkx_labels(g, pos)
@@ -2034,14 +2047,6 @@ class MainProg(QtWidgets.QMainWindow):
                 edgewidth = []
                 for (u, v, d) in H.edges(data=True):
                     edgewidth.append(len(g1.get_edge_data(u, v)) * 2)
-
-                if shape == 'circular':
-                    pos = nx.circular_layout(H)
-                elif shape == 'map':
-                    new_dict = {}
-                    for k,v in self.station_coords.items():
-                        new_dict[k] = (v[0], v[1])
-                    pos = new_dict
 
                 nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
                 nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
@@ -2205,9 +2210,15 @@ class MainProg(QtWidgets.QMainWindow):
         if not results_written:
             self.msg = show_message('No network adjustment results', 'Write error')
 
-    ###########################################################################
-    # Menus
-    ###########################################################################
+    def show_station_coordinates(self):
+        coordinates_dialog = CoordinatesTable(self.station_coords)
+        test = coordinates_dialog.exec_()
+        if test == 1:
+            self.station_coords = coordinates_dialog.coords()
+
+    def load_station_coordinates(self):
+        jeff = 1
+
     def close_windows(self):
         """
         Function for closing all windows
@@ -2277,7 +2288,8 @@ class MainProg(QtWidgets.QMainWindow):
 
             merge_msg = repo.git.merge(master.name)
 
-            msg = 'Updated Successfully from GitHub.'
+            msg = 'Updated successfully downloaded from GitHub. Please\n' \
+                  'reboot to install'
             QtWidgets.QMessageBox.information(self, "Update results", msg)
         except BaseException as e:
             msg = 'Problem Encountered Updating from GitHub\n\n' \

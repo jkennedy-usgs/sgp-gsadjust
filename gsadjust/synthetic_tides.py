@@ -29,7 +29,7 @@ software.
 """
 import numpy as np
 from datetime import datetime
-from matplotlib.dates import date2num
+from matplotlib.dates import date2num, num2date
 import math
 
 
@@ -101,12 +101,15 @@ def earth_tide(theta, lamda, gtime):
     # hardwire these - you can only send it ONE droptime
     deltat = 1
     NPT = 1
-    YY = gtime.year
-    MO = gtime.month
-    DD = gtime.day
-    HH = gtime.hour
-    MM = gtime.minute
-    SS = gtime.second
+
+    temp_time = num2date(gtime)
+
+    YY = temp_time.year
+    MO = temp_time.month
+    DD = temp_time.day
+    HH = temp_time.hour
+    MM = temp_time.minute
+    SS = temp_time.second
     # Initialize variables          
     irl=1
     iflag=0

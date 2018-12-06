@@ -35,7 +35,14 @@ The easiest, most reliable way to install GSadjust is using Conda to create a cu
 
     ```
     
-To run GSadjust on Windows, double-click gsadjust.bat in the sgp-gsadjust directory. On Mac or Linux, run the XXXXX shell script. This activates the conda environment and starts GSadjust. 
+4a. If Miniconda (conda.exe) is installed on your path, double-click gsadjust.bat to launch GSadjust.
+
+4b. If Miniconda is _not_ on your path, open the Anaconda command window (or re-use the command window from step 3), navigate to the sgp-gsadjust-master directory, and type:
+
+    ```
+    activate py35
+    python gsadjust\gsadjust.py
+    ```
 
 ## Data selection interface
 * Select/deselect samples and stations

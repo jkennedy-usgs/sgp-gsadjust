@@ -16,10 +16,11 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 The easiest, most reliable way to install GSadjust is using Conda to create a custom Python environment:
 
 1. Download and install the appropriate Miniconda installer for your platform (Windows, Mac, Linux, 32 or (probably) 64-bit):
-[https://conda.io/miniconda.html](https://conda.io/miniconda.html "Miniconda download")
-(Any Python version (e.g., 2.7 or 3.6) is okay)
+[https://conda.io/miniconda.html](https://conda.io/miniconda.html "Miniconda download"). Any Python version (e.g., 2.7 or 3.6) is okay. When installing on Windows, select the "Add Anaconda to my PATH environment variable" option, or, in step 3, launch the command window by choosing "Anaconda (64-bit)" from the Windows Start Menu. Alternatively, the Miniconda executables (i.e., conda.exe) can be manually added to the Windows path.
 
-2. Open a command window or terminal in the sgp-gsadjust (or sgp-gsadjust-master) directory and create a new conda environment:
+2. Download the GSadjust repository as a zip file using the green "Clone or download" button near the top of this page. Unzip the directory in a location of your choice.
+
+3. Open a command window or terminal in the new directory (sgp-gsadjust or sgp-gsadjust-master) and create a new conda environment:
 
     ```
     conda env create --file environment.yml
@@ -34,10 +35,6 @@ The easiest, most reliable way to install GSadjust is using Conda to create a cu
 
     ```
     
-3. Activate the new Python environment by typing "activate py35" at the command line (only necessary if you've not previously installed git). 
-
-4. Clone the sgp-gsadjust repository (type "git clone https://github.com/jkennedy-usgs/sgp-gsadjust" at the command line) in the directory where you'd like to store the source code. Alternatively, use the download link on the Github webpage. If downloaded, unzip the sgp-gsadjust-master directory. 
-
 To run GSadjust on Windows, double-click gsadjust.bat in the sgp-gsadjust directory. On Mac or Linux, run the XXXXX shell script. This activates the conda environment and starts GSadjust. 
 
 ## Data selection interface

@@ -1,8 +1,15 @@
+import sys, os
+code_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, code_path + '/../gsadjust')
+sys.path.insert(0, code_path)
+
 import pytest
 import pyqt_models
 import GSadjust
 import pickle
 from PyQt5 import QtCore
+
+
 
 @pytest.fixture
 def test_channellist_fixture(request):
@@ -20,15 +27,18 @@ def list_of_deltas():
     :return:
     """
     delta_list = []
-    fname = 'test_workspace1.p'
-    app = GSadjust.MainProg()
-    app.workspace_open(fname)
-    survey = app.obsTreeModel.invisibleRootItem().child(0)
+    fname = './tests/test_workspace1.p'
+    # app = GSadjust.MainProg()
+    # app.workspace_open(fname)
+    ots, dms =  GSadjust.MainProg.obsTreeModel.load_workspace(fname)
+    survey = ots[0]
+    # survey = app.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0,0)
     delta_model = loop.delta_model
     for i in range(delta_model.rowCount()):
         idx = delta_model.index(i,0)
         delta_list.append(delta_model.data(idx, role=QtCore.Qt.UserRole))
+    jeff = 1
     return delta_list
 
 @pytest.fixture
@@ -64,7 +74,7 @@ def test_threestations_fixture(request):
 
 @pytest.fixture
 def channellist():
-    fname = 'channellist_burris.p'
+    fname = './tests/channellist_burris.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -81,7 +91,7 @@ def obstreestation():
 
 @pytest.fixture
 def obstreesurvey():
-    filename = './test_BurrisData.txt'
+    filename = './tests/test_BurrisData.txt'
     meter_type = 'Burris'
     obstreesurvey = pyqt_models.ObsTreeSurvey('test')
     assert type(obstreesurvey) is pyqt_models.ObsTreeSurvey

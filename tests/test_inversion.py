@@ -1,6 +1,9 @@
 import sys, os
+
+sys.path.append(r"./gsadjust")
+
 code_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, code_path + '/../main_code')
+sys.path.insert(0, code_path + '/../gsadjust')
 import pytest
 from test_fixture_pyqt import obstreesurvey
 

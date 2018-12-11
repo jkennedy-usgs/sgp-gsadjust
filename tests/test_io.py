@@ -1,11 +1,18 @@
+import sys, os
+
+code_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, code_path + '/../gsadjust')
+sys.path.insert(0, code_path)
+
 import pytest
 import GSadjust
 
 
+
 def test_readfile_exceptions():
-    bad_filename = './test_doesnotexist.txt'
-    bad_indexdata_filename = './test_badindex_BurrisData.txt'
-    bad_valuedata_filename = './test_badvalue_BurrisData.txt'
+    bad_filename = './tests/test_doesnotexist.txt'
+    bad_indexdata_filename = './tests/test_badindex_BurrisData.txt'
+    bad_valuedata_filename = './tests/test_badvalue_BurrisData.txt'
     meter_type = 'Burris'
     with pytest.raises(IOError) as excinfo:
         data = GSadjust.MainProg.read_raw_data_file(bad_filename, meter_type)
@@ -15,7 +22,7 @@ def test_readfile_exceptions():
         data = GSadjust.MainProg.read_raw_data_file(bad_valuedata_filename, meter_type)
 
 def test_read_Burris():
-    filename = './test_BurrisData.txt'
+    filename = './tests/test_BurrisData.txt'
     meter_type = 'Burris'
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     assert len(data.dial) == 497
@@ -31,7 +38,7 @@ def test_read_Burris():
     assert abs(mean - 2775777) < 0.1
 
 def test_read_ScintrexCG6():
-    filename = './test_ScintrexCG5Data.txt'
+    filename = './tests/test_ScintrexCG5Data.txt'
     meter_type = 'Scintrex'
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     first_station = '1'

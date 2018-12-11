@@ -6,6 +6,7 @@ import gui_objects
 from time import sleep
 from PyQt5 import QtCore, Qt
 
+@pytest.mark.skipif("TRAVIS" in os.environ, reason="Doesn't work on Travis")
 def test_gui(qtbot, monkeypatch):
     # Not sure why, but need to store and restore the path after this test
     pwd = os.getcwd()
@@ -16,7 +17,7 @@ def test_gui(qtbot, monkeypatch):
     qtbot.wait(1000)
 
     # Open data
-    window.open_raw_data(r"E:\Shared\current\python\sgp-gsadjust\tests\test_BurrisData2.txt", 'Burris')
+    window.open_raw_data(r'.\tests\test_BurrisData2.txt', 'Burris')
     assert window.obsTreeModel.rowCount() == 1
 
     # Divide into loops

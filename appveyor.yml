@@ -1,0 +1,24 @@
+build: false
+
+environment:
+  matrix: 
+    - PYTHON_VERSION: 3.4 
+      MINICONDA: C:\Miniconda3
+
+init: 
+  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  - "ECHO %PYTHON_VERSION% %MINICONDA%"
+
+install: 
+  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%" 
+  - conda config --set always_yes yes --set changeps1 no 
+  - conda update -q conda 
+  - conda env create --file environment.yml
+  - activate py35 
+  - conda install -c conda-forge pytest-qt
+  - conda install pytest
+  - pwd
+
+test_script: 
+  - pytest
+  

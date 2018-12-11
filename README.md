@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/jkennedy-usgs/sgp-gsadjust.svg?branch=master)](https://travis-ci.org/jkennedy-usgs/sgp-gsadjust)
+[![Build status](https://ci.appveyor.com/api/projects/status/mb5yw6ksgwmfu18d?svg=true)](https://ci.appveyor.com/project/jkennedy-usgs/sgp-gsadjust)
+
 **This is the development branch of GSadjust. Code in this repository has not necessarily been reviewed by USGS.**
 
 **The approved preliminary software release is at** [https://github.com/usgs/sgp-gsadjust](https://github.com/usgs/sgp-gsadjust "USGS GSadjust repo")

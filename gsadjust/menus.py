@@ -46,6 +46,11 @@ class Menus:
                                                     slot=lambda meter='CG6': self.mainProg.open_file_dialog('CG6'),
                                                     tip="Open data file",
                                                     enabled=True)
+        self.mnFileOpenCsvFile = self.create_action("Import csv data...",
+                                                    shortcut="Ctrl+7",
+                                                    slot=lambda meter='csv': self.mainProg.open_file_dialog('csv'),
+                                                    tip="Open comma-separated value data file",
+                                                    enabled=True)
         self.mnFileAppendSurvey = self.create_action("Append survey to campaign...",
                                                      slot=lambda meter='choose': self.mainProg.open_file_dialog('choose'),
                                                      enabled=False)
@@ -75,6 +80,7 @@ class Menus:
         self.add_actions(self.mnFile, (self.mnFileOpenScintrexFile,
                                        self.mnFileOpenCG6File,
                                        self.mnFileOpenBurrisFile,
+                                       self.mnFileOpenCsvFile,
                                        None,
                                        self.mnFileAppendSurvey,
                                        self.mnFileAppendLoop,

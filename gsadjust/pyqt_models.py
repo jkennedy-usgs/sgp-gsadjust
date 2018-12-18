@@ -166,8 +166,9 @@ class ObsTreeStation(ObsTreeItem):
                     return 3.0
                 else:
                     return float(np.std(gtmp))
-            else:  # Scintrex: return the S.D. reported for each sample, normalized by weight.
-                sd = np.sqrt(1. / sum(self._weights_()))
+            else:  # Scintrex: return the average SD of the samples
+                sdtmp = np.array([self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+                sd = np.mean(sdtmp)  # np.sqrt(1. / sum(self._weights_()))
                 return sd
         except:
             return -999
@@ -532,6 +533,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     self.msg = show_message(
                         "Survey {}: At least one relative-gravity difference must be specified".format(self.name),
                         "Inversion error")
+                    return
                 if adj_type == 'PyLSQ':
                     logging.info('Numpy inversion, Survey: {}'.format(self.name))
                     self.numpy_inversion(output_root_dir, write_out_files)
@@ -707,7 +709,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     self.adjustment.adjustmentresults.text.append(coeffs[0] + ' ± ' + coeffs[1] + '\n')
 
         if dir_changed:
-            os.chdir('..\\main_code')
+            os.chdir('..\\gsadjust')
 
     def numpy_inversion(self, output_root_dir, write_out_files='n'):
         """

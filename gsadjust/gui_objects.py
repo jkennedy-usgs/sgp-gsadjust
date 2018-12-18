@@ -185,6 +185,7 @@ class MeterType(QtWidgets.QMessageBox):
         self.addButton(QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' Burris '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(' CSV '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' Cancel '), QtWidgets.QMessageBox.RejectRole)
         self.buttonClicked.connect(self.onClicked)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
@@ -193,6 +194,7 @@ class MeterType(QtWidgets.QMessageBox):
         meter = {' CG-3, CG-5 ': 'Scintrex',
                  ' CG-6 ': 'CG6',
                  ' Burris ': 'Burris',
+                 ' CSV ': 'csv',
                  ' Cancel ': 'Cancel'}
         self.meter_type = meter[btn.text()]
         if self.meter_type == 'Cancel':
@@ -580,7 +582,7 @@ class GravityChangeTable(QtWidgets.QDialog):
 
     def map_change_window(self):
 
-        self.win = Window(self.table, self.coords, self.header)
+        self.win = MapWindow(self.table, self.coords, self.header)
         self.win.show()
         # self.plot_window = QtWidgets.QDialog()
         # layout = QtWidgets.QVBoxLayout()
@@ -616,19 +618,19 @@ class GravityChangeTable(QtWidgets.QDialog):
     def plot_change_window(self):
         plt.figure(figsize=(12, 8))
         cmap = plt.cm.get_cmap('gist_ncar')
-        nrows = len(self.dates)
+        ncols = len(self.dates) + 1
         nstations = len(self.table[0])
         stations = self.table[0]
         # iterate through each station
         for i in range(nstations):
             xdata, ydata = [], []
-            for idx, row in enumerate(self.table[1:nrows]):
-                if not row[i] == '-999':
+            for idx, col in enumerate(self.table[1:ncols]):
+                if not col[i] == '-999':
                     if not ydata:
                         ydata.append(0)
                     else:
-                        ydata.append(float(row[i]) + ydata[-1])
-                    xdata.append(self.dates[idx+1])
+                        ydata.append(float(col[i]) + ydata[-1])
+                    xdata.append(self.dates[idx])
 
             plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
             plt.hold
@@ -637,9 +639,9 @@ class GravityChangeTable(QtWidgets.QDialog):
         plt.legend(loc="upper left", bbox_to_anchor=(1,1))
         return
 
-class Window(QtWidgets.QDialog):
+class MapWindow(QtWidgets.QDialog):
     def __init__(self, table, coords, header, parent=None):
-        super(Window, self).__init__(parent)
+        super(MapWindow, self).__init__(parent)
 
         # a figure instance to plot on
         self.figure = Figure()

@@ -392,7 +392,7 @@ class MainProg(QtWidgets.QMainWindow):
         obstreestation = self.obsTreeModel.itemFromIndex(self.currentStationIndex)
         obstreeloop = obstreestation.parent()
         station = obstreestation
-        if obstreeloop.meter_type == 'Scintrex' or obstreeloop.meter_type == 'CG6':
+        if obstreeloop.meter_type == 'Scintrex' or obstreeloop.meter_type == 'CG6' or obstreeloop.meter_type == 'csv':
             self.station_model = ScintrexTableModel(station)
         elif obstreeloop.meter_type == 'Burris':
             self.station_model = BurrisTableModel(station)
@@ -499,7 +499,8 @@ class MainProg(QtWidgets.QMainWindow):
             if not 'choose' in open_type:
                 self.init_gui()
             self.prep_station_plot()
-            if open_type == 'Burris' or open_type == 'CG6':
+            # if open_type == 'Burris' or open_type == 'CG6' or open_type == 'csv':
+            if open_type is not 'Scintrex':
                 self.populate_coordinates()
             self.workspace_loaded = True
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -524,14 +525,66 @@ class MainProg(QtWidgets.QMainWindow):
                 logging.info("number of lines: {:d}".format(len([1 for line in open(filename, 'r')])))
                 all_survey_data.meter_type = meter_type
                 # TODO: make meter-specific code separate methods
-                if meter_type == 'Scintrex':
+                if meter_type == 'csv':
+                    _ = fh.readline()
                     for line in fh:
                         i += 1
+                        line = line.strip()
+                        # Skip blank and comment lines
+                        if (not line) or (line[0] == '%'):
+                            continue
+
+                        # parse string line first with respect to '/' caracters (used in the date format),
+                        # then with ':' (used for the time display), eventually with the classic ' '
+                        vals_temp1 = line.split('/')
+                        vals_temp2 = vals_temp1[0].split(':')
+                        vals_temp3 = vals_temp2[0].split(',')
+                        vals_temp4 = vals_temp2[2].split(',')
+
+                        # fill object properties:
+                        all_survey_data.station.append(vals_temp3[0].strip())
+                        all_survey_data.lat.append(float(vals_temp3[1]))
+                        all_survey_data.long.append(float(vals_temp3[2]))
+                        all_survey_data.elev.append(float(vals_temp3[3]))
+                        all_survey_data.raw_grav.append(float(vals_temp3[4]) * 1000.)  # convert to microGal
+                        all_survey_data.tare.append(0)
+                        all_survey_data.sd.append(float(vals_temp3[5]) * 1000.)
+                        all_survey_data.tiltx.append(float(vals_temp3[6]))
+                        all_survey_data.tilty.append(float(vals_temp3[7]))
+                        all_survey_data.temp.append(float(vals_temp3[8]))
+                        all_survey_data.etc.append(float(vals_temp3[9]) * 1000.)
+                        all_survey_data.meter_etc.append(float(vals_temp3[9]) * 1000.)
+                        all_survey_data.dur.append(int(vals_temp3[10]))
+                        all_survey_data.rej.append(int(vals_temp3[11]))
+                        all_survey_data.t.append(date2num(dt.datetime(int(vals_temp1[-1]),
+                                                             int(vals_temp4[-1]),
+                                                             int(vals_temp1[-2]),
+                                                             int(vals_temp3[-1]),
+                                                             int(vals_temp2[-2]),
+                                                             int(vals_temp4[0]))))
+                        if meter:
+                            all_survey_data.meter.append(meter)
+                        else:
+                            all_survey_data.meter.append('-999')
+                        if oper:
+                            all_survey_data.oper.append(oper)
+                        else:
+                            all_survey_data.oper.append('-999')
+                        all_survey_data.keepdata.append(1)
+                    all_survey_data.meter_type = meter_type
+
+                elif meter_type == 'Scintrex':
+                    for line in fh:
+                        i += 1
+
                         # Clean line
                         line = line.strip()
+
                         # Skip blank and comment lines
                         if (not line) or (line[0] == 'L'):
                             continue
+
+                        # Header line; look for useful information
                         if line[0] == '/':
                             vals_temp = line.split()
                             if len(vals_temp) > 1:
@@ -551,7 +604,7 @@ class MainProg(QtWidgets.QMainWindow):
                         # fill object properties:
                         all_survey_data.line.append(float(vals_temp3[0]))
                         s = vals_temp3[1].replace('.0000000', '')
-                        all_survey_data.station.append(s)
+                        all_survey_data.station.append(s.strip())
                         all_survey_data.elev.append(float(vals_temp3[2]))
                         all_survey_data.raw_grav.append(float(vals_temp3[3]) * 1000.)  # convert to microGal
                         all_survey_data.tare.append(0)
@@ -611,7 +664,7 @@ class MainProg(QtWidgets.QMainWindow):
                         time_temp = vals_temp[c_time].split(':')
 
                         # fill object properties:
-                        all_survey_data.station.append(vals_temp[0])
+                        all_survey_data.station.append(vals_temp[0].strip())
                         all_survey_data.elev.append(float(vals_temp[c_elev]))
                         all_survey_data.lat.append(float(vals_temp[c_lat]))
                         all_survey_data.long.append(float(vals_temp[c_long]))
@@ -663,7 +716,7 @@ class MainProg(QtWidgets.QMainWindow):
 
                         # fill object properties:
                         all_survey_data.line.append(0.)
-                        all_survey_data.station.append(vals_temp[0])
+                        all_survey_data.station.append(vals_temp[0].strip())
                         all_survey_data.elev.append(float(vals_temp[c_elev]))
                         all_survey_data.lat.append(float(vals_temp[c_lat]))
                         all_survey_data.long.append(float(vals_temp[c_long]))
@@ -693,7 +746,7 @@ class MainProg(QtWidgets.QMainWindow):
                         else:
                             all_survey_data.oper.append('-999')
                         all_survey_data.keepdata.append(1)
-
+                    all_survey_data.meter_type = meter_type
                 return all_survey_data
 
         # Returning e like this allows exceptions to be tested in pytest
@@ -1309,7 +1362,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.tare_view.update()
         self.tab_drift.process_tares(self.obsTreeModel.itemFromIndex(self.currentLoopIndex))
         self.update_drift_tables_and_plots()
-        return
 
     def delete_datum(self):
         """
@@ -1318,10 +1370,11 @@ class MainProg(QtWidgets.QMainWindow):
         index = self.tab_adjust.datum_view.selectedIndexes()
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
         for idx in reversed(index):
+            self.tab_adjust.datum_proxy_model.beginRemoveRows(idx.parent(), idx.row(), 0)
             self.tab_adjust.datum_proxy_model.removeRow(idx.row(), idx.parent())
+            self.tab_adjust.datum_proxy_model.endRemoveRows()
             # survey.datum_model.removeRow(idx)
         self.tab_adjust.datum_view.update()
-        return
 
     def get_loop_threshold(self):
         # Prompt user to select time threshold

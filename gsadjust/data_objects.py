@@ -700,10 +700,12 @@ class SimpleLoop:
     """
 
     def __init__(self, loop):
+        # Copy everything but the PyQt objects
         for k, v in loop.__dict__.items():
             if not type(v) == pyqt_models.DeltaTableModel and not type(v) == pyqt_models.TareTableModel:
                 setattr(self, k, v)
-        # self.__dict__ = copy.deepcopy(loop.__dict__)
+
+        # Copy tares and stations from PyQt models to lists
         self.stations = []
         self.tares = []
         if loop.tare_model is not None:
@@ -713,6 +715,7 @@ class SimpleLoop:
         for i in range(loop.rowCount()):
             station = SimpleStation(loop.child(i))
             self.stations.append(station)
+
         self.checked = loop.checkState()
         self.delta_model = None
         self.tare_model = None

@@ -163,7 +163,7 @@ class Menus:
         self.mnAdjPyLSQ.setChecked(True)
 
         self.mnAdjOptions = self.create_action("Adjust options...",
-                                               slot=self.mainProg.show_adjust_options,
+                                               slot=self.mainProg.properties_adjust,
                                                enabled=True)
         self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",
                                               shortcut="Ctrl+2", slot=lambda: self.mainProg.adjust_network('current'),

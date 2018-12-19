@@ -226,18 +226,21 @@ class ObsTreeLoop(ObsTreeItem):
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
         self.meter = None  # Meter S/N, for the case where multiple meters are calibrated
-
+        self.comment = None
+        self.oper = None
 
     def __str__(self):
-        return 'Drift method: {},  ' \
+        return 'Loop: {}, ' \
+               'Drift method: {},  ' \
                'Meter type: {},  ' \
                'Continuous drift method: {}, ' \
                'Continuous drift start/end method: {}, ' \
-               'Netadj method: {}\n'.format(self.drift_method,
-                                          self.meter_type,
-                                          self.drift_cont_method,
-                                          self.drift_cont_startend,
-                                          self.drift_netadj_method)
+               'Netadj method: {}\n'.format(self.name,
+                                            self.drift_method,
+                                            self.meter_type,
+                                            self.drift_cont_method,
+                                            self.drift_cont_startend,
+                                            self.drift_netadj_method)
 
     @property
     def meter_type(self):
@@ -262,6 +265,7 @@ class ObsTreeLoop(ObsTreeItem):
 
         :param data: Passed to Loop.populate_station_dic()
         """
+        self.oper = data.oper[0]
         self.meter = data.meter[0]
         prev_sta = data.station[0]
         ind_start = 0

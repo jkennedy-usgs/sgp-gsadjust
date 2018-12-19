@@ -20,6 +20,7 @@ unauthorized use of the software.
 """
 import os
 import datetime as dt
+import copy
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
@@ -203,6 +204,46 @@ class MeterType(QtWidgets.QMessageBox):
             self.accept()
 
 
+class LoopOptions(QtWidgets.QDialog):
+    def __init__(self, loops, parent=None):
+        super(LoopOptions, self).__init__(parent)
+        self.setGeometry(50, 50, 350, 350)
+        self.loops = loops
+        self.init_ui()
+
+    def init_ui(self):
+        # create buttons and actions
+        cancel_button = QtWidgets.QPushButton('Cancel')
+        cancel_button.clicked.connect(self.close)
+        ok_button = QtWidgets.QPushButton('OK')
+        ok_button.clicked.connect(self.set_loop_options)
+
+        buttonBox = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
+        buttonBox.addButton(cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
+        buttonBox.addButton(ok_button, QtWidgets.QDialogButtonBox.ActionRole)
+
+        self.operator_edit = QtWidgets.QLineEdit(self.loops[0].oper)
+        self.meter_edit = QtWidgets.QLineEdit(self.loops[0].meter)
+        self.comment_edit = QtWidgets.QTextEdit()
+        self.comment_edit.setPlainText(self.loops[0].comment)
+
+        grid = QtWidgets.QGridLayout()
+        grid.addWidget(QtWidgets.QLabel('Operator'), 1, 0)
+        grid.addWidget(self.operator_edit, 1, 1)
+        grid.addWidget(QtWidgets.QLabel('Meter ID'), 2, 0)
+        grid.addWidget(self.meter_edit, 2, 1)
+        grid.addWidget(QtWidgets.QLabel('Comment'), 3, 0)
+        grid.addWidget(self.comment_edit, 4, 0, 1, 2)
+        grid.addWidget(buttonBox, 5, 0, 1, 2)
+        self.setLayout(grid)
+
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def set_loop_options(self):
+
+        self.accept()
+
+
 class AdjustOptions(QtWidgets.QDialog):
     """
     Dialog to set network adjustment options.
@@ -304,7 +345,6 @@ class AdjustOptions(QtWidgets.QDialog):
             self.cal_coeff_chk.setEnabled(False)
         else:
             self.cal_coeff_chk.setEnabled(True)
-
 
     def set_adjust_options(self):
         if self.drift_temp_chk.isChecked():

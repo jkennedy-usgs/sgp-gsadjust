@@ -262,6 +262,7 @@ class MainProg(QtWidgets.QMainWindow):
         # Right-click tree view context menu
         self.menus.mnDeleteSurvey = self.menus.create_action('Delete survey', slot=self.delete_selected)
         self.menus.mnDeleteLoop = self.menus.create_action('Delete loop', slot=self.delete_selected)
+        self.menus.mnLoopProperties = self.menus.create_action('Loop properties', slot=self.properties_loop)
         self.menus.mnStationDelete = self.menus.create_action('Delete station(s)', slot=self.delete_station)
         self.menus.mnStationDuplicate = self.menus.create_action('Duplicate station', slot=self.duplicate_station)
         self.menus.mnDataNewLoop = self.menus.create_action('Move station(s) to new loop', slot=self.new_loop)
@@ -338,7 +339,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.activate_survey_or_loop(self.currentSurveyIndex)
 
         # Set data plot
-        self.prep_station_plot()
+        self.plot_samples()
         # self.selmodel.select(station.index(), QtCore.QItemSelectionModel.SelectCurrent)
         self.data_treeview.setFocus()
 
@@ -380,11 +381,11 @@ class MainProg(QtWidgets.QMainWindow):
         :param new_idx: Index of newly-selected tab.
         """
         if new_idx == 0:
-            self.prep_station_plot()
+            self.plot_samples()
         if new_idx == 1:
             self.update_drift_tables_and_plots()
 
-    def prep_station_plot(self):
+    def plot_samples(self):
         """
         Get station to plot, update station table model if necessary.
         """
@@ -396,7 +397,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.station_model = ScintrexTableModel(station)
         elif obstreeloop.meter_type == 'Burris':
             self.station_model = BurrisTableModel(station)
-        self.station_model.dataChanged.connect(self.prep_station_plot)
+        self.station_model.dataChanged.connect(self.plot_samples)
         self.station_model.signal_update_coordinates.connect(self.populate_coordinates)
         self.station_model.signal_adjust_update_required.connect(self.adjust_update_required)
         self.station_model.signal_uncheck_station.connect(self.uncheck_station)
@@ -498,7 +499,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             if not 'choose' in open_type:
                 self.init_gui()
-            self.prep_station_plot()
+            self.plot_samples()
             # if open_type == 'Burris' or open_type == 'CG6' or open_type == 'csv':
             if open_type is not 'Scintrex':
                 self.populate_coordinates()
@@ -1195,7 +1196,7 @@ class MainProg(QtWidgets.QMainWindow):
                 if type(item) is ObsTreeStation:
                     self.currentStationIndex = indexes[0]
                     if self.tab_widget.currentIndex() == 0:
-                        self.prep_station_plot()
+                        self.plot_samples()
                     if self.tab_widget.currentIndex() == 1:
                         self.update_drift_tables_and_plots()
 
@@ -1326,6 +1327,31 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).results_model.clearResults()
         self.update_adjust_tables()
 
+    def properties_loop(self):
+        """
+        Show popup dialog to specify loop properties.
+        :return:
+        """
+        indexes = self.data_treeview.selectedIndexes()
+        loops = []
+        for idx in indexes:
+            if idx.column() == 0:
+                loops.append(self.obsTreeModel.itemFromIndex(idx))
+        loop_options = LoopOptions(loops, parent=self)
+        if loop_options.exec_():
+            # Sync new meter numbers with station objects
+            # for loop in self.loops:
+
+            for loop in loops:
+                loop.oper = loop_options.operator_edit.text()
+                loop.meter = loop_options.meter_edit.text()
+                loop.comment = loop_options.comment_edit.toPlainText()
+                for i in range(loop.rowCount()):
+                    obstreestation = loop.child(i)
+                    obstreestation.meter = [loop.meter] * len(obstreestation.meter)
+                    obstreestation.oper = [loop.oper] * len(obstreestation.oper)
+        self.plot_samples()
+
     def delete_selected(self):
         """
         Remove loop or survey from tree view
@@ -1349,7 +1375,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.currentStationIndex = index.sibling(index.row()-1, 0)
         else:
             self.currentStationIndex = index.sibling(0, 0)
-        self.prep_station_plot()
+        self.plot_samples()
 
     def delete_tare(self):
         """
@@ -1522,7 +1548,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.layoutChanged.emit()
             self.currentLoopIndex = new_obstreeloop.index()
             self.currentStationIndex = obstreeloop.child(0, 0).index()
-            self.prep_station_plot()
+            self.plot_samples()
             self.update_drift_tables_and_plots()
 
     def treeview_context_menu(self, point):
@@ -1532,7 +1558,9 @@ class MainProg(QtWidgets.QMainWindow):
         self.data_treeview_popup_menu = QtWidgets.QMenu("Menu", self)
         self.data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
         self.data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
-        self.data_treeview_popup_menu.addAction(None)
+        self.data_treeview_popup_menu.addSeparator()
+        self.data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
+        self.data_treeview_popup_menu.addSeparator()
         self.data_treeview_popup_menu.addAction(self.menus.mnStationDelete)
         self.data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
         self.data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
@@ -1960,7 +1988,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(d, 0)
             logging.info('Datum station added: {}'.format(station))
 
-    def show_adjust_options(self):
+    def properties_adjust(self):
         """
         Instantiates PyQt dialog to set adjustment options
         """
@@ -2418,7 +2446,7 @@ def main():
 
 
 # Import here to avoid circular import error
-from gui_objects import show_message, SelectAbsg, AdjustOptions
+from gui_objects import show_message, SelectAbsg, AdjustOptions, LoopOptions
 
 if __name__ == '__main__':
     main()

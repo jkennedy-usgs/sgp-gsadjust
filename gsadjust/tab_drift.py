@@ -769,9 +769,7 @@ class TabDrift(QtWidgets.QWidget):
         logging.info('Drift method set to ' + method)
         orig_method = obstreeloop.drift_method
         obstreeloop.drift_method = method
-        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
-        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
-        self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
+
         # These control the visibility of different tables
         # update is an int (index of menu item) when this function is called from the
         #  menu-item callback
@@ -779,10 +777,13 @@ class TabDrift(QtWidgets.QWidget):
             if method == 'none':
                 self.drift_none()
             if method == 'netadj':
+                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
                 self.drift_adjust()
             if method == 'roman':
                 self.drift_roman()
             if method == 'continuous':
+                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
+                self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
                 self.drift_continuous()
         model = self.plot_drift(update=update)
 
@@ -894,7 +895,7 @@ class TabDrift(QtWidgets.QWidget):
         Update which PyQt tables are shown
         """
         self.drift_single_canvas.show()
-        self.drift_single_canvas.setMinimumWidth(400)
+        self.drift_single_canvas.setMinimumWidth(700)
         self.drift_cont_plotpanel.hide()
         self.cont_label_widget.show()
         self.cont_label_widget.setMinimumHeight(50)
@@ -917,7 +918,7 @@ class TabDrift(QtWidgets.QWidget):
         # self.plot_drift()
         self.roman_label_widget.show()
         self.drift_single_canvas.show()
-        self.drift_single_canvas.setMinimumWidth(400)
+        self.drift_single_canvas.setMinimumWidth(700)
         self.drift_cont_plotpanel.hide()
         self.dg_samples_view.show()
         # self.delta_view.show()
@@ -937,7 +938,7 @@ class TabDrift(QtWidgets.QWidget):
         """
         self.drift_single_canvas.hide()
         self.drift_cont_plotpanel.show()
-        self.drift_cont_plotpanel.setMinimumWidth(400)
+        self.drift_cont_plotpanel.setMinimumWidth(700)
         self.dg_samples_view.hide()
         # Hide std_for_adj and residual columns
         self.show_all_columns(self.delta_view)
@@ -961,7 +962,7 @@ class TabDrift(QtWidgets.QWidget):
         Update which PyQt tables are shown
         """
         self.drift_single_canvas.show()
-        self.drift_single_canvas.setMinimumWidth(400)
+        self.drift_single_canvas.setMinimumWidth(700)
         self.drift_cont_plotpanel.hide()
         self.cont_label_widget.show()
         self.cont_label_widget.setMinimumHeight(50)

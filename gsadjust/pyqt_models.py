@@ -29,7 +29,7 @@ import copy
 import os
 
 # Constants for column headers
-DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL = range(7)
+DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, DATUM_TIME, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(9)
 DELTA_STATION1, DELTA_STATION2, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(8)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
 
@@ -231,8 +231,8 @@ class ObsTreeLoop(ObsTreeItem):
 
     def __str__(self):
         return 'Loop: {}, ' \
-               'Drift method: {},  ' \
-               'Meter type: {},  ' \
+               'Drift method: {}, ' \
+               'Meter type: {}, ' \
                'Continuous drift method: {}, ' \
                'Continuous drift start/end method: {}, ' \
                'Netadj method: {}\n'.format(self.name,
@@ -241,6 +241,18 @@ class ObsTreeLoop(ObsTreeItem):
                                             self.drift_cont_method,
                                             self.drift_cont_startend,
                                             self.drift_netadj_method)
+
+    @property
+    def tooltip(self):
+        return 'Loop: {}\n' \
+               'Drift method: {}\n' \
+               'Meter type: {}\n' \
+               'Operator: {}\n' \
+               'Comment: {}'.format(self.name,
+                                    self.drift_method,
+                                    self.meter_type,
+                                    self.oper,
+                                    self.comment)
 
     @property
     def meter_type(self):
@@ -1131,6 +1143,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 if index.column() == 0:
                     m = index.model().itemFromIndex(index)
                     return m.checkState()
+            elif role == QtCore.Qt.ToolTipRole:
+                if index.column() > 0:
+                    m = index.model().itemFromIndex(index.sibling(index.row(), 0))
+                else:
+                    m = index.model().itemFromIndex(index)
+                if type(m) is ObsTreeLoop:
+                    return m.tooltip
 
     def setData(self, index, value, role):
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
@@ -1415,12 +1434,16 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                 return QVariant("Std. dev.")
             elif section == DATUM_DATE:
                 return QVariant("Date")
+            elif section == DATUM_TIME:
+                return QVariant("Time (UTC)")
             elif section == MEAS_HEIGHT:
                 return QVariant("Meas. height")
             elif section == GRADIENT:
                 return QVariant("Gradient")
             elif section == DATUM_RESIDUAL:
                 return QVariant("Residual")
+            elif section == N_SETS:
+                return QVariant("# sets")
         return QVariant(int(section + 1))
 
     def insertRows(self, datum, position, rows=1, index=QtCore.QModelIndex()):
@@ -1440,7 +1463,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         return len(self.datums)
 
     def columnCount(self, parent=None):
-        return 7
+        return 9
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.isValid():
@@ -1455,13 +1478,16 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                     return datum.station
                 if column == DATUM_DATE:
                     return datum.date
+                if column == DATUM_TIME:
+                    return datum.time
                 if column == MEAS_HEIGHT:
                     return '%0.2f' % datum.meas_height
                 if column == GRADIENT:
                     return '%0.2f' % datum.gradient
                 if column == DATUM_RESIDUAL:
                     return '%0.1f' % datum.residual
-
+                if column == N_SETS:
+                    return datum.n_sets
             elif role == QtCore.Qt.CheckStateRole:
                 # check status definition
                 if index.column() == 0:

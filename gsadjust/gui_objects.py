@@ -1060,8 +1060,10 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree.setColumnHidden(2, True)
         self.tree.setColumnHidden(3, True)
 
+
+
         # Hide column of residuals
-        self.table.setColumnHidden(6, True)
+        self.table.setColumnHidden(7, True)
         self.tree.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
         # Move date column to second from left
@@ -1110,6 +1112,8 @@ class SelectAbsg(QtWidgets.QDialog):
                                           meas_height=float(d.transferht),
                                           gradient=float(d.gradient),
                                           checked=0)
+                            datum.n_sets = d.processed
+                            datum.time = d.time
                             self.table_model.insertRows(datum, 1)
                             self.path = path
         QtWidgets.QApplication.restoreOverrideCursor()

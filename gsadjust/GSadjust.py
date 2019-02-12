@@ -1147,6 +1147,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.setSortingEnabled(True)
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
         self.tab_adjust.datum_view.setModel(self.tab_adjust.datum_proxy_model)
+        self.tab_adjust.datum_view.setColumnHidden(4, True)
+        self.tab_adjust.datum_view.setColumnHidden(8, True)
         self.tab_adjust.textAdjResults.clear()
 
         try:
@@ -1627,11 +1629,12 @@ class MainProg(QtWidgets.QMainWindow):
         elif how_many=='current':
             obstreesurvey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
             obstreesurvey.run_inversion(adj_type)
+        # Tools available if there is more than one survey
         if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
             self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
             self.menus.mnToolsLOO.setEnabled(True)
             self.menus.mnAdjPlotObservedAdjustedAbs.setEnabled(True)
-            self.menus.mnAdjPlotCompareDatum.setEnabled(True)
+        self.menus.mnAdjPlotCompareDatum.setEnabled(True)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -2044,7 +2047,7 @@ class MainProg(QtWidgets.QMainWindow):
         ind = np.arange(len(diff))
         ax.bar(ind, diff)
         ax.set_title('Adj. datum - input datum (microGal)')
-        ax.set_xticks(ind + 0.4)
+        ax.set_xticks(ind)
         ax.set_xticklabels(lbl)
         plt.show()
 
@@ -2149,7 +2152,9 @@ class MainProg(QtWidgets.QMainWindow):
                 nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
                 nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
                 nx.draw_networkx_labels(H, pos)
+
             plt.autoscale(enable=True, axis='both', tight=True)
+            plt.axis('off')
             plt.show()
 
     def plot_datum_comparison_timeseries(self):

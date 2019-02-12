@@ -609,7 +609,7 @@ class MainProg(QtWidgets.QMainWindow):
                         all_survey_data.station.append(s.strip())
                         all_survey_data.elev.append(float(vals_temp3[2]))
                         all_survey_data.raw_grav.append(float(vals_temp3[3]) * 1000. -
-                                                        float(vals_temp3[8] * 1000.))  # convert to microGal; remove tide correction
+                                                        float(vals_temp3[8]) * 1000.)  # convert to microGal; remove tide correction
                         all_survey_data.tare.append(0)
                         all_survey_data.sd.append(float(vals_temp3[4]) * 1000.)
                         all_survey_data.tiltx.append(float(vals_temp3[5]))
@@ -1368,6 +1368,7 @@ class MainProg(QtWidgets.QMainWindow):
         Remove station from tree view
         """
         indexes = self.data_treeview.selectedIndexes()
+
         # Because each tree item has three columns, len(indexes) equals the number of items selected * 3. The next
         # line takes every 3rd index.
         indexes = indexes[0::3]
@@ -1377,6 +1378,16 @@ class MainProg(QtWidgets.QMainWindow):
             self.currentStationIndex = index.sibling(index.row()-1, 0)
         else:
             self.currentStationIndex = index.sibling(0, 0)
+
+        first_index = indexes[0]
+        if first_index.row() > 0:
+            row = first_index.row() - 1
+        else:
+            row = 0
+        new_selection_index = self.obsTreeModel.index(row,
+                                                      0,
+                                                      first_index.parent())
+        self.selmodel.select(new_selection_index, QtCore.QItemSelectionModel.SelectCurrent)
         self.plot_samples()
 
     def delete_tare(self):

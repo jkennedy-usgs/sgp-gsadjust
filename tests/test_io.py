@@ -50,4 +50,4 @@ def test_read_ScintrexCG6():
             break
     mean = sum(first_station_data) / len(first_station_data)
     # This value calculated independently in Excel
-    assert abs(mean - 2639322) < 0.1
+    assert abs(mean - 2639256.214) < 0.1

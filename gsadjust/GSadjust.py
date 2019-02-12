@@ -1520,6 +1520,9 @@ class MainProg(QtWidgets.QMainWindow):
         """
         indexes = self.data_treeview.selectedIndexes()
         self.new_loop_from_indexes(indexes)
+        self.activate_survey_or_loop(self.currentLoopIndex)
+        self.update_drift_tables_and_plots(update=True)
+        self.plot_samples()
 
     def new_loop_from_indexes(self, indexes):
         """
@@ -1562,8 +1565,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.layoutChanged.emit()
             self.currentLoopIndex = new_obstreeloop.index()
             self.currentStationIndex = obstreeloop.child(0, 0).index()
-            self.plot_samples()
-            self.update_drift_tables_and_plots(update=False)
+
 
     def treeview_context_menu(self, point):
         """

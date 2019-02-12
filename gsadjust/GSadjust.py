@@ -1157,8 +1157,8 @@ class MainProg(QtWidgets.QMainWindow):
 
     def update_drift_tables_and_plots(self, update=True):
         """
-        Creates plots, which in turn calculates delta-gs. It needs to be done for each loop when loading a workspace.
-        IUpdates tables and plots based on which survey is selected in tree view
+        First updates the drift_method combobox, then calls set_drift_method to update plots.
+        :param update: Plots are only updated if True. Saves time when loading a workspace.
         """
         drift_method = self.obsTreeModel.itemFromIndex(self.currentLoopIndex).drift_method
         self.tab_drift.driftmethod_comboboxbox.setCurrentIndex(self.drift_lookup[drift_method])
@@ -1463,6 +1463,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.new_loop_from_indexes(indexes)
                 indexes = []
         self.currentLoopIndex = original_loop_index
+        self.update_drift_tables_and_plots()
         self.deltas_update_required()
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -1562,7 +1563,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.currentLoopIndex = new_obstreeloop.index()
             self.currentStationIndex = obstreeloop.child(0, 0).index()
             self.plot_samples()
-            self.update_drift_tables_and_plots()
+            self.update_drift_tables_and_plots(update=False)
 
     def treeview_context_menu(self, point):
         """

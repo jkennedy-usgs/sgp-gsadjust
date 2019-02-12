@@ -16,7 +16,7 @@
     //]]>
     </script>
 
-    		<title>2. Data tab</title>
+    		<title>3. Data tab</title>
 
     <link rel="stylesheet" type="text/css" href="css/all.css" media="all" />
     <link rel="stylesheet" href="de_style.css" type="text/css" media="all" />
@@ -79,7 +79,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 19px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: bottom;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom_9.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
+<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -130,6 +130,10 @@
                                 <span class="b-tabs__selectorContent">Index</span>
                              </div>
     
+                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
+                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
+                                <span class="b-tabs__selectorContent">Search</span>
+                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -209,6 +213,29 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
+<div class="b-search m-search__workZone" id="searchZone">
+    <form action="#" class="b-search__form">
+        <table class="b-search__layout">
+            <tr>
+                <td class="b-search__side m-search__side__input">
+                    <div class="b-search__gap">
+                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
+                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
+                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
+                    </div>
+                </td>
+                <td class="b-search__side m-search__side__submit">
+                    <span class="b-button b-search__button">
+                        <span class="b-button__wrapper">
+                            <span class="b-button__text"></span>
+                        </span>
+                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -217,13 +244,13 @@
             <tr>
                 <td id="headerSide__nav" class="b-article__headerSide m-article__headerSide__nav">
                     <div id="headerSide__nav__breadCrumbs" class="b-breadCrumbs">
-                        <ul class="b-breadCrumbs__items"><li class="b-breadCrumbs__item">2. Data tab</li>
+                        <ul class="b-breadCrumbs__items"><li class="b-breadCrumbs__item">3. Data tab</li>
 </ul>                    </div>
                 </td>
                 <td id="headerSide__buttons" class="b-article__headerSide m-article__headerSide__buttons">
                     <div class="b-controlButtons">
                         <ul class="b-controlButtons__items">
-                            <li class="b-controlButtons__item m-controlButtons__item__prev"><a href="workflow.htm" class="b-controlButtons__link" title="Previous page"><span class="b-controlButtons__link_icon"></span><span class="b-controlButtons__link_text">&#xa0;Previous page</span></a></li>
+                            <li class="b-controlButtons__item m-controlButtons__item__prev"><a href="data_sets_included_with_gsadjust.htm" class="b-controlButtons__link" title="Previous page"><span class="b-controlButtons__link_icon"></span><span class="b-controlButtons__link_text">&#xa0;Previous page</span></a></li>
                             <li class="b-controlButtons__item m-controlButtons__item__next"><a href="plot_toolbar.htm" class="b-controlButtons__link" title="Next page"><span class="b-controlButtons__link_text">Next page&#xa0;</span><span class="b-controlButtons__link_icon"></span></a></li>
                                                 </ul>
                     </div>
@@ -253,7 +280,7 @@
                             .addClass("b-article__headerSide m-article__headerSide__buttons")
                             .append(
                                 $("<div></div>").addClass("b-controlButtons")
-                                .html($("<ul></ul>").addClass("b-controlButtons__items").html("    <li class=\"b-controlButtons__item m-controlButtons__item__prev\"><a href=\"workflow.htm\" class=\"b-controlButtons__link\" title=\"Previous page\"><span class=\"b-controlButtons__link_icon\"></span><span class=\"b-controlButtons__link_text\">&#xa0;Previous page</span></a></li>\n    <li class=\"b-controlButtons__item m-controlButtons__item__next\"><a href=\"plot_toolbar.htm\" class=\"b-controlButtons__link\" title=\"Next page\"><span class=\"b-controlButtons__link_text\">Next page&#xa0;</span><span class=\"b-controlButtons__link_icon\"></span></a></li>\n"))
+                                .html($("<ul></ul>").addClass("b-controlButtons__items").html("    <li class=\"b-controlButtons__item m-controlButtons__item__prev\"><a href=\"data_sets_included_with_gsadjust.htm\" class=\"b-controlButtons__link\" title=\"Previous page\"><span class=\"b-controlButtons__link_icon\"></span><span class=\"b-controlButtons__link_text\">&#xa0;Previous page</span></a></li>\n    <li class=\"b-controlButtons__item m-controlButtons__item__next\"><a href=\"plot_toolbar.htm\" class=\"b-controlButtons__link\" title=\"Next page\"><span class=\"b-controlButtons__link_text\">Next page&#xa0;</span><span class=\"b-controlButtons__link_icon\"></span></a></li>\n"))
                             )
                         )
                     )
@@ -290,7 +317,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 29px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: top;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#f0f0f0;">USGS Southwest Gravity Program</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a href="http://go.usa.gov/xqBnQ"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#0000ff;text-decoration:underline;">USGS Southwest Gravity Program</span></a></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -302,11 +329,11 @@
     <noscript>
     <div>To properly display this page you need a browser with JavaScript support.</div>
     </noscript>
-                <div class="description_on_page"><div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="ic"><h1><strong>2. Data tab</strong></h1></div></div>
+                <div class="description_on_page"><div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="ic"><h1><strong>3. Data tab</strong></h1></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The data tab provides functions for viewing and selecting/deselecting the observations to be included in the drift correction and adjustment. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">
-<map name="controlmap3fc35f7b_1261_4eb6_b307_6b2cf4e35ab8" id="controlmap3fc35f7b_1261_4eb6_b307_6b2cf4e35ab8">
+<map name="controlmap4a943226_8f70_4b1b_a23a_336eae1d9700" id="controlmap4a943226_8f70_4b1b_a23a_336eae1d9700">
 <area shape="rect" alt="" href="#id_14" coords="1239,426,1267,454" data-coord-left="1239" data-coord-top="426" data-coord-right="1267" data-coord-bottom="454"  />
 <area shape="rect" alt="" href="#id_13" coords="1229,140,1257,168" data-coord-left="1229" data-coord-top="140" data-coord-right="1257" data-coord-bottom="168"  />
 <area shape="rect" alt="" href="#id_4" coords="448,33,476,61" data-coord-left="448" data-coord-top="33" data-coord-right="476" data-coord-bottom="61"  />
@@ -321,72 +348,72 @@
 <area shape="rect" alt="" href="#id_2" coords="163,61,191,89" data-coord-left="163" data-coord-top="61" data-coord-right="191" data-coord-bottom="89"  />
 <area shape="rect" alt="" href="#id_3" coords="285,61,313,89" data-coord-left="285" data-coord-top="61" data-coord-right="313" data-coord-bottom="89"  />
 <area shape="rect" alt="" href="#id_9" coords="757,93,785,121" data-coord-left="757" data-coord-top="93" data-coord-right="785" data-coord-bottom="121"  />
-</map><img usemap="#controlmap3fc35f7b_1261_4eb6_b307_6b2cf4e35ab8"  alt="2. Data tab" style="border: solid 0px;  " width="1365" height="665" class="de_wndimg de_780D01ADE8" src="drex_data_tab_screen.png"/></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_1"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="1" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_1_2.png"/></a><div class="ic"><h2><strong>Data Tree View</strong></h2></div></div>
+</map><img usemap="#controlmap4a943226_8f70_4b1b_a23a_336eae1d9700"  alt="3. Data tab" style="border: solid 0px;  " width="1365" height="665" class="de_wndimg de_780D01ADE8" src="drex_data_tab_screen.png"/></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_1"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="1" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_1.png"/></a><div class="ic"><h2><strong>Data Tree View</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160; The <a class="local_link" href="data_tree_view.htm"><span class="de_2B94C39861">Data Tree View</span></a> shows the hierarchical structure of the data set, and is common to all tabs.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_2"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="2" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_2_2.png"/></a><div class="ic"><h2><strong>Data Table</strong></h2></div></div>
-<ul class="de_list"><li class="list-element list-counter-2" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; counter-reset: list-counter-2;">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 46px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>&#160; The Data Table shows all of the samples for a particular station occupation. The columns vary depending on the meter type:<table class="de_tbl_265 detbl" style="width: 265px; height: 289; margin-left: 0; margin-right: auto;">
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_2"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="2" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_2.png"/></a><div class="ic"><h2><strong>Data Table</strong></h2></div></div>
+<ul class="de_list"><li class="list-element list-counter-5" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; counter-reset: list-counter-5;">
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 46px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>&#160; The Data Table shows all of the samples for a particular station occupation. The columns vary depending on the meter type:<table class="de_tbl_265 detbl" style="width: 265px; height: 0; margin-left: 0; margin-right: auto;">
 <col style="width: 127px;" class="de_col_1_127" />
 <col style="width: 138px;" class="de_col_2_138" />
-<tr style="height: 25px">
+<tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><strong>Burris</strong></div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><strong>Scintrex</strong></div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Station name</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Station</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Operator</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Gravity (g)</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Meter number</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Standard deviation</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Date/time</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Tilt x</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Gravity (g)</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Tilt y</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Dial setting</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Temp</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Feedback</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Duration</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Tide correction</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Rejected</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Elevation</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Elapsed time</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Latitude</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Date/time</div>
-</td></tr><tr style="height: 24px">
+</td></tr><tr style="height: 0px;">
 <td class="de_td_127" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 127px; vertical-align: top;" colspan = "1" rowspan = "1" >
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Longitude</div>
 </td><td class="de_td_138" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 1px; border-left-color: #000000; border-right-style: none; border-right-width: 1px; border-right-color: #000000; border-top-style: none; border-top-width: 1px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 1px; border-bottom-color: #000000;  width: 138px; vertical-align: top;" colspan = "1" rowspan = "1" >
@@ -395,7 +422,7 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </li></ul><div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_3"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="3" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_3_2.png"/></a><div class="ic"><h2><strong>Data Plot Window</strong></h2></div></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_3"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="3" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_3.png"/></a><div class="ic"><h2><strong>Data Plot Window</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">The Data Plot window shows graphically the gravity value and accompanying data for a particular station occupation. For the Burris meter, the plots shown are gravity, feedback, tilt correction, and Earth tide correction. For the Scintrex meter, the plots shows are gravity, Tilt X, Tilt Y, and standard deviation. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
@@ -445,7 +472,7 @@
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </div>                	<div class="menu_on_page">
-		<h2>The contents of 2. Data tab</h2>
+		<h2>The contents of 3. Data tab</h2>
 		<div class="m-workZone_seeAlso_itemContent">
 	<span class="b-tree__spacer">
 		<span class="b-tree__i_article">
@@ -490,9 +517,6 @@
 	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="creating_loops.htm">Creating loops</a></span>
 </div>	</div>
                     			
-                			                <h6 class="b-article__generatorCopyright">
-                    <a class="b-link b-article__generatorCopyrightLink" href="http://www.drexplain.com" rel="nofollow">The online help was made with Dr.Explain</a>
-                </h6>
-                <br /><b>Unregistered version</b></div>
+                			</div>
 </body>
 </html>

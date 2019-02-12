@@ -79,7 +79,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 19px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: bottom;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom_2.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
+<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -130,6 +130,10 @@
                                 <span class="b-tabs__selectorContent">Index</span>
                              </div>
     
+                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
+                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
+                                <span class="b-tabs__selectorContent">Search</span>
+                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -209,6 +213,29 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
+<div class="b-search m-search__workZone" id="searchZone">
+    <form action="#" class="b-search__form">
+        <table class="b-search__layout">
+            <tr>
+                <td class="b-search__side m-search__side__input">
+                    <div class="b-search__gap">
+                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
+                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
+                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
+                    </div>
+                </td>
+                <td class="b-search__side m-search__side__submit">
+                    <span class="b-button b-search__button">
+                        <span class="b-button__wrapper">
+                            <span class="b-button__text"></span>
+                        </span>
+                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -290,7 +317,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 29px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: top;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#f0f0f0;">USGS Southwest Gravity Program</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a href="http://go.usa.gov/xqBnQ"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#0000ff;text-decoration:underline;">USGS Southwest Gravity Program</span></a></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -304,13 +331,13 @@
     </noscript>
                 <div class="description_on_page"><div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="ic"><h1><strong>1. Overview</strong></h1></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust is a cross-platform graphical interface to facilitate the least-squares network adjustment of combined absolute and relative gravity surveys. The software is a product of the <a href="http://go.usa.gov/xqBnQ"><span class="de_2B94C39861">USGS Southwest Gravity Program</span></a>. The purpose of GSadjust is to facilitate the efficient processing of field gravity surveys. The program is useful for both synpotic (&quot;snapshot&quot;) gravity surveys or surveys of gravity change over time. The program does not perform gravity inversion or otherwise interpret gravity data.</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust is a cross-platform graphical user interface for least-squares network adjustment of combined absolute and relative gravity surveys. The software is a product of the <a href="http://go.usa.gov/xqBnQ"><span class="de_2B94C39861">USGS Southwest Gravity Program</span></a>. The purpose of GSadjust is to facilitate the efficient processing of field gravity surveys. The program is useful for both synpotic (&quot;snapshot&quot;) gravity surveys or surveys of gravity change over time. The program does not perform gravity inversion or otherwise interpret gravity data.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The objective of network adjustment is to determine a single, best-fit gravity value at each station based on all available measurements and their respective uncertainty. Typically the measurements are relative-gravity differences between stations, observed with a relative gravimeter, and absolute-gravity measurements at individual stations, observed with an absolute gravimeter. The reason relative-gravity differences are used instead of individual relative-gravimeter observations has to do with the nature of the relative-gravimeter, which is subject to constant, random drift and occasional tares, or offsets. Usually there will be many more relative-gravity observations than absolute-gravity observations, and there will be redundant data (that is, more than the minimum necessary to determine a gravity value at each station).&#160; </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The objective of network adjustment is to determine a single, best-fit gravity value at each station based on all available measurements and their respective uncertainty. Typically the measurements are relative-gravity differences between stations, observed with a relative gravimeter, and absolute-gravity measurements at individual stations, observed with an absolute gravimeter. The reason relative-gravity differences are used instead of individual relative-gravimeter observations has to do with the nature of the relative-gravimeter, which is subject to constant, random drift and occasional tares, or offsets. Usually there will be more relative-gravity observations than absolute-gravity observations, and there will be redundant data (that is, more than the minimum data necessary to determine a gravity value at each station).&#160; </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Although various software packages exist for least-squares network adjustment of survey measurements, gravity networks present unique considerations not present in other methods. First, the primary instrument used in spatially-distributed measurements of the Earth's gravity field is the relative gravimeter, the zero-point of which drifts randomly and unpredictably. Plotting gravimeter drift over time is considered essential for an accurate accounting of the meter's behavior. Second, it is widely recognized that gravity measurements are susceptible to various errors and &quot;outlier&quot; measurements are not uncommon. Network adjustments often proceed iteratively, including or excluding observations based on the statistical properties of the network. For these reasons the gravity-specific graphical interface GSadjust was developed for network adjustment. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust builds on the software PyGrav (Hector and Hinderer, 2016). Compared to PyGrav, GSadjust offers enhanced plotting and analysis of gravimeter drift, and additional methods for drift correction (beyond inclusion as a parameter in the adjustment). GSadjust also offers additional functionality for network adjustment, including plotting results, enabling/disabling gravity differences, and importing absolute-gravity observations. GSadjust is written in Python 3.5 and the PyQt5 graphical user interface framework. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust builds on the software PyGrav (Hector and Hinderer, 2016). Compared to PyGrav, GSadjust offers enhanced plotting and analysis of gravimeter drift, additional methods for drift correction (beyond inclusion as a parameter in the adjustment), and inclusion of absolute-gravity observations. GSadjust also offers additional functionality for network adjustment, including plotting results, enabling/disabling gravity differences, and calculating the change in gravity over time. GSadjust is written in Python 3.5 and the PyQt5 graphical user interface framework, and is public domain. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The software and related documentation on these web pages were developed in part by the U.S. Geological Survey (USGS) for use by the USGS in fulfilling its mission. The software can be used, copied, modified, and distributed without any fee or cost. Use of appropriate credit is requested. The USGS provides no warranty, expressed or implied, as to the correctness of the furnished software or the suitability for any purpose. The software has been tested, but as with any complex software, there could be undetected errors. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
@@ -325,33 +352,30 @@
 			<span class="b-tree__i_article_inner"></span>
 		</span>
 	</span>
-	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="installing_gsadjust.htm">1.1. Installing GSadjust</a></span>
+	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="installing_gsadjust.htm">Installing GSadjust</a></span>
 </div><div class="m-workZone_seeAlso_itemContent">
 	<span class="b-tree__spacer">
 		<span class="b-tree__i_article">
 			<span class="b-tree__i_article_inner"></span>
 		</span>
 	</span>
-	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="data_organization.htm">1.2. Data Organization</a></span>
+	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="data_organization.htm">Data Organization</a></span>
 </div><div class="m-workZone_seeAlso_itemContent">
 	<span class="b-tree__spacer">
 		<span class="b-tree__i_article">
 			<span class="b-tree__i_article_inner"></span>
 		</span>
 	</span>
-	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="data_tree_view.htm">1.3. Data Tree View</a></span>
+	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="data_tree_view.htm">Data Tree View</a></span>
 </div><div class="m-workZone_seeAlso_itemContent">
 	<span class="b-tree__spacer">
 		<span class="b-tree__i_article">
 			<span class="b-tree__i_article_inner"></span>
 		</span>
 	</span>
-	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="workflow.htm">1.4. Workflow</a></span>
+	<span class="b-tree__itemText"><a class="b-breadCrumbs__link" href="workflow.htm">Workflow</a></span>
 </div>	</div>
                     			
-                			                <h6 class="b-article__generatorCopyright">
-                    <a class="b-link b-article__generatorCopyrightLink" href="http://www.drexplain.com" rel="nofollow">The online help was made with Dr.Explain</a>
-                </h6>
-                <br /><b>Unregistered version</b></div>
+                			</div>
 </body>
 </html>

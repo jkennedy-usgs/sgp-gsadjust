@@ -130,14 +130,12 @@ class Menus:
         self.mnEditAddTareDialog = self.create_action("Add tare...",
                                                       slot=self.mainProg.add_tare,
                                                       enabled=True)
-        self.mnEditLoops = self.create_action("Divide selected loop into subloops...",
+        self.mnEditLoops = self.create_action("Divide selected loop...",
                                               slot=self.mainProg.get_loop_threshold,
                                               enabled=True)
         # add actions to menu
         self.add_actions(self.mnEdit,
                          (self.mnEditTideCorrection,
-                          self.mnEditOceanLoadingCorrectionAction,
-                          self.mnEditAtmosphericCorrectionAction,
                           self.mnEditCorrectRecordedTimeAction,
                           None,
                           self.mnEditShowCoordinates,

@@ -79,7 +79,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 19px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: bottom;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom_15.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
+<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -130,6 +130,10 @@
                                 <span class="b-tabs__selectorContent">Index</span>
                              </div>
     
+                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
+                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
+                                <span class="b-tabs__selectorContent">Search</span>
+                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -209,6 +213,29 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
+<div class="b-search m-search__workZone" id="searchZone">
+    <form action="#" class="b-search__form">
+        <table class="b-search__layout">
+            <tr>
+                <td class="b-search__side m-search__side__input">
+                    <div class="b-search__gap">
+                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
+                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
+                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
+                    </div>
+                </td>
+                <td class="b-search__side m-search__side__submit">
+                    <span class="b-button b-search__button">
+                        <span class="b-button__wrapper">
+                            <span class="b-button__text"></span>
+                        </span>
+                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -217,7 +244,7 @@
             <tr>
                 <td id="headerSide__nav" class="b-article__headerSide m-article__headerSide__nav">
                     <div id="headerSide__nav__breadCrumbs" class="b-breadCrumbs">
-                        <ul class="b-breadCrumbs__items"><li class="b-breadCrumbs__item"><a href="drift_tab.htm" class="b-breadCrumbs__link">3. Drift tab</a></li>
+                        <ul class="b-breadCrumbs__items"><li class="b-breadCrumbs__item"><a href="drift_tab.htm" class="b-breadCrumbs__link">4. Drift tab</a></li>
 
 <li class="b-breadCrumbs__item"> Plotting options</li>
 </ul>                    </div>
@@ -292,7 +319,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 29px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: top;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#f0f0f0;">USGS Southwest Gravity Program</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a href="http://go.usa.gov/xqBnQ"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#0000ff;text-decoration:underline;">USGS Southwest Gravity Program</span></a></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -311,7 +338,7 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Clicking on a line in the main plot window will show the station name at the top left of the plot.</div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">
-<map name="controlmap451b6bdb_0dc9_4a5e_bdf1_24087c6d4968" id="controlmap451b6bdb_0dc9_4a5e_bdf1_24087c6d4968">
+<map name="controlmap469fe8bf_3aa4_4788_b825_d4db3dfc3502" id="controlmap469fe8bf_3aa4_4788_b825_d4db3dfc3502">
 <area shape="rect" alt="" href="#id_1" coords="227,11,255,39" data-coord-left="227" data-coord-top="11" data-coord-right="255" data-coord-bottom="39"  />
 <area shape="rect" alt="" href="#id_2" coords="226,54,254,82" data-coord-left="226" data-coord-top="54" data-coord-right="254" data-coord-bottom="82"  />
 <area shape="rect" alt="" href="#id_3" coords="226,97,254,125" data-coord-left="226" data-coord-top="97" data-coord-right="254" data-coord-bottom="125"  />
@@ -319,8 +346,8 @@
 <area shape="rect" alt="" href="#id_5" coords="226,183,254,211" data-coord-left="226" data-coord-top="183" data-coord-right="254" data-coord-bottom="211"  />
 <area shape="rect" alt="" href="#id_6" coords="226,226,254,254" data-coord-left="226" data-coord-top="226" data-coord-right="254" data-coord-bottom="254"  />
 <area shape="rect" alt="" href="#id_7" coords="227,270,255,298" data-coord-left="227" data-coord-top="270" data-coord-right="255" data-coord-bottom="298"  />
-</map><img usemap="#controlmap451b6bdb_0dc9_4a5e_bdf1_24087c6d4968"  alt=" Plotting options" style="border: solid 0px;  " width="781" height="309" class="de_wndimg de_780D01ADE8" src="drex__plotting_options_screen.png"/></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_1"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="1" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_1_6.png"/></a><div class="ic"><h2><strong>Drift correction method</strong></h2></div></div>
+</map><img usemap="#controlmap469fe8bf_3aa4_4788_b825_d4db3dfc3502"  alt=" Plotting options" style="border: solid 0px;  " width="781" height="309" class="de_wndimg de_780D01ADE8" src="drex__plotting_options_screen.png"/></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_1"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="1" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_1.png"/></a><div class="ic"><h2><strong>Drift correction method</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="1. Drift correction method" style="border: solid 0px;  " width="423" height="33" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_1.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Drop down box to specify drift correction method: none, network adjustment, Roman, or continuous.</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
@@ -328,7 +355,7 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="2. Drift model type" style="border: solid 0px;  " width="425" height="29" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_2.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Continuous drift model only: Specify either a polynomial or spline model of continuous drift.</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_3"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="3" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_3_6.png"/></a><div class="ic"><h2><strong>Behavior at start/end</strong></h2></div></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_3"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="3" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_3.png"/></a><div class="ic"><h2><strong>Behavior at start/end</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="3. Behavior at start/end" style="border: solid 0px;  " width="424" height="31" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_3.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Continuous drift model only: The model only extends to the first and last drift observation, which is a smaller time-span than the first and last station occupation (the drift observation is plotted at the midpoint in time between the two occupations that comprise the drift observation). The drift model can be extrapolated, or extended at a constant value. If extrapolated, a straigt line is extended with the same slope as the drift model; in some cases this can lead to extreme drift corrections for the first and/or last occupations, and a constant value is preferable. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
@@ -338,26 +365,23 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><h2><strong>Constant:</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="237" height="99" class=" de_780D01ADE8" src="drex__plotting_options_custom_2.png"/></div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_4"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="4" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_4_3.png"/></a><div class="ic"><h2><strong>Max. time between repeats</strong></h2></div></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_4"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="4" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_4.png"/></a><div class="ic"><h2><strong>Max. time between repeats</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="4. Max. time between repeats" style="border: solid 0px;  " width="424" height="29" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_4.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">For some surveys, a large amount of time may elapse between repeated station occupations, and these may not be reliable measurements of drift. This option allows drift observations to be excluded based on the time between station repeats. Note: the minimum counter value is 00:10. If the counter is above this, but will not decrease when the down arrow is clicked, it may be necessary to place the cursor (by clicking the mouse) on either the hour or minutes field.</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_5"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="5" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_5_3.png"/></a><div class="ic"><h2><strong>Show time-extent of drift observation</strong></h2></div></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_5"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="5" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_5.png"/></a><div class="ic"><h2><strong>Show time-extent of drift observation</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="5. Show time-extent of drift observation" style="border: solid 0px;  " width="423" height="29" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_5.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Continuous drift model only: When checked, the lower plot of drift rate vs. time includes horizontal lines that extend to the time of the two station occupations that comprise the drift observation. This option can be useful in determining whether drift observations are useful for determining the drift model (repeated stations with long elapsed times can be unreliable for estimating drift). </div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_6"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="6" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_6_2.png"/></a><div class="ic"><h2><strong>Vertical</strong></h2></div></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_6"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="6" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_6.png"/></a><div class="ic"><h2><strong>Vertical</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="6. Vertical" style="border: solid 0px;  " width="429" height="28" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_6.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">This slider controls the (arbitrary) vertical offset between lines in the station drift plot. Varying the slider may be useful to visualize the data, and helps the user understand the arbitrary nature of the vertical position of each line.</div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
-<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_7"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="7" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_7_3.png"/></a><div class="ic"><h2><strong>Spline tension</strong></h2></div></div>
+<div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_7"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="7" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_7.png"/></a><div class="ic"><h2><strong>Spline tension</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="7. Spline tension" style="border: solid 0px;  " width="421" height="27" class="de_ctrlimg de_780D01ADE8" src="drex__plotting_options_control_7.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Continuous drift model only: When using a spline as the drift model, this slider controls the spline tension. Greater values, to the right, result in a smoother spline and possibly a poorer match to the drift observations. Smaller values, to the left, result in a wavier spline and drift observations are more likely to be matched exactly. </div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
 </div>                                    			
-                			                <h6 class="b-article__generatorCopyright">
-                    <a class="b-link b-article__generatorCopyrightLink" href="http://www.drexplain.com" rel="nofollow">The online help was made with Dr.Explain</a>
-                </h6>
-                <br /><b>Unregistered version</b></div>
+                			</div>
 </body>
 </html>

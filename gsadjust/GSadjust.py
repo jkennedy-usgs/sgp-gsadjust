@@ -133,7 +133,7 @@ from tab_network import TabAdjust
 from tab_drift import TabDrift
 from tab_data import TabData
 from menus import Menus
-from tide_correction import tide_correction_agnew
+from tide_correction import tide_correction_agnew, tide_correction_meter
 
 """
 To install conda env:
@@ -547,7 +547,8 @@ class MainProg(QtWidgets.QMainWindow):
                         all_survey_data.lat.append(float(vals_temp3[1]))
                         all_survey_data.long.append(float(vals_temp3[2]))
                         all_survey_data.elev.append(float(vals_temp3[3]))
-                        all_survey_data.raw_grav.append(float(vals_temp3[4]) * 1000.)  # convert to microGal
+                        all_survey_data.raw_grav.append(float(vals_temp3[4]) * 1000. -
+                                                        float(vals_temp3[9]) * 1000.)  # convert to microGal; remove etc
                         all_survey_data.tare.append(0)
                         all_survey_data.sd.append(float(vals_temp3[5]) * 1000.)
                         all_survey_data.tiltx.append(float(vals_temp3[6]))
@@ -607,7 +608,8 @@ class MainProg(QtWidgets.QMainWindow):
                         s = vals_temp3[1].replace('.0000000', '')
                         all_survey_data.station.append(s.strip())
                         all_survey_data.elev.append(float(vals_temp3[2]))
-                        all_survey_data.raw_grav.append(float(vals_temp3[3]) * 1000.)  # convert to microGal
+                        all_survey_data.raw_grav.append(float(vals_temp3[3]) * 1000. -
+                                                        float(vals_temp3[8] * 1000.))  # convert to microGal; remove tide correction
                         all_survey_data.tare.append(0)
                         all_survey_data.sd.append(float(vals_temp3[4]) * 1000.)
                         all_survey_data.tiltx.append(float(vals_temp3[5]))
@@ -2133,6 +2135,7 @@ class MainProg(QtWidgets.QMainWindow):
                 nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
                 nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
                 nx.draw_networkx_labels(H, pos)
+            plt.autoscale(enable=True, axis='both', tight=True)
             plt.show()
 
     def plot_datum_comparison_timeseries(self):
@@ -2147,12 +2150,15 @@ class MainProg(QtWidgets.QMainWindow):
         """
         correction_type = None
         tide_correction_dialog = TideCorrectionDialog()
-        if tide_correction_dialog.msg.exec_():
-            correction_type = tide_correction_dialog.correction_type
+        tide_correction_dialog.msg.exec_()
+        correction_type = tide_correction_dialog.correction_type
         if correction_type == 'Cancel':
             return
+        elif correction_type == 'Meter-supplied':
+            tide_correction_meter(self)
         elif correction_type == 'Agnew':
             lat, lon, elev = [], [], []
+            # Get mean coordinates as default position
             for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                 survey = self.obsTreeModel.invisibleRootItem().child(i)
                 for ii in range(survey.rowCount()):
@@ -2186,6 +2192,7 @@ class MainProg(QtWidgets.QMainWindow):
                                       float(tc.elev.text()))
             self.deltas_update_required()
             self.adjust_update_required()
+        self.plot_samples()
 
     def write_summary(self):
         """

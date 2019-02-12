@@ -947,43 +947,36 @@ DR_EXPLAIN.searchEngine = (function() {
     function ID()
     {
         if (!SearchResults.length) getSearchResultOutput();
-        var sID = dirname() + "/de_search/ids.txt";
+        var sID = dirname() + "/de_search/ids.json";
         request.open("GET", sID, true);
         request.onreadystatechange = function()
         {
             if (request.readyState == 4)
             if (request.status == 200 || request.status == 0)
             {
-                var arrFileId = (request.responseText).split(/\s*\n\s*/);
-                var h;
+                var arrFileId;
+                try
+                {
+                    arrFileId = JSON.parse(request.responseText);
+                }
+                catch(e)
+                {
+                    //Something is wrong, abort search
+                    SearchResults = new Array();
+                    SearchResults[0] = new Array();
+                    SearchResults[0][0] = "Error!";
+                    SearchResults[0][1] = "mailto:help@drexplain.com";
+                    getSearchResultOutput();
+                    return;
+                }
+
+                var id;
                 for (var i = 0; i < SearchResults.length; i++)
                 {
-                    h = (SearchResults[i] - 1) * 3;
+                    id = SearchResults[i];
                     SearchResults[i] = new Array();
-
-                    if (!arrFileId[h + 1] || !arrFileId[h + 2])
-                    {
-                        if (!!arrFileId[h + 2])
-                        {
-                            SearchResults[i][0] = arrFileId[h + 2];
-                            SearchResults[i][1] = arrFileId[h + 2];
-                        }
-                        else
-                        {
-                            //Something is wrong, abort search
-                            SearchResults = new Array();
-                            SearchResults[0] = new Array();
-                            SearchResults[0][0] = "Error!";
-                            SearchResults[0][1] = "mailto:help@drexplain.com";
-                            getSearchResultOutput();
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        SearchResults[i][0] = arrFileId[h + 1];
-                        SearchResults[i][1] = arrFileId[h + 2];
-                    }
+                    SearchResults[i][0] = arrFileId[id][0];
+                    SearchResults[i][1] = arrFileId[id][1];
                 }
                 getSearchResultOutput();
             }
@@ -1002,20 +995,26 @@ DR_EXPLAIN.searchEngine = (function() {
         if (request.readyState != 4) return;
         if (request.status != 200 && request.status != 0)  return;
 
-        var arrFileStrings  = (request.responseText).split(/\s*\r\n\s*/);
+        var arrFileStrings;
+        try
+        {
+            arrFileStrings = JSON.parse(request.responseText);
+        }
+        catch(e)
+        {
+            return;
+        }
+
         var stToSearch      = StringPairArray[iStringToSearch][0];
 
         var isFirstIteration = true;
         var wasFound        = false;
         var curResults = new Array();
-        for (var i = 0; i < arrFileStrings.length; i += 2)
+        for (var i = 0; i < arrFileStrings.length; i++)
         {
-
-            if (arrFileStrings[i].indexOf(stToSearch) == 0)
+            if (arrFileStrings[i].s.indexOf(stToSearch) == 0)
             {
-                var pages = arrFileStrings[i + 1];
-                pages = pages.split(/\s*,\s*/);
-                curResults = unite(curResults, pages);
+                curResults = unite(curResults, arrFileStrings[i].p);
                 wasFound = true;
             }
         }
@@ -1126,27 +1125,25 @@ DR_EXPLAIN.searchEngine = (function() {
         SearchForNextString();
     }
 
-    //Downloads prefixes.txt
+    //Downloads prefixes.json
     //Fills IndexOfFiles array
     function GetIndex()
     {
         SearchResults=new Array();
         NextStringToSearch=0; //?
-        var sURL = dirname() + "/de_search/prefixes.txt";
+        var sURL = dirname() + "/de_search/prefixes.json";
         request.open("GET", sURL);
         request.onreadystatechange = function() {
             if (request.readyState == 4)
                 if(request.status == 200 || request.status == 0)
                 {
-                    var arPrefixes = (request.responseText).split(/\s*\r\n\s*/);
-                    var j = 0;
-                    for (var i = 0; i + 2 < arPrefixes.length; i+=3)
+                    try
                     {
-                        IndexOfFiles[j] = new Object();
-                        IndexOfFiles[j].fileName = arPrefixes[i] + ".txt";
-                        IndexOfFiles[j].first = arPrefixes[i+1];
-                        IndexOfFiles[j].last = arPrefixes[i+2];
-                        ++j;
+                        IndexOfFiles = JSON.parse(request.responseText);
+                    }
+                    catch(e)
+                    {
+                        return;
                     }
                     AttachFilesToStrings();
                 }
@@ -1615,7 +1612,7 @@ DR_EXPLAIN.namespace( 'DR_EXPLAIN.tabController' );
 DR_EXPLAIN.tabController = (function(){
     var _class = {
         DREX_SHOW_MENU: 1,
-        DREX_SHOW_SEARCH: 0,
+        DREX_SHOW_SEARCH: 1,
         DREX_SHOW_INDEX: 1,
 
         tabArr: [],
@@ -3803,6 +3800,9 @@ function onDocumentReady(app) {
     app.workZoneSizer.recalculateAll();
 
     app.tabController.doSetScrollTopByUrlEncoder();
+
+    if (window.location.hash !== "#")
+        window.location.hash = window.location.hash;
 }
 
 $(document).ready(function() {

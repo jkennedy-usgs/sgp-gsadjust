@@ -202,29 +202,6 @@ def launch_agnew(cwin, MainProg):
     MainProg.plot_samples()
 
 
-def tide_correction_meter(campaigndata):
-    """
-    Apply tide correction from previously-loaded Tsoft file. Assume that units are mGal (already converted from nanogal
-    when the file was loaded). The sign of the correction is opposite that of Agnew.
-    :param campaigndata: data
-    :param tides: [t,s]
-    """
-    logging.info('New tide correction from time series')
-    for keysurv, surv in campaigndata.survey_dic.items():
-        for keyloop, loop in campaigndata.survey_dic[keysurv].loop_dic.items():
-            for keysta, sta in campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic.items():
-                campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].grav = \
-                    [campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].grav[i]
-                     - campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].etc[i]  # remove previous
-                     + campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].meter_etc[i]
-                     # add new correction
-                     for i in range(len(campaigndata.survey_dic[keysurv].
-                                        loop_dic[keyloop].
-                                        station_dic[keysta].t))]
-                campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].etc = \
-                    campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].meter_etc
-
-
 def tide_correction_ts(campaigndata, tide_in):
     """
     Apply tide correction from previously-loaded Tsoft file. Assume that units are mGal (already converted from nanogal
@@ -259,6 +236,20 @@ def ts_tide_corr(tides, time):
     return tides.d[idx]
 
 
+def tide_correction_meter(MainProg):
+    """
+    Function for using internal CG5 tide correction option.
+    update the Campaign().corr_g list
+    """
+    for i in range(MainProg.obsTreeModel.invisibleRootItem().rowCount()):
+        survey = MainProg.obsTreeModel.invisibleRootItem().child(i)
+        for ii in range(survey.rowCount()):
+            loop = survey.child(ii)
+            for iii in range(loop.rowCount()):
+                station = loop.child(iii)
+                station.etc = station.meter_etc
+
+
 def tide_correction_agnew(MainProg, lat, lon, alt):
     """
     Apply Agnew tide correction.
@@ -278,84 +269,7 @@ def tide_correction_agnew(MainProg, lat, lon, alt):
                 tides = np.round(np.array([earth_tide(lat, lon, t)
                                            for t in station.t]) * 10000) / 10000.
                 tides *= 1000  # convert milligal to microgal
-
-                # station.corr_g = [station.raw_grav[i] - station.etc[i] + tides[i]  # add new correction
-                #      for i in range(len(station.t))]
-                # station.etc = [tides[i] for i in range(len(station.t))]
                 station.etc = tides
-
-
-def tide_correction_predict(self, tides):
-    """
-    Apply tide corrections: populate/update the gcorr field of all gravity objects in self.campaigndata
-    update all grav fields
-    update all etc fields
-
-    IMPORTANT: sign of the correction is important:
-    - native etc from relative meter should be removed from .grav, and then predict etc
-    should be removed too! Therefore the new etc should be '-' as well
-    This is because native ETC CG5 value is not a synthetic tide but a
-    correction, hence '- synthetic tide'.
-    Therefore, when removing etc to grav (grav-etc), this means that
-    the synthetic tide is added back and the total signal is obtained.
-    For further removing of another synthetic tide, one should therefore do
-    new_corr_g = grav-old_etc-etc2
-    new_etc=-etc2
-    """
-    # if data is loaded from already processed data, self.campaigndata time
-    # series are not populated, and correction should not be applied at such
-    # levels
-
-    # CG5 data is acquired with a µgal resolution. therefore, apply
-    # corrections at the µgal level:
-    tides.d = np.round(np.array(tides.d) * 1000) / 1000.
-
-    if any(self.t):
-        tides.interpolate_on_given_times(self.t)
-        self.corr_g = [self.grav[i] - self.etc[i] - tides.d[i] for i in range(len(self.t))]
-        self.grav = self.corr_g
-        self.etc = [-tides.d[i] for i in range(len(self.t))]
-    i = 1
-    for keysurv, surv in self.survey_dic.items():
-        i += 1
-        tidetemp = copy.deepcopy(tides)
-        if any(self.survey_dic[keysurv].t):
-            tidetemp.interpolate_on_given_times(self.survey_dic[keysurv].t)
-            self.survey_dic[keysurv].corr_g = [
-                self.survey_dic[keysurv].grav[i] - self.survey_dic[keysurv].etc[i] - tidetemp.d[i] for i in
-                range(len(self.survey_dic[keysurv].t))]
-            self.survey_dic[keysurv].grav = self.survey_dic[keysurv].corr_g
-            self.survey_dic[keysurv].etc = [-tidetemp.d[i] for i in range(len(self.survey_dic[keysurv].t))]
-        j = 1
-        for keyloop, loop in self.survey_dic[keysurv].loop_dic.items():
-            j += 1
-            tidetemp2 = copy.deepcopy(tidetemp)
-            if any(self.survey_dic[keysurv].loop_dic[keyloop].t):
-                tidetemp2.interpolate_on_given_times(self.survey_dic[keysurv].loop_dic[keyloop].t)
-                self.survey_dic[keysurv].loop_dic[keyloop].corr_g = [
-                    self.survey_dic[keysurv].loop_dic[keyloop].grav[i] -
-                    self.survey_dic[keysurv].loop_dic[keyloop].etc[i] - tidetemp2.d[i] for i in
-                    range(len(self.survey_dic[keysurv].loop_dic[keyloop].t))]
-                self.survey_dic[keysurv].loop_dic[keyloop].grav = self.survey_dic[keysurv].loop_dic[keyloop].corr_g
-                self.survey_dic[keysurv].loop_dic[keyloop].etc = [-tidetemp2.d[i] for i in range(
-                    len(self.survey_dic[keysurv].loop_dic[keyloop].t))]
-            k = 1
-            for keysta, sta in self.survey_dic[keysurv].loop_dic[keyloop].station_dic.items():
-                k += 1
-                tidetemp3 = copy.deepcopy(tidetemp2)
-                tidetemp3.interpolate_on_given_times(self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].t)
-                self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].corr_g = [
-                    self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].grav[i] -
-                    self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].etc[i] - tidetemp3.d[i] for i in
-                    range(len(self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].t))]
-                self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].grav = \
-                    self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].corr_g
-                self.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta].etc = [-tidetemp3.d[i] for i in
-                                                                                      range(len(self.
-                                                                                                survey_dic[keysurv].
-                                                                                                loop_dic[keyloop].
-                                                                                                station_dic[keysta].
-                                                                                                t))]
 
 
 def ocean_correction_agnew(self, amp, phases, lon):

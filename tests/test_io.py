@@ -27,7 +27,6 @@ def test_read_Burris():
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     assert len(data.dial) == 497
     assert len(data.raw_grav) == 497
-    assert len(data.corr_g) == 0
     first_station = 'rg37'
     for idx, el in enumerate(data.station):
         if el != first_station:
@@ -45,7 +44,6 @@ def test_read_ScintrexCG6():
     assert len(data.dial) == 0
     assert len(data.keepdata) == 2096
     assert len(data.raw_grav) == 2096
-    assert len(data.corr_g) == 0
     for idx, el in enumerate(data.station):
         if el != first_station:
             first_station_data = data.raw_grav[:idx]

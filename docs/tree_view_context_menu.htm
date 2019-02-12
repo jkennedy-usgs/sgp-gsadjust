@@ -79,7 +79,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 19px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: bottom;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom_7.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
+<div class="p" style="text-align: justify; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="39" height="39" class=" de_780D01ADE8" src="drex_header_custom.png"/> &#160; <span style="font-family: &quot;Arial&quot;;font-size: 20pt;color:#f0f0f0;"><strong><sup>GSadjust User Guide</sup></strong></span></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -130,6 +130,10 @@
                                 <span class="b-tabs__selectorContent">Index</span>
                              </div>
     
+                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
+                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
+                                <span class="b-tabs__selectorContent">Search</span>
+                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -209,6 +213,29 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
+<div class="b-search m-search__workZone" id="searchZone">
+    <form action="#" class="b-search__form">
+        <table class="b-search__layout">
+            <tr>
+                <td class="b-search__side m-search__side__input">
+                    <div class="b-search__gap">
+                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
+                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
+                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
+                    </div>
+                </td>
+                <td class="b-search__side m-search__side__submit">
+                    <span class="b-button b-search__button">
+                        <span class="b-button__wrapper">
+                            <span class="b-button__text"></span>
+                        </span>
+                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -219,7 +246,7 @@
                     <div id="headerSide__nav__breadCrumbs" class="b-breadCrumbs">
                         <ul class="b-breadCrumbs__items"><li class="b-breadCrumbs__item"><a href="overview.htm" class="b-breadCrumbs__link">1. Overview</a></li>
 
-<li class="b-breadCrumbs__item"><a href="data_tree_view.htm" class="b-breadCrumbs__link">1.3. Data Tree View</a></li>
+<li class="b-breadCrumbs__item"><a href="data_tree_view.htm" class="b-breadCrumbs__link">Data Tree View</a></li>
 
 <li class="b-breadCrumbs__item">Tree view context menu</li>
 </ul>                    </div>
@@ -228,7 +255,7 @@
                     <div class="b-controlButtons">
                         <ul class="b-controlButtons__items">
                             <li class="b-controlButtons__item m-controlButtons__item__prev"><a href="data_tree_view.htm" class="b-controlButtons__link" title="Previous page"><span class="b-controlButtons__link_icon"></span><span class="b-controlButtons__link_text">&#xa0;Previous page</span></a></li>
-                            <li class="b-controlButtons__item m-controlButtons__item__next"><a href="workflow.htm" class="b-controlButtons__link" title="Next page"><span class="b-controlButtons__link_text">Next page&#xa0;</span><span class="b-controlButtons__link_icon"></span></a></li>
+                            <li class="b-controlButtons__item m-controlButtons__item__next"><a href="tree_view_toolbar.htm" class="b-controlButtons__link" title="Next page"><span class="b-controlButtons__link_text">Next page&#xa0;</span><span class="b-controlButtons__link_icon"></span></a></li>
                                                 </ul>
                     </div>
                 </td>
@@ -257,7 +284,7 @@
                             .addClass("b-article__headerSide m-article__headerSide__buttons")
                             .append(
                                 $("<div></div>").addClass("b-controlButtons")
-                                .html($("<ul></ul>").addClass("b-controlButtons__items").html("    <li class=\"b-controlButtons__item m-controlButtons__item__prev\"><a href=\"data_tree_view.htm\" class=\"b-controlButtons__link\" title=\"Previous page\"><span class=\"b-controlButtons__link_icon\"></span><span class=\"b-controlButtons__link_text\">&#xa0;Previous page</span></a></li>\n    <li class=\"b-controlButtons__item m-controlButtons__item__next\"><a href=\"workflow.htm\" class=\"b-controlButtons__link\" title=\"Next page\"><span class=\"b-controlButtons__link_text\">Next page&#xa0;</span><span class=\"b-controlButtons__link_icon\"></span></a></li>\n"))
+                                .html($("<ul></ul>").addClass("b-controlButtons__items").html("    <li class=\"b-controlButtons__item m-controlButtons__item__prev\"><a href=\"data_tree_view.htm\" class=\"b-controlButtons__link\" title=\"Previous page\"><span class=\"b-controlButtons__link_icon\"></span><span class=\"b-controlButtons__link_text\">&#xa0;Previous page</span></a></li>\n    <li class=\"b-controlButtons__item m-controlButtons__item__next\"><a href=\"tree_view_toolbar.htm\" class=\"b-controlButtons__link\" title=\"Next page\"><span class=\"b-controlButtons__link_text\">Next page&#xa0;</span><span class=\"b-controlButtons__link_icon\"></span></a></li>\n"))
                             )
                         )
                     )
@@ -294,7 +321,7 @@
 <col style="width: 100%;" class="de_col_1_576" />
 <tr style="height: 29px;">
 <td class="de_td_576" style = "padding: 2px; padding-bottom: 1px; border-left-style: none; border-left-width: 0px; border-left-color: #000000; border-right-style: none; border-right-width: 0px; border-right-color: #000000; border-top-style: none; border-top-width: 0px; border-top-color: #000000; border-bottom-style: none; border-bottom-width: 0px; border-bottom-color: #000000;  width: 100%; vertical-align: top;" colspan = "1" rowspan = "1" >
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#f0f0f0;">USGS Southwest Gravity Program</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a href="http://go.usa.gov/xqBnQ"><span style="font-family: &quot;Arial&quot;;font-size: 10pt;color:#0000ff;text-decoration:underline;">USGS Southwest Gravity Program</span></a></div>
 </td></tr></table></div>
                     </td>
                 </tr>
@@ -311,11 +338,11 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The Data Tree View has a right-click context menu from which stations can be deleted, duplicated, or moved to a new loop. Multiple stations can be selected by holding down the shift key (these operations won't work when non-adjacent stations are selected, as can be done by holding the control key).</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">
-<map name="controlmap6f675020_07ae_410b_91ed_830bce2d0e96" id="controlmap6f675020_07ae_410b_91ed_830bce2d0e96">
+<map name="controlmapf2706c23_8fd7_479a_97c5_a498fb027f30" id="controlmapf2706c23_8fd7_479a_97c5_a498fb027f30">
 <area shape="rect" alt="" href="#id_1" coords="175,7,203,35" data-coord-left="175" data-coord-top="7" data-coord-right="203" data-coord-bottom="35"  />
 <area shape="rect" alt="" href="#id_2" coords="175,48,203,76" data-coord-left="175" data-coord-top="48" data-coord-right="203" data-coord-bottom="76"  />
 <area shape="rect" alt="" href="#id_3" coords="175,90,203,118" data-coord-left="175" data-coord-top="90" data-coord-right="203" data-coord-bottom="118"  />
-</map><img usemap="#controlmap6f675020_07ae_410b_91ed_830bce2d0e96"  alt="Tree view context menu" style="border: solid 0px;  " width="491" height="129" class="de_wndimg de_780D01ADE8" src="drex_tree_view_context_menu_screen.png"/></div>
+</map><img usemap="#controlmapf2706c23_8fd7_479a_97c5_a498fb027f30"  alt="Tree view context menu" style="border: solid 0px;  " width="491" height="129" class="de_wndimg de_780D01ADE8" src="drex_tree_view_context_menu_screen.png"/></div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="de_ctrl"><table><tr><td><a class="anchor" id="id_1"></a><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="anchor" href="#top"><img  alt="1" style="border: solid 0px;  float: left; " width="40" height="40" class="de_ctrlbullet de_780D01ADE8" src="drex_bullet_1.png"/></a><div class="ic"><h2><strong>Delete station(s)</strong></h2></div></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="1. Delete station(s)" style="border: solid 0px;  " width="211" height="32" class="de_ctrlimg de_780D01ADE8" src="drex_tree_view_context_menu_control_1.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Deletes one or more selected stations (stations must be adjacent in the tree view). To restore deleted stations, data must be reloaded from a text file.</div>
@@ -330,9 +357,6 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><a class="local_link" href="creating_loops.htm"><span class="de_2B94C39861">Creates a new loop</span></a> with the selected stations. </div>
 </td></tr><tr class="topLinkRow" style="border-style:none"><td style="border-style:none; text-align: right;"><div style="text-align: right; font-size:8pt"><a href="#top">Top</a></div></td></tr></table></div></div>
 </div>                                    			
-                			                <h6 class="b-article__generatorCopyright">
-                    <a class="b-link b-article__generatorCopyrightLink" href="http://www.drexplain.com" rel="nofollow">The online help was made with Dr.Explain</a>
-                </h6>
-                <br /><b>Unregistered version</b></div>
+                			</div>
 </body>
 </html>

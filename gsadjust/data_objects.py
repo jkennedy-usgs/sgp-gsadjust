@@ -56,34 +56,39 @@ class ChannelList:
 
     def __init__(self):
         self.meter_type = None
-        self.line = []
-        self.station = []
-        self.elev = []
-        self.raw_grav = []
-        self.sd = []
-        self.tiltx = []
-        self.tilty = []
-        self.temp = []
-        self.etc = []
-        self.meter_etc = []
-        self.dur = []
-        self.rej = []
-        self.t = []
-        self.oper = []
-        self.dial = []
-        self.feedback = []
-        self.tide = []
-        self.meter = []
-        self.lat = []
-        self.long = []
-        self.corr_g = []
-        self.tare = []
-        self.keepdata = []  # List of 0's and 1's indicating which samples are to be used
+        # Attributes that are populated when a file is read
+        self.line = []               # OLine number (Scintrex only)
+        self.station = []            # Station name
+        self.elev = []               # Elevation
+        self.lat = []                # Station latitude
+        self.long = []               # Station longitude
+
+        # A station gravity value (.grav or .gmean) is calculated "on the fly" from .raw_grav, .etc,
+        # and .tare as a property in the ObsTreeFunction class
+        self.raw_grav = []           # gravity reading WITHOUT Earth tide correction (etc is removed when data are read)
+        # self.corr_g = []           # Corrected gravity value, no longer used; still some legacy usage in OL code
+        self.sd = []                 # Standard deviation (Scintrex only)
+        self.etc = []                # Earth tide correction - can be updated to another model
+        self.meter_etc = []          # Earth tide correction from meter
+        self.tare = []               # tare magnitude (included in corr_g)
+
+        self.tiltx = []              # tilt x
+        self.tilty = []              # tilt y
+        self.temp = []               # temperature, deg. C
+        self.dur = []                # Measurement duration (Scintrex only)
+        self.rej = []                # Accept or reject flag (Scintrex only)
+        self.t = []                  # Measurement time
+        self.oper = []               # Operator
+        self.dial = []               # Dial setting
+        self.feedback = []           # Feedback (Burris only)
+        self.meter = []              # Meter serial number
+        self.keepdata = []  # 0/1 flags indicating which samples are to be used
+
 
     def __iter__(self):
         """
         Function to iterate over ChannelList. Useful because Scintrex and Burris meters have different fields; this
-        returns the fields relevant to the particular meter and skips blank fields.
+        returns only non-blank fields.
         :return: tuple of a single non-empty field in the ChannelList object: (field, list of values)
         """
         for attr, value in self.__dict__.items():

@@ -20,17 +20,14 @@ unauthorized use of the software.
 """
 import os
 import datetime as dt
-import copy
-import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
-from matplotlib.widgets import Slider
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 # from mpl_toolkits.basemap import Basemap
-from functools import partial
 from data_objects import Datum, AdjustmentOptions
 from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel, MeterCalibrationModel
 import a10
@@ -376,8 +373,8 @@ class AdjustOptions(QtWidgets.QDialog):
             self.ao.specify_cal_coeff = True
             self.ao.cal_coeff = False
             for i in range(self.cal_coeff_model.rowCount()):
-                meter = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i,0))
-                calval = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i,1))
+                meter = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i, 0))
+                calval = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i, 1))
                 self.ao.meter_cal_dict[meter.text()] = float(calval.text())
         else:
             self.ao.specify_cal_coeff = False
@@ -483,28 +480,6 @@ def copy_cells_to_clipboard(table):
         msg = show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
 
 
-def DateMethodDialog():
-    """
-    Dialog to select data import method - all data into one survey of with dates contained in a second file.
-    :return: String indicating survey import type ('choose' or 'single')
-    """
-    msg = QtWidgets.QMessageBox()
-    msg.setIcon(QtWidgets.QMessageBox.Question)
-
-    msg.setText("Start/end date file not found.")
-    msg.setWindowTitle("Specify start/end dates")
-    msg.addButton(QtWidgets.QPushButton('Choose File'), QtWidgets.QMessageBox.YesRole)
-    msg.addButton(QtWidgets.QPushButton('Single Survey'), QtWidgets.QMessageBox.NoRole)
-    msg.addButton(QtWidgets.QPushButton('Cancel'), QtWidgets.QMessageBox.RejectRole)
-    method = msg.exec_()
-    if method == 0:
-        return 'choose'
-    elif method == 1:
-        return 'single'
-    else:
-        return False
-
-
 def about_dialog():
     msg1 = '<html>GSadjust, a product of the USGS Southwest Gravity Program<br>' + \
            '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>' + \
@@ -589,7 +564,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         gravity_change_window.table.setModel(gravity_change_window.model)
 
         # Create buttons and actions
-        gravity_change_window.btn00= QtWidgets.QPushButton('Map')
+        gravity_change_window.btn00 = QtWidgets.QPushButton('Map')
         gravity_change_window.btn00.clicked.connect(self.map_change_window)
         gravity_change_window.btn0 = QtWidgets.QPushButton('Plot')
         gravity_change_window.btn0.clicked.connect(lambda: self.plot_change_window())
@@ -631,19 +606,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         # self.axes = self.fig.add_subplot(111)
         # layout.addWidget(self.canvas)
         #
-        # # fig = plt.figure(figsize=(12, 8))
-        # n_cols = (len(self.table) - 1)/2
-        # stations = self.table[0]
-        # x, y, d = [], [], []
-        # data = self.table[1]
-        # for idx, sta in enumerate(stations):
-        #     datum = float(data[idx])
-        #     if datum > -998:
-        #         x.append(self.coords[sta][0])
-        #         y.append(self.coords[sta][1])
-        #         d.append(datum)
-        # self.axes.scatter(x, y, c=d, s=500)
-        # # self.fig.colorbar()
+
         # # sldr = Slider(self.ax, 'name', 0., 5., valinit=0., valfmt="%i")
         # # sldr.on_changed(partial(self.set_slider, sldr))
         # self.plot_window.show()
@@ -653,7 +616,6 @@ class GravityChangeTable(QtWidgets.QDialog):
         # self.poly.xy[2] = self.val, 1
         # self.poly.xy[3] = self.val, 0
         self.valtext.set_text(self.valfmt % self.val)
-
 
     def plot_change_window(self):
         plt.figure(figsize=(12, 8))
@@ -694,7 +656,7 @@ class MapWindow(QtWidgets.QDialog):
 
         # this is the Navigation widget
         # it takes the Canvas widget and a parent
-        # self.toolbar = NavigationToolbar(self.canvas, self)
+        self.toolbar = NavigationToolbar(self.canvas, self)
 
         # Just some button connected to `plot` method
         self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -706,13 +668,30 @@ class MapWindow(QtWidgets.QDialog):
         self.plot_title = QtWidgets.QLabel(self.header[1])
         # set the layout
         layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         layout.addWidget(self.plot_title)
         layout.addWidget(self.slider)
         self.setLayout(layout)
+        self.plot()
 
     def plot(self):
         jeff = 1
+        # # fig = plt.figure(figsize=(12, 8))
+        # n_cols = (len(self.table) - 1)/2
+        # stations = self.table[0]
+        # x, y, d = [], [], []
+        # data = self.table[1]
+        # for idx, sta in enumerate(stations):
+        #     datum = float(data[idx])
+        #     if datum > -998:
+        #         x.append(self.coords[sta][0])
+        #         y.append(self.coords[sta][1])
+        #         d.append(datum)
+        # self.axes.scatter(x, y, c=d, s=500)
+        # # self.fig.colorbar()
+
+
         # from mpl_toolkits.basemap import Basemap
         # ax = self.figure.add_subplot(111)
         # map = Basemap(projection='ortho',
@@ -737,27 +716,29 @@ class MapWindow(QtWidgets.QDialog):
         # slider_idx =  int(self.slider.value())
         #
         # # create an axis
-        # ax = self.figure.add_subplot(111)
+        self.ax = self.figure.add_subplot(111)
         #
         # # discards the old graph
         # ax.clear()
         #
-        # # plot data
-        # stations = self.table[0]
-        # x, y, d = [], [], []
-        # data = self.table[slider_idx]
-        # for idx, sta in enumerate(stations):
-        #     datum = float(data[idx])
-        #     if datum > -998:
-        #         x.append(self.coords[sta][0])
-        #         y.append(self.coords[sta][1])
-        #         d.append(datum)
-        # ax.scatter(x, y, c=d, s=200, vmin=-20, vmax=20)
-        # self.plot_title.setText(self.header[slider_idx])
-        # # ax.plot(data, '*-')
-        #
-        # # refresh canvas
-        # self.canvas.draw()
+        # plot data
+        stations = self.table[0]
+        x, y, d = [], [], []
+        data = self.table[self.slider.value()]
+        for idx, sta in enumerate(stations):
+            datum = float(data[idx])
+            if datum > -998:
+                x.append(self.coords[sta][0])
+                y.append(self.coords[sta][1])
+                d.append(datum)
+        plotted_data = self.ax.scatter(x, y, c=d, s=200, vmin=-20, vmax=20)
+        self.ax.autoscale(enable=True, axis='both', tight=True)
+        self.plot_title.setText(self.header[self.slider.value()])
+        self.figure.colorbar(plotted_data)
+        # ax.plot(data, '*-')
+
+        # refresh canvas
+        self.canvas.draw()
 
 def show_full_table(MainProg):
     MainProg.popup.close()
@@ -863,9 +844,6 @@ class TideCorrectionDialog(QtWidgets.QDialog):
         self.msg = QtWidgets.QMessageBox()
         self.msg.setText("Select tide-correction method")
         self.msg.addButton(QtWidgets.QPushButton('Meter-supplied'), QtWidgets.QMessageBox.YesRole)
-        btn1 = QtWidgets.QPushButton('Predict')
-        btn1.setEnabled(False)
-        self.msg.addButton(btn1, QtWidgets.QMessageBox.YesRole)
         self.msg.addButton(QtWidgets.QPushButton('Agnew'), QtWidgets.QMessageBox.YesRole)
         btn2 = QtWidgets.QPushButton('Cancel')
         self.msg.addButton(btn2, QtWidgets.QMessageBox.RejectRole)
@@ -1004,15 +982,16 @@ class AddTareDialog(QtWidgets.QDialog):
 
 class SelectAbsg(QtWidgets.QDialog):
     """
-    Dialog to show absolute-gravity values from *.project.txt files. The user can select the files to import as Datums.
+    Dialog to show absolute-gravity values from *.project.txt files. The user
+    can select the files to import as Datums.
     """
     def __init__(self, path):
         super(SelectAbsg, self).__init__()
         self.title = 'Select directory with Abs. g files (.project.txt)'
         self.left = 100
         self.top = 100
-        self.width = 800
-        self.height = 480
+        self.width = 1200
+        self.height = 800
         self.new_datums = []
         self.path = path
 

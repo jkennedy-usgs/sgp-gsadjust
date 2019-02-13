@@ -86,7 +86,7 @@ class ObsTreeStation(ObsTreeItem):
         TODO: test effect of weighting if Burris and Scintrex data are combined in a survey
         :return:
         """
-        if self.meter_type == 'Burris':
+        if self.meter_type == 'Burris' or self.meter_type == 'CG6Tsoft':
             return [1 for i in self.keepdata if i == 1]
         else:
             sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]

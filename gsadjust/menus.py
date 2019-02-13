@@ -46,6 +46,10 @@ class Menus:
                                                     slot=lambda meter='CG6': self.mainProg.open_file_dialog('CG6'),
                                                     tip="Open data file",
                                                     enabled=True)
+        self.mnFileOpenCG6FileTsoft = self.create_action("Load raw CG-6 data (Tsoft format)...",
+                                                    slot=lambda meter='CG6Tsoft': self.mainProg.open_file_dialog('CG6Tsoft'),
+                                                    tip="Open data file",
+                                                    enabled=True)
         self.mnFileOpenCsvFile = self.create_action("Import csv data...",
                                                     shortcut="Ctrl+7",
                                                     slot=lambda meter='csv': self.mainProg.open_file_dialog('csv'),
@@ -79,6 +83,7 @@ class Menus:
         # add actions to menu
         self.add_actions(self.mnFile, (self.mnFileOpenScintrexFile,
                                        self.mnFileOpenCG6File,
+                                       self.mnFileOpenCG6FileTsoft,
                                        self.mnFileOpenBurrisFile,
                                        self.mnFileOpenCsvFile,
                                        None,

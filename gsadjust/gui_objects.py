@@ -182,6 +182,7 @@ class MeterType(QtWidgets.QMessageBox):
         self.setText("Choose meter file to import")
         self.addButton(QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(' CG-6 Tsoft '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' Burris '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' CSV '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' Cancel '), QtWidgets.QMessageBox.RejectRole)
@@ -191,6 +192,7 @@ class MeterType(QtWidgets.QMessageBox):
     def onClicked(self, btn):
         meter = {' CG-3, CG-5 ': 'Scintrex',
                  ' CG-6 ': 'CG6',
+                 ' CG-6 Tsoft ': 'CG6Tsoft',
                  ' Burris ': 'Burris',
                  ' CSV ': 'csv',
                  ' Cancel ': 'Cancel'}

@@ -84,16 +84,21 @@ class TabData(QtWidgets.QWidget):
         autoselec_grav = QtWidgets.QWidget()
         autoselec_dur = QtWidgets.QWidget()
         autoselec_all = QtWidgets.QWidget()
-        autoselec_tilts.button = QtWidgets.QPushButton("&auto uncheck tilts >", self)
+        autoselec_alldata = QtWidgets.QWidget()
+        autoselec_tilts.button = QtWidgets.QPushButton("&auto uncheck |tilt| >", self)
         autoselec_tilts.button.clicked.connect(lambda: self.autoselect_tilt(autoselec_tilts))
         autoselec_sd.button = QtWidgets.QPushButton("&auto uncheck SD >", self)
         autoselec_sd.button.clicked.connect(lambda: self.autoselect_sd(autoselec_sd))
         autoselec_grav.button = QtWidgets.QPushButton("&auto uncheck g >", self)
         autoselec_grav.button.clicked.connect(lambda: self.autoselect_grav(autoselec_grav))
-        autoselec_dur.button = QtWidgets.QPushButton("&auto uncheck dur <>", self)
+        autoselec_dur.button = QtWidgets.QPushButton("&auto uncheck dur >", self)
         autoselec_dur.button.clicked.connect(lambda: self.autoselect_dur(autoselec_dur))
-        autoselec_all.button = QtWidgets.QPushButton("&apply to all data", self)
+        autoselec_all.button = QtWidgets.QPushButton("&apply all filters", self)
         autoselec_all.button.clicked.connect(lambda: self.autoselect_all(autoselec_tilts.val,
+                                                                         autoselec_sd.val, autoselec_grav.val,
+                                                                         autoselec_dur.val))
+        autoselec_alldata.button = QtWidgets.QPushButton("&apply all filters to all data", self)
+        autoselec_alldata.button.clicked.connect(lambda: self.autoselect_alldata(autoselec_tilts.val,
                                                                          autoselec_sd.val, autoselec_grav.val,
                                                                          autoselec_dur.val))
         autoselec_tilts.val = QtWidgets.QLineEdit()
@@ -115,6 +120,7 @@ class TabData(QtWidgets.QWidget):
         layout_options.addWidget(autoselec_tilts.val, 0, 3, 1, 1)
         layout_options.addWidget(autoselec_grav.button, 0, 4)
         layout_options.addWidget(autoselec_grav.val, 0, 5, 1, 1)
+        layout_options.addWidget(autoselec_all.button, 0, 6)
         layout_options.addWidget(autoselec_dur.button, 1, 4)
         layout_options.addWidget(autoselec_dur.val, 1, 5, 1, 1)
         layout_options.addWidget(checkall_button, 1, 0)
@@ -122,7 +128,7 @@ class TabData(QtWidgets.QWidget):
         layout_options.addWidget(autoselec_sd.button, 1, 2)
         layout_options.addWidget(autoselec_sd.val, 1, 3, 1, 1)
         # layout_options.addWidget(updateplot_button, 0, 6)
-        layout_options.addWidget(autoselec_all.button, 1, 6)
+        layout_options.addWidget(autoselec_alldata.button, 1, 6)
         # add subplayouts to the main layout
         grid.addLayout(layout_options, 0, 0, 1, 2)
 
@@ -156,22 +162,37 @@ class TabData(QtWidgets.QWidget):
         series = np.array(station.grav)
         series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
         if meter_type == 'Scintrex' or meter_type == 'CG6' or meter_type == 'csv':
-            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal', '1')
+            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'Gravity', '$\mu$gal', '1')
             # tiltx channel
             series = np.array(station.tiltx)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'tilt X', 'arcsec', '2')
+            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'Tilt X', 'arcsec', '2')
             # tilty channel
             series = np.array(station.tilty)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'tilt Y', 'arcsec', '3')
+            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'Tilt Y', 'arcsec', '3')
             # SD channel
             series = np.array(station.sd)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'standard deviation', '$\mu$gal', '4')
+            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Standard deviation', '$\mu$gal', '4')
+
+        elif meter_type == 'CG6Tsoft':
+            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'Gravity', '$\mu$gal', '1')
+            # tiltx channel
+            series = np.array(station.tiltx)
+            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            self.set_plot(self.axes_data_UR, t, series, t_selec, series_selec, 'Tilt X', 'arcsec', '2')
+            # tilty channel
+            series = np.array(station.tilty)
+            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'Tilt Y', 'arcsec', '3')
+            # SD channel
+            series = np.array(station.etc)
+            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Earth Tide Correction', '$\mu$gal', '4')
 
         elif meter_type == 'Burris':
-            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'gravity', '$\mu$gal', '1')
+            self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'Gravity', '$\mu$gal', '1')
             # tiltx channel
             series = np.array(station.feedback)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
@@ -179,11 +200,11 @@ class TabData(QtWidgets.QWidget):
             # tilty channel
             series = np.array(station.etc)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'Earth TIde Correction', 'microGal', '3')
+            self.set_plot(self.axes_data_LR, t, series, t_selec, series_selec, 'Earth Tide Correction', '$\mu$Gal', '3')
             # SD channel
             series = np.array(station.tiltx)
             series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Tilt Correction', 'microGal', '4')
+            self.set_plot(self.axes_data_LL, t, series, t_selec, series_selec, 'Tilt Correction', '$\mu$Gal', '4')
         self.data_canvas.draw()
         return True
 
@@ -210,7 +231,7 @@ class TabData(QtWidgets.QWidget):
         axe.grid(True)
         xfmt = DateFormatter('%H:%M')
         # It should be possible to just set_data on the plot object returned from axe.plot, but I couldn't figure it out
-        if serie_type == 'gravity' and seriey_selec:  # Plot horizontal line at mean g
+        if serie_type == 'Gravity' and seriey_selec:  # Plot horizontal line at mean g
             mean_g = np.mean(seriey_selec)
             axe.plot([seriex[0], seriex[-1]], [mean_g, mean_g], 'o-', color='b', label=serie_type)
 
@@ -245,11 +266,12 @@ class TabData(QtWidgets.QWidget):
         function for automatic selection of data based on simple thresholds:
         Tilts: absolute value higher than threshold are set to keepdata=0
         """
+        obstreestation = self.parent.obsTreeModel.itemFromIndex(self.parent.currentStationIndex)
         if obstreestation.meter_type == 'Burris':
             self.msg = show_message('Not implemented for Burris data', 'Data selection error')
             return
-        tilt_column1 = 3
-        tilt_column2 = 4
+        tilt_column1 = 4
+        tilt_column2 = 5
         tilt_threshold = float(autoselec.val.text())
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         for i in range(self.parent.station_model.rowCount()):
@@ -267,10 +289,11 @@ class TabData(QtWidgets.QWidget):
         function for automatic selection of data based on simple thresholds
         sd: sd values higher than threshold are set to keepdata=0
         """
+        obstreestation = self.parent.obsTreeModel.itemFromIndex(self.parent.currentStationIndex)
         if obstreestation.meter_type == 'Burris':
             self.msg = show_message('Not implemented for Burris data', 'Data selection error')
             return
-        sd_column = 2
+        sd_column = 3
         sd_threshold = float(autoselec.val.text())
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         for i in range(self.parent.station_model.rowCount()):
@@ -290,7 +313,7 @@ class TabData(QtWidgets.QWidget):
         if obstreestation.meter_type == 'Burris':
             self.msg = show_message('Not implemented for Burris data', 'Data selection error')
             return
-        dur_column = 6
+        dur_column = 7
         dur_threshold = float(autoselec.val.text())
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         for i in range(self.parent.station_model.rowCount()):
@@ -308,14 +331,14 @@ class TabData(QtWidgets.QWidget):
         mean value from 3 last points are set to keepdata=0
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(self.parent.currentStationIndex)
-        if obstreestation.meter_type == 'Scintrex':
-            g_column = 1
-        elif obstreestation.meter_type == 'Burris':
+        if obstreestation.meter_type == 'Burris':
             g_column = 4
+        else:
+            g_column = 2
         g_threshold = float(autoselec.val.text())
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         g = obstreestation.grav
-        stabilized_value = np.mean(g[len(g) - 3:len(g)])
+        stabilized_value = obstreestation.gmean
         for i in range(self.parent.station_model.rowCount()):
             indx = self.parent.station_model.index(i, g_column)
             data = float(self.parent.station_model.data(indx, role=QtCore.Qt.DisplayRole))
@@ -324,7 +347,59 @@ class TabData(QtWidgets.QWidget):
                 self.parent.station_model.setData(idx_chk, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
         QtWidgets.QApplication.restoreOverrideCursor()
 
+
     def autoselect_all(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
+        """
+        function for automatic selection of data based on simple thresholds
+        apply all selection critera which have been input by the user to all
+        the data set.
+        """
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        selec_grav, selec_sd, selec_tilts, selec_dur = False, False, False, False
+        g_threshold, sd_threshold, tilt_threshold, dur_threshold = 0, 0, 0, 0
+        if grav_thrshld.text():
+            g_threshold = float(grav_thrshld.text())
+            selec_grav = True
+        if sd_thrshld.text():
+            sd_threshold = float(sd_thrshld.text())
+            selec_sd = True
+        if tilts_thrshld.text():
+            tilt_threshold = float(tilts_thrshld.text())
+            selec_tilts = True
+        if dur_thrshld.text():
+            dur_threshold = float(dur_thrshld.text())
+            selec_dur = True
+
+        obstreestation = self.parent.obsTreeModel.itemFromIndex(self.parent.currentStationIndex)
+        g = obstreestation.grav
+        stabilized_value = obstreestation.gmean
+        for iiii in range(len(obstreestation.keepdata)):
+            indx = self.parent.station_model.index(iiii, 0)
+            if selec_grav and abs(g[iiii] - stabilized_value) > g_threshold:
+                obstreestation.keepdata[iiii] = 0
+                self.parent.station_model.setData(indx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
+                continue
+            if selec_sd and obstreestation.sd[iiii] > sd_threshold:
+                obstreestation.keepdata[iiii] = 0
+                self.parent.station_model.setData(indx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
+                continue
+            if selec_dur and obstreestation.dur[iiii] > dur_threshold:
+                obstreestation.keepdata[iiii] = 0
+                self.parent.station_model.setData(indx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
+                continue
+            if selec_tilts:
+                if obstreestation.meter_type == 'Scintrex' \
+                        or obstreestation.meter_type == 'CG6' \
+                        or obstreestation.meter_type == 'CG6Tsoft':
+                    if abs(obstreestation.tiltx[iiii]) > tilt_threshold and \
+                       abs(obstreestation.tilty[iiii]) > tilt_threshold:
+                        obstreestation.keepdata[iiii] = 0
+                        self.parent.station_model.setData(indx, QtCore.Qt.Unchecked,
+                                                          QtCore.Qt.CheckStateRole)
+        QtWidgets.QApplication.restoreOverrideCursor()
+
+
+    def autoselect_alldata(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
         """
         function for automatic selection of data based on simple thresholds
         apply all selection critera which have been input by the user to all
@@ -353,10 +428,10 @@ class TabData(QtWidgets.QWidget):
                 for iii in range(obstreeloop.rowCount()):
                     obstreestation = obstreeloop.child(iii)
                     g = obstreestation.grav
-                    stabilized_value = np.mean(g[len(g) - 3:len(g)])
+                    stabilized_value = obstreestation.gmean
                     for iiii in range(len(obstreestation.keepdata)):
                         indx = self.parent.station_model.index(iiii, 0)
-                        if selec_grav and abs(g[iiii]) > g_threshold + stabilized_value:
+                        if selec_grav and abs(g[iiii] - stabilized_value) > g_threshold:
                             obstreestation.keepdata[iiii] = 0
                             self.parent.station_model.setData(indx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
                             continue

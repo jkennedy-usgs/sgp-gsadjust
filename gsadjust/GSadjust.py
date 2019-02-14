@@ -158,6 +158,7 @@ class MainProg(QtWidgets.QMainWindow):
     GSadjust main routine
     """
     data_path = r'../test_data'
+    output_path = None
     drift_lookup = {'none': 0, 'netadj': 1, 'roman': 2, 'continuous': 3}
     t_threshold = 0  # Time between surveys for automatic survey detection
     obsTreeModel = ObsTreeModel()
@@ -166,7 +167,6 @@ class MainProg(QtWidgets.QMainWindow):
     vertical_gradient_interval = 64.2
     workspace_loaded = False
     dpi = 60  # resolution for data plots
-    output_root_dir = None
     all_survey_data = None
 
     # PyQt indexes
@@ -474,7 +474,7 @@ class MainProg(QtWidgets.QMainWindow):
             return
 
         if fname:
-            self.output_root_dir = os.path.dirname(fname)
+            self.output_path = os.path.dirname(fname)
             logging.info('Loading data file: %s', fname)
             self.data_path = os.path.dirname(str(fname))
 
@@ -663,17 +663,18 @@ class MainProg(QtWidgets.QMainWindow):
 
     def workspace_open(self, fname):
         """
-        Loads campaigndata object from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
+        Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
         pickled and are removed in workspace_save).
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
         # try:
         QtWidgets.QApplication.processEvents()
-        obstreesurveys, delta_models = self.obsTreeModel.load_workspace(fname)
+        obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(fname)
         if obstreesurveys:
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
+            self.obsTreeModel.station_coords = coords
 
     def populate_obstreemodel(self, obstreesurveys, delta_models):
         PBAR1 = ProgressBar(total=6, textmess='Loading workspace')
@@ -814,14 +815,15 @@ class MainProg(QtWidgets.QMainWindow):
         Stores a single set of coordinates for each station with the campaigndata object. The coordinates of the last
         Station in the Survey > Loop > Station heirarchy will be used.
         """
-        self.station_coords = dict()
+        station_coords = dict()
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
                 for iii in range(loop.rowCount()):
                     station = loop.child(iii)
-                    self.station_coords[station.station_name] = (station.long[0], station.lat[0], station.elev[0])
+                    station_coords[station.station_name] = (station.long[0], station.lat[0], station.elev[0])
+        self.obsTreeModel.station_coords = station_coords
 
     ###########################################################################
     # General routines
@@ -1461,7 +1463,7 @@ class MainProg(QtWidgets.QMainWindow):
             for station in unique_station_names:
                 station_g = []
                 g_header = []
-                coords = self.station_coords[station]
+                coords = self.obsTreeModel.station_coords[station]
                 lat.append(coords[0])
                 lon.append(coords[1])
                 elev.append(coords[2])
@@ -1921,7 +1923,7 @@ class MainProg(QtWidgets.QMainWindow):
                 pos = nx.circular_layout(H)
             elif shape == 'map':
                 new_dict = {}
-                for k, v in self.station_coords.items():
+                for k, v in self.obsTreeModel.station_coords.items():
                     new_dict[k] = (v[0], v[1])
                 pos = new_dict
 
@@ -2110,12 +2112,21 @@ class MainProg(QtWidgets.QMainWindow):
             self.msg = show_message('No network adjustment results', 'Write error')
 
     def show_station_coordinates(self):
-        coordinates_dialog = CoordinatesTable(self.station_coords)
+        """
+        Shows station coordinates dialog.
+        :return:
+        """
+        coordinates_dialog = CoordinatesTable(self.obsTreeModel.station_coords)
         test = coordinates_dialog.exec_()
         if test == 1:
-            self.station_coords = coordinates_dialog.coords()
+            self.obsTreeModel.station_coords = coordinates_dialog.coords()
 
     def load_station_coordinates(self):
+        """
+        Load station coordinates from file
+        :return:
+        """
+        # TODO: load station coordinates dialog
         jeff = 1
 
     def close_windows(self):

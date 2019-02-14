@@ -111,8 +111,8 @@ class CoordinatesTable(QtWidgets.QDialog):
             row = self.table.rowCount()
             self.table.insertRow(row)
             table_item_station = QtWidgets.QTableWidgetItem(k)
-            table_item_lat = QtWidgets.QTableWidgetItem(str(v[0]))
-            table_item_long = QtWidgets.QTableWidgetItem(str(v[1]))
+            table_item_lat = QtWidgets.QTableWidgetItem(str(v[1]))
+            table_item_long = QtWidgets.QTableWidgetItem(str(v[0]))
             table_item_elev = QtWidgets.QTableWidgetItem(str(v[2]))
             self.table.setItem(row, 0, table_item_station)
             self.table.setItem(row, 1, table_item_lat)
@@ -171,8 +171,8 @@ class CoordinatesTable(QtWidgets.QDialog):
         """
         c = dict()
         for i in range(self.table.rowCount()):
-            c[self.table.item(i,0).text()] = (float(self.table.item(i, 1).text()),
-                                       float(self.table.item(i, 2).text()),
+            c[self.table.item(i,0).text()] = (float(self.table.item(i, 2).text()),
+                                       float(self.table.item(i, 1).text()),
                                        float(self.table.item(i, 3).text()))
         return c
 

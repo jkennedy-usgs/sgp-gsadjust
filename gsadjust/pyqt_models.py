@@ -425,6 +425,14 @@ class ObsTreeSurvey(ObsTreeItem):
         return temp
 
     @property
+    def tooltip(self):
+        return 'Survey: {}\n' \
+               'Meters: {}\n' \
+               'Number of loops: {}'.format(self.name,
+                                    self.unique_meters,
+                                    self.loop_count)
+
+    @property
     def unique_meters(self):
         """
         :return: List of unique gravity-meter IDs (serial numbers) used in the survey
@@ -1093,6 +1101,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         super(ObsTreeModel, self).__init__()
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
+        self.station_coords = None
 
     signal_refresh_view = QtCore.pyqtSignal()
     signal_name_changed = QtCore.pyqtSignal()
@@ -1148,7 +1157,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-                if type(m) is ObsTreeLoop:
+                if type(m) is ObsTreeLoop or type(m) is ObsTreeSurvey:
                     return m.tooltip
 
     def setData(self, index, value, role):
@@ -1271,7 +1280,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         delta_tables, obstreesurveys = [], []
         with open(fname, "rb") as f:
             data = pickle.load(f)
-        for simplesurvey in data:
+            coords = data[1]
+            surveys = data[0]
+        for simplesurvey in surveys:
             obstreesurvey = ObsTreeSurvey.from_simplesurvey(simplesurvey)
             for loop in simplesurvey.loops:
                 obstreeloop = ObsTreeLoop.from_simpleloop(loop)
@@ -1291,7 +1302,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurveys.append(obstreesurvey)
             delta_tables.append(obstreesurvey.deltas)
 
-        return (obstreesurveys, delta_tables)
+        return (obstreesurveys, delta_tables, coords)
 
     def datums(self):
         datum_list = []
@@ -1306,7 +1317,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled
         try:
-            workspace_data = self.obstree_export_data()
+            workspace_data = [self.obstree_export_data(), self.station_coords]
             if fname[-2:] != '.p':
                 fname += '.p'
             with open(fname, "wb") as f:

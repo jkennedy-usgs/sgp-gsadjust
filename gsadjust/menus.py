@@ -102,7 +102,7 @@ class Menus:
         # Process Menu:
         #######################################################################
         self.mnEdit = self.mainProg.menuBar().addMenu("&Edit")
-        self.mnEditTideCorrection = self.create_action("&Tide correction",
+        self.mnEditTideCorrection = self.create_action("&Tide correction...",
                                                        shortcut="Ctrl+T", slot=self.mainProg.tide_correction_dialog,
                                                        tip="Choose tide correction method", enabled=False)
         # for ocean loading correction
@@ -116,14 +116,14 @@ class Menus:
                                                                     slot=self.mainProg.correction_atmospheric,
                                                                     tip="Apply atmospheric correction by loading a data file",
                                                                     enabled=False)
-        self.mnEditShowCoordinates = self.create_action("Show station coordinates",
+        self.mnEditShowCoordinates = self.create_action("Show station coordinates...",
                                                         slot=self.mainProg.show_station_coordinates,
                                                         enabled=False)
         self.mnEditLoadCoordinates = self.create_action("Load station coordinates",
                                                         slot=self.mainProg.load_station_coordinates,
                                                         enabled=False)
         # for correcting time
-        self.mnEditCorrectRecordedTimeAction = self.create_action("&Correct recorded time",
+        self.mnEditCorrectRecordedTimeAction = self.create_action("&Correct recorded time...",
                                                                   slot=self.mainProg.correction_recorded_time,
                                                                   tip="Correct recorded time", enabled=False)
         self.mnEditVerticalGradientIntervalAction = self.create_action("&Vertical gradient interval...",
@@ -144,7 +144,7 @@ class Menus:
                           self.mnEditCorrectRecordedTimeAction,
                           None,
                           self.mnEditShowCoordinates,
-                          self.mnEditLoadCoordinates,
+                          #self.mnEditLoadCoordinates,
                           None,
                           self.mnEditLoops,
                           self.mnEditAddTareDialog,
@@ -165,7 +165,7 @@ class Menus:
         self.mnAdjtype.addAction(self.mnAdjGravnet)
         self.mnAdjPyLSQ.setChecked(True)
 
-        self.mnAdjOptions = self.create_action("Adjust options...",
+        self.mnAdjOptions = self.create_action("Adjust options",
                                                slot=self.mainProg.properties_adjust,
                                                enabled=True)
         self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",

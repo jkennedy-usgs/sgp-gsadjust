@@ -181,7 +181,7 @@ class MainProg(QtWidgets.QMainWindow):
     status_text = None
     menus, selmodel = None, None
     tab_data, tab_drift, tab_adjust = None, None, None
-    station_model, station_coords = None, None
+    station_model = None
     workspace_savename = None
 
     DOWN = 1
@@ -264,9 +264,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnDeleteSurvey = self.menus.create_action('Delete survey', slot=self.delete_selected)
         self.menus.mnDeleteLoop = self.menus.create_action('Delete loop', slot=self.delete_selected)
         self.menus.mnLoopProperties = self.menus.create_action('Loop properties', slot=self.properties_loop)
+        self.menus.mnStationRename = self.menus.create_action('Rename station', slot=self.rename_station)
         self.menus.mnStationDelete = self.menus.create_action('Delete station(s)', slot=self.delete_station)
         self.menus.mnStationDuplicate = self.menus.create_action('Duplicate station', slot=self.duplicate_station)
-        self.menus.mnDataNewLoop = self.menus.create_action('Move station(s) to new loop', slot=self.new_loop)
+        self.menus.mnDataNewLoop = self.menus.create_action('Move stations to new loop', slot=self.new_loop)
 
         # self.resize(600,800)
         self.showNormal()
@@ -405,7 +406,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.station_model.signal_update_coordinates.connect(self.populate_coordinates)
         self.station_model.signal_adjust_update_required.connect(self.adjust_update_required)
         self.station_model.signal_uncheck_station.connect(self.uncheck_station)
-        self.station_model.signal_check_station.connect(self. check_station)
+        self.station_model.signal_check_station.connect(self.check_station)
         self.tab_data.data_view.setModel(self.station_model)
         self.obsTreeModel.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
@@ -598,6 +599,10 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.menus.mnEditLoadCoordinates.setEnabled(False)
         self.menus.mnEditShowCoordinates.setEnabled(False)
+
+        self.menus.mnFileAppendLoop.setEnabled(False)
+        self.menus.mnFileAppendSurvey.setEnabled(False)
+        self.menus.mnFileAppendWorkspace.setEnabled(False)
         # self.tab_adjust.__init__()
 
     def workspace_save(self):
@@ -674,6 +679,7 @@ class MainProg(QtWidgets.QMainWindow):
         if obstreesurveys:
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
+        if coords:
             self.obsTreeModel.station_coords = coords
 
     def populate_obstreemodel(self, obstreesurveys, delta_models):
@@ -690,11 +696,16 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
             return
         else:
+            i = 0
+            firststation = None
+            # This avoids an error when the first loop (or subsequent loops) are empty
             firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+            while firststation is None:
+                firstloop = firstsurvey.child(i)
+                firststation = firstloop.child(0)
+                i += 1
             PBAR1.progressbar.setValue(3)
             QtWidgets.QApplication.processEvents()
-            firstloop = firstsurvey.child(0)
-            firststation = firstloop.child(0)
             self.currentSurveyIndex = firstsurvey.index()
             self.currentLoopIndex = firstloop.index()
             self.currentStationIndex = firststation.index()
@@ -812,7 +823,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def populate_coordinates(self):
         """
-        Stores a single set of coordinates for each station with the campaigndata object. The coordinates of the last
+        Stores a single set of coordinates for each station with the obsTreeModel object. The coordinates of the last
         Station in the Survey > Loop > Station heirarchy will be used.
         """
         station_coords = dict()
@@ -1159,6 +1170,20 @@ class MainProg(QtWidgets.QMainWindow):
         if self.obsTreeModel.invisibleRootItem().rowCount() == 0:
             self.workspace_clear()
 
+    def rename_station(self):
+        """
+        Rename station; same as F2.
+        """
+        indexes = self.data_treeview.selectedIndexes()
+        if len(indexes) > 3 or len(indexes) == 0:
+            return
+        # Because each tree item has three columns, len(indexes) equals the number of items selected * 3. The next
+        # line takes every 3rd index.
+        index = indexes[0]
+        trigger = self.data_treeview.EditKeyPressed
+        event = None
+        self.data_treeview.edit(index, trigger, event)
+
     def delete_station(self):
         """
         Remove station from tree view
@@ -1373,6 +1398,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.data_treeview_popup_menu.addSeparator()
         self.data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
         self.data_treeview_popup_menu.addSeparator()
+        self.data_treeview_popup_menu.addAction(self.menus.mnStationRename)
         self.data_treeview_popup_menu.addAction(self.menus.mnStationDelete)
         self.data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
         self.data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
@@ -1386,6 +1412,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.mnDeleteLoop.setEnabled(False)
                 self.menus.mnStationDelete.setEnabled(True)
                 self.menus.mnStationDuplicate.setEnabled(True)
+                self.menus.mnStatonRename.setEnabled(True)
                 self.menus.mnDataNewLoop.setEnabled(True)
             elif type(item) is ObsTreeLoop or type(item) is ObsTreeSurvey:
                 self.menus.mnDeleteSurvey.setEnabled(True)
@@ -1393,6 +1420,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.mnStationDelete.setEnabled(False)
                 self.menus.mnStationDuplicate.setEnabled(False)
                 self.menus.mnDataNewLoop.setEnabled(False)
+                self.menus.mnStationRename.setEnabled(False)
 
             self.data_treeview_popup_menu.exec_(self.data_treeview.mapToGlobal(point))
 
@@ -1889,12 +1917,13 @@ class MainProg(QtWidgets.QMainWindow):
         Networkx plot of network. If shape == 'map', accurate coordinates must be present in the input file.
         :param shape: 'circular' or 'map'
         """
-        g1 = nx.MultiGraph()
-        g2 = nx.MultiGraph()
+        edges = nx.MultiGraph()
+        disabled_edges = nx.MultiGraph()
         stations = []
+        datum_nodelist, nondatum_nodelist = [], []
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
+
         delta_model = survey.delta_model
-        edge_colors = []
         if delta_model.rowCount() == 0:
             self.msg = show_message('Delta table is empty. Unable to plot network graph', 'Plot error')
         else:
@@ -1903,21 +1932,21 @@ class MainProg(QtWidgets.QMainWindow):
                 delta = delta_model.data(ind, role=QtCore.Qt.UserRole)
                 chk = delta_model.data(ind, QtCore.Qt.CheckStateRole)
                 if chk == 2:
-                    edge_colors.append('k')
-                    g1.add_edge(delta.sta1, delta.sta2, key=ind)
+                    edges.add_edge(delta.sta1, delta.sta2, key=ind)
                 else:
-                    edge_colors.append('r')
-                    g2.add_edge(delta.sta1, delta.sta2, key=ind)
-                if delta.sta1 not in stations:
-                    stations.append(delta.sta1)
-                    g1.add_node(delta.sta1)
-                    g2.add_node(delta.sta1)
-                if delta.sta2 not in stations:
-                    stations.append(delta.sta2)
-                    g1.add_node(delta.sta2)
-                    g2.add_node(delta.sta2)
+                    disabled_edges.add_edge(delta.sta1, delta.sta2, key=ind)
+                datum_names = survey.datum_model.datum_names()
+                for station_name in [delta.sta1, delta.sta2]:
+                    if station_name in datum_names:
+                        if station_name not in datum_nodelist:
+                            datum_nodelist.append(station_name)
+                            continue
+                    elif station_name not in nondatum_nodelist:
+                        nondatum_nodelist.append(station_name)
+                        edges.add_node(station_name)
+                        disabled_edges.add_node(station_name)
 
-            H = nx.Graph(g1)
+            H = nx.Graph(edges)
 
             if shape == 'circular':
                 pos = nx.circular_layout(H)
@@ -1926,6 +1955,11 @@ class MainProg(QtWidgets.QMainWindow):
                 for k, v in self.obsTreeModel.station_coords.items():
                     new_dict[k] = (v[0], v[1])
                 pos = new_dict
+                pos_label = {}
+                y_off = 0.001  # offset on the y axis
+
+                for k, v in pos.items():
+                    pos_label[k] = (v[0], v[1] + y_off)
 
             if not nx.is_connected(H):
                 gs = [H.subgraph(c) for c in nx.connected_components(H)]
@@ -1934,18 +1968,21 @@ class MainProg(QtWidgets.QMainWindow):
                     # pos = nx.circular_layout(g)
                     nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
                     nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
-                    nx.draw_networkx_labels(g, pos)
+                    nx.draw_networkx_labels(g, pos, font_color='orange')
                     plt.title('Networks are disconnected!')
             else:
                 # edge width is proportional to number of delta-g's
                 edgewidth = []
                 for (u, v, d) in H.edges(data=True):
-                    edgewidth.append(len(g1.get_edge_data(u, v)) * 2)
+                    edgewidth.append(len(edges.get_edge_data(u, v)) * 2 - 1)
 
                 nx.draw_networkx_edges(H, pos, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
-                nx.draw_networkx_edges(g2, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
-                nx.draw_networkx_nodes(H, pos, node_color='w', alpha=0.4, with_labels=True)
-                nx.draw_networkx_labels(H, pos)
+                nx.draw_networkx_edges(disabled_edges, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
+                nx.draw_networkx_nodes(H, pos, node_size=120, nodelist=datum_nodelist, node_color="k", node_shape='^',
+                                       with_labels=True, alpha=0.8)
+                nx.draw_networkx_nodes(H, pos, node_size=120, nodelist=nondatum_nodelist, node_color="k", node_shape='o',
+                                       with_labels=True, alpha=0.3)
+                nx.draw_networkx_labels(H, pos, font_color='r')
 
             plt.autoscale(enable=True, axis='both', tight=True)
             plt.axis('off')

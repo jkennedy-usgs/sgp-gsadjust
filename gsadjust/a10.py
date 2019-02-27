@@ -215,7 +215,8 @@ class A10(object):
         self.clock = data_array[15]
         self.blue = data_array[16]
         self.red = data_array[17]
-        self.date = data_array[18]
+        date_elems = data_array[18].split('/')
+        self.date = str(int(date_elems[2]) + 2000) + '-' + date_elems[0] + '-' + date_elems[1]
         self.time = data_array[19]
         self.timeoffset = data_array[20]
         self.gravity = data_array[21]

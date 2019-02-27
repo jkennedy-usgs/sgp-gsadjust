@@ -1044,7 +1044,7 @@ class ObsTreeSurvey(ObsTreeItem):
 
     def return_obstreestation(self, station_id):
         """
-        returns ObsTreeStation object corresponding to delta_id
+        returns ObsTreeStation object corresponding to delta_id. Used when recreatiug deltas from a saved workspace.
         :param delta_id: tuple, (station_name, station_count)
         :return: ObsTreeStation
         """
@@ -1178,13 +1178,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
         if role == QtCore.Qt.EditRole:
             if index.isValid() and 0 == index.column():
-                import gui_objects
+                from gui_objects import rename_dialog
                 m = index.model().itemFromIndex(index)
                 if type(m) is ObsTreeStation:
                     old_name = m.station_name
                     new_name = str(value)
                     if new_name is not m.station_name:
-                        rename_type = gui_objects.rename_dialog(old_name, new_name)
+                        rename_type = rename_dialog(old_name, new_name)
                         if rename_type == 'Loop':
                             loop = m.parent()
                             for i in range(loop.rowCount()):
@@ -1278,10 +1278,14 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         """
         logging.info("Workspace loaded: " + fname)
         delta_tables, obstreesurveys = [], []
+        coords, surveys = None, None
         with open(fname, "rb") as f:
             data = pickle.load(f)
-            coords = data[1]
-            surveys = data[0]
+            if all(isinstance(x, data_objects.SimpleSurvey) for x in data):
+                surveys = data
+            elif len(data) > 1:
+                coords = data[1]
+                surveys = data[0]
         for simplesurvey in surveys:
             obstreesurvey = ObsTreeSurvey.from_simplesurvey(simplesurvey)
             for loop in simplesurvey.loops:
@@ -1488,7 +1492,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                 if column == DATUM_STATION:
                     return datum.station
                 if column == DATUM_DATE:
-                    return datum.date
+                    return QtCore.QDate.fromString(datum.date, 'yyyy-MM-dd')
                 if column == DATUM_TIME:
                     return datum.time
                 if column == MEAS_HEIGHT:
@@ -1574,6 +1578,11 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         self.endResetModel()
         return QVariant()
 
+    def datum_names(self):
+        dn = []
+        for datum in self.datums:
+            dn.append(datum.station)
+        return dn
 
 
 class TareTableModel(QtCore.QAbstractTableModel):
@@ -2205,7 +2214,7 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.Checked
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role, silent=False):
         """
         If a row is unchecked, update the keepdata value to 0 setData launched when role is acting value is
         QtCore.Qt.Checked or QtCore.Qt.Unchecked
@@ -2220,8 +2229,9 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                 self.ChannelList_obj.keepdata[index.row()] = 0
                 if not any(self.ChannelList_obj.keepdata):
                     self.signal_uncheck_station.emit()
-            self.signal_adjust_update_required.emit()
-            self.dataChanged.emit(index, index)
+            if not silent:
+                self.signal_adjust_update_required.emit()
+                self.dataChanged.emit(index, index)
             return True
 
         elif role == QtCore.Qt.EditRole:

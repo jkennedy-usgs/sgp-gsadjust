@@ -76,6 +76,7 @@ class Overwrite(QtWidgets.QMessageBox):
         else:
             self.reject()
 
+
 class CoordinatesTable(QtWidgets.QDialog):
     """
     Shows table of coordinates, which can be edited or copy/pasted. Coordinates provided by self.coords(), called
@@ -559,7 +560,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         self.table = table
         self.header = header
         self.dates = dates
-        self.coords = MainProg.station_coords
+        self.coords = MainProg.obsTreeModel.station_coords
         gravity_change_window = QtWidgets.QWidget()
         gravity_change_window.model = GravityChangeModel(table, header)
         gravity_change_window.table = QtWidgets.QTableView()
@@ -1004,7 +1005,7 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree_model.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
         self.table = QtWidgets.QTableView()
 
-        self.ProxyModel = CustomSortingModel(self)
+        self.ProxyModel = QtCore.QSortFilterProxyModel()
         self.table.setModel(self.ProxyModel)
         self.table.setSortingEnabled(True)
         self.init_ui()

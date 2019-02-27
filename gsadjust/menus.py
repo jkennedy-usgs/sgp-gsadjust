@@ -201,7 +201,7 @@ class Menus:
         self.mnAdjImportAbsFull = self.create_action("Import abs. g (complete)...",
                                                      slot=self.mainProg.import_abs_g_complete,
                                                      enabled=True)
-        self.mnAdjImportAbsDatabase = self.create_action("Import abs. g from database...",
+        self.mnAdjImportAbsDatabase = self.create_action("Import abs. g from project files...",
                                                          slot=self.mainProg.import_abs_g_direct,
                                                          enabled=True)
         self.mnAdjClearDatumTable = self.create_action("Clear datum table",

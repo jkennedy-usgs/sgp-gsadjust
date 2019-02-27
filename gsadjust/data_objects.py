@@ -134,34 +134,43 @@ class Delta:
             with the delta.
     """
     def __init__(self, sta1, sta2, driftcorr=0., ls_drift=None, delta_type='normal', checked=2,
-                 adj_sd=999, cal_coeff=1):
+                 adj_sd=999, cal_coeff=1, loop=None):
         self.station1 = sta1
         self.station2 = sta2
         self.checked = checked
         self.adj_sd = adj_sd
         self.type = delta_type
-        if self.type=='normal':
+        if self.type == 'normal':
             self.meter = sta2.meter[0]
         # Roman correction: list of deltas
-        elif self.type=='list':
+        elif self.type == 'list':
             self.meter = sta2[0].meter
         # Roman correction: single dg
-        elif self.type=='three_point':
+        elif self.type == 'three_point':
             self.meter = sta2[1].meter[0]
         self.residual = -999.
         self.driftcorr = driftcorr
         self.ls_drift = ls_drift  # degree of drift, if included in network adjustment
         self.cal_coeff = cal_coeff
+        self.loop = loop
 
     @classmethod
     def from_list(cls, list_of_deltas):
+        """
+        Used when repopulating deltas from a workspace
+        :param list_of_deltas:
+        :return: Delta
+        """
         return cls(None, list_of_deltas, delta_type='list')
 
-    # Used to match up adjustment results with observations, and to store simple Deltas
     @property
     def key(self):
+        """
+        Used to match up adjustment results with observations, and to store simple Deltas
+        :return: str
+        """
         if self.type == 'list':
-            return self.type + self.sta1 + self.sta2 + str(self.dg)# self.sta1 + self.sta2 + str(self.dg) + str(self.sd)
+            return self.type + self.sta1 + self.sta2 + str(self.dg)
         elif self.type == 'normal':
             return self.type + \
                    self.station1.station_name + \
@@ -172,8 +181,12 @@ class Delta:
     @property
     def sd_for_adjustment(self):
         """
+        Standard deviation used in the network adjustment.
+
         If the standard deviation hasn't changed (e.g., it's the default value 999), return the standard deviation
         initially associated with the delta.
+
+        Default valute (i.e., if not set in adjustment options) is self.sd.
         :return: float
         """
         if self.adj_sd == 999:
@@ -183,6 +196,10 @@ class Delta:
 
     @property
     def sd(self):
+        """
+        Standard deviation determined from drift correction. Default value for network adjustment.
+        :return: float
+        """
         if self.type == 'list':
             if len(self.station2) > 1:
                 s = [np.abs(delta.dg) for delta in self.station2]
@@ -209,7 +226,6 @@ class Delta:
 
     @property
     def sta2(self):
-        # Roman correction
         if self.type == 'list':
             if self.station2[0].dg > 0:
                 return self.station2[0].station2[1].station_name

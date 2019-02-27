@@ -30,7 +30,7 @@ def list_of_deltas():
     fname = './tests/test_workspace1.p'
     # app = GSadjust.MainProg()
     # app.workspace_open(fname)
-    ots, dms =  GSadjust.MainProg.obsTreeModel.load_workspace(fname)
+    ots, dms, _ =  GSadjust.MainProg.obsTreeModel.load_workspace(fname)
     survey = ots[0]
     # survey = app.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0,0)

@@ -165,7 +165,7 @@ class Menus:
         self.mnAdjtype.addAction(self.mnAdjGravnet)
         self.mnAdjPyLSQ.setChecked(True)
 
-        self.mnAdjOptions = self.create_action("Adjust options",
+        self.mnAdjOptions = self.create_action("Adjustment options...",
                                                slot=self.mainProg.properties_adjust,
                                                enabled=True)
         self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",

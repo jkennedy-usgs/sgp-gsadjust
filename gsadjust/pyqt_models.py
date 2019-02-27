@@ -30,7 +30,7 @@ import os
 
 # Constants for column headers
 DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, DATUM_TIME, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(9)
-DELTA_STATION1, DELTA_STATION2, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(8)
+DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(9)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
 
 
@@ -246,11 +246,11 @@ class ObsTreeLoop(ObsTreeItem):
     def tooltip(self):
         return 'Loop: {}\n' \
                'Drift method: {}\n' \
-               'Meter type: {}\n' \
+               'Meter: {}\n' \
                'Operator: {}\n' \
                'Comment: {}'.format(self.name,
                                     self.drift_method,
-                                    self.meter_type,
+                                    self.meter,
                                     self.oper,
                                     self.comment)
 
@@ -452,7 +452,7 @@ class ObsTreeSurvey(ObsTreeItem):
         loops = []
         for i in range(self.rowCount()):
             loop = self.child(i)
-            loops.append(int(loop.name))
+            loops.append(loop.name)
         return loops
 
     def populate(self, survey_data, name='0'):
@@ -1811,7 +1811,6 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
     def __init__(self):
         super(DeltaTableModel, self).__init__(parent=None)
         self._deltas = []
-        self._disabled_list = []
 
     signal_adjust_update_required = QtCore.pyqtSignal()
 
@@ -1827,6 +1826,8 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 return QVariant("From")
             elif section == DELTA_STATION2:
                 return QVariant("To")
+            elif section== LOOP:
+                return QVariant("Loop")
             elif section == DELTA_TIME:
                 return QVariant("Time")
             elif section == DELTA_G:
@@ -1856,11 +1857,11 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def columnCount(self, parent=None):
         if parent is None:
-            return 8
+            return 9
         elif parent.isValid():
             return 0
         else:
-            return 8
+            return 9
 
     def data(self, index, role):
         if index.isValid():
@@ -1894,6 +1895,14 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     return delta.sta1
                 elif column == DELTA_STATION2:
                     return delta.sta2
+                elif column == LOOP:
+                    if delta.loop is None:
+                        if type(delta.station2) == list:
+                            return delta.station2[0].loop
+                        else:
+                            return "NA"
+                    else:
+                        return delta.loop
                 elif column == DELTA_TIME:
                     return dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
                 elif column == DELTA_G:
@@ -1923,11 +1932,8 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             delta = self._deltas[index.row()]
             if value == QtCore.Qt.Checked:
                 delta.checked = 2
-                if index.row() in self._disabled_list:
-                    self._disabled_list.remove(index.row())
             elif value == QtCore.Qt.Unchecked:
                 delta.checked = 0
-                self._disabled_list.append(index.row())
             self.signal_adjust_update_required.emit()
             return True
         if role == QtCore.Qt.EditRole:

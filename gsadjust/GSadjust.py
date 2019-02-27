@@ -1412,7 +1412,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.mnDeleteLoop.setEnabled(False)
                 self.menus.mnStationDelete.setEnabled(True)
                 self.menus.mnStationDuplicate.setEnabled(True)
-                self.menus.mnStatonRename.setEnabled(True)
+                self.menus.mnStationRename.setEnabled(True)
                 self.menus.mnDataNewLoop.setEnabled(True)
             elif type(item) is ObsTreeLoop or type(item) is ObsTreeSurvey:
                 self.menus.mnDeleteSurvey.setEnabled(True)
@@ -1720,7 +1720,7 @@ class MainProg(QtWidgets.QMainWindow):
         :param ao: AdjustmentOptions object
         """
         for i in range(survey.delta_model.rowCount()):
-            ind = survey.delta_model.createIndex(i, 6)
+            ind = survey.delta_model.createIndex(i, 7)  # Column 7: minimum standard deviation
             delta = survey.delta_model.data(ind, role=QtCore.Qt.UserRole)
             additive = 0
             factor = 1
@@ -1882,7 +1882,7 @@ class MainProg(QtWidgets.QMainWindow):
         nrows = survey.delta_model.rowCount()
         rlist = []
         for i in range(nrows):
-            idx = survey.delta_model.index(i, 7)
+            idx = survey.delta_model.index(i, 8)
             results = survey.delta_model.data(idx, role=QtCore.Qt.DisplayRole)
             d = float(results.value())
             if d > -998:

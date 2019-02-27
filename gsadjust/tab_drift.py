@@ -314,7 +314,7 @@ class TabDrift(QtWidgets.QWidget):
         self.update_delta_model(obstreeloop.drift_method, model)
 
     @staticmethod
-    def calc_none_dg(data):
+    def calc_none_dg(data, loop_name):
         """
         Calculates delta-g's from successive gravity observations
         :param data: list of stations from which to calculate delta-g
@@ -329,7 +329,8 @@ class TabDrift(QtWidgets.QWidget):
                 continue
             delta = Delta(prev_station,
                           station,
-                          driftcorr=0.0)
+                          driftcorr=0.0,
+                          loop=loop_name)
             delta_model.insertRows(delta, 0)
             prev_station = station
         return delta_model
@@ -351,13 +352,14 @@ class TabDrift(QtWidgets.QWidget):
             delta = Delta(prev_station,
                           station,
                           driftcorr=0.0,
-                          ls_drift=(loop_name, self.drift_polydegree_combobox.currentIndex() - 1))
+                          ls_drift=(loop_name, self.drift_polydegree_combobox.currentIndex() - 1),
+                          loop=loop_name)
             delta_model.insertRows(delta, 0)
             prev_station = station
         return delta_model
 
     @staticmethod
-    def calc_cont_dg(xp, yp, data):
+    def calc_cont_dg(xp, yp, data, loop_name):
         """
         Calculates delta-g's while removing drift using the input drift model
         :param xp: times of continuous drift model
@@ -393,14 +395,15 @@ class TabDrift(QtWidgets.QWidget):
             drift2 = yp[drift2_idx]
             delta = Delta(prev_station,
                           station,
-                          driftcorr=drift2 - drift1)
+                          driftcorr=drift2 - drift1,
+                          loop=loop_name)
             delta_list.append(delta)
             delta_model.insertRows(delta, 0)
             prev_station = station
         return delta_model
 
     @staticmethod
-    def calc_roman_dg(data):
+    def calc_roman_dg(data, loop_name, time_threshold=None):
         """
         Caculates delta-g between three station occupations (one station visited once, one station visited twice) by
         interpolating drift at the latter station.
@@ -437,20 +440,25 @@ class TabDrift(QtWidgets.QWidget):
                             first = False
                             continue
                         else:
+                            # Check for three-point configuration
                             if first_obs.tmean < station.tmean < second_obs.tmean:
-                                delta = Delta(station,
-                                              (first_obs, second_obs),
-                                              delta_type='three_point')
-                                sta2_dg = second_obs.gmean - first_obs.gmean
-                                time_prorate = (station.tmean - first_obs.tmean) / (
-                                        second_obs.tmean - first_obs.tmean)
-                                vert_lines.append([(station.tmean, station.tmean),
-                                                   ((y0[first_obs.station_name] -
-                                                     first_obs.gmean -
-                                                     (sta2_dg * time_prorate)) * -1,
-                                                    station.gmean - y0[station.station_name])])
-                                roman_dg_model.insertRows(delta, 0)
-                            first_obs = second_obs
+                                # Check that time_threshold is met, or not set
+                                if time_threshold is None or \
+                                            (second_obs.tmean - first_obs.tmean) * 1440 < time_threshold:
+                                    delta = Delta(station,
+                                                  (first_obs, second_obs),
+                                                  delta_type='three_point',
+                                                  loop=loop_name)
+                                    sta2_dg = second_obs.gmean - first_obs.gmean
+                                    time_prorate = (station.tmean - first_obs.tmean) / (
+                                            second_obs.tmean - first_obs.tmean)
+                                    vert_lines.append([(station.tmean, station.tmean),
+                                                       ((y0[first_obs.station_name] -
+                                                         first_obs.gmean -
+                                                         (sta2_dg * time_prorate)) * -1,
+                                                        station.gmean - y0[station.station_name])])
+                                    roman_dg_model.insertRows(delta, 0)
+                                first_obs = second_obs
 
         # If there is more than one delta-g between a given station pair, average them
         # Setup dict to store averages '(sta1, sta2)':[g]
@@ -525,13 +533,16 @@ class TabDrift(QtWidgets.QWidget):
         no_data = True
         if any([True for x in plot_data if len(x[0]) > 1]):
             no_data = False
-    
+
+        data = obstreeloop.checked_stations()
+
         # Only include drift observations that meet time criteria
+        time_threshold = None
         if self.drift_screen_elapsed_time.isChecked():
             hour = self.drift_time_spinner.dateTime().time().hour()
             minute = self.drift_time_spinner.dateTime().time().minute()
-            plot_data = self.screen_for_elapsed_time(plot_data, elapsed_time=hour * 60 + minute)
-    
+            time_threshold = hour * 60 + minute
+            plot_data = self.screen_for_elapsed_time(plot_data, elapsed_time=time_threshold)
         if drift_type == 'none' or drift_type == 'netadj':
             # none, netadj, and roman all use axes_drift_single
             delta_model = None
@@ -563,9 +574,9 @@ class TabDrift(QtWidgets.QWidget):
             if update:
                 self.axes_drift_single.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                 self.drift_single_canvas.draw()
-            data = obstreeloop.checked_stations()
+
             if drift_type == 'none':
-                delta_model = self.calc_none_dg(data)
+                delta_model = self.calc_none_dg(data, obstreeloop.name)
             elif drift_type == 'netadj':
                 delta_model = self.calc_netadj_dg(data, obstreeloop.name)
             return delta_model
@@ -697,8 +708,7 @@ class TabDrift(QtWidgets.QWidget):
                     xp = np.append(xp_temp, new_xp2)
                     yp_temp = np.append(yp1, yp)
                     yp = np.append(yp_temp, yp2)
-                data = obstreeloop.checked_stations()
-                delta_model = self.calc_cont_dg(xp, yp, data)
+                delta_model = self.calc_cont_dg(xp, yp, data, obstreeloop.name)
                 if update:
                     self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                     self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
@@ -715,8 +725,7 @@ class TabDrift(QtWidgets.QWidget):
             logging.info('Plotting Roman drift, Loop ' + obstreeloop.name)
             if update:
                 self.axes_drift_single.cla()
-            data = obstreeloop.checked_stations()
-            models = self.calc_roman_dg(data)
+            models = self.calc_roman_dg(data, obstreeloop.name, time_threshold)
 
             for line in plot_data:
                 if len(line[0]) > 1:
@@ -772,7 +781,7 @@ class TabDrift(QtWidgets.QWidget):
 
         # These control the visibility of different tables
         # update is an int (index of menu item) when this function is called from the
-        #  menu-item callback
+        #   menu-item callback
         if type(update) is int or update is True:
             if method == 'none':
                 self.drift_none()
@@ -810,16 +819,18 @@ class TabDrift(QtWidgets.QWidget):
             self.delta_view.setModel(models[1])
             # Hide drift correction, std_for_adj, and residual columns
             self.show_all_columns(self.delta_view)
-            self.delta_view.hideColumn(4)
-            self.delta_view.hideColumn(6)
+            self.delta_view.hideColumn(2)
+            self.delta_view.hideColumn(5)
             self.delta_view.hideColumn(7)
+            self.delta_view.hideColumn(8)
         else:
             obstreeloop.delta_model = model
             self.delta_view.setModel(model)
             # Hide std_for_adj and residual columns
             self.show_all_columns(self.delta_view)
-            self.delta_view.hideColumn(6)
+            self.delta_view.hideColumn(2)
             self.delta_view.hideColumn(7)
+            self.delta_view.hideColumn(8)
 
     def tare_context_menu(self, point):
         """

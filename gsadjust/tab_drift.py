@@ -283,24 +283,37 @@ class TabDrift(QtWidgets.QWidget):
         for line in plot_data:
             x = [x for x in line[0]]
             y = [y for y in line[1]]
-            first = True
-            start_idx = 0
+            new_x, new_y = [], []
+            # first = True
+            # start_idx = 0
             i = 0
-            for i in range(len(x)):
-                if first:
-                    first = False
-                    pass
-                else:
-                    x_diff = x[i] - x[i - 1]
-                    if x_diff * 1440 > elapsed_time:
-                        # Check that there's at least two points in the new line segment
-                        if i - start_idx > 1:
-                            new_data.append([x[start_idx:i - 1], y[start_idx:i - 1], line[2]])
-                        start_idx = i
-                    elif len(x) == 2:
-                        new_data.append([x, y, line[2]])
-            if i - start_idx > 1:
-                new_data.append([x[start_idx:], y[start_idx:], line[2]])
+            for i in range(1,len(x)):
+                # if first:
+                #     first = False
+                #     pass
+                # else:
+                x_diff = x[i] - x[i - 1]
+                if x_diff * 1440 < elapsed_time:
+                    # Check that there's at least two points in the new line segment
+                    if len(new_x) == 0:
+                        new_x += [x[i-1], x[i]]
+                        new_y += [y[i-1], y[i]]
+                    elif abs(new_x[-1] - x[i-1]) < 0.0001:
+                        new_x.append(x[i])
+                        new_y.append(y[i])
+                    else:
+                        new_data.append([new_x, new_y, line[2]])
+                        new_x = [x[i-1], x[i]]
+                        new_y = [y[i-1], y[i]]
+            #             new_data.append([x[start_idx:], y[start_idx:], line[2]])
+            #             if i - start_idx > 1:
+            #                 new_data.append([x[start_idx:i - 1], y[start_idx:i - 1], line[2]])
+            #             start_idx = i
+            #         elif len(x) == 2:
+            #             new_data.append([x, y, line[2]])
+            # if i - start_idx > 1:
+            if len(new_x) > 0:
+                new_data.append([new_x, new_y, line[2]])
     
         return new_data
 
@@ -407,58 +420,109 @@ class TabDrift(QtWidgets.QWidget):
         """
         Caculates delta-g between three station occupations (one station visited once, one station visited twice) by
         interpolating drift at the latter station.
+
+        Accommodating the time threshold is tricky. for the plotting to be correct the initial g subtracted from
+        each measurement has to vary.
     
-        :param data: list of lines; each line is a list of x (times), g, and station name
+        :param data: list of stations
         :return: tuple with 2 pyqt models (for dg samples and average dg) and plot data for vertical lines
         """
-        # assume stations are in chronological order
+        # assumes stations in data are in chronological order
 
         roman_dg_model = RomanTableModel()
         vert_lines = []
-        stations = list(set([i.station_name for i in data]))
+        station_list = [i.station_name for i in data]
+        unique_stations = list(set(station_list))
 
         # store initial value at each station
-        y0 = dict()
-        for station_name in stations:
-            for station in data:
-                if station.station_name == station_name:
-                    y0[station_name] = station.gmean
-                    break
+        initial_g = dict()
 
-        # iterate over each line
+        # Easiest case: all g values are relative to the initial g at that station
+        if time_threshold is None:
+            for station_name in unique_stations:
+                for station in data:
+                    if station.station_name == station_name:
+                        initial_g[station_name] = station.gmean
+                        break
+        else:
+            # If time_threshold is specified (checked in the GUI) we need to build a list of possible initial g values
+            # for each station. Possible values are those occurring after a gap >= time_threshold (i.e., if there is a
+            # gap, reset the initial g that's subtracted from the measurements. This makes the lines start at y = 0 on
+            # the plots.
+            #
+            # Builds the dictionary:
+            # initial_g{key:station_name value:(time, g)}
+            for station_name in unique_stations:
+                stations = []
+                for station in data:
+                    if station.station_name == station_name:
+                        stations.append(station)
+                iter_stations = iter(stations)
+                first_station = next(iter_stations)
+                initial_xy = [(first_station.tmean, first_station.gmean)]
+                for station in iter_stations:
+                    if (station.tmean - first_station.tmean) * 1440 > time_threshold:
+                        initial_xy.append((station.tmean, station.gmean))
+                    first_station = station
+                initial_g[station_name] = initial_xy
+
+        # For each station in data, loop over all the other stations looking for two observations that bracket the
+        # first station
         for station in data:
-            for other_station in stations:
+            for other_station in unique_stations:
+                # Ignore it if its the same station
                 if other_station == station.station_name:
                     continue
                 else:
-                    # get all occurrences of new_station
+                    # get all occurrences of the other station
                     other_stations = [i for i in data if i.station_name == other_station]
-                    first = True
-                    for second_obs in other_stations:
-                        if first:
-                            first_obs = second_obs
-                            first = False
-                            continue
-                        else:
-                            # Check for three-point configuration
-                            if first_obs.tmean < station.tmean < second_obs.tmean:
+                    if len(other_stations) > 1:
+                        iter_stations = iter(other_stations)
+                        other1 = next(iter_stations)
+                        for other2 in iter_stations:
+                            # Check for 3-point configuration (2 observations at other station bracket the initial obs)
+                            if other1.tmean < station.tmean < other2.tmean:
                                 # Check that time_threshold is met, or not set
                                 if time_threshold is None or \
-                                            (second_obs.tmean - first_obs.tmean) * 1440 < time_threshold:
+                                            (other2.tmean - other1.tmean) * 1440 < time_threshold:
                                     delta = Delta(station,
-                                                  (first_obs, second_obs),
+                                                  (other1, other2),
                                                   delta_type='three_point',
                                                   loop=loop_name)
-                                    sta2_dg = second_obs.gmean - first_obs.gmean
-                                    time_prorate = (station.tmean - first_obs.tmean) / (
-                                            second_obs.tmean - first_obs.tmean)
+                                    sta2_dg = other2.gmean - other1.gmean
+                                    # this is the drift correction
+                                    time_prorate = (station.tmean - other1.tmean) / (
+                                            other2.tmean - other1.tmean)
+                                    # Look for previous occupation at same station. If there is a break > time_threshold
+                                    # between the previous and current occupation, we need to account for the shift in
+                                    # initial g. Each station has a unique initial g (that might change,
+                                    # depending on the time_threshold).
+                                    if time_threshold is not None:
+                                        initial_gees = initial_g[other1.station_name]
+                                        other_initial_g = initial_gees[0][1]
+                                        if len(initial_gees) > 1:
+                                            for initial_xy in initial_gees[1:]:
+                                                if other1.tmean >= initial_xy[0]:
+                                                    other_initial_g = initial_xy[1]
+                                        initial_gees = initial_g[station.station_name]
+                                        station_initial_g = initial_gees[0][1]
+                                        if len(initial_gees) > 1:
+                                            for initial_xy in initial_gees[1:]:
+                                                if station.tmean >= initial_xy[0]:
+                                                    station_initial_g = initial_xy[1]
+                                    # Easy case: everything relative to the initial observation.
+                                    else:
+                                        other_initial_g = initial_g[other1.station_name]
+                                        station_initial_g = initial_g[station.station_name]
+
                                     vert_lines.append([(station.tmean, station.tmean),
-                                                       ((y0[first_obs.station_name] -
-                                                         first_obs.gmean -
+                                                       ((other_initial_g -
+                                                         other1.gmean -
                                                          (sta2_dg * time_prorate)) * -1,
-                                                        station.gmean - y0[station.station_name])])
+                                                        station.gmean - station_initial_g)])
+
                                     roman_dg_model.insertRows(delta, 0)
-                                first_obs = second_obs
+                            other1 = other2
 
         # If there is more than one delta-g between a given station pair, average them
         # Setup dict to store averages '(sta1, sta2)':[g]

@@ -270,8 +270,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnDataNewLoop = self.menus.create_action('Move stations to new loop', slot=self.new_loop)
 
         # self.resize(600,800)
-        self.showNormal()
-        self.setWindowState(QtCore.Qt.WindowMaximized)
+
+
 
         self.install_dir = os.path.dirname(os.getcwd())
         self.check_for_updates(show_uptodate_msg=False)
@@ -2308,7 +2308,9 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon('g.png'))
     ex = MainProg()
+    ex.showMaximized()
     app.exec_()
+
 
 
 # Import here to avoid circular import error

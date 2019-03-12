@@ -623,7 +623,7 @@ class GravityChangeTable(QtWidgets.QDialog):
     def plot_change_window(self):
         plt.figure(figsize=(12, 8))
         cmap = plt.cm.get_cmap('gist_ncar')
-        ncols = len(self.dates) + 1
+        ncols = len(self.dates)
         nstations = len(self.table[0])
         stations = self.table[0]
         # iterate through each station
@@ -633,9 +633,12 @@ class GravityChangeTable(QtWidgets.QDialog):
                 if not col[i] == '-999':
                     if not ydata:
                         ydata.append(0)
+                        ydata.append(float(col[i]))
+                        xdata.append(self.dates[idx])
+                        xdata.append(self.dates[idx+1])
                     else:
                         ydata.append(float(col[i]) + ydata[-1])
-                    xdata.append(self.dates[idx])
+                        xdata.append(self.dates[idx+1])
 
             plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
             plt.hold
@@ -737,7 +740,7 @@ class MapWindow(QtWidgets.QDialog):
         plotted_data = self.ax.scatter(x, y, c=d, s=200, vmin=-20, vmax=20)
         self.ax.autoscale(enable=True, axis='both', tight=True)
         self.plot_title.setText(self.header[self.slider.value()])
-        self.figure.colorbar(plotted_data)
+        # self.figure.colorbar(plotted_data)
         # ax.plot(data, '*-')
 
         # refresh canvas

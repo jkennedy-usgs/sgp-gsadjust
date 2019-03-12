@@ -191,7 +191,7 @@ class MainProg(QtWidgets.QMainWindow):
         super(MainProg, self).__init__()
 
         self.menus = Menus(self)
-        self.setGeometry(50, 50, 350, 300)
+        # self.setGeometry(50, 50, 350, 300)
         self.setWindowTitle('GSadjust')
 
         # tab_....s are populated with GUI elements in the tab_...() functions
@@ -560,7 +560,8 @@ class MainProg(QtWidgets.QMainWindow):
         Append previously-saved workspace to current workspace.
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.data_path)
-        obstreesurveys, delta_models = self.obsTreeModel.load_workspace(fname)
+        obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(fname)
+        # TODO: Do something with coords (append to table if not already there)
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow([survey,
                                          QtGui.QStandardItem('0'),
@@ -2309,6 +2310,7 @@ def main():
     app.setWindowIcon(QtGui.QIcon('g.png'))
     ex = MainProg()
     ex.showMaximized()
+    app.processEvents()
     app.exec_()
 
 

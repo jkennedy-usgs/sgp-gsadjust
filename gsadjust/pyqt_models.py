@@ -1274,7 +1274,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         """
         Load previously-save (pickled) workspace. Need to recreate PyQt models from 'simple' data objects.
         :param fname:
-        :return: ObsTreeSurvey and delta_table.
+        :return: (ObsTreeSurvey, delta_table, coords)
         """
         logging.info("Workspace loaded: " + fname)
         delta_tables, obstreesurveys = [], []

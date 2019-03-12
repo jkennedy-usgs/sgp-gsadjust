@@ -91,15 +91,15 @@ class TabDrift(QtWidgets.QWidget):
         # Widget to remove dg-observations with a long elapsed time in between
         self.drift_screen_elapsed_time = QtWidgets.QCheckBox('Max. time between repeats (hh:mm)')
         self.drift_screen_elapsed_time.setChecked(False)
-        self.drift_screen_elapsed_time.stateChanged.connect(self.plot_drift)
+        self.drift_screen_elapsed_time.stateChanged.connect(self.time_extent_changed)
         self.drift_time_spinner = IncrMinuteTimeEdit(QtCore.QTime(1, 0))
-        self.drift_time_spinner.timeChanged.connect(self.plot_drift)
+        self.drift_time_spinner.timeChanged.connect(self.time_extent_changed)
         self.drift_time_spinner.setDisplayFormat("hh:mm")
     
         # Widget to add horizontal-extent lines to drift-rate plot
         self.drift_plot_hz_extent = QtWidgets.QCheckBox('Show time-extent of drift observation')
         self.drift_plot_hz_extent.setChecked(False)
-        self.drift_plot_hz_extent.stateChanged.connect(lambda: self.plot_drift())
+        self.drift_plot_hz_extent.stateChanged.connect(self.plot_drift)
     
         self.tension_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.tension_slider.setRange(10, 2500)
@@ -217,6 +217,10 @@ class TabDrift(QtWidgets.QWidget):
     
         layout_main.addWidget(main_vsplitter_window)
         self.setLayout(layout_main)
+
+    def time_extent_changed(self):
+        self.parent.deltas_update_required()
+        self.plot_drift()
 
     def drift_newpoint_picked(self, event):
         if event.button == 3:

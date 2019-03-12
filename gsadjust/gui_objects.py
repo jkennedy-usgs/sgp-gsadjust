@@ -587,8 +587,8 @@ class GravityChangeTable(QtWidgets.QDialog):
         hbox.addStretch(0)
         # Only show plot button on simple table
         if self.dates:
-            hbox.addWidget(gravity_change_window.btn00)
             hbox.addWidget(gravity_change_window.btn0)
+            hbox.addWidget(gravity_change_window.btn00)
         hbox.addWidget(gravity_change_window.btn1)
         hbox.addWidget(gravity_change_window.btn2)
         vbox.addLayout(hbox)
@@ -641,7 +641,7 @@ class GravityChangeTable(QtWidgets.QDialog):
                         xdata.append(self.dates[idx+1])
 
             plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
-            plt.hold
+            # plt.hold
         plt.ylabel('Gravity change, in µGal')
         plt.show()
         plt.legend(loc="upper left", bbox_to_anchor=(1,1))

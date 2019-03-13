@@ -2296,8 +2296,9 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 
 def main():
-    # start log file
+    # GSadjust starts in the py35 directory
     os.chdir('../sgp-gsadjust')
+    # start log file
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
     logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.DEBUG)
     sys.excepthook = handle_exception

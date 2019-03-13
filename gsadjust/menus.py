@@ -171,11 +171,11 @@ class Menus:
         self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",
                                               shortcut="Ctrl+2", slot=lambda: self.mainProg.adjust_network('current'),
                                               tip="Adjust current survey", enabled=False,
-                                              icon=QtGui.QIcon('ac.png'))
+                                              icon=QtGui.QIcon('./gsadjust/resources/ac.png'))
         self.mnAdjAdjust = self.create_action("&Adjust all surveys",
                                               shortcut="Ctrl+1", slot=lambda:self.mainProg.adjust_network('all'),
                                               tip="Adjust all surveys", enabled=False,
-                                              icon=QtGui.QIcon('aa.png'))
+                                              icon=QtGui.QIcon('./gsadjust/resources/aa.png'))
         self.mnAdjUpdateDeltas = self.create_action("&Populate delta table - all surveys",
                                                     shortcut="Ctrl+A",
                                                     slot=lambda: self.mainProg.populate_deltamodel('all'),

@@ -157,7 +157,7 @@ class MainProg(QtWidgets.QMainWindow):
     """
     GSadjust main routine
     """
-    data_path = r'../test_data'
+    data_path = r'./test_data/'
     output_path = None
     drift_lookup = {'none': 0, 'netadj': 1, 'roman': 2, 'continuous': 3}
     t_threshold = 0  # Time between surveys for automatic survey detection
@@ -212,23 +212,19 @@ class MainProg(QtWidgets.QMainWindow):
         # self.treeview_box.addItem(QtWidgets.QSpacerItem(200, 42))
         self.data_treeview = QtWidgets.QTreeView()
 
-        self.move_station_up = QtWidgets.QAction(QtGui.QIcon('up.png'), 'Move survey up', self)
+        self.move_station_up = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/up.png'), 'Move survey up', self)
         self.move_station_up.triggered.connect(slot=lambda: self.move_survey(self.UP))
-        self.move_station_down = QtWidgets.QAction(QtGui.QIcon('down.png'), 'Move survey down', self)
+        self.move_station_down = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/down.png'), 'Move survey down', self)
         self.move_station_down.triggered.connect(slot=lambda: self.move_survey(self.DOWN))
         self.toolbar = QtWidgets.QToolBar()
         self.toolbar.addAction(self.move_station_up)
         self.toolbar.addAction(self.move_station_down)
 
-        self.collapse_all = QtWidgets.QAction(QtGui.QIcon('ca.png'), 'Collapse all', self)
+        self.collapse_all = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/ca.png'), 'Collapse all', self)
         self.collapse_all.triggered.connect(slot=self.data_treeview.collapseAll)
-        self.expand_all = QtWidgets.QAction(QtGui.QIcon('ea.png'), 'Expand all', self)
+        self.expand_all = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/ea.png'), 'Expand all', self)
         self.expand_all.triggered.connect(slot=self.data_treeview.expandAll)
 
-        # self.adjust_current = QtWidgets.QAction(QtGui.QIcon('ac.png'), 'Collapse all', self)
-        # self.adjust_current.triggered.connect(slot=self.data_treeview.collapseAll)
-        # self.adjust_all = QtWidgets.QAction(QtGui.QIcon('aa.png'), 'Expand all', self)
-        # self.adjust_all.triggered.connect(slot=self.data_treeview.expandAll)
         self.toolbar.addAction(self.collapse_all)
         self.toolbar.addAction(self.expand_all)
         self.toolbar.addAction(self.menus.mnAdjAdjustCurrent)
@@ -246,9 +242,9 @@ class MainProg(QtWidgets.QMainWindow):
         # Setup statusbar icons
         self.update_deltas_text = QtWidgets.QLabel("Update delta table:", self)
         self.update_adjust_text = QtWidgets.QLabel("    Update adjustment:", self)
-        self.update_not_needed_icon = QtGui.QPixmap('ico3.png')
-        self.update_adjust_icon = QtGui.QPixmap('ico2.png')
-        self.update_deltas_icon = QtGui.QPixmap('ico1.png')
+        self.update_not_needed_icon = QtGui.QPixmap('./gsadjust/resources/ico3.png')
+        self.update_adjust_icon = QtGui.QPixmap('./gsadjust/resources/ico2.png')
+        self.update_deltas_icon = QtGui.QPixmap('./gsadjust/resources/ico1.png')
         self.adjust_update_required_label = QtWidgets.QLabel()
         self.deltas_update_required_label = QtWidgets.QLabel()
 
@@ -270,10 +266,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnDataNewLoop = self.menus.create_action('Move stations to new loop', slot=self.new_loop)
 
         # self.resize(600,800)
-
-
-
-        self.install_dir = os.path.dirname(os.getcwd())
+        self.install_dir = os.getcwd()
+        # QtWidgets.QMessageBox.information(self, "xxx", self.install_dir)
         self.check_for_updates(show_uptodate_msg=False)
 
     def init_gui(self):
@@ -2303,11 +2297,12 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 def main():
     # start log file
+    os.chdir('../sgp-gsadjust')
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
     logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.DEBUG)
     sys.excepthook = handle_exception
     app = QtWidgets.QApplication(sys.argv)
-    app.setWindowIcon(QtGui.QIcon('g.png'))
+    app.setWindowIcon(QtGui.QIcon('./gsadjust/resources/g.png'))
     ex = MainProg()
     ex.showMaximized()
     app.processEvents()

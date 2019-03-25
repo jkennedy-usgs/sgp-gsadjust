@@ -16,7 +16,9 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 
 **Installing GSadjust**
 
-The easiest, most reliable way to install GSadjust is using Conda to create a custom Python environment:
+**NEW! (2019-03-25):** A Windows installer is [now available](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/v0.9-alpha). This installs a standalone Python environment with everything needed for GSadjust, and adds GSadjust to the Start menu. The Python installation should not interfere with other previously installed Python environements. Admin rights are NOT required if installed anywhere other than the C:\Program Files directory.
+
+Mac and Linux installers will be available soon. In the meantime, the most reliable way to install GSadjust on those platforms is using Conda to create a custom Python environment:
 
 1. Download and install the appropriate Miniconda installer for your platform (Windows, Mac, Linux, 32 or (probably) 64-bit):
 [https://conda.io/miniconda.html](https://conda.io/miniconda.html "Miniconda download"). Any Python version (e.g., 2.7 or 3.6) is okay. When installing on Windows, select the "Add Anaconda to my PATH environment variable" option, or, in step 3, launch the command window by choosing "Anaconda (64-bit)" from the Windows Start Menu. Alternatively, the Miniconda executables (i.e., conda.exe) can be manually added to the Windows path.

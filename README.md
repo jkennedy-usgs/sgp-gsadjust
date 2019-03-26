@@ -16,16 +16,16 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 
 **Installing GSadjust**
 
-**NEW! (2019-03-25):** A Windows installer is [now available](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/v0.9-alpha). This installs a standalone Python environment with everything needed for GSadjust, and adds GSadjust to the Start menu. The Python installation should not interfere with other previously installed Python environements. Admin rights are NOT required if installed anywhere other than the C:\Program Files directory.
+**NEW! (2019-03-25):** Windows and Mac installers are [now available](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/v0.9-alpha). This installs a standalone Python environment with everything needed for GSadjust. On Windows, GSadjust is added to the Start menu and optionally to the Desktop. On Mac, after mounting the .dmg, GSadjust can be copied to the Applications folder or elsewhere. The Python installation should not interfere with other previously installed Python environements. Admin rights are NOT required on Windows if installed to the default user directory (i.e., anywhere other than the C:\Program Files directory).
 
-Mac and Linux installers will be available soon. In the meantime, the most reliable way to install GSadjust on those platforms is using Conda to create a custom Python environment:
+On Linux, the most reliable way to install GSadjust is to use Conda to create a custom Python environment (these instructions can also be used on Windows or Mac):
 
 1. Download and install the appropriate Miniconda installer for your platform (Windows, Mac, Linux, 32 or (probably) 64-bit):
 [https://conda.io/miniconda.html](https://conda.io/miniconda.html "Miniconda download"). Any Python version (e.g., 2.7 or 3.6) is okay. When installing on Windows, select the "Add Anaconda to my PATH environment variable" option, or, in step 3, launch the command window by choosing "Anaconda (64-bit)" from the Windows Start Menu. Alternatively, the Miniconda executables (i.e., conda.exe) can be manually added to the Windows path.
 
 2. Download the GSadjust repository as a zip file using the green "Clone or download" button near the top of this page. Unzip the directory in a location of your choice.
 
-3. Open a command window or terminal in the new directory (sgp-gsadjust or sgp-gsadjust-master) and create a new conda environment:
+3. Open a terminal in the new directory (sgp-gsadjust or sgp-gsadjust-master) and create a new conda environment:
 
     ```
     conda env create --file environment.yml

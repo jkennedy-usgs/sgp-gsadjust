@@ -1,3 +1,3 @@
 call activate py35
-cd gsadjust
-python gsadjust.py
+REM cd gsadjust
+python ./gsadjust/gsadjust.py

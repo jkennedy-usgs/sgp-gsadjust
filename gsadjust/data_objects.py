@@ -709,6 +709,7 @@ class SimpleDelta:
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift
+        self.loop = delta.loop
         self.driftcorr = delta.driftcorr
         self.checked = delta.checked
 

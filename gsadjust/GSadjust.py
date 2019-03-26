@@ -187,7 +187,7 @@ class MainProg(QtWidgets.QMainWindow):
     DOWN = 1
     UP = -1
 
-    def __init__(self):
+    def __init__(self, splash=None):
         super(MainProg, self).__init__()
 
         self.menus = Menus(self)
@@ -214,7 +214,8 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.move_station_up = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/up.png'), 'Move survey up', self)
         self.move_station_up.triggered.connect(slot=lambda: self.move_survey(self.UP))
-        self.move_station_down = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/down.png'), 'Move survey down', self)
+        self.move_station_down = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/down.png'), 'Move survey down',
+                                                   self)
         self.move_station_down.triggered.connect(slot=lambda: self.move_survey(self.DOWN))
         self.toolbar = QtWidgets.QToolBar()
         self.toolbar.addAction(self.move_station_up)
@@ -268,7 +269,7 @@ class MainProg(QtWidgets.QMainWindow):
         # self.resize(600,800)
         self.install_dir = os.getcwd()
         # QtWidgets.QMessageBox.information(self, "xxx", self.install_dir)
-        self.check_for_updates(show_uptodate_msg=False)
+        self.check_for_updates(show_uptodate_msg=False, parent=splash)
 
     def init_gui(self):
         """
@@ -605,12 +606,13 @@ class MainProg(QtWidgets.QMainWindow):
         Saves data if a workspace has already been saved
         """
         if self.deltas_update_required_label.set is True:
-            self.msg = show_message('Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
-                         'Adjustment tab is not up to date.', 'Workspace save error')
+            self.msg = show_message(
+                'Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
+                'Adjustment tab is not up to date.', 'Workspace save error')
             return False
         success = self.obsTreeModel.save_workspace(self.workspace_savename)
         if success:
-            self.msg = show_message('Workspace saved','')
+            self.msg = show_message('Workspace saved', '')
             return True
         else:
             self.msg = show_message("Workspace save error", "Error")
@@ -621,8 +623,9 @@ class MainProg(QtWidgets.QMainWindow):
         Saves data object using pickle.dump()
         """
         if self.deltas_update_required_label.set is True:
-            self.msg = show_message('Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
-                         'Adjustment tab is not up to date.', 'Workspace save error')
+            self.msg = show_message(
+                'Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
+                'Adjustment tab is not up to date.', 'Workspace save error')
         else:
             try:
                 fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.data_path)
@@ -761,7 +764,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         for delta in deltas:
             # Sometimes they differ by a little bit (1e-8)
-            if delta.key[0:len(key)-5] == key[0:len(key)-5]:
+            if delta.key[0:len(key) - 5] == key[0:len(key) - 5]:
                 return delta
         return None
 
@@ -769,6 +772,8 @@ class MainProg(QtWidgets.QMainWindow):
         deltas = self.assemble_all_deltas()
         for idx, delta_model in enumerate(delta_models):
             for simpledelta in delta_model:
+                if not hasattr(simpledelta, 'loop'):
+                    simpledelta.loop = None
                 i = 0
                 try:
                     if simpledelta.type == 'normal':
@@ -780,23 +785,24 @@ class MainProg(QtWidgets.QMainWindow):
                                       driftcorr=simpledelta.driftcorr,
                                       ls_drift=simpledelta.ls_drift,
                                       delta_type=simpledelta.type,
-                                      checked=simpledelta.checked)
+                                      checked=simpledelta.checked,
+                                      loop=simpledelta.loop)
                         else:
                             logging.error('')
                     elif simpledelta.type == 'list':
                         if not hasattr(simpledelta, 'key'):
                             list_of_deltas = []
                             for delta in simpledelta.sta2:
-
                                 station1 = surveys[idx].return_obstreestation(delta[0])
                                 station2 = (surveys[idx].return_obstreestation(delta[1]),
                                             surveys[idx].return_obstreestation(delta[2]))
                                 tpd = Delta(station1, station2,
-                                  adj_sd=simpledelta.adj_sd,
-                                  driftcorr=simpledelta.driftcorr,
-                                  ls_drift=simpledelta.ls_drift,
-                                  delta_type='three_point',
-                                  checked=simpledelta.checked)
+                                            adj_sd=simpledelta.adj_sd,
+                                            driftcorr=simpledelta.driftcorr,
+                                            ls_drift=simpledelta.ls_drift,
+                                            delta_type='three_point',
+                                            checked=simpledelta.checked,
+                                            loop=simpledelta.loop)
                                 list_of_deltas.append(tpd)
                             d = Delta.from_list(list_of_deltas)
                         # This section is necessary to load older .p versions. It's much slower than the above section.
@@ -808,7 +814,7 @@ class MainProg(QtWidgets.QMainWindow):
                     # d.adj_sd = simpledelta.sd_for_adjustment
                     # d.checked = simpledelta.checked
                     if d:
-                        i+=1
+                        i += 1
                         surveys[idx].delta_model.insertRows(d, 0)
                     else:  # unable to create delta
                         self.msg = show_message('Error populating delta table. Please update delta table on Adjust tab',
@@ -1076,9 +1082,9 @@ class MainProg(QtWidgets.QMainWindow):
             stationname = self.obsTreeModel.itemFromIndex(self.currentLoopIndex).child(0).name
             defaultfile = self.data_path + '/' + stationname + '.grd'
             file_name, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Vertical gradient file to write',
-                                                         defaultfile)
+                                                                 defaultfile)
             if file_name:
-                delta = deltamodel.data(deltamodel.index(0,0), role=QtCore.Qt.UserRole)
+                delta = deltamodel.data(deltamodel.index(0, 0), role=QtCore.Qt.UserRole)
                 with open(file_name, 'w') as fid:
                     fid.write('{:0.2f}'.format(-1 * delta.dg / self.vertical_gradient_interval))
                     fid.write(' +/- {:0.2f}'.format(delta.sd / self.vertical_gradient_interval))
@@ -1191,7 +1197,7 @@ class MainProg(QtWidgets.QMainWindow):
         for index in reversed(indexes):
             self.obsTreeModel.removeRow(index.row(), index.parent())
         if index.row() > 0:
-            self.currentStationIndex = index.sibling(index.row()-1, 0)
+            self.currentStationIndex = index.sibling(index.row() - 1, 0)
         else:
             self.currentStationIndex = index.sibling(0, 0)
 
@@ -1259,16 +1265,16 @@ class MainProg(QtWidgets.QMainWindow):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
         indexes = []
-        PBAR1 = ProgressBar(total=obstreeloop.rowCount()-1, textmess='surveys')
+        PBAR1 = ProgressBar(total=obstreeloop.rowCount() - 1, textmess='surveys')
         PBAR1.show()
         PBAR1.progressbar.setValue(1)
         QtWidgets.QApplication.processEvents()
         # Step through loop backward
         pbar_idx = list(range(obstreeloop.rowCount()))
         pbar_idx.reverse()
-        for i in range(obstreeloop.rowCount()-1, 1, -1):
+        for i in range(obstreeloop.rowCount() - 1, 1, -1):
             station2 = obstreeloop.child(i)
-            station1 = obstreeloop.child(i-1)
+            station1 = obstreeloop.child(i - 1)
             PBAR1.progressbar.setValue(pbar_idx[i])
             QtWidgets.QApplication.processEvents()
             # Check time difference between successive stations
@@ -1322,7 +1328,7 @@ class MainProg(QtWidgets.QMainWindow):
         model = self.obsTreeModel
         index = self.currentSurveyIndex
         rowNum = index.row()
-        newRow = rowNum+direction
+        newRow = rowNum + direction
         if not (0 <= newRow < model.rowCount()):
             return False
         survey = model.takeRow(rowNum)
@@ -1373,7 +1379,7 @@ class MainProg(QtWidgets.QMainWindow):
                     first = False
             for idx in reversed(indexes):
                 if idx.column() == 0:
-                    self.obsTreeModel.beginRemoveRows(idx.parent(),idx.row(),idx.row()+1)
+                    self.obsTreeModel.beginRemoveRows(idx.parent(), idx.row(), idx.row() + 1)
                     self.obsTreeModel.removeRow(idx.row(), idx.parent())
                     self.obsTreeModel.endRemoveRows()
             obstreesurvey.appendRow(new_obstreeloop)
@@ -1381,7 +1387,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.layoutChanged.emit()
             self.currentLoopIndex = new_obstreeloop.index()
             self.currentStationIndex = obstreeloop.child(0, 0).index()
-
 
     def treeview_context_menu(self, point):
         """
@@ -1439,11 +1444,11 @@ class MainProg(QtWidgets.QMainWindow):
             if reply == QtWidgets.QMessageBox.No:
                 return
 
-        if how_many=='all':
+        if how_many == 'all':
             for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                 obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
                 obstreesurvey.run_inversion(adj_type)
-        elif how_many=='current':
+        elif how_many == 'current':
             obstreesurvey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
             obstreesurvey.run_inversion(adj_type)
         # Tools available if there is more than one survey
@@ -1747,8 +1752,9 @@ class MainProg(QtWidgets.QMainWindow):
                 try:
                     datum = Datum(parts[0], float(parts[1]), float(parts[2]))
                 except IndexError:
-                    self.msg = show_message('Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
-                                 'space delimited', 'File read error')
+                    self.msg = show_message(
+                        'Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
+                        'space delimited', 'File read error')
                 self.obsTreeModel.itemFromIndex(self.currentSurveyIndex).datum_model.insertRows(datum, 0)
                 line = fh.readline()
                 logging.info('Absolute gravity data imported, station {}'.format(parts[0]))
@@ -1959,7 +1965,7 @@ class MainProg(QtWidgets.QMainWindow):
             if not nx.is_connected(H):
                 gs = [H.subgraph(c) for c in nx.connected_components(H)]
                 for idx, g in enumerate(gs):
-                    plt.subplot(1, len(gs), idx+1)
+                    plt.subplot(1, len(gs), idx + 1)
                     # pos = nx.circular_layout(g)
                     nx.draw_networkx_edges(g, pos, width=1, alpha=0.4, node_size=0, edge_color='k')
                     nx.draw_networkx_nodes(g, pos, node_color='w', alpha=0.4, with_labels=True)
@@ -1975,7 +1981,8 @@ class MainProg(QtWidgets.QMainWindow):
                 nx.draw_networkx_edges(disabled_edges, pos, width=1, alpha=0.4, node_size=0, edge_color='r')
                 nx.draw_networkx_nodes(H, pos, node_size=120, nodelist=datum_nodelist, node_color="k", node_shape='^',
                                        with_labels=True, alpha=0.8)
-                nx.draw_networkx_nodes(H, pos, node_size=120, nodelist=nondatum_nodelist, node_color="k", node_shape='o',
+                nx.draw_networkx_nodes(H, pos, node_size=120, nodelist=nondatum_nodelist, node_color="k",
+                                       node_shape='o',
                                        with_labels=True, alpha=0.3)
                 nx.draw_networkx_labels(H, pos, font_color='r')
 
@@ -2082,7 +2089,7 @@ class MainProg(QtWidgets.QMainWindow):
                 fid.write(str(survey.adjustment.adjustmentresults))
                 fid.write('# Adjusted station values and std. dev., survey: {}\n'.format(survey.name))
                 for ii in range(survey.results_model.rowCount()):
-                    adj_sta = survey.results_model.data(survey.results_model.index(ii,0), role=QtCore.Qt.UserRole)
+                    adj_sta = survey.results_model.data(survey.results_model.index(ii, 0), role=QtCore.Qt.UserRole)
                     fid.write('{}\n'.format(str(adj_sta)))
 
     def write_tabular_data(self):
@@ -2172,16 +2179,15 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Shows compiled help file created using Dr. Explain
         """
-        webbrowser.open('file://' + os.path.realpath('../dist/help/index.htm'))
+        webbrowser.open('file://' + os.path.realpath('./docs/index.htm'))
 
-
-    def check_for_updates(self, e=None, show_uptodate_msg=True):
+    def check_for_updates(self, e=None, show_uptodate_msg=True, parent=None):
         """
         Check if the usgs_root repo is at the same commit as this installation
         Parameters
         ----------
         e : qt event
-
+        parent: Splash screen. Using this as the QMessageBox parent shows the MB centered over the splash screen.
         show_uptodate_msg : bool
            Whether to display a msg if no updates found
         Returns
@@ -2199,7 +2205,7 @@ class MainProg(QtWidgets.QMainWindow):
                 msg = "An update is available for GSadjust.\n"
                 msg += "Would you like to install now?"
 
-                confirm = QtWidgets.QMessageBox.question(self, "Updates Available", msg,
+                confirm = QtWidgets.QMessageBox.question(parent, "Updates Available", msg,
                                                          QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                 if confirm == QtWidgets.QMessageBox.Yes:
                     self.update_from_github()
@@ -2250,6 +2256,7 @@ class BoldDelegate(QtWidgets.QStyledItemDelegate):
     Makes selected item in tree view bold.
     See     http://www.qtcentre.org/threads/61716-Set-the-color-of-a-row-in-a-qtreeview
     """
+
     def paint(self, painter, option, index):
         m = index.model().itemFromIndex(index)
         # decide here if item should be bold and set font weight to bold if needed
@@ -2294,21 +2301,30 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
 
-
 def main():
-    # GSadjust starts in the py35 directory
-    os.chdir('../sgp-gsadjust')
+    # GSadjust starts in different directories on Mac and Windows
+    if sys.platform == 'darwin':
+        os.chdir('../../')
+    else:
+        os.chdir('../sgp-gsadjust')
+
     # start log file
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
     logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.DEBUG)
     sys.excepthook = handle_exception
     app = QtWidgets.QApplication(sys.argv)
+    splash_pix = QtGui.QPixmap('./gsadjust/resources/Splash.png')
+    splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
+    splash.setMask(splash_pix.mask())
+    splash.show()
+    app.processEvents()
+
     app.setWindowIcon(QtGui.QIcon('./gsadjust/resources/g.png'))
-    ex = MainProg()
+    ex = MainProg(splash=splash)
     ex.showMaximized()
     app.processEvents()
+    splash.finish(ex)
     app.exec_()
-
 
 
 # Import here to avoid circular import error

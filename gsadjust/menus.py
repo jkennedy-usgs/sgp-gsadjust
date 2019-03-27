@@ -268,7 +268,7 @@ class Menus:
                                         self.mnToolsNetworkGraphMap,
                                         None,
                                         self.mnToolsComputeGravityChangeAction,
-                                        self.mnToolsLOO,
+                                        # self.mnToolsLOO,
                                         None,
                                         self.mnToolsWriteMetadataText,
                                         self.mnToolsWriteTabularOutput,

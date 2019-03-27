@@ -1,3 +1,4 @@
-call activate py35
+REM call activate py35
+E:\Shared\current\python\py35t\Scripts\activate
 REM cd gsadjust
-python ./gsadjust/gsadjust.py
+E:\Shared\current\python\py35t\Scripts\python .\gsadjust\gsadjust.py

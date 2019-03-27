@@ -643,9 +643,9 @@ class GravityChangeTable(QtWidgets.QDialog):
             plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
             # plt.hold
         plt.ylabel('Gravity change, in µGal')
-        plt.show()
+
         plt.legend(loc="upper left", bbox_to_anchor=(1,1))
-        return
+        plt.show()
 
 class MapWindow(QtWidgets.QDialog):
     def __init__(self, table, coords, header, parent=None):

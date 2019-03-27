@@ -629,13 +629,14 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             try:
                 fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.data_path)
-                success = self.obsTreeModel.save_workspace(fname)
-                if success:
-                    self.msg = show_message('Workspace saved', '')
-                    self.workspace_savename = fname
-                    self.menus.mnFileSaveWorkspace.setEnabled(True)
-                else:
-                    self.msg = show_message("Workspace save error", "Error")
+                if fname:
+                    success = self.obsTreeModel.save_workspace(fname)
+                    if success:
+                        self.msg = show_message('Workspace saved', '')
+                        self.workspace_savename = fname
+                        self.menus.mnFileSaveWorkspace.setEnabled(True)
+                    else:
+                        self.msg = show_message("Workspace save error", "Error")
 
             except Exception as e:
                 self.msg = show_message("Workspace save error", "Error")
@@ -1655,6 +1656,9 @@ class MainProg(QtWidgets.QMainWindow):
         Leave one out analysis. For each datum station, this repeats the network adjustment for each survey, but with
         the datum station excluded. Results are sent to plot_LOO_analysis, which generates a line plot of the measured
         datum time series and the corresponding adjusted time series.
+
+        TODO: This isn't quite right, it should be comparing (at each datum station) the adjusted value with the station
+        included in the adjustment, with the adjusted value with the station excluded.
         :return:
         """
         # Get list of datum stations for all surveys

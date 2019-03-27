@@ -709,7 +709,13 @@ class SimpleDelta:
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift
-        self.loop = delta.loop
+        if delta.loop is None:
+            if type(delta.station2) == list:
+                self.loop = delta.station2[0].loop
+            else:
+                self.loop = "NA"
+        else:
+            self.loop = delta.loop
         self.driftcorr = delta.driftcorr
         self.checked = delta.checked
 

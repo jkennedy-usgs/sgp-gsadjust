@@ -450,8 +450,10 @@ class MainProg(QtWidgets.QMainWindow):
         if 'choose' in open_type:
             meter_type_dialog = MeterType()
             test = meter_type_dialog.exec_()
-            if test == 1:
-                meter_type = meter_type_dialog.meter_type
+            if test < 5:  # 5 = cancel  (accept/reject not working?)
+                  meter_type = meter_type_dialog.meter_type
+            else:
+                return
 
         # Otherwise, 'Load raw....' was called. We know the meter type, but need to ask about appending or overwriting
         # the existing data (only if there is existing data).

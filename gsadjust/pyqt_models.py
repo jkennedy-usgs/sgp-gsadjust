@@ -566,7 +566,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     self.gravnet_inversion()
             except Exception:
                 logging.exception("Inversion error")
-                self.msg = self.msg = show_message("Error during inversion. Are there standard deviations that are zero or vey small?",
+                self.msg = self.msg = show_message("Error during inversion. Are there standard deviations that are zero or very small?",
                              "Inversion error")
 
     def gravnet_inversion(self):
@@ -576,13 +576,16 @@ class ObsTreeSurvey(ObsTreeItem):
         # TODO: method could probably be made static
         from gui_objects import show_message
         from data_objects import AdjustedStation
-        dir_changed = False
+        dir_changed1, dir_changed2 = False, False
         # Check that executable exists in current directory (it should, if run as compiled .exe
         if not os.path.exists('.\\gravnet.exe'):
             # if not found, it might be in the dist directory (i.e., running GSadjust.py)
             if os.path.exists('..\\dist\\gravnet.exe'):
                 os.chdir('..\\dist')
-                dir_changed = True
+                dir_changed1 = True
+            if os.path.exists('.\\dist\\gravnet.exe'):
+                os.chdir('.\\dist')
+                dir_changed2 = True
             # not found at all: error
             else:
                 self.msg = show_message('Gravnet.exe not found, aborting', 'Inversion error')
@@ -732,8 +735,10 @@ class ObsTreeSurvey(ObsTreeItem):
                 for coeffs in meter_drift_params:
                     self.adjustment.adjustmentresults.text.append(coeffs[0] + ' ± ' + coeffs[1] + '\n')
 
-        if dir_changed:
+        if dir_changed1:
             os.chdir('..\\gsadjust')
+        elif dir_changed2:
+            os.chdir('..')
 
     def numpy_inversion(self, output_root_dir, write_out_files='n'):
         """
@@ -800,6 +805,7 @@ class ObsTreeSurvey(ObsTreeItem):
         for delta in self.adjustment.deltas:
             ls_drift_list.append(delta.ls_drift)
         if not all(v is None for v in ls_drift_list):
+            ls_drift_list = [x for x in ls_drift_list if x is not None]
             ls_drift_dict = dict(set(ls_drift_list))
             for i in range(self.rowCount()):
                 obstreeloop = self.child(i)
@@ -1050,7 +1056,7 @@ class ObsTreeSurvey(ObsTreeItem):
         """
         for station in self.iter_stations():
             if (station.station_name) == station_id[0]:
-                if abs(station.tmean - station_id[1]) < 0.001:
+                if abs(station.tmean - station_id[1]) < 0.0001:
                     return station
         return None
 

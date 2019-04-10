@@ -1466,6 +1466,10 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.adjust_update_not_required()
 
+    def show_gravity_change_table(self):
+        header, table, dates = self.compute_gravity_change()
+        GravityChangeTable(self, table, header, dates=dates, full_table=False)
+
     def compute_gravity_change(self, full_table=False):
         """
         Shows PyQt table of gravity change.
@@ -1639,7 +1643,7 @@ class MainProg(QtWidgets.QMainWindow):
         if not full_table:
             header = ['station'] + header1 + header2
             table = out_table
-            gravity_change_table = GravityChangeTable(self, table, header, dates)
+            return header, table, dates
         else:
             header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
             # transpose table
@@ -1650,8 +1654,8 @@ class MainProg(QtWidgets.QMainWindow):
             table += out_table_cumulative
             # transpose back
             table = [list(i) for i in zip(*table)]
-            table = [header] + table
-            return table
+            # table = [header] + table
+            return header, table, dates
 
     def adjusted_vs_observed_datum_analysis(self):
         """

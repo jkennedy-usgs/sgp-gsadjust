@@ -23,6 +23,8 @@ import datetime as dt
 from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+from mpl_toolkits.basemap import Basemap
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -547,7 +549,6 @@ class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
         fig.show()
 
 
-
 class GravityChangeTable(QtWidgets.QDialog):
     """
     Floating window to show gravity-change results
@@ -557,12 +558,14 @@ class GravityChangeTable(QtWidgets.QDialog):
     """
     def __init__(self, MainProg, table, header, dates=None, full_table=False):
         super(GravityChangeTable, self).__init__()
-        self.table = table
-        self.header = header
-        self.dates = dates
+        self.header, self.table,self.dates = MainProg.compute_gravity_change()
+        self.full_header,self.full_table,  _ = MainProg.compute_gravity_change(full_table=True)
         self.coords = MainProg.obsTreeModel.station_coords
         gravity_change_window = QtWidgets.QWidget()
-        gravity_change_window.model = GravityChangeModel(table, header)
+        if full_table:
+            gravity_change_window.model = GravityChangeModel(self.full_header, self.full_table, full_table=True)
+        else:
+            gravity_change_window.model = GravityChangeModel(self.header, self.table)
         gravity_change_window.table = QtWidgets.QTableView()
         gravity_change_window.table.setModel(gravity_change_window.model)
 
@@ -578,7 +581,7 @@ class GravityChangeTable(QtWidgets.QDialog):
             gravity_change_window.btn2.clicked.connect(lambda: show_full_table(MainProg))
         else:
             gravity_change_window.btn2 = QtWidgets.QPushButton('Show simple table')
-            gravity_change_window.btn2.clicked.connect(lambda: MainProg.compute_gravity_change())
+            gravity_change_window.btn2.clicked.connect(lambda: show_simple_table(MainProg))
 
         # Locations
         vbox = QtWidgets.QVBoxLayout()
@@ -600,25 +603,8 @@ class GravityChangeTable(QtWidgets.QDialog):
 
     def map_change_window(self):
 
-        self.win = MapWindow(self.table, self.coords, self.header)
+        self.win = MapWindow(self.table, self.header, self.coords, self.full_table, self.full_header)
         self.win.show()
-        # self.plot_window = QtWidgets.QDialog()
-        # layout = QtWidgets.QVBoxLayout()
-        # self.fig = Figure((12.0, 8.0), facecolor='white')
-        # self.canvas = FigureCanvas(self.fig)
-        # self.axes = self.fig.add_subplot(111)
-        # layout.addWidget(self.canvas)
-        #
-
-        # # sldr = Slider(self.ax, 'name', 0., 5., valinit=0., valfmt="%i")
-        # # sldr.on_changed(partial(self.set_slider, sldr))
-        # self.plot_window.show()
-
-    def set_slider(self, val):
-        self.val = round(val)
-        # self.poly.xy[2] = self.val, 1
-        # self.poly.xy[3] = self.val, 0
-        self.valtext.set_text(self.valfmt % self.val)
 
     def plot_change_window(self):
         plt.figure(figsize=(12, 8))
@@ -648,14 +634,22 @@ class GravityChangeTable(QtWidgets.QDialog):
         plt.show()
 
 class MapWindow(QtWidgets.QDialog):
-    def __init__(self, table, coords, header, parent=None):
-        super(MapWindow, self).__init__(parent)
 
+    station_label = None
+
+    def __init__(self, table,  header, coords, full_table, full_header, parent=None):
+        super(MapWindow, self).__init__(parent)
         # a figure instance to plot on
-        self.figure = Figure()
         self.table = table
-        self.coords = coords
         self.header = header
+        self.coords = coords
+        self.full_table = full_table
+        self.full_header = full_header
+        self.figure = Figure(figsize=(10, 8))
+        self.n_surveys = (len(self.table) - 1) / 2
+        self.surveys = self.get_survey_dates(header)
+        self.axlim = self.get_axis_lims(coords)
+
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
@@ -664,97 +658,293 @@ class MapWindow(QtWidgets.QDialog):
         # it takes the Canvas widget and a parent
         self.toolbar = NavigationToolbar(self.canvas, self)
 
-        # Just some button connected to `plot` method
+        self.time_widget = QtWidgets.QWidget()
+        self.btnIncremental = QtWidgets.QRadioButton("Incremental", self)
+        self.btnIncremental.setChecked(True)
+        self.btnReference = QtWidgets.QRadioButton("Change relative to", self)
+        self.drpReference = QtWidgets.QComboBox()
+        self.btnIncremental.toggled.connect(self.plot)
+        self.btnReference.toggled.connect(self.plot)
+        bbox = QtWidgets.QHBoxLayout()
+        bbox.addWidget(self.btnIncremental)
+        bbox.addSpacing(10)
+        bbox.addWidget(self.btnReference)
+        bbox.addWidget(self.drpReference)
+        bbox.addStretch(1)
+        self.time_widget.setLayout(bbox)
+
+        self.basemap_widget = QtWidgets.QWidget()
+        self.cbBasemap = QtWidgets.QCheckBox("Show Basemap", self)
+        self.cbBasemap.setChecked(False)
+        self.cbBasemap.stateChanged.connect(self.plot)
+        self.drpBasemap = QtWidgets.QComboBox()
+        self.drpBasemap.currentIndexChanged.connect(self.plot)
+        bbox = QtWidgets.QHBoxLayout()
+        bbox.addWidget(self.cbBasemap)
+        bbox.addSpacing(10)
+        bbox.addWidget(self.drpBasemap)
+        bbox.addStretch(1)
+        self.basemap_widget.setLayout(bbox)
+
+        self.units_widget = QtWidgets.QWidget()
+        self.cbUnits = QtWidgets.QCheckBox("Show change in meters of water", self)
+        self.cbUnits.setChecked(False)
+        self.cbUnits.stateChanged.connect(self.plot)
+        bbox = QtWidgets.QHBoxLayout()
+        bbox.addWidget(self.cbUnits)
+        bbox.addStretch(1)
+        self.units_widget.setLayout(bbox)
+
+        # Slider
         self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.slider.setRange(1, (len(self.table) - 1)/2)
-        self.slider.setValue(1)
-        self.slider.valueChanged.connect(self.plot)
+        self.slider.valueChanged.connect(self.update_plot)
         self.slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
 
-        self.plot_title = QtWidgets.QLabel(self.header[1])
+        for s in self.surveys:
+            self.drpReference.addItem(s)
+
+        self.maps = ['ESRI_Imagery_World_2D',
+                'ESRI_StreetMap_World_2D',
+                'NatGeo_World_Map',
+                'NGS_Topo_US_2D',
+                'Ocean_Basemap',
+                'USA_Topo_Maps',
+                'World_Imagery',
+                'World_Physical_Map',
+                'World_Shaded_Relief',
+                'World_Street_Map',
+                'World_Terrain_Base',
+                'World_Topo_Map']
+
+        for map in self.maps:
+            self.drpBasemap.addItem(map)
+
+        self.slider_label = QtWidgets.QLabel(self.header[1])
         # set the layout
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.toolbar)
+        layout.addWidget(self.time_widget)
+        layout.addWidget(self.basemap_widget)
+        layout.addWidget(self.units_widget)
+        layout.addStretch(1)
         layout.addWidget(self.canvas)
-        layout.addWidget(self.plot_title)
+        layout.addWidget(self.slider_label)
+
         layout.addWidget(self.slider)
+        layout.addStretch(1)
         self.setLayout(layout)
+
         self.plot()
 
+    def get_survey_dates(self, header):
+        dates = []
+        first = True
+        for title in header:
+            if first:
+                first = False
+                continue
+            d = title.split('_to_')
+            dates.append(d[0])
+            dates.append(d[1])
+        return sorted(list(set(dates)))
+
+    def update_plot(self):
+        if hasattr(self,'points'):
+            for point in self.points:
+                point.remove()
+            self.points = []
+            x, y, d, name = self.get_data()
+
+            for idx, xd in enumerate(x):
+                point = self.m.scatter(xd, y[idx], c=d[idx], s=200, vmin=self.clim[0], vmax=self.clim[1], cmap="RdBu",
+                                        picker=5,
+                                        zorder=10,
+                                        latlon=True)
+                point.name = name[idx]
+                self.points.append(point)
+            self.slider_label.setText(self.get_name())
+            self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
+            self.canvas.draw()
+
+    def get_data(self):
+        x, y, d, name = [], [], [], []
+
+        if self.btnIncremental.isChecked():
+            data = self.table[self.slider.value()]
+            stations = self.table[0]
+            for sta_idx, sta in enumerate(stations):
+                datum = float(data[sta_idx])
+                if datum > -998:
+                    x.append(self.coords[sta][0])
+                    y.append(self.coords[sta][1])
+                    if self.cbUnits.isChecked():
+                        datum /= 41.9
+                    d.append(datum)
+                    name.append(sta)
+
+        elif self.btnReference.isChecked():
+            ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
+            ref_col_idx = self.full_header.index(ref_survey)
+            current_survey = self.surveys[self.slider.value()-1]
+            current_col_idx = self.full_header.index(current_survey)
+            stations = [r[0] for r in self.full_table]
+            for r in self.full_table:
+                sta = r[0]
+                ref_g = float(r[ref_col_idx])
+                surv_g = float(r[current_col_idx])
+                if ref_g > -998 and surv_g > -998:
+                    x.append(self.coords[sta][0])
+                    y.append(self.coords[sta][1])
+                    if current_survey < ref_survey:
+                        datum = (ref_g -surv_g)
+                    else:
+                        datum = (surv_g - ref_g)
+                    if self.cbUnits.isChecked():
+                        d.append(datum / 41.9)
+                    else:
+                        d.append(datum)
+                    name.append(sta)
+
+        return x, y, d, name
+
+    def get_name(self):
+        if self.btnIncremental.isChecked():
+            name = self.header[self.slider.value()]
+            return name.replace('_', ' ')
+        elif not self.btnIncremental.isChecked():
+            ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
+            current_survey = self.surveys[self.slider.value() - 1]
+            if current_survey < ref_survey:
+                return current_survey + ' to ' + ref_survey
+            else:
+                return ref_survey + ' to ' + current_survey
+
     def plot(self):
-        jeff = 1
-        # # fig = plt.figure(figsize=(12, 8))
-        # n_cols = (len(self.table) - 1)/2
-        # stations = self.table[0]
-        # x, y, d = [], [], []
-        # data = self.table[1]
-        # for idx, sta in enumerate(stations):
-        #     datum = float(data[idx])
-        #     if datum > -998:
-        #         x.append(self.coords[sta][0])
-        #         y.append(self.coords[sta][1])
-        #         d.append(datum)
-        # self.axes.scatter(x, y, c=d, s=500)
-        # # self.fig.colorbar()
+        border = 0.1
+        self.clim = self.get_color_lims(self.table)
+
+        if self.btnIncremental.isChecked():
+            self.slider.setRange(1, self.n_surveys)
+        elif not self.btnIncremental.isChecked():
+            self.slider.setRange(1, self.n_surveys + 1)
+        self.slider.setValue(1)
 
 
-        # from mpl_toolkits.basemap import Basemap
-        # ax = self.figure.add_subplot(111)
-        # map = Basemap(projection='ortho',
-        #               lat_0=0, lon_0=0)
-        #
-        # map.drawmapboundary(fill_color='aqua')
-        # map.fillcontinents(color='coral', lake_color='aqua')
-        # map.drawcoastlines()
-        #
-        # lons = [0, 10, -20, -20]
-        # lats = [0, -10, 40, -20]
-        #
-        # x, y = map(lons, lats)
-        #
-        # map.scatter(x, y, marker='D', color='m')
-        # plt.show()
-        # self.canvas.draw()
-
-        #
-        # ''' plot some random stuff '''
-        # # random data
-        # slider_idx =  int(self.slider.value())
-        #
-        # # create an axis
+        self.figure.clf()
         self.ax = self.figure.add_subplot(111)
-        #
-        # # discards the old graph
-        # ax.clear()
-        #
-        # plot data
-        stations = self.table[0]
-        x, y, d = [], [], []
-        data = self.table[self.slider.value()]
-        for idx, sta in enumerate(stations):
-            datum = float(data[idx])
-            if datum > -998:
-                x.append(self.coords[sta][0])
-                y.append(self.coords[sta][1])
-                d.append(datum)
-        plotted_data = self.ax.scatter(x, y, c=d, s=200, vmin=-20, vmax=20)
-        self.ax.autoscale(enable=True, axis='both', tight=True)
-        self.plot_title.setText(self.header[self.slider.value()])
-        # self.figure.colorbar(plotted_data)
-        # ax.plot(data, '*-')
+        # self.ax = self.figure.add_subplot(111)
+        self.ax.clear()
+        # m = Basemap(ax=self.ax)
+        self.m = Basemap(ax=self.ax,
+                llcrnrlon=self.axlim[0],
+                llcrnrlat=self.axlim[2],
+                urcrnrlon=self.axlim[1],
+                urcrnrlat=self.axlim[3],
+                epsg=5070,
+                projection='merc',
+                suppress_ticks=False)
+
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        self.points = []
+        x, y, d, name = self.get_data()
+        for idx, xd in enumerate(x):
+            point = self.m.scatter(xd, y[idx], c=d[idx], s=200, vmin=self.clim[0], vmax=self.clim[1], cmap="RdBu",
+                                    picker=5,
+                                    zorder=10,
+                                    latlon=True)
+            point.name = name[idx]
+            self.points.append(point)
+
+        if self.cbBasemap.isChecked():
+            img = self.m.arcgisimage(service=self.maps[self.drpBasemap.currentIndex()],
+                      zorder=0,
+                      xpixels=1400, verbose=True)
+            img.set_alpha(0.5)
+
+        QtWidgets.QApplication.restoreOverrideCursor()
+        # self.figure.colorbar(point)
+        self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
+        cb = self.figure.colorbar(point)
+        self.ax.set_xlabel('Distance, in meters', fontsize=16)
+        if not self.cbUnits.isChecked():
+            cb.set_label('Gravity change, in µGal', fontsize=16)
+        elif self.cbUnits.isChecked():
+            cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
+        self.m.set_axes_limits()
+        # self.ax.set_xlim(self.axlim[0], self.axlim[1])
+        # self.ax.set_ylim(self.axlim[2], self.axlim[3])
+
+        self.slider_label.setText(self.get_name())
 
         # refresh canvas
+        self.figure.canvas.mpl_connect('pick_event', self.show_point_label)
         self.canvas.draw()
+
+    def show_point_label(self, event):
+        """
+        Shows the station name in the upper left of the drift plot when a line is clicked.
+        :param event: Matplotlib event
+        :param axes: Current axes (differs for none|netadj|roman vs continuous)
+        """
+        thispoint = event.artist
+        if self.station_label is not None:
+            self.station_label.set_text('')
+        self.station_label = self.ax.text(0.1, 0.95, thispoint.name, horizontalalignment='center',
+                                       verticalalignment='center',
+                                       transform=self.ax.transAxes)
+        self.canvas.draw()
+
+    def get_color_lims(self, table):
+        margin = 0.1
+
+        row_minmax = []
+        first = True
+        for row in table:
+            if first:
+                first = False
+                continue
+            valid_data = [float(d) for d in row if float(d) > -998]
+            row_minmax.append(abs(min(valid_data)))
+            row_minmax.append(abs(max(valid_data)))
+
+        cmax = max(row_minmax)
+        clim = (cmax * -1 - cmax * margin, cmax + cmax * margin)
+        if self.cbUnits.isChecked():
+            clim = (clim[0] / 41.9, clim[1] / 41.9)
+        return clim
+
+    def get_axis_lims(self, coords):
+        margin = 0.25
+        x, y = [], []
+        for c in coords.values():
+            x.append(c[0])
+            y.append(c[1])
+
+        xrange = abs(max(x) - min(x))
+        yrange = abs(max(y) - min(y))
+        xmin = min(x) - xrange * margin
+        xmax = max(x) + xrange * margin
+        ymin = min(y) - yrange * margin
+        ymax = max(y) + yrange * margin
+        return (xmin, xmax, ymin, ymax)
 
 def show_full_table(MainProg):
     MainProg.popup.close()
-    table = MainProg.compute_gravity_change(full_table=True)
-    header = table[0]
+    header, table, dates = MainProg.compute_gravity_change(full_table=True)
+    # header = table[0]
     tp_table = list(zip(*table[1:]))
     # GravityChangeTable(MainProg, tp_table, header, full_table=True)
-    gravity_change_table = GravityChangeTable(MainProg, tp_table, header, full_table=True)
+    GravityChangeTable(MainProg, tp_table, header, dates, full_table=True)
     return
 
+def show_simple_table(MainProg):
+    MainProg.popup.close()
+    header, table, dates = MainProg.compute_gravity_change(full_table=False)
+    # tp_table = list(zip(*table[1:]))
+    # GravityChangeTable(MainProg, tp_table, header, full_table=True)
+    # gravity_change_table = GravityChangeTable(MainProg, tp_table, header, full_table=True)
+    GravityChangeTable(MainProg, table, header, dates, full_table=False)
+    return
 
 def show_message(message, title, icon=QtWidgets.QMessageBox.Warning):
     """

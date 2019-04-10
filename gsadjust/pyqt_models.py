@@ -500,9 +500,11 @@ class ObsTreeSurvey(ObsTreeItem):
             # writing metadata about adjustment).
             specify_cal_coeff = False
             cal_dic = None
-            if self.adjustment.adjustmentoptions.specify_cal_coeff:
-                specify_cal_coeff = True
-                cal_dic = self.adjustment.adjustmentoptions.meter_cal_dict
+            # To deal with old files
+            if hasattr(self.adjustment.adjustmentoptions, 'specify_cal_coeff'):
+                if self.adjustment.adjustmentoptions.specify_cal_coeff:
+                    specify_cal_coeff = True
+                    cal_dic = self.adjustment.adjustmentoptions.meter_cal_dict
             for ii in range(self.delta_model.rowCount()):
                 ind = self.delta_model.createIndex(ii, 0)
                 chk = self.delta_model.data(ind, QtCore.Qt.CheckStateRole)
@@ -2284,18 +2286,21 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
     There is only one such model per campaign. Gravity change is calculated when the respective menu item is chosen.
     """
 
-    def __init__(self, table, header, parent=None):
+    def __init__(self, header, table, full_table=False, parent=None):
         self.__headers = header
         QtCore.QAbstractTableModel.__init__(self, parent)
         self.unchecked = {}
-        self.createArrayData(table)
+        self.createArrayData(table, full_table)
 
-    def createArrayData(self, table):
+    def createArrayData(self, table, full_table):
         """
         Create the np array data for table display, and update the ChannelList_obj. This function can be called from
         outside to update the table display
         """
-        array = np.array(table).transpose()
+        if not full_table:
+            array = np.array(table).transpose()
+        else:
+            array = np.array(table)
         self.array_data = array
 
     def rowCount(self, parent=None):

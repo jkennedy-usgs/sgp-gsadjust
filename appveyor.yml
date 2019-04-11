@@ -9,6 +9,7 @@ init:
   - "ECHO %PYTHON_VERSION% %MINICONDA%"
 
 install: 
+  - python -m pip install --upgrade pip
   - pip install -r requirements.txt
   - pip install ftp://ftpint.usgs.gov/pub/wr/az/flagstaff/jkennedybasemap-1.2.0-cp35-cp35m-win_amd64.whl
   - pip install pytest

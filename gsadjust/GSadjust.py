@@ -2320,7 +2320,11 @@ def main():
 
     # start log file
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
-    logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    # Should probably change this to try a different location for the log file.
+    try:
+        logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    except PermissionError:
+        show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
     sys.excepthook = handle_exception
     app = QtWidgets.QApplication(sys.argv)
     splash_pix = QtGui.QPixmap('./gsadjust/resources/Splash.png')

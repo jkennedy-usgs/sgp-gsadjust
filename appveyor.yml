@@ -2,21 +2,17 @@ build: false
 
 environment:
   matrix: 
-    - PYTHON_VERSION: 3.4 
-      MINICONDA: C:\Miniconda3
+    - PYTHON: "C:\\Python36-x64"
 
 init: 
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - "ECHO %PYTHON_VERSION% %MINICONDA%"
 
 install: 
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%" 
-  - conda config --set always_yes yes --set changeps1 no 
-  - conda update -q conda 
-  - conda env create --file environment.yml
-  - activate py35 
-  - conda install -c conda-forge pytest-qt
-  - conda install pytest
+  - pip install -r requirements.txt
+  - pip install ftp://ftpint.usgs.gov/pub/wr/az/flagstaff/jkennedybasemap-1.2.0-cp35-cp35m-win_amd64.whl
+  - pip install pytest
+  - pip install pytest-qt
   - pwd
 
 test_script: 

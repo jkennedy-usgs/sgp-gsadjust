@@ -23,13 +23,11 @@ import datetime as dt
 from PyQt5 import QtGui, QtCore, QtWidgets
 import logging
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
 from mpl_toolkits.basemap import Basemap
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-# from mpl_toolkits.basemap import Basemap
 from data_objects import Datum, AdjustmentOptions
 from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel, MeterCalibrationModel
 import a10

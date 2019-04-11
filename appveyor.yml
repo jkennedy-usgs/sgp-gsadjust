@@ -3,14 +3,30 @@ build: false
 environment:
   matrix: 
     - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
 
 init: 
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - "ECHO %PYTHON_VERSION% %MINICONDA%"
 
 install: 
-  - python
-  - python -m pip install --upgrade pip
+  # Install Python (from the official .msi of http://python.org) and pip when
+  # not already installed.
+  # - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
+
+  # Prepend newly installed Python to the PATH of this build (this cannot be
+  # done from inside the powershell script as it would require to restart
+  # the parent CMD process).
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+  # Check that we have the expected version and architecture for Python
+  - "python --version"
+
+  # Upgrade to the latest version of pip to avoid it displaying warnings
+  # about it being out of date.
+  - "pip install --disable-pip-version-check --user --upgrade pip"
+
   - pip install -r requirements.txt
   - pip install ftp://ftpint.usgs.gov/pub/wr/az/flagstaff/jkennedybasemap-1.2.0-cp35-cp35m-win_amd64.whl
   - pip install pytest

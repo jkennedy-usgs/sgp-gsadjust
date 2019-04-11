@@ -1,6 +1,9 @@
 language: python
 python:
   - "3.6"
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq pkg-config python-numpy libgeos-dev libgeos++-dev
 install:
   - pip install -r requirements.txt
   - pip install git+https://github.com/matplotlib/basemap.git

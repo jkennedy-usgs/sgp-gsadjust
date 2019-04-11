@@ -9,7 +9,7 @@ gitdb2==2.0.5
 GitPython==2.1.11
 kiwisolver==1.0.1
 matplotlib==2.2.3
-mkl-fft==1.0.6
+mkl-fft
 mkl-random==1.0.1
 more-itertools==4.3.0
 networkx==2.2

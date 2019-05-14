@@ -1,22 +1,17 @@
 language: python
-
-sudo: required
-
-env:
-    - CONDA="python=3.5"
+python:
+  - "3.6"
 before_install:
-    - wget http://bit.ly/miniconda -O miniconda.sh
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH="$HOME/miniconda/bin:$PATH"
-    - conda update --yes conda
-    - conda config --add channels conda-forge --force
-    - travis_retry conda env create --file environment.yml
-    - source activate py35
-    - travis_retry conda install --yes pytest
-    - travis_retry conda install --yes -c conda-forge pytest-qt
-
+  - wget https://repo.continuum.io/miniconda/Miniconda3-4.6.14-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda3/bin:$PATH
+  - conda update --yes conda
+install:
+  - conda install -y -c conda-forge cartopy
+  - pip install -r requirements.txt
 before_script:
-      - export DISPLAY=:99.0
-      - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
+  - export DISPLAY=:99.0
+  - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
 script:
-    - pytest
+  - pytest

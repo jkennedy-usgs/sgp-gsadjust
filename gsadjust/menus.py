@@ -260,7 +260,7 @@ class Menus:
         self.mnToolsWriteSummary = self.create_action('Write adjustment summary',
                                                       slot=self.mainProg.write_summary)
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
-                                                                    slot=self.mainProg.compute_gravity_change,
+                                                                    slot=self.mainProg.show_gravity_change_table,
                                                                     tip="Compute gravity change", enabled=False)
         self.mnToolsLOO = self.create_action("Adjusted vs. observed datum...", slot=self.mainProg.adjusted_vs_observed_datum_analysis,
                                              enabled=False)

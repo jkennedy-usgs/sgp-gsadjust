@@ -2,23 +2,44 @@ build: false
 
 environment:
   matrix: 
-    - PYTHON_VERSION: 3.4 
-      MINICONDA: C:\Miniconda3
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
 
 init: 
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - "ECHO %PYTHON_VERSION% %MINICONDA%"
 
 install: 
-  - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%" 
-  - conda config --set always_yes yes --set changeps1 no 
-  - conda update -q conda 
-  - conda env create --file environment.yml
-  - activate py35 
-  - conda install -c conda-forge pytest-qt
-  - conda install pytest
+  # Install Python (from the official .msi of http://python.org) and pip when
+  # not already installed.
+  # - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
+
+  # Prepend newly installed Python to the PATH of this build (this cannot be
+  # done from inside the powershell script as it would require to restart
+  # the parent CMD process).
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+  # Check that we have the expected version and architecture for Python
+  - "python --version"
+
+  # Upgrade to the latest version of pip to avoid it displaying warnings
+  # about it being out of date.
+  - "pip install --disable-pip-version-check --user --upgrade pip"
+
+  - pip install -r requirements.txt
+  # shapely and cartopy are installed differently on windows vs linux
+  - curl -fsS -o Shapely-1.6.4.post1-cp36-cp36m-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/Shapely-1.6.4.post1-cp36-cp36m-win_amd64.whl"
+  - curl -fsS -o Cartopy-0.17.0-cp36-cp36m-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/Cartopy-0.17.0-cp36-cp36m-win_amd64.whl"
+  - pip install Shapely-1.6.4.post1-cp36-cp36m-win_amd64.whl
+  - pip install Cartopy-0.17.0-cp36-cp36m-win_amd64.whl
+  - pip install pytest
+  - pip install pytest-qt
   - pwd
 
 test_script: 
   - pytest
-  
+
+# Keep alive for RDP  
+#on_finish:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

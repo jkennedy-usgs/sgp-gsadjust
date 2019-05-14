@@ -70,6 +70,12 @@ On Linux, the most reliable way to install GSadjust is to use Conda to create a 
 
 ![adjust_tab](https://cloud.githubusercontent.com/assets/9754449/22990492/9d34be7c-f376-11e6-92e9-f3b3e85a808c.png)
 
+## Gravity change
+* Calculates gravity change between series
+* Shows time-series plot of gravity change at all stations
+* Shows map view with user-selectable base map
+
+![gravity_change](https://user-images.githubusercontent.com/9754449/56771106-9b3a6300-676a-11e9-95a6-12fd0da14810.png)
 ---
 Originally based on 
 

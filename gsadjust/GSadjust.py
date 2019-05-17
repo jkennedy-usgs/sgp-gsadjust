@@ -269,7 +269,6 @@ class MainProg(QtWidgets.QMainWindow):
         # self.resize(600,800)
         self.install_dir = os.getcwd()
         # QtWidgets.QMessageBox.information(self, "xxx", self.install_dir)
-        self.check_for_updates(show_uptodate_msg=False, parent=splash)
 
     def init_gui(self):
         """
@@ -2202,7 +2201,7 @@ class MainProg(QtWidgets.QMainWindow):
            Whether to display a msg if no updates found
         Returns
         -------
-        None
+        Booblean, whether or not to start GSadjust (True  yes)
         """
         try:
             from git import Repo
@@ -2218,16 +2217,19 @@ class MainProg(QtWidgets.QMainWindow):
                 confirm = QtWidgets.QMessageBox.question(parent, "Updates Available", msg,
                                                          QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                 if confirm == QtWidgets.QMessageBox.Yes:
-                    self.update_from_github()
+                    return self.update_from_github()
             elif show_uptodate_msg:
                 msg = "GSadjust is up to date."
                 QtWidgets.QMessageBox.information(self, "No Update Needed", msg)
+                return True
+            return True
 
         except BaseException as e:
             if show_uptodate_msg:
                 msg = 'Problem Encountered Updating from GitHub\n\nError Message:\n'
                 msg += str(e)
                 QtWidgets.QMessageBox.information(self, "Update results", msg)
+                return True  # Update didn't work, start GSadjust anyway
 
     def update_from_github(self):
         """
@@ -2247,8 +2249,10 @@ class MainProg(QtWidgets.QMainWindow):
             merge_msg = repo.git.merge(master.name)
 
             msg = 'Updated successfully downloaded from GitHub. Please\n' \
-                  'reboot to install'
+                  'restart GSadjust.'
             QtWidgets.QMessageBox.information(self, "Update results", msg)
+            return False  # Don't launch GSadjust, need to restart to install updates
+
         except BaseException as e:
             msg = 'Problem Encountered Updating from GitHub\n\n' \
                   'Please upgrade to the latest release by reinstalling the ' \
@@ -2257,8 +2261,8 @@ class MainProg(QtWidgets.QMainWindow):
                   'Error Message:\n'
             msg += str(e)
             QtWidgets.QMessageBox.information(self, "Update results", msg)
+            return True  # Update didn't work, launch anyway
 
-        QtWidgets.QApplication.restoreOverrideCursor()
 
 
 class BoldDelegate(QtWidgets.QStyledItemDelegate):
@@ -2331,14 +2335,18 @@ def main():
     splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
     splash.show()
-    app.processEvents()
-
-    app.setWindowIcon(QtGui.QIcon('./gsadjust/resources/g.png'))
     ex = MainProg(splash=splash)
-    ex.showMaximized()
     app.processEvents()
     splash.finish(ex)
-    app.exec_()
+
+    if ex.check_for_updates(show_uptodate_msg=False, parent=splash):
+        app.setWindowIcon(QtGui.QIcon('./gsadjust/resources/g.png'))
+        ex.showMaximized()
+        app.processEvents()
+
+        app.exec_()
+    else:
+        ex.close_windows()
 
 
 # Import here to avoid circular import error

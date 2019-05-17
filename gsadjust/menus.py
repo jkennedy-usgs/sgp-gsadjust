@@ -79,7 +79,7 @@ class Menus:
         self.mnFileLoadWorkspaceAction = self.create_action("Open workspace...",
                                                             slot=self.mainProg.workspace_open_getfile)
         self.mnFileExitAction = self.create_action("&Exit",
-                                                   shortcut="Alt+F4"
+                                                   shortcut="Alt+F4",
                                                    slot=self.mainProg.close_windows, 
                                                    tip="Exit App")
 

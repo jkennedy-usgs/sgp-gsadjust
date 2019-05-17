@@ -36,7 +36,7 @@ On Linux, the most reliable way to install GSadjust is to use Conda to create a 
     Alternatively, install Python 3.5+ directly and/or in a different virtual environment. The following packages are required:
     
     ```
-    matplotlib numpy pyqt=5 scipy networkx
+    matplotlib numpy pyqt=5 scipy networkx gitpython
 
     ```
     

@@ -2316,6 +2316,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 
 def main():
+    app = QtWidgets.QApplication(sys.argv)
     # GSadjust starts in different directories on Mac and Windows
     if sys.platform == 'darwin':
         os.chdir('../../')
@@ -2330,7 +2331,7 @@ def main():
     except PermissionError:
         show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
     sys.excepthook = handle_exception
-    app = QtWidgets.QApplication(sys.argv)
+
     splash_pix = QtGui.QPixmap('./gsadjust/resources/Splash.png')
     splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())

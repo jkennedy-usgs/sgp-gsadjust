@@ -2264,7 +2264,6 @@ class MainProg(QtWidgets.QMainWindow):
             return True  # Update didn't work, launch anyway
 
 
-
 class BoldDelegate(QtWidgets.QStyledItemDelegate):
     """
     Makes selected item in tree view bold.

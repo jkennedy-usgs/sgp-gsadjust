@@ -15,6 +15,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages re
 unauthorized use of the software.
 """
 from PyQt5 import QtWidgets, QtGui
+
 from gui_objects import about_dialog
 
 

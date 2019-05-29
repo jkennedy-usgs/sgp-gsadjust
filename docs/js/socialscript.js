@@ -26,7 +26,7 @@
 			 script.src = load[i];
 			 first.parentNode.insertBefore(script, first);
 		   }
-		 }
+		 };
 		 if (w.attachEvent) {
 		   w.attachEvent('onload', go);
 		 } else {

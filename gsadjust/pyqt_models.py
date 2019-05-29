@@ -17,16 +17,18 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
-from PyQt5.QtCore import QVariant
-from PyQt5 import QtGui, QtCore, QtWidgets
-from matplotlib.dates import num2date, date2num
-import numpy as np
-import logging
-import pickle
-import data_objects
-import datetime as dt
 import copy
+import datetime as dt
+import logging
 import os
+import pickle
+
+import numpy as np
+from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import QVariant
+from matplotlib.dates import num2date, date2num
+
+import data_objects
 
 # Constants for column headers
 DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, DATUM_TIME, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(9)

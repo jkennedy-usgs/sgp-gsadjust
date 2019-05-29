@@ -14,13 +14,14 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
+import matplotlib.pyplot as plt
+import numpy as np
+from PyQt5 import QtWidgets, QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-from PyQt5 import QtWidgets, QtCore
-import numpy as np
 from matplotlib.dates import DateFormatter
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+
 from gui_objects import show_message
 
 
@@ -48,7 +49,6 @@ class TabData(QtWidgets.QWidget):
     """
 
     dpi = 100
-
 
     def __init__(self, parent):
         super(TabData, self).__init__()
@@ -99,8 +99,8 @@ class TabData(QtWidgets.QWidget):
                                                                          autoselec_dur.val))
         autoselec_alldata.button = QtWidgets.QPushButton("&apply all filters to all data", self)
         autoselec_alldata.button.clicked.connect(lambda: self.autoselect_alldata(autoselec_tilts.val,
-                                                                         autoselec_sd.val, autoselec_grav.val,
-                                                                         autoselec_dur.val))
+                                                                                 autoselec_sd.val, autoselec_grav.val,
+                                                                                 autoselec_dur.val))
         autoselec_tilts.val = QtWidgets.QLineEdit()
         autoselec_sd.val = QtWidgets.QLineEdit()
         autoselec_grav.val = QtWidgets.QLineEdit()
@@ -250,7 +250,7 @@ class TabData(QtWidgets.QWidget):
             g_range_pos = max(seriey) - mean_g
             g_range_neg = mean_g - min(seriey)
             if g_range_neg <= 10 and g_range_pos <= 10:
-                axe.set_ylim(mean_g-10, mean_g+10)
+                axe.set_ylim(mean_g - 10, mean_g + 10)
                 axe.yaxis.label.set_color('black')
                 axe.spines['left'].set_color('black')
                 axe.tick_params(axis='y', colors='black')
@@ -258,7 +258,6 @@ class TabData(QtWidgets.QWidget):
                 axe.yaxis.label.set_color('red')
                 axe.spines['left'].set_color('red')
                 axe.tick_params(axis='y', colors='red')
-
 
     # All of these check/uncheck routines are very slow. Why?
     def autoselect_tilt(self, autoselec):
@@ -347,7 +346,6 @@ class TabData(QtWidgets.QWidget):
                 self.parent.station_model.setData(idx_chk, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
         QtWidgets.QApplication.restoreOverrideCursor()
 
-
     def autoselect_all(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
         """
         function for automatic selection of data based on simple thresholds
@@ -392,12 +390,11 @@ class TabData(QtWidgets.QWidget):
                         or obstreestation.meter_type == 'CG6' \
                         or obstreestation.meter_type == 'CG6Tsoft':
                     if abs(obstreestation.tiltx[iiii]) > tilt_threshold and \
-                       abs(obstreestation.tilty[iiii]) > tilt_threshold:
+                            abs(obstreestation.tilty[iiii]) > tilt_threshold:
                         obstreestation.keepdata[iiii] = 0
                         self.parent.station_model.setData(indx, QtCore.Qt.Unchecked,
                                                           QtCore.Qt.CheckStateRole)
         QtWidgets.QApplication.restoreOverrideCursor()
-
 
     def autoselect_alldata(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
         """
@@ -446,7 +443,7 @@ class TabData(QtWidgets.QWidget):
                         if selec_tilts:
                             if obstreestation.meter_type == 'Scintrex':
                                 if abs(obstreestation.tiltx[iiii]) > tilt_threshold and \
-                                   abs(obstreestation.tilty[iiii]) > tilt_threshold:
+                                        abs(obstreestation.tilty[iiii]) > tilt_threshold:
                                     obstreestation.keepdata[iiii] = 0
                                     self.parent.station_model.setData(indx, QtCore.Qt.Unchecked,
                                                                       QtCore.Qt.CheckStateRole)

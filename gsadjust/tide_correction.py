@@ -18,13 +18,14 @@ fact of release constitute any such warranty. The software is provided on the co
 U.S. Government shall be held liable for any damages resulting from the authorized or unauthorized use of the
 software.
 """
-from PyQt5 import QtGui, QtWidgets
-import copy
-import os
-import subprocess
-import shutil
-import numpy as np
 import logging
+import os
+import shutil
+import subprocess
+
+import numpy as np
+from PyQt5 import QtWidgets
+
 from data_objects import TimeSeries
 from synthetic_tides import earth_tide, ocean_loading
 
@@ -180,9 +181,6 @@ def launch_predict(self, cwin, option):
 
     self.popup.close()
     self.statusBar().showMessage("Process some data?")
-
-
-
 
 
 def launch_agnew(cwin, MainProg):

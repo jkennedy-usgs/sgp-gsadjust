@@ -34,15 +34,13 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
-import numpy as np
 import datetime as dt
-import copy
-import logging
-from PyQt5 import QtCore, QtWidgets
 
-from scipy.interpolate import interp1d
-from collections import OrderedDict
+import numpy as np
+from PyQt5 import QtCore
 from matplotlib.dates import date2num, num2date
+from scipy.interpolate import interp1d
+
 import pyqt_models
 
 
@@ -57,33 +55,32 @@ class ChannelList:
     def __init__(self):
         self.meter_type = None
         # Attributes that are populated when a file is read
-        self.line = []               # OLine number (Scintrex only)
-        self.station = []            # Station name
-        self.elev = []               # Elevation
-        self.lat = []                # Station latitude
-        self.long = []               # Station longitude
+        self.line = []  # OLine number (Scintrex only)
+        self.station = []  # Station name
+        self.elev = []  # Elevation
+        self.lat = []  # Station latitude
+        self.long = []  # Station longitude
 
         # A station gravity value (.grav or .gmean) is calculated "on the fly" from .raw_grav, .etc,
         # and .tare as a property in the ObsTreeFunction class
-        self.raw_grav = []           # gravity reading WITHOUT Earth tide correction (etc is removed when data are read)
+        self.raw_grav = []  # gravity reading WITHOUT Earth tide correction (etc is removed when data are read)
         # self.corr_g = []           # Corrected gravity value, no longer used; still some legacy usage in OL code
-        self.sd = []                 # Standard deviation (Scintrex only)
-        self.etc = []                # Earth tide correction - can be updated to another model
-        self.meter_etc = []          # Earth tide correction from meter
-        self.tare = []               # tare magnitude (included in corr_g)
+        self.sd = []  # Standard deviation (Scintrex only)
+        self.etc = []  # Earth tide correction - can be updated to another model
+        self.meter_etc = []  # Earth tide correction from meter
+        self.tare = []  # tare magnitude (included in corr_g)
 
-        self.tiltx = []              # tilt x
-        self.tilty = []              # tilt y
-        self.temp = []               # temperature, deg. C
-        self.dur = []                # Measurement duration (Scintrex only)
-        self.rej = []                # Accept or reject flag (Scintrex only)
-        self.t = []                  # Measurement time
-        self.oper = []               # Operator
-        self.dial = []               # Dial setting
-        self.feedback = []           # Feedback (Burris only)
-        self.meter = []              # Meter serial number
+        self.tiltx = []  # tilt x
+        self.tilty = []  # tilt y
+        self.temp = []  # temperature, deg. C
+        self.dur = []  # Measurement duration (Scintrex only)
+        self.rej = []  # Accept or reject flag (Scintrex only)
+        self.t = []  # Measurement time
+        self.oper = []  # Operator
+        self.dial = []  # Dial setting
+        self.feedback = []  # Feedback (Burris only)
+        self.meter = []  # Meter serial number
         self.keepdata = []  # 0/1 flags indicating which samples are to be used
-
 
     def __iter__(self):
         """
@@ -133,6 +130,7 @@ class Delta:
     adj_sd: stores the standard deviation used in the adjusment, which may differ from the one initially associated
             with the delta.
     """
+
     def __init__(self, sta1, sta2, driftcorr=0., ls_drift=None, delta_type='normal', checked=2,
                  adj_sd=999, cal_coeff=1, loop=None):
         self.station1 = sta1
@@ -186,7 +184,7 @@ class Delta:
         If the standard deviation hasn't changed (e.g., it's the default value 999), return the standard deviation
         initially associated with the delta.
 
-        Default valute (i.e., if not set in adjustment options) is self.sd.
+        Default value (i.e., if not set in adjustment options) is self.sd.
         :return: float
         """
         if self.adj_sd == 999:
@@ -207,7 +205,7 @@ class Delta:
             else:
                 return 3.0
         elif self.type == 'normal':
-            s = np.sqrt(self.station2.stdev**2 + self.station1.stdev**2)
+            s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
             return s
         elif self.type == 'three_point':
             return 3.0
@@ -238,12 +236,11 @@ class Delta:
 
     @property
     def dg(self):
-        dg = None
         # Roman correction: dg requires three station-observations
         if self.type == 'three_point':
             sta2_dg = self.station2[1].gmean - self.station2[0].gmean
-            time_prorate = (self.station1.tmean - self.station2[0].tmean)/(self.station2[1].tmean -
-                                                                           self.station2[0].tmean)
+            time_prorate = (self.station1.tmean - self.station2[0].tmean) / (self.station2[1].tmean -
+                                                                             self.station2[0].tmean)
             dg = (self.station2[0].gmean + sta2_dg * time_prorate) - self.station1.gmean
         # Roman correction: return average of individual deltas
         elif self.type == 'list':
@@ -290,16 +287,16 @@ class Delta:
             in_use = '0'
         # Rarely a station time will be -999 (if all samples are unchecked)
         if self.sta1_t != -999:
-            dt = num2date(self.sta1_t).strftime('%Y-%m-%d %H:%M:%S')
+            delta_time = num2date(self.sta1_t).strftime('%Y-%m-%d %H:%M:%S')
         else:
-            dt = '-999'
+            delta_time = '-999'
         return_str = '{} {} {} {} {:0.3f} {:0.3f} {:0.3f}'.format(in_use,
-                                                   self.sta1,
-                                                   self.sta2,
-                                                   dt,
-                                                   self.dg,
-                                                   self.sd,
-                                                   self.sd_for_adjustment)
+                                                                  self.sta1,
+                                                                  self.sta2,
+                                                                  delta_time,
+                                                                  self.dg,
+                                                                  self.sd,
+                                                                  self.sd_for_adjustment)
         return return_str
 
     def time(self):
@@ -325,6 +322,7 @@ class Tare:
     that doesn't work too well with the Roman method because the delta-g is calculated between (1) a station and (2) an
     interpolated value between two occupations at the other station.
     """
+
     def __init__(self, date, time, tare):
         self.date = date
         self.time = time
@@ -383,6 +381,7 @@ class AdjustmentResults:
     """
     Object to store least-squares adjustment statistics.
     """
+
     def __init__(self):
         self.n_deltas, self.n_deltas_notused = 0, 0
         self.n_datums, self.n_datums_notused = 0, 0
@@ -391,15 +390,15 @@ class AdjustmentResults:
         self.avg_stdev = 0
         self.text = None
 
-
     def __str__(self):
         return_str = ''
         for attr in vars(self):
             if attr != 'text':
-                return_str += '{}: {}\n'.format(attr, getattr(self,attr))
+                return_str += '{}: {}\n'.format(attr, getattr(self, attr))
         for line in self.text:
             return_str += line
         return return_str
+
 
 ###############################################################################
 class AdjustedStation:
@@ -555,8 +554,9 @@ class AdjustmentOptions:
     def __str__(self):
         return_str = ''
         for attr in vars(self):
-            return_str += '{}: {}\n'.format(attr, getattr(self,attr))
+            return_str += '{}: {}\n'.format(attr, getattr(self, attr))
         return return_str
+
 
 ###############################################################################
 class Adjustment:
@@ -635,7 +635,7 @@ class Adjustment:
 
         t = np.sqrt(2 * np.log(1 / alpha))
         chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (
-            1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3)
+                1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3)
         dof = float(self.dof)
         self.chi2c = dof * (chi_1_alpha * np.sqrt(2 / (9 * dof)) + 1 - 2. / (9 * dof)) ** 3
 
@@ -691,6 +691,7 @@ class SimpleDelta:
     to the station name and station count so that when a workspace is loaded, the delta is recreated with the
     appropriate stations.
     """
+
     def __init__(self, delta):
         # Normal delta
         if delta.type == 'normal':
@@ -700,10 +701,7 @@ class SimpleDelta:
             self.sta1 = None
             self.sta2 = []
             for threepoint in delta.station2:
-                stations = []
-                stations.append(threepoint.station1.key)
-                stations.append(threepoint.station2[0].key)
-                stations.append(threepoint.station2[1].key)
+                stations = [threepoint.station1.key, threepoint.station2[0].key, threepoint.station2[1].key]
                 self.sta2.append(stations)
         # self.key = delta.key
         self.adj_sd = delta.adj_sd
@@ -718,6 +716,7 @@ class SimpleDelta:
             self.loop = delta.loop
         self.driftcorr = delta.driftcorr
         self.checked = delta.checked
+
 
 class SimpleLoop:
     """

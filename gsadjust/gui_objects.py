@@ -18,23 +18,21 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
-import os
 import datetime as dt
-from PyQt5 import QtGui, QtCore, QtWidgets
-import logging
-import matplotlib.pyplot as plt
-# from mpl_toolkits.basemap import Basemap
-from matplotlib.dates import date2num
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import os
 
 import cartopy.crs as ccrs
 import cartopy.io.img_tiles as cimgt
+import matplotlib.pyplot as plt
+from PyQt5 import QtGui, QtCore, QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.dates import date2num
+from matplotlib.figure import Figure
 
-from data_objects import Datum, AdjustmentOptions
-from pyqt_models import GravityChangeModel, DatumTableModel, CustomSortingModel, MeterCalibrationModel
 import a10
+from data_objects import Datum
+from pyqt_models import GravityChangeModel, DatumTableModel, MeterCalibrationModel
 
 
 class ApplyTimeCorrection(QtWidgets.QDialog):
@@ -86,6 +84,7 @@ class CoordinatesTable(QtWidgets.QDialog):
     Shows table of coordinates, which can be edited or copy/pasted. Coordinates provided by self.coords(), called
     by the calling routine.
     """
+
     def __init__(self, coords):
         super(CoordinatesTable, self).__init__()
         vlayout = QtWidgets.QVBoxLayout()
@@ -133,7 +132,6 @@ class CoordinatesTable(QtWidgets.QDialog):
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setSizePolicy(sizePolicy)
 
-
     def keyPressEvent(self, e):
         """
         Handle copy/paste. Without this, the default is to copy only one cell. No sanity checks.
@@ -144,7 +142,7 @@ class CoordinatesTable(QtWidgets.QDialog):
             selected = self.table.selectedRanges()
             if e.key() == QtCore.Qt.Key_C:  # copy
                 s = ''
-                for r in range(selected[0].topRow(), selected[0].bottomRow()+1):
+                for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
                     row_text = ''
                     for c in range(self.table.columnCount()):
                         row_text += self.table.item(r, c).text() + '\t'
@@ -176,10 +174,11 @@ class CoordinatesTable(QtWidgets.QDialog):
         """
         c = dict()
         for i in range(self.table.rowCount()):
-            c[self.table.item(i,0).text()] = (float(self.table.item(i, 2).text()),
-                                       float(self.table.item(i, 1).text()),
-                                       float(self.table.item(i, 3).text()))
+            c[self.table.item(i, 0).text()] = (float(self.table.item(i, 2).text()),
+                                               float(self.table.item(i, 1).text()),
+                                               float(self.table.item(i, 3).text()))
         return c
+
 
 class MeterType(QtWidgets.QMessageBox):
     def __init__(self):
@@ -244,7 +243,6 @@ class LoopOptions(QtWidgets.QDialog):
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def set_loop_options(self):
-
         self.accept()
 
 
@@ -252,6 +250,7 @@ class AdjustOptions(QtWidgets.QDialog):
     """
     Dialog to set network adjustment options.
     """
+
     def __init__(self, survey_str, options, parent=None):
         super(AdjustOptions, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
@@ -411,6 +410,7 @@ class IncrMinuteTimeEdit(QtWidgets.QTimeEdit):
     MinuteSection or HourSection. This manifests as when at a time, e.g., 3:00, stepBy isn't called when in the
     Minute Section because time is already at 0.
     """
+
     def __init__(self, time):
         super(IncrMinuteTimeEdit, self).__init__(time)
         self.step = 10
@@ -425,11 +425,11 @@ class IncrMinuteTimeEdit(QtWidgets.QTimeEdit):
         hours = self.dateTime().time().hour()
         minutes = self.dateTime().time().minute() + steps * self.step
         if minutes < 0:
-            self.setTime(QtCore.QTime(hours-1, 60 + minutes))
+            self.setTime(QtCore.QTime(hours - 1, 60 + minutes))
         if minutes < 60:
             self.setTime(QtCore.QTime(hours, minutes))
         else:
-            self.setTime(QtCore.QTime(hours+1, 60 % minutes))
+            self.setTime(QtCore.QTime(hours + 1, 60 % minutes))
 
 
 class ProgressBar(QtWidgets.QWidget):
@@ -497,14 +497,14 @@ def about_dialog():
 
 
 def VerticalGradientDialog(default_interval):
-        text, ok = QtWidgets.QInputDialog.getDouble(None, "Vertical-gradient interval",
-                                                    "Interval, in cm:",
-                                                    default_interval,
-                                                    0, 200, 1)
-        if ok:
-            return float(text)
-        else:
-            return default_interval
+    text, ok = QtWidgets.QInputDialog.getDouble(None, "Vertical-gradient interval",
+                                                "Interval, in cm:",
+                                                default_interval,
+                                                0, 200, 1)
+    if ok:
+        return float(text)
+    else:
+        return default_interval
 
 
 class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
@@ -558,10 +558,11 @@ class GravityChangeTable(QtWidgets.QDialog):
     :param table:
     :param header:
     """
+
     def __init__(self, MainProg, table, header, dates=None, full_table=False):
         super(GravityChangeTable, self).__init__()
-        self.header, self.table,self.dates = MainProg.compute_gravity_change()
-        self.full_header,self.full_table,  _ = MainProg.compute_gravity_change(full_table=True)
+        self.header, self.table, self.dates = MainProg.compute_gravity_change()
+        self.full_header, self.full_table, _ = MainProg.compute_gravity_change(full_table=True)
         self.coords = MainProg.obsTreeModel.station_coords
         gravity_change_window = QtWidgets.QWidget()
         if full_table:
@@ -623,23 +624,23 @@ class GravityChangeTable(QtWidgets.QDialog):
                         ydata.append(0)
                         ydata.append(float(col[i]))
                         xdata.append(self.dates[idx])
-                        xdata.append(self.dates[idx+1])
+                        xdata.append(self.dates[idx + 1])
                     else:
                         ydata.append(float(col[i]) + ydata[-1])
-                        xdata.append(self.dates[idx+1])
+                        xdata.append(self.dates[idx + 1])
 
-            plt.plot(xdata,ydata,'-o', color=cmap(i/(nstations-1)), label=stations[i])
+            plt.plot(xdata, ydata, '-o', color=cmap(i / (nstations - 1)), label=stations[i])
             # plt.hold
         plt.ylabel('Gravity change, in µGal')
 
-        plt.legend(loc="upper left", bbox_to_anchor=(1,1))
+        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
         plt.show()
 
-class MapWindow(QtWidgets.QDialog):
 
+class MapWindow(QtWidgets.QDialog):
     station_label = None
 
-    def __init__(self, table,  header, coords, full_table, full_header, parent=None):
+    def __init__(self, table, header, coords, full_table, full_header, parent=None):
         super(MapWindow, self).__init__(parent)
         # a figure instance to plot on
         self.table = table
@@ -706,12 +707,12 @@ class MapWindow(QtWidgets.QDialog):
             self.drpReference.addItem(s)
 
         self.maps = [
-                'NatGeo_World_Map',
-                'USA_Topo_Maps',
-                'World_Imagery',
-                'World_Shaded_Relief',
-                'World_Street_Map',
-                'World_Topo_Map']
+            'NatGeo_World_Map',
+            'USA_Topo_Maps',
+            'World_Imagery',
+            'World_Shaded_Relief',
+            'World_Street_Map',
+            'World_Topo_Map']
 
         for map in self.maps:
             self.drpBasemap.addItem(map)
@@ -733,7 +734,6 @@ class MapWindow(QtWidgets.QDialog):
 
         self.plot()
 
-
     def get_survey_dates(self, header):
         dates = []
         first = True
@@ -747,16 +747,16 @@ class MapWindow(QtWidgets.QDialog):
         return sorted(list(set(dates)))
 
     def update_plot(self):
-        if hasattr(self,'points'):
+        if hasattr(self, 'points'):
             # for point in self.points:
             #     point.remove()
             self.points.remove()
             x, y, d, name = self.get_data()
 
             self.points = self.ax.scatter(x, y, c=d, s=200, vmin=self.clim[0], vmax=self.clim[1], cmap="RdBu",
-                                    picker=5,
-                                    zorder=10,
-                                    transform=ccrs.Geodetic())
+                                          picker=5,
+                                          zorder=10,
+                                          transform=ccrs.Geodetic())
             self.points.name = name
             # self.points.append(point)
             self.slider_label.setText(self.get_name())
@@ -782,7 +782,7 @@ class MapWindow(QtWidgets.QDialog):
         elif self.btnReference.isChecked():
             ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
             ref_col_idx = self.full_header.index(ref_survey)
-            current_survey = self.surveys[self.slider.value()-1]
+            current_survey = self.surveys[self.slider.value() - 1]
             current_col_idx = self.full_header.index(current_survey)
             stations = [r[0] for r in self.full_table]
             for r in self.full_table:
@@ -793,7 +793,7 @@ class MapWindow(QtWidgets.QDialog):
                     x.append(self.coords[sta][0])
                     y.append(self.coords[sta][1])
                     if current_survey < ref_survey:
-                        datum = (ref_g -surv_g)
+                        datum = (ref_g - surv_g)
                     else:
                         datum = (surv_g - ref_g)
                     if self.cbUnits.isChecked():
@@ -825,20 +825,20 @@ class MapWindow(QtWidgets.QDialog):
             self.slider.setRange(1, self.n_surveys + 1)
         self.slider.setValue(1)
 
-
         self.figure.clf()
 
-        map_center = (self.axlim[0] + self.axlim[1] ) / 2
-        self.ax = self.figure.add_subplot(1, 1, 1, projection=ccrs.AlbersEqualArea(map_center)) #self.stamen_terrain.crs)
+        map_center = (self.axlim[0] + self.axlim[1]) / 2
+        self.ax = self.figure.add_subplot(1, 1, 1,
+                                          projection=ccrs.AlbersEqualArea(map_center))  # self.stamen_terrain.crs)
         self.ax.clear()
 
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         self.points = []
         x, y, d, names = self.get_data()
         self.points = self.ax.scatter(x, y, c=d, s=200, vmin=self.clim[0], vmax=self.clim[1], cmap="RdBu",
-                                picker=5,
-                                zorder=10,
-                                transform=ccrs.Geodetic())
+                                      picker=5,
+                                      zorder=10,
+                                      transform=ccrs.Geodetic())
         self.points.name = names
 
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -876,8 +876,8 @@ class MapWindow(QtWidgets.QDialog):
         if self.station_label is not None:
             self.station_label.set_text('')
         self.station_label = self.ax.text(0.1, 0.95, thispoint.name[event.ind[0]], horizontalalignment='center',
-                                       verticalalignment='center',
-                                       transform=self.ax.transAxes)
+                                          verticalalignment='center',
+                                          transform=self.ax.transAxes)
         self.canvas.draw()
 
     def get_color_lims(self, table):
@@ -914,6 +914,7 @@ class MapWindow(QtWidgets.QDialog):
         ymax = max(y) + yrange * margin
         return (xmin, xmax, ymin, ymax)
 
+
 def show_full_table(MainProg):
     MainProg.popup.close()
     header, table, dates = MainProg.compute_gravity_change(full_table=True)
@@ -923,6 +924,7 @@ def show_full_table(MainProg):
     GravityChangeTable(MainProg, tp_table, header, dates, full_table=True)
     return
 
+
 def show_simple_table(MainProg):
     MainProg.popup.close()
     header, table, dates = MainProg.compute_gravity_change(full_table=False)
@@ -931,6 +933,7 @@ def show_simple_table(MainProg):
     # gravity_change_table = GravityChangeTable(MainProg, tp_table, header, full_table=True)
     GravityChangeTable(MainProg, table, header, dates, full_table=False)
     return
+
 
 def show_message(message, title, icon=QtWidgets.QMessageBox.Warning):
     """
@@ -963,7 +966,7 @@ def rename_dialog(old_name, new_name):
     msg.addButton(QtWidgets.QPushButton('Campaign'), 0)
     msg.addButton(QtWidgets.QPushButton('Survey'), 0)
     msg.addButton(QtWidgets.QPushButton('Loop'), 0)
-    msg.addButton(QtWidgets.QPushButton('Just this station'),0)
+    msg.addButton(QtWidgets.QPushButton('Just this station'), 0)
     msg.addButton(QtWidgets.QPushButton('Cancel'), 1)
     method = msg.exec_()
     methods = {0: 'Campaign',
@@ -1112,6 +1115,7 @@ class AddTareDialog(QtWidgets.QDialog):
     """
     Dialog to specify date, time and tare.
     """
+
     def __init__(self, default_time):
         super(AddTareDialog, self).__init__()
         self.title = 'Specify date, time, and magnitude of tare'
@@ -1167,6 +1171,7 @@ class SelectAbsg(QtWidgets.QDialog):
     Dialog to show absolute-gravity values from *.project.txt files. The user
     can select the files to import as Datums.
     """
+
     def __init__(self, path):
         super(SelectAbsg, self).__init__()
         self.title = 'Select directory with Abs. g files (.project.txt)'
@@ -1241,8 +1246,6 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree.setColumnHidden(1, True)
         self.tree.setColumnHidden(2, True)
         self.tree.setColumnHidden(3, True)
-
-
 
         # Hide column of residuals
         self.table.setColumnHidden(7, True)

@@ -15,25 +15,26 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
+import datetime as dt
+import logging
+
+import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import DateFormatter
-from scipy.interpolate import UnivariateSpline
-from matplotlib.figure import Figure
 from matplotlib.dates import date2num
-import logging
-import numpy as np
-import datetime as dt
+from matplotlib.figure import Figure
+from scipy.interpolate import UnivariateSpline
+
 from data_objects import Delta
-from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop
 from gui_objects import IncrMinuteTimeEdit, show_message
+from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop
 
 
 ###########################################################################
 # GSadjust drift tab
 ###########################################################################
 class TabDrift(QtWidgets.QWidget):
-
     station_label = None
 
     def __init__(self, parent):
@@ -44,7 +45,7 @@ class TabDrift(QtWidgets.QWidget):
         # Main window
         layout_main = QtWidgets.QVBoxLayout()
         main_vsplitter_window = QtWidgets.QSplitter(QtCore.Qt.Vertical, self)
-    
+
         # Setup drift figures (Roman and Continuous). Only one will be shown at a time.
         # Drift figure: default and roman
         self.drift_window = QtWidgets.QSplitter(QtCore.Qt.Horizontal, self)
@@ -52,7 +53,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_single_canvas = FigureCanvas(self.drift_fig)
         self.drift_fig.subplots_adjust(wspace=0.3)
         self.axes_drift_single = self.drift_fig.add_subplot(111)
-    
+
         # Drift figure: continuous
         # Plot pannel
         self.drift_cont_plotpanel = QtWidgets.QSplitter(QtCore.Qt.Vertical, self)
@@ -66,7 +67,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_cont_canvasbot = FigureCanvas(self.drift_cont_figbot)
         self.drift_cont_figbot.subplots_adjust(wspace=0.3)
         self.axes_drift_cont_lower = self.drift_cont_figbot.add_subplot(111)
-    
+
         # Drift tab tables
         self.dg_samples_table = DeltaTableModel()
         self.delta_view = QtWidgets.QTableView()
@@ -87,7 +88,7 @@ class TabDrift(QtWidgets.QWidget):
         self.driftmethod_comboboxbox.activated.connect(self.set_drift_method)
         for item in self.driftmethod_comboboxbox_key.values():
             self.driftmethod_comboboxbox.addItem(item)
-    
+
         # Widget to remove dg-observations with a long elapsed time in between
         self.drift_screen_elapsed_time = QtWidgets.QCheckBox('Max. time between repeats (hh:mm)')
         self.drift_screen_elapsed_time.setChecked(False)
@@ -95,12 +96,12 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_time_spinner = IncrMinuteTimeEdit(QtCore.QTime(1, 0))
         self.drift_time_spinner.timeChanged.connect(self.time_extent_changed)
         self.drift_time_spinner.setDisplayFormat("hh:mm")
-    
+
         # Widget to add horizontal-extent lines to drift-rate plot
         self.drift_plot_hz_extent = QtWidgets.QCheckBox('Show time-extent of drift observation')
         self.drift_plot_hz_extent.setChecked(False)
         self.drift_plot_hz_extent.stateChanged.connect(self.plot_drift)
-    
+
         self.tension_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.tension_slider.setRange(10, 2500)
         self.tension_slider.setValue(1250)
@@ -118,14 +119,13 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_polydegree_combobox.activated.connect(self.drift_combobox_updated)
         for item in self.drift_cont_methodcombobox_key.values():
             self.drift_polydegree_combobox.addItem(item)
-    
         self.drift_cont_behaviorcombobox_key = {0: "Extrapolate",
                                                 1: "Constant"}
         self.drift_cont_startendcombobox = QtWidgets.QComboBox()
         self.drift_cont_startendcombobox.activated.connect(self.drift_combobox_updated)
         for item in self.drift_cont_behaviorcombobox_key.values():
             self.drift_cont_startendcombobox.addItem(item)
-    
+
         self.offset_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.offset_slider.setRange(0, 10)
         self.offset_slider.setValue(0)
@@ -161,7 +161,7 @@ class TabDrift(QtWidgets.QWidget):
         self.tare_popup_menu = QtWidgets.QMenu("tare Popup Menu", self)
         self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
         self.mnDeleteTare.triggered.connect(self.parent.delete_tare)
-    
+
         lbl = QtWidgets.QLabel("Tares")
         lbl.setFont(QtGui.QFont("Times", 11, QtGui.QFont.Bold))
         lbl.setFixedHeight(30)
@@ -174,17 +174,17 @@ class TabDrift(QtWidgets.QWidget):
         drift_cont_control_layout.addWidget(control_subwidget)
         drift_cont_control_layout.addStretch()
         drift_controls.setLayout(drift_cont_control_layout)
-    
+
         self.drift_cont_plotpanel.addWidget(self.drift_cont_canvastop)
         self.drift_cont_plotpanel.addWidget(self.drift_cont_canvasbot)
         self.drift_window.addWidget(self.drift_cont_plotpanel)
-    
+
         self.drift_window.addWidget(self.drift_single_canvas)
         self.drift_window.addWidget(self.drift_cont_plotpanel)
         self.drift_window.addWidget(drift_controls)
         main_vsplitter_window.addWidget(self.drift_window)
         self.drift_single_canvas.hide()
-    
+
         lbls = QtWidgets.QHBoxLayout()
         lbl1 = QtWidgets.QLabel("Relative-gravity differences (delta-g's)", self)
         lbls.addWidget(lbl1)
@@ -192,7 +192,7 @@ class TabDrift(QtWidgets.QWidget):
         self.cont_label_widget.setFixedHeight(30)
         main_vsplitter_window.addWidget(self.cont_label_widget)
         self.cont_label_widget.hide()
-    
+
         self.roman_label_widget = QtWidgets.QWidget()
         lbls = QtWidgets.QHBoxLayout()
         lbl1 = QtWidgets.QLabel("Relative-gravity differences (delta-g's)", self)
@@ -203,7 +203,7 @@ class TabDrift(QtWidgets.QWidget):
         self.roman_label_widget.setFixedHeight(30)
         main_vsplitter_window.addWidget(self.roman_label_widget)
         self.roman_label_widget.hide()
-    
+
         # dg table (Roman method)
         self.dg_samples_view.setModel(self.dg_avg_model)
         self.delta_view.setModel(self.dg_samples_table)
@@ -214,7 +214,7 @@ class TabDrift(QtWidgets.QWidget):
         main_vsplitter_window.addWidget(main_hsplitter_window)
         self.delta_view.show()
         self.dg_samples_view.hide()
-    
+
         layout_main.addWidget(main_vsplitter_window)
         self.setLayout(layout_main)
 
@@ -249,15 +249,15 @@ class TabDrift(QtWidgets.QWidget):
             remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
                                        triggered=self.drift_cont_removepoint,
                                        enabled=False)
-    
+
         self.popup_menu.addAction(add)
         self.popup_menu.addAction(remove)
         cursor = QtGui.QCursor()
         self.popup_menu.popup(cursor.pos())
-    
+
     def drift_cont_removepoint(self):
         pass
-    
+
     def drift_cont_addpoint(self):
         pass
 
@@ -291,7 +291,7 @@ class TabDrift(QtWidgets.QWidget):
             # first = True
             # start_idx = 0
             i = 0
-            for i in range(1,len(x)):
+            for i in range(1, len(x)):
                 # if first:
                 #     first = False
                 #     pass
@@ -300,15 +300,15 @@ class TabDrift(QtWidgets.QWidget):
                 if x_diff * 1440 < elapsed_time:
                     # Check that there's at least two points in the new line segment
                     if len(new_x) == 0:
-                        new_x += [x[i-1], x[i]]
-                        new_y += [y[i-1], y[i]]
-                    elif abs(new_x[-1] - x[i-1]) < 0.0001:
+                        new_x += [x[i - 1], x[i]]
+                        new_y += [y[i - 1], y[i]]
+                    elif abs(new_x[-1] - x[i - 1]) < 0.0001:
                         new_x.append(x[i])
                         new_y.append(y[i])
                     else:
                         new_data.append([new_x, new_y, line[2]])
-                        new_x = [x[i-1], x[i]]
-                        new_y = [y[i-1], y[i]]
+                        new_x = [x[i - 1], x[i]]
+                        new_y = [y[i - 1], y[i]]
             #             new_data.append([x[start_idx:], y[start_idx:], line[2]])
             #             if i - start_idx > 1:
             #                 new_data.append([x[start_idx:i - 1], y[start_idx:i - 1], line[2]])
@@ -318,7 +318,7 @@ class TabDrift(QtWidgets.QWidget):
             # if i - start_idx > 1:
             if len(new_x) > 0:
                 new_data.append([new_x, new_y, line[2]])
-    
+
         return new_data
 
     def update_tension(self):
@@ -351,7 +351,7 @@ class TabDrift(QtWidgets.QWidget):
             delta_model.insertRows(delta, 0)
             prev_station = station
         return delta_model
-    
+
     def calc_netadj_dg(self, data, loop_name):
         """
         Calculates delta-g's from successive gravity observations
@@ -397,7 +397,7 @@ class TabDrift(QtWidgets.QWidget):
                 interval = (x - prev_x) * 24
                 prev_x = x
                 ypsum.append(prev_sum + drift_rate * interval)
-    
+
         xp = xp.tolist()
         yp = ypsum  # yp = yp.tolist()
         first = True
@@ -488,7 +488,7 @@ class TabDrift(QtWidgets.QWidget):
                             if other1.tmean < station.tmean < other2.tmean:
                                 # Check that time_threshold is met, or not set
                                 if time_threshold is None or \
-                                            (other2.tmean - other1.tmean) * 1440 < time_threshold:
+                                        (other2.tmean - other1.tmean) * 1440 < time_threshold:
                                     delta = Delta(station,
                                                   (other1, other2),
                                                   delta_type='three_point',
@@ -539,7 +539,7 @@ class TabDrift(QtWidgets.QWidget):
             if delta_key1 not in unique_pairs and delta_key2 not in unique_pairs:
                 unique_pairs.add(delta_key1)
                 avg_dg[delta_key1] = [delta]
-                for ii in range(i+1, roman_dg_model.rowCount()):
+                for ii in range(i + 1, roman_dg_model.rowCount()):
                     testdelta = roman_dg_model.data(roman_dg_model.index(ii, 0), role=QtCore.Qt.UserRole)
                     testdelta_key1 = (testdelta.station1.station_name, testdelta.station2[0].station_name)
                     testdelta_key2 = (testdelta.station2[0].station_name, testdelta.station1.station_name)
@@ -627,7 +627,7 @@ class TabDrift(QtWidgets.QWidget):
                         a = self.axes_drift_single.plot(x, y, '.-', picker=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
-    
+
             # Plot
             if plot_data and not no_data and update:
                 self.axes_drift_single.xaxis.set_major_formatter(DateFormatter('%H:%M'))
@@ -654,7 +654,7 @@ class TabDrift(QtWidgets.QWidget):
             self.axes_drift_cont_lower.clear()
             self.axes_drift_cont_upper.clear()
             drift_rate, drift_time, drift_x = [], [], []
-    
+
             # Get data for plotting
             min_time = 100000000
             max_time = 0
@@ -687,13 +687,13 @@ class TabDrift(QtWidgets.QWidget):
                         a = self.axes_drift_cont_upper.plot(x, y, '.-', picker=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
-    
+
             # Plot
             if plot_data:
                 if update:
                     self.axes_drift_cont_upper.xaxis.set_major_formatter(DateFormatter('%H:%M'))
                     self.axes_drift_cont_lower.xaxis.set_major_formatter(DateFormatter('%H:%M'))
-                    self.drift_cont_plot = self.axes_drift_cont_lower.plot(drift_time, drift_rate, '.', picker=2)
+                    self.axes_drift_cont_lower.plot(drift_time, drift_rate, '.', picker=2)
                     xticks = self.axes_drift_cont_upper.get_xticks()
                     self.axes_drift_cont_lower.set_xticks(xticks)
                     xlims = self.axes_drift_cont_upper.get_xlim()
@@ -787,7 +787,7 @@ class TabDrift(QtWidgets.QWidget):
                 return delta_model
             else:
                 self.msg = show_message('No data available for plotting', 'Plot error')
-    
+
         # Plots vertical dashed lines showing delta-g's
         elif drift_type == 'roman':
             logging.info('Plotting Roman drift, Loop ' + obstreeloop.name)
@@ -803,7 +803,7 @@ class TabDrift(QtWidgets.QWidget):
                     x = [dt.datetime.utcfromtimestamp((f - 719163) * 86400.) for f in line[0]]
                     a = self.axes_drift_single.plot(x, y, '.-', picker=5)
                     a[0].name = line[2]
-    
+
             for line in models[2]:
                 if update:
                     self.axes_drift_single.plot(line[0], line[1], '--')
@@ -919,7 +919,7 @@ class TabDrift(QtWidgets.QWidget):
     #     if selected:
     #         self.datum_popup_menu.addAction(self.mnDeleteDatum)
     #         self.datum_popup_menu.exec_(self.datum_view.mapToGlobal(point))
-    
+
     # def init_tares_popup_menu(self):
     #     """
     #     Right-click menu on results table
@@ -968,7 +968,7 @@ class TabDrift(QtWidgets.QWidget):
             model = self.plot_drift()
             method = obstreeloop.drift_method
             self.update_delta_model(method, model)
-    
+
     def drift_adjust(self):
         """
         Update which PyQt tables are shown

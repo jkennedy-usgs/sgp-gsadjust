@@ -4,8 +4,8 @@
 GSadjust, for the interactive network adjustment of relative-gravity networks
 =============================================================================
 
-Version 1.0
-April 2018
+Version 0.95
+June 2019
 
 Jeff Kennedy, USGS
 jkennedy@usgs.gov
@@ -19,7 +19,7 @@ processing relative gravity data, Computers & Geosciences, doi:10.1016/j.cageo.2
 
 GSadjust is distributed with the network adjustment software Gravnet (Windows executable)
 (Hwang, C., C. Wang and L. Lee. 2002. Adjustment of relative gravity measurements
-using weighted and datum-free constraints. Computers & Geosciences 28 1005–1015)
+using weighted and datum-free constraints. Computers & Geosciences 28 1005-1015)
 
 This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
 timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
@@ -101,40 +101,39 @@ Survey or Loop is selected (by double-clicking in the tree view). There is one o
 
 """
 
+import copy
+import csv
+import datetime as dt
+import logging
+import os
 # Standard library modules
 import sys
-import os
-import logging
-import traceback
-import copy
-import datetime as dt
 import time
-import csv
+import traceback
 import webbrowser
 
+import matplotlib.pyplot as plt
+# For network graphs
+import networkx as nx
 # Modules that must be installed
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
-import matplotlib.pyplot as plt
-
-# For network graphs
-import networkx as nx  # networkx 1.9
 from matplotlib.dates import num2date
-from data_objects import Datum, Tare, AdjustmentResults, ChannelList, Delta
+
+from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex
+from data_objects import Datum, Tare, ChannelList, Delta
+from gui_objects import AddDatumFromList, CoordinatesTable
+from gui_objects import FigureDatumComparisonTimeSeries
+from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
+from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
+from menus import Menus
 from pyqt_models import BurrisTableModel, ScintrexTableModel
 from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
-from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
-from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
-from gui_objects import FigureDatumComparisonTimeSeries
-from gui_objects import AddDatumFromList, CoordinatesTable
-
-from tab_network import TabAdjust
-from tab_drift import TabDrift
 from tab_data import TabData
-from menus import Menus
+from tab_drift import TabDrift
+from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
-from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex
 
 """
 To install conda env:
@@ -419,7 +418,7 @@ class MainProg(QtWidgets.QMainWindow):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
-                if not loop.meter in meter_list:
+                if meter_list not in loop.meter:
                     meter_list[loop.meter] = 1.000
         return meter_list
 
@@ -450,7 +449,7 @@ class MainProg(QtWidgets.QMainWindow):
             meter_type_dialog = MeterType()
             test = meter_type_dialog.exec_()
             if test < 5:  # 5 = cancel  (accept/reject not working?)
-                  meter_type = meter_type_dialog.meter_type
+                meter_type = meter_type_dialog.meter_type
             else:
                 return
 
@@ -498,7 +497,7 @@ class MainProg(QtWidgets.QMainWindow):
             if err:
                 logging.exception(err, exc_info=True)
 
-            if not 'choose' in open_type:
+            if open_type not in 'choose':
                 self.init_gui()
             self.plot_samples()
             # if open_type == 'Burris' or open_type == 'CG6' or open_type == 'csv':
@@ -520,7 +519,6 @@ class MainProg(QtWidgets.QMainWindow):
         :return all_survey_data: ChannelList object with all survey data
         """
         i = 0
-        meter, oper = None, None
         try:
             all_survey_data = ChannelList()
             with open(filename, 'r') as fh:
@@ -683,14 +681,14 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.station_coords = coords
 
     def populate_obstreemodel(self, obstreesurveys, delta_models):
-        PBAR1 = ProgressBar(total=6, textmess='Loading workspace')
-        PBAR1.show()
-        PBAR1.progressbar.setValue(1)
+        pbar = ProgressBar(total=6, textmess='Loading workspace')
+        pbar.show()
+        pbar.progressbar.setValue(1)
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow([survey,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
-        PBAR1.progressbar.setValue(2)
+        pbar.progressbar.setValue(2)
         QtWidgets.QApplication.processEvents()
         if not delta_models:
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -704,7 +702,7 @@ class MainProg(QtWidgets.QMainWindow):
                 firstloop = firstsurvey.child(i)
                 firststation = firstloop.child(0)
                 i += 1
-            PBAR1.progressbar.setValue(3)
+            pbar.progressbar.setValue(3)
             QtWidgets.QApplication.processEvents()
             self.currentSurveyIndex = firstsurvey.index()
             self.currentLoopIndex = firstloop.index()
@@ -723,22 +721,22 @@ class MainProg(QtWidgets.QMainWindow):
 
             self.workspace_loaded = True
             self.update_all_drift_plots()
-            PBAR1.progressbar.setValue(4)
+            pbar.progressbar.setValue(4)
             QtWidgets.QApplication.processEvents()
-            # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a workspace,
-            # the loop deltas first have to be created by update_all_drift_plots(), then the survey delta table can be
-            # updated.
+            # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a
+            # workspace, the loop deltas first have to be created by update_all_drift_plots(), then the survey delta
+            # table can be updated.
             self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
             for survey in obstreesurveys:
                 self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
             self.update_adjust_tables()
-            PBAR1.progressbar.setValue(5)
+            pbar.progressbar.setValue(5)
             QtWidgets.QApplication.processEvents()
             self.init_gui()
             self.deltas_update_not_required()
             QtWidgets.QApplication.restoreOverrideCursor()
-            PBAR1.progressbar.setValue(6)
-            PBAR1.close()
+            pbar.progressbar.setValue(6)
+            pbar.close()
         # except Exception as e:
         #     self.msg = show_message("Workspace load error", "Error")
 
@@ -752,8 +750,8 @@ class MainProg(QtWidgets.QMainWindow):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
-                for i in range(loop.delta_model.rowCount()):
-                    delta = loop.delta_model.data(loop.delta_model.index(i, 0), role=QtCore.Qt.UserRole)
+                for iii in range(loop.delta_model.rowCount()):
+                    delta = loop.delta_model.data(loop.delta_model.index(iii, 0), role=QtCore.Qt.UserRole)
                     deltas.append(delta)
         return deltas
 
@@ -1231,7 +1229,6 @@ class MainProg(QtWidgets.QMainWindow):
         Called when user right-clicks a datum and selects delete from the context menu
         """
         index = self.tab_adjust.datum_view.selectedIndexes()
-        survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
         for idx in reversed(index):
             self.tab_adjust.datum_proxy_model.beginRemoveRows(idx.parent(), idx.row(), 0)
             self.tab_adjust.datum_proxy_model.removeRow(idx.row(), idx.parent())
@@ -1242,7 +1239,6 @@ class MainProg(QtWidgets.QMainWindow):
     def get_loop_threshold(self):
         # Prompt user to select time threshold
         loopdialog = LoopTimeThresholdDialog()
-        loop_thresh = 0
         if loopdialog.exec_():
             loop_thresh = loopdialog.dt_edit.dateTime()
             # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
@@ -1267,9 +1263,9 @@ class MainProg(QtWidgets.QMainWindow):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.currentLoopIndex)
         indexes = []
-        PBAR1 = ProgressBar(total=obstreeloop.rowCount() - 1, textmess='surveys')
-        PBAR1.show()
-        PBAR1.progressbar.setValue(1)
+        pbar = ProgressBar(total=obstreeloop.rowCount() - 1, textmess='surveys')
+        pbar.show()
+        pbar.progressbar.setValue(1)
         QtWidgets.QApplication.processEvents()
         # Step through loop backward
         pbar_idx = list(range(obstreeloop.rowCount()))
@@ -1277,7 +1273,7 @@ class MainProg(QtWidgets.QMainWindow):
         for i in range(obstreeloop.rowCount() - 1, 1, -1):
             station2 = obstreeloop.child(i)
             station1 = obstreeloop.child(i - 1)
-            PBAR1.progressbar.setValue(pbar_idx[i])
+            pbar.progressbar.setValue(pbar_idx[i])
             QtWidgets.QApplication.processEvents()
             # Check time difference between successive stations
             tdiff = station2.tmean - station1.tmean
@@ -1329,12 +1325,12 @@ class MainProg(QtWidgets.QMainWindow):
 
         model = self.obsTreeModel
         index = self.currentSurveyIndex
-        rowNum = index.row()
-        newRow = rowNum + direction
-        if not (0 <= newRow < model.rowCount()):
+        row_number = index.row()
+        new_row = row_number + direction
+        if not (0 <= new_row < model.rowCount()):
             return False
-        survey = model.takeRow(rowNum)
-        model.insertRow(newRow, survey)
+        survey = model.takeRow(row_number)
+        model.insertRow(new_row, survey)
         self.currentSurveyIndex = model.indexFromItem(survey[0])
         return True
 
@@ -1506,8 +1502,8 @@ class MainProg(QtWidgets.QMainWindow):
                     station_found = False
                     g_header.append(survey.name)
                     g_header.append(survey.name + '_sd')
-                    for i in range(survey.results_model.rowCount()):
-                        adj_station = survey.results_model.data(survey.results_model.index(i, 0),
+                    for ii in range(survey.results_model.rowCount()):
+                        adj_station = survey.results_model.data(survey.results_model.index(ii, 0),
                                                                 role=QtCore.Qt.UserRole)
                         if adj_station.station[:6] == station[:6]:
                             station_found = True
@@ -1667,15 +1663,15 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         # Get list of datum stations for all surveys
-        PBAR1 = ProgressBar(total=self.obsTreeModel.invisibleRootItem().rowCount(), textmess='Adjusting surveys')
-        PBAR1.show()
+        pbar = ProgressBar(total=self.obsTreeModel.invisibleRootItem().rowCount(), textmess='Adjusting surveys')
+        pbar.show()
 
         datums = self.obsTreeModel.datums()
         # Loop over surveys
         x_all, adj_g_all, obs_g_all = [], [], []
         ctr = 0
         for station in datums:
-            PBAR1.progressbar.setValue(ctr)
+            pbar.progressbar.setValue(ctr)
             ctr += 1
             QtWidgets.QApplication.processEvents()
             station_adj_g = []
@@ -1917,7 +1913,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             a = plt.plot(x, y1, '-o', label=datums[i] + '_obs')
             line_color = a[0].get_color()
-            b = plt.plot(x, y2, '--o', c=line_color, label=datums[i] + '_adj')
+            plt.plot(x, y2, '--o', c=line_color, label=datums[i] + '_adj')
             i += 1
         plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
         fig.show()
@@ -1929,7 +1925,6 @@ class MainProg(QtWidgets.QMainWindow):
         """
         edges = nx.MultiGraph()
         disabled_edges = nx.MultiGraph()
-        stations = []
         datum_nodelist, nondatum_nodelist = [], []
         survey = self.obsTreeModel.itemFromIndex(self.currentSurveyIndex)
 
@@ -2003,13 +1998,12 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Creating a PyQt window heree in preparation for eventually having a tabbed plot window with various diagnostics
         """
-        plot = FigureDatumComparisonTimeSeries(self.obsTreeModel)
+        _ = FigureDatumComparisonTimeSeries(self.obsTreeModel)
 
     def tide_correction_dialog(self):
         """
         Opens dialog to specify correction type
         """
-        correction_type = None
         tide_correction_dialog = TideCorrectionDialog()
         tide_correction_dialog.msg.exec_()
         correction_type = tide_correction_dialog.correction_type
@@ -2175,7 +2169,7 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         # TODO: load station coordinates dialog
-        jeff = 1
+        return
 
     def close_windows(self):
         """
@@ -2190,7 +2184,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         webbrowser.open('file://' + os.path.realpath('./docs/index.htm'))
 
-    def check_for_updates(self, e=None, show_uptodate_msg=True, parent=None):
+    def check_for_updates(self, show_uptodate_msg=True, parent=None):
         """
         Check if the usgs_root repo is at the same commit as this installation
         Parameters
@@ -2204,6 +2198,8 @@ class MainProg(QtWidgets.QMainWindow):
         Booblean, whether or not to start GSadjust (True  yes)
         """
         try:
+            gitpath = os.path.dirname(self.install_dir) + "\\gsadjust-env\\Lib\\mingw64\\bin"
+            os.environ["PATH"] += os.pathsep + gitpath
             from git import Repo
             # install_dir = utils.get_install_dname('pymdwizard')
             repo = Repo(self.install_dir)

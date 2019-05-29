@@ -1,6 +1,9 @@
-from data_objects import ChannelList
 import datetime as dt
+
 from matplotlib.dates import date2num
+
+from data_objects import ChannelList
+
 
 def read_csv(fh):
     i = 0
@@ -55,6 +58,7 @@ def read_csv(fh):
         all_survey_data.keepdata.append(1)
     all_survey_data.meter_type = 'csv'
     return all_survey_data
+
 
 def read_scintrex(fh):
     i = 0
@@ -122,9 +126,9 @@ def read_scintrex(fh):
     all_survey_data.meter_type = 'Scintrex'
     return all_survey_data
 
+
 def read_burris(fh):
     i = 0
-    meter, oper = None, None
     all_survey_data = ChannelList()
 
     for line in fh:
@@ -185,6 +189,7 @@ def read_burris(fh):
         all_survey_data.keepdata.append(1)
     all_survey_data.meter_type = 'Burris'
     return all_survey_data
+
 
 def read_cg6(fh):
     i = 0
@@ -247,6 +252,7 @@ def read_cg6(fh):
     all_survey_data.meter_type = 'CG6'
     return all_survey_data
 
+
 def read_cg6tsoft(fh):
     i = 0
     meter, oper = None, None
@@ -256,6 +262,7 @@ def read_cg6tsoft(fh):
         i += 1
         line = line.strip()
         vals_temp = line.split()
+        station_name = None
         if line[0] == '/':
             vals_temp = line.split()
             if len(vals_temp) > 1:
@@ -264,7 +271,7 @@ def read_cg6tsoft(fh):
                 if vals_temp[1] == 'Operator:':
                     oper = vals_temp[-1]
                 if vals_temp[1] == 'Station:':
-                    name = vals_temp[-1]
+                    station_name = vals_temp[-1]
             continue
 
         # Numbers are columns in the imported file
@@ -275,38 +282,37 @@ def read_cg6tsoft(fh):
         c_grav = 11  # CorrGravity channel
 
         # fill object properties:
-        all_survey_data.station.append(name)
-        all_survey_data.elev.append(float(vals_temp[c_elev]))
-        all_survey_data.lat.append(float(vals_temp[c_lat]))
-        all_survey_data.long.append(float(vals_temp[c_long]))
-        all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000.)
-        all_survey_data.tare.append(0)
-        all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.)
-        all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.)
-        all_survey_data.sd.append(-999)  # SD not exported in Tsoft format?? It is in regular format
-        all_survey_data.meter.append(meter)
-        all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.)
-        all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.)
-        all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.)
-        all_survey_data.t.append(date2num(dt.datetime(int(vals_temp[c_year]),
-                                                      int(vals_temp[c_month]),
-                                                      int(vals_temp[c_day]),
-                                                      int(vals_temp[c_hour]),
-                                                      int(vals_temp[c_minute]),
-                                                      int(vals_temp[c_second]))))
-        if meter:
+        if station_name:
+            all_survey_data.station.append(station_name)
+            all_survey_data.elev.append(float(vals_temp[c_elev]))
+            all_survey_data.lat.append(float(vals_temp[c_lat]))
+            all_survey_data.long.append(float(vals_temp[c_long]))
+            all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000.)
+            all_survey_data.tare.append(0)
+            all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.)
+            all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.)
+            all_survey_data.sd.append(-999)  # SD not exported in Tsoft format?? It is in regular format
             all_survey_data.meter.append(meter)
-        else:
-            all_survey_data.meter.append('-999')
-        if oper:
-            all_survey_data.oper.append(oper)
-        else:
-            all_survey_data.oper.append('-999')
-        all_survey_data.keepdata.append(1)
-        all_survey_data.dur.append(-999)
-        all_survey_data.rej.append(-999)
+            all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.)
+            all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.)
+            all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.)
+            all_survey_data.t.append(date2num(dt.datetime(int(vals_temp[c_year]),
+                                                          int(vals_temp[c_month]),
+                                                          int(vals_temp[c_day]),
+                                                          int(vals_temp[c_hour]),
+                                                          int(vals_temp[c_minute]),
+                                                          int(vals_temp[c_second]))))
+            if meter:
+                all_survey_data.meter.append(meter)
+            else:
+                all_survey_data.meter.append('-999')
+            if oper:
+                all_survey_data.oper.append(oper)
+            else:
+                all_survey_data.oper.append('-999')
+            all_survey_data.keepdata.append(1)
+            all_survey_data.dur.append(-999)
+            all_survey_data.rej.append(-999)
     all_survey_data.meter_type = 'CG6Tsoft'
 
-
     return all_survey_data
-

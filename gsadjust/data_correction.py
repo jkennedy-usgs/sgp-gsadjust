@@ -4,18 +4,11 @@
 data_correction.py
 ==================
 """
-import os
-import shutil
-import subprocess
 from copy import deepcopy
+
 from PyQt5 import QtGui
 
 from .data_objects import TimeSeries
-from .synthetic_tides import *
-
-
-
-
 
 
 def load_tide_time_series(self):
@@ -36,8 +29,6 @@ def load_tide_time_series(self):
         Tides.populate_from_eterna_file(fname, 3)
 
     self.applyTideCorrection(Tides)
-
-
 
 
 def ocean_loading_correction(self):
@@ -147,7 +138,7 @@ def atmospheric_correction(self):
                                                     loop_dic[keyloop].station_dic[keysta].t)
                 self.campaigndata.survey_dic[keysurv].loop_dic[keyloop]. \
                     station_dic[keysta].corr_g = self.campaigndata.survey_dic[keysurv]. \
-                                                    loop_dic[keyloop].station_dic[keysta].grav - Atmtemp3.d
+                                                     loop_dic[keyloop].station_dic[keysta].grav - Atmtemp3.d
                 self.campaigndata.survey_dic[keysurv].loop_dic[keyloop].station_dic[keysta]. \
                     grav = self.campaigndata.survey_dic[keysurv].loop_dic[keyloop]. \
                     station_dic[keysta].corr_g

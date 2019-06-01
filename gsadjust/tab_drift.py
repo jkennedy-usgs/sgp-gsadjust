@@ -327,7 +327,7 @@ class TabDrift(QtWidgets.QWidget):
         """
         self.tension_label.setText(str(self.tension_slider.value()))
         model = self.plot_drift()
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         self.update_delta_model(obstreeloop.drift_method, model)
 
     @staticmethod
@@ -591,7 +591,7 @@ class TabDrift(QtWidgets.QWidget):
         # delta-g code were better separated, update wouldn't be needed.
         offset = 0
         if type(obstreeloop) is not ObsTreeLoop:
-            obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+            obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
             obstreesurvey = obstreeloop.parent()
         drift_type = obstreeloop.drift_method
         plot_data = obstreeloop.get_data_for_plot()
@@ -833,7 +833,7 @@ class TabDrift(QtWidgets.QWidget):
         Called from update_drift_tables_and_plots + callback from GUI. Initiates plotting on drift tab.
         :param update: Boolean or int, controls if plots are updated. For performance, it's set to false when loading a file
         """
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         method_key = self.driftmethod_comboboxbox.currentIndex()
 
         tare_model = obstreeloop.tare_model
@@ -879,7 +879,7 @@ class TabDrift(QtWidgets.QWidget):
         :param method: If 'roman', show sample and average models. Otherwise, show a single model.
         :param model: a PyQt model or list of models (Roman method).
         """
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         if method == 'roman':
             models = model
             self.dg_samples_view.setModel(models[0])
@@ -963,7 +963,7 @@ class TabDrift(QtWidgets.QWidget):
         Respond to tare check/uncheck.
         """
         if hasattr(selected, 'model'):
-            obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+            obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
             self.process_tares(obstreeloop)
             model = self.plot_drift()
             method = obstreeloop.drift_method
@@ -1060,7 +1060,7 @@ class TabDrift(QtWidgets.QWidget):
         """
         method_key = self.drift_polydegree_combobox.currentIndex()
         startend_key = self.drift_cont_startendcombobox.currentIndex()
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         drift_method = obstreeloop.drift_method
         if drift_method == 'continuous':
             obstreeloop.drift_cont_method = method_key

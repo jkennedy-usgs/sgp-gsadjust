@@ -5,6 +5,7 @@ import os
 import gui_objects
 from time import sleep
 from PyQt5 import QtCore, Qt
+import matplotlib
 
 @pytest.mark.skipif("TRAVIS" in os.environ, reason="Doesn't work on Travis")
 def test_gui(qtbot, monkeypatch):
@@ -87,8 +88,13 @@ def test_gui(qtbot, monkeypatch):
     # Adjustment results should be different with some observations disabled
     assert abs(sd0 - sd1) > 0.01
 
+    fig = window.plot_histogram()
+    assert type(fig) == matplotlib.figure.Figure
+    matplotlib.pyplot.close(fig)
+
     success = window.workspace_save()
     assert success == True
+
 
     window.workspace_clear()
     assert window.obsTreeModel.rowCount() == 0

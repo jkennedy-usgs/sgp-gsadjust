@@ -134,7 +134,12 @@ def read_burris(fh):
     for line in fh:
         i += 1
         line = line.strip()
-        vals_temp = line.split()
+        if line.find(',') != -1:
+            vals_temp = line.split(',')
+            if vals_temp[0] == 'Station ID':
+                continue
+        else:
+            vals_temp = line.split()
         # Numbers are columns in the imported file
         c_station, c_oper, c_meter, c_date, c_time = 0, 1, 2, 3, 4
         c_dial, c_feedback, c_tide, c_tilt = 6, 7, 8, 9

@@ -1117,6 +1117,15 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     signal_name_changed = QtCore.pyqtSignal()
     signal_delta_update_required = QtCore.pyqtSignal()
 
+    def __iter__(self):
+        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+            yield self.obsTreeModel.invisibleRootItem().child(i)
+        # for attr, value in self.__dict__.items():
+        #     a = getattr(self, attr)
+        #     if type(a) is list:
+        #         if len(a) > 0:
+        #             yield attr, a
+
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
 

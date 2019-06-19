@@ -416,7 +416,7 @@ class MainProg(QtWidgets.QMainWindow):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
-                if meter_list not in loop.meter:
+                if loop.meter not in meter_list:
                     meter_list[loop.meter] = 1.000
         return meter_list
 
@@ -1298,11 +1298,9 @@ class MainProg(QtWidgets.QMainWindow):
         obstreeloop = model.itemFromIndex(indexes[0].parent())
         obstreesurvey = obstreeloop.parent()
         obstreestation = self.obsTreeModel.itemFromIndex(index)
-        temp_obstreestation = copy.deepcopy(obstreestation)
-        new_obstreestation = ObsTreeStation.from_station(temp_obstreestation)
-        new_station_count = float(temp_obstreestation.station_count) + 0.1
-        new_obstreestation.station_count = "{:.1f}".format(new_station_count)
-        # new_tree_station = ObsTreeStation(station=new_obstreestation)
+        new_station_count = float(obstreestation.station_count) + 0.1
+        new_obstreestation = ObsTreeStation(obstreestation, obstreestation.station_name, "{:.1f}".format(new_station_count))
+
         obstreeloop.insertRow(index.row() + 1, [new_obstreestation,
                                                 QtGui.QStandardItem('a'),
                                                 QtGui.QStandardItem('a')])
@@ -2118,7 +2116,7 @@ def main():
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
     # Should probably change this to try a different location for the log file.
     try:
-        logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.WARNING)
     except PermissionError:
         show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
     sys.excepthook = handle_exception

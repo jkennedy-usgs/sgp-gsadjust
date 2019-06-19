@@ -843,9 +843,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         table_updated = False
         if populate_type == 'all':
-            # for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            #     survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for survey in self.obsTreeModel:
+            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
+                survey = self.obsTreeModel.invisibleRootItem().child(i)
                 table_updated = survey.populate_delta_model(clear=True)
                 self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
@@ -1302,8 +1301,6 @@ class MainProg(QtWidgets.QMainWindow):
         new_station_count = float(obstreestation.station_count) + 0.1
         new_obstreestation = ObsTreeStation(obstreestation, obstreestation.station_name, "{:.1f}".format(new_station_count))
 
-        # new_obstreestation.station_count = "{:.1f}".format(new_station_count)
-        # new_tree_station = ObsTreeStation(station=new_obstreestation)
         obstreeloop.insertRow(index.row() + 1, [new_obstreestation,
                                                 QtGui.QStandardItem('a'),
                                                 QtGui.QStandardItem('a')])

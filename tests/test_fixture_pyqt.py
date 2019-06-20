@@ -7,7 +7,7 @@ import pytest
 import pyqt_models
 import GSadjust
 import pickle
-from PyQt5 import QtCore
+from PyQt5 import QtGui, QtCore
 
 
 
@@ -30,7 +30,7 @@ def list_of_deltas():
     fname = './tests/test_workspace1.p'
     # app = GSadjust.MainProg()
     # app.workspace_open(fname)
-    ots, dms, _ =  GSadjust.MainProg.obsTreeModel.load_workspace(fname)
+    ots, dms, _ = GSadjust.MainProg.obsTreeModel.load_workspace(fname)
     survey = ots[0]
     # survey = app.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0,0)
@@ -85,16 +85,25 @@ def obstreestation():
     return a
 
 @pytest.fixture
-def obstreestation():
-    a = pyqt_models.ObsTreeStation(channellist(),'jeff',1)
-    return a
-
-@pytest.fixture
 def obstreesurvey():
     filename = './tests/test_BurrisData.txt'
     meter_type = 'Burris'
-    obstreesurvey = pyqt_models.ObsTreeSurvey('test')
-    assert type(obstreesurvey) is pyqt_models.ObsTreeSurvey
+    survey = pyqt_models.ObsTreeSurvey('test')
+    assert type(survey) is pyqt_models.ObsTreeSurvey
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
-    obstreesurvey.populate(data)
-    return obstreesurvey
+    survey.populate(data)
+    return survey
+
+@pytest.fixture
+def obstreemodel(obstreesurvey):
+    model = pyqt_models.ObsTreeModel()
+    model.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
+    assert type(model) is pyqt_models.ObsTreeModel
+    return model
+
+@pytest.fixture
+def mainprog():
+    fname = './tests/test_workspace1.p'
+    app = GSadjust.MainProg()
+    app.workspace_open(fname)
+    return app

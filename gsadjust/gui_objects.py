@@ -23,6 +23,8 @@ import os
 
 import cartopy.crs as ccrs
 import cartopy.io.img_tiles as cimgt
+import matplotlib
+matplotlib.use('qt5agg')
 import matplotlib.pyplot as plt
 from PyQt5 import QtGui, QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -33,7 +35,7 @@ from matplotlib.figure import Figure
 import a10
 from data_objects import Datum
 from pyqt_models import GravityChangeModel, DatumTableModel, MeterCalibrationModel
-
+from utils import *
 
 class ApplyTimeCorrection(QtWidgets.QDialog):
     def __init__(self):
@@ -149,23 +151,24 @@ class CoordinatesTable(QtWidgets.QDialog):
                     rt = row_text[:-1]  # Remove trailing \t
                     rt += '\n'
                     s += rt
-                sys_clip = QtWidgets.QApplication.clipboard()
-                sys_clip.setText(s)
+                self.sys_clip = QtWidgets.QApplication.clipboard()
+                self.sys_clip.setText(s)
 
             if e.key() == QtCore.Qt.Key_V:
-                sys_clip = QtWidgets.QApplication.clipboard()
-                s = sys_clip.text()
+                self.sys_clip = QtWidgets.QApplication.clipboard()
+                s = self.sys_clip.text()
                 rows = s.split('\n')
                 for idx, r in enumerate(rows):
-                    elems = r.split('\t')
-                    table_item_station = QtWidgets.QTableWidgetItem(elems[0])
-                    table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
-                    table_item_long = QtWidgets.QTableWidgetItem(elems[2])
-                    table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
-                    self.table.setItem(idx, 0, table_item_station)
-                    self.table.setItem(idx, 1, table_item_lat)
-                    self.table.setItem(idx, 2, table_item_long)
-                    self.table.setItem(idx, 3, table_item_elev)
+                    if r is not '':
+                        elems = r.split('\t')
+                        table_item_station = QtWidgets.QTableWidgetItem(elems[0])
+                        table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
+                        table_item_long = QtWidgets.QTableWidgetItem(elems[2])
+                        table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
+                        self.table.setItem(idx, 0, table_item_station)
+                        self.table.setItem(idx, 1, table_item_lat)
+                        self.table.setItem(idx, 2, table_item_long)
+                        self.table.setItem(idx, 3, table_item_elev)
 
     def coords(self):
         """
@@ -289,9 +292,9 @@ class AdjustOptions(QtWidgets.QDialog):
             except:
                 self.ao.specify_cal_coeff = False
             if not hasattr(self.ao, 'meter_cal_dict'):
-                self.ao.meter_cal_dict = self.parent().populate_cal_model()
+                self.ao.meter_cal_dict = init_cal_coeff_dict(self.parent().obsTreeModel)
             elif self.ao.meter_cal_dict is None:
-                self.ao.meter_cal_dict = self.parent().populate_cal_model()
+                self.ao.meter_cal_dict = init_cal_coeff_dict(self.parent().obsTreeModel)
             self.cal_coeff_model = MeterCalibrationModel()
             for k, v in self.ao.meter_cal_dict.items():
                 self.cal_coeff_model.appendRow([QtGui.QStandardItem(k), QtGui.QStandardItem(str(v))])

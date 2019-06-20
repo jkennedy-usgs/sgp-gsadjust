@@ -96,8 +96,9 @@ The general data structure of the program is stored as PyQt objects inherited fr
 The Adjustment object in each ObsTreeSurvey holds the network adjustment input, output, and options. There is one
 Adjustment per Survey.
 
-The datum_model, delta_model, results_model, and tare_model are PyQt models. The gui is update with the respective model when a new
-Survey or Loop is selected (by double-clicking in the tree view). There is one of each table per Survey.
+The datum_model, delta_model, results_model, and tare_model are PyQt models. The gui is update with the respective
+model when a new Survey or Loop is selected (by double-clicking in the tree view). There is one of each table per
+Survey.
 
 """
 
@@ -113,18 +114,17 @@ import traceback
 import webbrowser
 
 # For network graphs
-import networkx as nx
 # Modules that must be installed
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 from matplotlib.dates import num2date
 
-from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex
+# GSadjust modules
+from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, import_abs_g_complete, import_abs_g_simple
 from data_export import export_metadata, export_summary
 from data_objects import Datum, Tare, ChannelList, Delta
 from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
 from gui_objects import AddDatumFromList, CoordinatesTable
-
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
 from menus import Menus
@@ -135,7 +135,9 @@ from tab_data import TabData
 from tab_drift import TabDrift
 from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
-
+from data_correction import time_correction
+from data_analysis import compute_gravity_change
+from utils import *
 """
 To install conda env:
 conda create -n pyg35 python=3.5 numpy scipy=0.19 pyqt=5 networkx matplotlib pywin32 
@@ -394,7 +396,7 @@ class MainProg(QtWidgets.QMainWindow):
         elif obstreeloop.meter_type == 'Burris':
             self.station_model = BurrisTableModel(station)
         self.station_model.dataChanged.connect(self.plot_samples)
-        self.station_model.signal_update_coordinates.connect(self.populate_coordinates)
+        self.station_model.signal_update_coordinates.connect(self.populate_station_coords)
         self.station_model.signal_adjust_update_required.connect(self.adjust_update_required)
         self.station_model.signal_uncheck_station.connect(self.uncheck_station)
         self.station_model.signal_check_station.connect(self.check_station)
@@ -409,16 +411,6 @@ class MainProg(QtWidgets.QMainWindow):
     def check_station(self):
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreestation.setCheckState(2)
-
-    def populate_cal_model(self):
-        meter_list = {}
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                if loop.meter not in meter_list:
-                    meter_list[loop.meter] = 1.000
-        return meter_list
 
     ###########################################################################
     # Load/Open/Save routines
@@ -500,7 +492,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.plot_samples()
             # if open_type == 'Burris' or open_type == 'CG6' or open_type == 'csv':
             if open_type is not 'Scintrex':
-                self.populate_coordinates()
+                self.populate_station_coords()
             self.workspace_loaded = True
             QtWidgets.QApplication.restoreOverrideCursor()
             QtWidgets.QApplication.processEvents()
@@ -559,7 +551,7 @@ class MainProg(QtWidgets.QMainWindow):
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
         self.update_all_drift_plots()
-        self.populate_coordinates()
+        self.populate_station_coords()
         self.workspace_loaded = True
         self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -708,7 +700,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.index_current_loop_survey = firstsurvey.index()
             self.index_current_station_loop = firstloop.index()
             self.index_current_station_survey = firstsurvey.index()
-            self.populate_coordinates()
+            self.populate_station_coords()
             self.menus.mnFileSaveWorkspace.setEnabled(True)
             self.menus.mnAdjAdjust.setEnabled(True)
             self.menus.mnAdjAdjustCurrent.setEnabled(True)
@@ -738,36 +730,8 @@ class MainProg(QtWidgets.QMainWindow):
         # except Exception as e:
         #     self.msg = show_message("Workspace load error", "Error")
 
-    def assemble_all_deltas(self):
-        """
-        Get all deltas from loop delta models.
-        :return: One long list of all deltas in a campaign.
-        """
-        deltas = []
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                for iii in range(loop.delta_model.rowCount()):
-                    delta = loop.delta_model.data(loop.delta_model.index(iii, 0), role=QtCore.Qt.UserRole)
-                    deltas.append(delta)
-        return deltas
-
-    def return_delta_given_key(self, key, deltas):
-        """
-        Return a delta based on thS\e staion name and station count of the comprising stations.
-        :param keys: a tuple or list, depending on the type of delta
-        :param deltas: List of deltas, as returned from assemble_all_deltas()
-        :return:
-        """
-        for delta in deltas:
-            # Sometimes they differ by a little bit (1e-8)
-            if delta.key[0:len(key) - 5] == key[0:len(key) - 5]:
-                return delta
-        return None
-
     def populate_survey_deltatable_from_simpledeltas(self, delta_models, surveys):
-        deltas = self.assemble_all_deltas()
+        deltas = assemble_all_deltas(self.obsTreeModel)
         for idx, delta_model in enumerate(delta_models):
             for simpledelta in delta_model:
                 if not hasattr(simpledelta, 'loop'):
@@ -806,7 +770,7 @@ class MainProg(QtWidgets.QMainWindow):
                         # This section is necessary to load older .p versions. It's much slower than the above section.
                         else:
                             try:
-                                d = self.return_delta_given_key(simpledelta.key, deltas)
+                                d = return_delta_given_key(simpledelta.key, deltas)
                             except:
                                 return
                     if d:
@@ -818,20 +782,15 @@ class MainProg(QtWidgets.QMainWindow):
                 except:
                     self.msg = show_message('Import error', 'Import error')
 
-    def populate_coordinates(self):
+    def populate_station_coords(self):
         """
         Stores a single set of coordinates for each station with the obsTreeModel object. The coordinates of the last
-        Station in the Survey > Loop > Station heirarchy will be used.
+        Station in the Survey > Loop > Station hierarchy are used.
+
+        Used as a slot for the self.station_model.signal_update_coordinates signal (thus init_station_coords can't
+        be called directly)
         """
-        station_coords = dict()
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                for iii in range(loop.rowCount()):
-                    station = loop.child(iii)
-                    station_coords[station.station_name] = (station.long[0], station.lat[0], station.elev[0])
-        self.obsTreeModel.station_coords = station_coords
+        self.obsTreeModel.station_coords = init_station_coords_dict(self.obsTreeModel)
 
     ###########################################################################
     # General routines
@@ -981,7 +940,6 @@ class MainProg(QtWidgets.QMainWindow):
         if on drift tab, but otherwise do nothing.
         :param selected: Selected indexes
         """
-        # index = selected.indexes()
         if selected.model() is not None:
             if self.tab_widget.currentIndex() == 1:
                 self.update_drift_tables_and_plots()
@@ -1006,60 +964,29 @@ class MainProg(QtWidgets.QMainWindow):
                     if self.tab_widget.currentIndex() == 1:
                         self.update_drift_tables_and_plots()
 
+    def adjusted_vs_observed_datum_analysis(self):
+        return
+
     def correction_ocean_loading(self):
         self.msg = show_message('Not implemented', 'Error')
 
     def correction_atmospheric(self):
         self.msg = show_message('Not implemented', 'Error')
 
-    def correction_recorded_time(self):
+    def correct_recorded_time(self):
         """
         Correct all times from an offset: when GMT time entered in relative gravimeter is bad.
         """
         # ask for time difference to apply
+
         text, ok = QtWidgets.QInputDialog.getText(self, 'Input parameters',
                                                   'time offset to apply (min)?')
         if ok:
             time_correction_dialog = ApplyTimeCorrection()
             time_correction_dialog.msg.exec_()
             correction_type = time_correction_dialog.time_correction_type
-            t_offset = int(text)
-            if correction_type == 'all':
-                for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-                    obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
-                    for ii in range(obstreesurvey.rowCount()):
-                        obstreeloop = obstreesurvey.child(ii)
-                        for iii in range(obstreeloop.rowCount()):
-                            obstreestation = obstreeloop.child(iii)
-                            obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
-                            logging.info("{} minute offset added to station {}".format(t_offset,
-                                                                                       obstreestation.display_name))
-            elif correction_type == 'survey':
-                obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-                for ii in range(obstreesurvey.rowCount()):
-                    obstreeloop = obstreesurvey.child(ii)
-                    for iii in range(obstreeloop.rowCount()):
-                        obstreestation = obstreeloop.child(iii)
-                        obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
-                        logging.info(
-                            "{} minute offset added to station {}".format(t_offset, obstreestation.display_name))
-            elif correction_type == 'loop':
-                obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
-                for iii in range(obstreeloop.rowCount()):
-                    obstreestation = obstreeloop.child(iii)
-                    obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
-                    logging.info(
-                        "{} minute offset added to station {}".format(t_offset, obstreestation.display_name))
-            elif correction_type == 'station':
-                indexes = self.gui_data_treeview.selectedIndexes()
-                # Because each tree item has three columns, len(indexes) equals the number of items selected * 3.
-                # The next line takes every 3rd index.
-                indexes = indexes[0::3]
-                for index in indexes:
-                    obstreestation = self.obsTreeModel.itemFromIndex(index)
-                    obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
-                    logging.info("{} minute offset added to station {}".format(t_offset,
-                                                                               obstreestation.display_name))
+            if correction_type != False:
+                time_correction(self.obsTreeModel, int(text), self.index_current_survey, self.index_current_loop, self.gui_data_treeview.selectedIndexes())
 
     def set_vertical_gradient_interval(self):
         """
@@ -1359,7 +1286,9 @@ class MainProg(QtWidgets.QMainWindow):
             for idx in indexes:
                 if idx.column() == 0:
                     obstreestation = model.itemFromIndex(idx)
-                    new_obstreestation = ObsTreeStation.from_station(obstreestation)
+                    new_obstreestation = ObsTreeStation(obstreestation,
+                                                        obstreestation.station_name,
+                                                        obstreestation.station_count)
                     logging.info('Station added to new loop: {}'.format(
                         obstreestation.name))
                     new_obstreeloop.appendRow([new_obstreestation,
@@ -1456,195 +1385,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.adjust_update_not_required()
 
     def show_gravity_change_table(self):
-        header, table, dates = self.compute_gravity_change()
+        header, table, dates = compute_gravity_change(self.obsTreeModel)
         GravityChangeTable(self, table, header, dates=dates, full_table=False)
-
-    def compute_gravity_change(self, full_table=False):
-        """
-        Shows PyQt table of gravity change.
-
-        :param full_table: if True, entire tabular output file for data release is shown. Includes station
-        coordinates, g, standard deviation, and gravity change.
-        """
-        compare_station, initial_station, iteration_station, iteration_name = None, None, None, None
-        logging.info('Calculating gravity change')
-        first = True
-        unique_station_names = set()
-        unique_stations = list()
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                for iii in range(loop.rowCount()):
-                    station = loop.child(iii)
-                    unique_station_names.add(station.station_name)
-                    unique_stations.append(station)
-        unique_station_names = sorted(unique_station_names)
-        out_table_iteration, out_table_cumulative = [], []
-        header1, header2 = [], []
-        lat, lon, elev, all_g = [], [], [], []
-        if full_table:
-            for station in unique_station_names:
-                station_g = []
-                g_header = []
-                coords = self.obsTreeModel.station_coords[station]
-                lat.append(coords[0])
-                lon.append(coords[1])
-                elev.append(coords[2])
-                for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-                    survey = self.obsTreeModel.invisibleRootItem().child(i)
-                    station_found = False
-                    g_header.append(survey.name)
-                    g_header.append(survey.name + '_sd')
-                    for ii in range(survey.results_model.rowCount()):
-                        adj_station = survey.results_model.data(survey.results_model.index(ii, 0),
-                                                                role=QtCore.Qt.UserRole)
-                        if adj_station.station[:6] == station[:6]:
-                            station_found = True
-                            break
-                    if station_found:
-                        station_g.append('{:0.1f}'.format(adj_station.g))
-                        station_g.append('{:0.1f}'.format(adj_station.sd))
-                    else:
-                        station_g.append('-999')
-                        station_g.append('-999')
-                all_g.append(station_g)
-
-        dates = []
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
-            dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
-            diff_cumulative = []
-            diff_iteration = []
-            if full_table:
-                diff_cumulative_sd, diff_iteration_sd = [], []
-            if first:
-                # Calculate both the between-survey change and the change from the initial survey
-                initial_survey = survey.results_model
-                iteration_reference = initial_survey
-                reference_name = survey.name
-                iteration_name = reference_name
-                first = False
-            else:
-                if not full_table:
-                    header1.append(str(iteration_name) + '_to_' + str(survey.name))
-                    header2.append(str(reference_name) + '_to_' + str(survey.name))
-                else:
-                    header1.append('dH2O_' + str(iteration_name) + '_to_' + str(survey.name))
-                    header1.append('dH2O_sd_' + str(iteration_name) + '_to_' + str(survey.name))
-                    header2.append('dH2O_' + str(reference_name) + '_to_' + str(survey.name))
-                    header2.append('dH2O_sd_' + str(reference_name) + '_to_' + str(survey.name))
-
-                compare_survey = survey.results_model
-                for station_name in unique_station_names:
-
-                    for ii in range(initial_survey.rowCount()):
-                        initial_station = initial_survey.data(initial_survey.index(ii, 0),
-                                                              role=QtCore.Qt.UserRole)
-                        # Iterate through, look for matching station. If statements deal with Gravnet, which truncates
-                        # station names to 6 characters
-                        if len(initial_station.station) > 6 and len(station_name) > 6:
-                            if initial_station.station == station_name:
-                                break
-                        elif len(initial_station.station) > 6:
-                            if initial_station.station[:6] == station_name:
-                                break
-                        elif initial_station.station == station_name:
-                            break
-                        else:
-                            initial_station = None
-                    for ii in range(iteration_reference.rowCount()):
-                        iteration_station = iteration_reference.data(iteration_reference.index(ii, 0),
-                                                                     role=QtCore.Qt.UserRole)
-                        # Iterate through, look for matching station
-                        # if iteration_station.station == station_name[:6]:
-                        #     break
-                        # else:
-                        #     iteration_station = None
-
-                        if len(iteration_station.station) > 6 and len(station_name) > 6:
-                            if iteration_station.station == station_name:
-                                break
-                        elif len(iteration_station.station) > 6:
-                            if iteration_station.station[:6] == station_name:
-                                break
-                        elif iteration_station.station == station_name:
-                            break
-                        else:
-                            iteration_station = None
-
-                    for ii in range(compare_survey.rowCount()):
-                        compare_station = compare_survey.data(compare_survey.index(ii, 0),
-                                                              role=QtCore.Qt.UserRole)
-                        # if compare_station.station == station_name[:6]:
-                        #     break
-                        # else:
-                        #     compare_station = None
-
-                        if len(compare_station.station) > 6 and len(station_name) > 6:
-                            if compare_station.station == station_name:
-                                break
-                        elif len(compare_station.station) > 6:
-                            if compare_station.station[:6] == station_name:
-                                break
-                        elif compare_station.station == station_name:
-                            break
-                        else:
-                            compare_station = None
-
-                    if initial_station is not None and compare_station is not None:
-                        if not full_table:
-                            diff_cumulative.append("{:0.1f}".format(compare_station.g - initial_station.g))
-                        else:
-                            diff_cumulative.append("{:0.2f}".format((compare_station.g - initial_station.g) / 41.9))
-                            var = np.sqrt(compare_station.sd ** 2 + initial_station.sd ** 2) / 41.9
-                            if np.isnan(var):
-                                diff_cumulative_sd.append('-999')
-                            else:
-                                diff_cumulative_sd.append("{:0.2f}".format(var))
-                    else:
-                        diff_cumulative.append("-999")
-                        if full_table:
-                            diff_cumulative_sd.append("-999")  # for sd column
-                    if iteration_station is not None and compare_station is not None:
-                        if not full_table:
-                            diff_iteration.append("{:0.1f}".format(compare_station.g - iteration_station.g))
-                        else:
-                            diff_iteration.append("{:0.2f}".format((compare_station.g - iteration_station.g) / 41.9))
-                            var = np.sqrt(compare_station.sd ** 2 + iteration_station.sd ** 2) / 41.9
-                            if np.isnan(var):
-                                diff_iteration_sd.append('-999')
-                            else:
-                                diff_iteration_sd.append("{:0.2f}".format(var))
-                    else:
-                        diff_iteration.append("-999")
-                        if full_table:
-                            diff_iteration_sd.append("-999")  # for sd column
-                out_table_iteration.append(diff_iteration)
-                out_table_cumulative.append(diff_cumulative)
-                if full_table:
-                    out_table_iteration.append(diff_iteration_sd)
-                    out_table_cumulative.append(diff_cumulative_sd)
-                iteration_reference = compare_survey
-                iteration_name = survey.name
-        out_table = [list(unique_station_names)] + out_table_iteration + out_table_cumulative
-
-        if not full_table:
-            header = ['station'] + header1 + header2
-            table = out_table
-            return header, table, dates
-        else:
-            header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
-            # transpose table
-            g = [list(i) for i in zip(*all_g)]
-            table = [unique_station_names, lat, lon, elev]
-            table += g
-            table += out_table_iteration
-            table += out_table_cumulative
-            # transpose back
-            table = [list(i) for i in zip(*table)]
-            # table = [header] + table
-            return header, table, dates
 
     def plot_network_graph_circular(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
@@ -1664,72 +1406,6 @@ class MainProg(QtWidgets.QMainWindow):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         p = plot_adjust_residual_histogram(survey)
         return p
-
-    def adjusted_vs_observed_datum_analysis(self):
-        """
-        Leave one out analysis. For each datum station, this repeats the network adjustment for each survey, but with
-        the datum station excluded. Results are sent to plot_LOO_analysis, which generates a line plot of the measured
-        datum time series and the corresponding adjusted time series.
-
-        TODO: This isn't quite right, it should be comparing (at each datum station) the adjusted value with the station
-        included in the adjustment, with the adjusted value with the station excluded.
-        :return:
-        """
-        # Get list of datum stations for all surveys
-        pbar = ProgressBar(total=self.obsTreeModel.invisibleRootItem().rowCount(), textmess='Adjusting surveys')
-        pbar.show()
-
-        datums = self.obsTreeModel.datums()
-        # Loop over surveys
-        x_all, adj_g_all, obs_g_all = [], [], []
-        ctr = 0
-        for station in datums:
-            pbar.progressbar.setValue(ctr)
-            ctr += 1
-            QtWidgets.QApplication.processEvents()
-            station_adj_g = []
-            station_obs_g = []
-            x_data = []
-
-            # Iterate through surveys
-            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-
-                # If datum is in survey, uncheck it and do inversion
-                obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
-                done = False
-                adj_g = None
-                for ii in range(obstreesurvey.datum_model.rowCount()):
-                    if not done:
-                        idx = obstreesurvey.datum_model.index(ii, 0)
-                        datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
-                        if datum.station == station:
-                            checkstate = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.CheckStateRole)
-                            obstreesurvey.datum_model.setData(idx, 0, QtCore.Qt.CheckStateRole)
-                            if self.menus.mnAdjPyLSQ.isChecked():
-                                adj_type = 'PyLSQ'
-                            else:
-                                adj_type = 'Gravnet'
-                            obstreesurvey.run_inversion(adj_type)
-                            # Restore check state
-                            obstreesurvey.datum_model.setData(idx, checkstate, QtCore.Qt.CheckStateRole)
-                            for iii in range(obstreesurvey.results_model.rowCount()):
-                                idx = obstreesurvey.results_model.index(iii, 0)
-                                adj_station = obstreesurvey.results_model.data(idx, role=QtCore.Qt.UserRole)
-
-                                if adj_station.station == station:
-                                    adj_g = adj_station.g + (datum.gradient * datum.meas_height)
-                                    done = True
-                                    break
-                if adj_g:
-                    station_adj_g.append(adj_g)
-                    station_obs_g.append(datum.g)
-                    x_data.append(dt.datetime.strptime(obstreesurvey.name, '%Y-%m-%d'))
-
-            # Store results
-            x_all.append(x_data)
-            adj_g_all.append(station_adj_g)
-            obs_g_all.append(station_obs_g)
-        self.plot_LOO_analysis(x_all, adj_g_all, obs_g_all, datums)
 
     def set_adj_sd(self, survey, ao):
         """
@@ -1753,70 +1429,44 @@ class MainProg(QtWidgets.QMainWindow):
             survey.delta_model.setData(ind, sigma, role=QtCore.Qt.EditRole)
         self.update_adjust_tables()
 
-    def import_abs_g_simple(self):
+    def menu_import_abs_g_simple(self):
         """
-        Imports absolute data from three column file, station g stdev. Adds rows to datum_model
+        Slot for mnAdjImportAbsSimple
+        Returns
+        -------
+
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None,
                                                          'Open file (3 columns, space delimited, station-g-std. dev.)',
                                                          self.path_data)
         logging.info('Importing absolute gravity data from {}'.format(fname))
-        with open(fname, "r") as fh:
-            line = fh.readline()
-            while True:
-                if not line:
-                    break
-                parts = line.split(" ")
-                try:
-                    datum = Datum(parts[0], float(parts[1]), float(parts[2]))
-                except IndexError:
-                    self.msg = show_message(
-                        'Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
-                        'space delimited', 'File read error')
-                self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
-                line = fh.readline()
-                logging.info('Absolute gravity data imported, station {}'.format(parts[0]))
+        try:
+            datums = import_abs_g_simple(fname)
+        except IndexError:
+            self.msg = show_message(
+                'Error reading absolute gravity file. Is it three columns (station, g, std. dev.), ' +
+                'space delimited', 'File read error')
+        for datum in datums:
+            self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
+            logging.info('Datum imported: {}'.format(datum.__str__()))
 
-    def import_abs_g_complete(self):
+
+    def menu_import_abs_g_complete(self):
         """
-        Imports absolute gravity data as output by A10_parse.py. Adds rows to datum_model
+        Slot for mnAdjImportAbsFull
+
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open A10_parse.py output file',
                                                          self.path_data)
         logging.info('Importing absolute gravity data from {}'.format(fname))
-        fh = open(fname, 'r')
+        datums = import_abs_g_complete(fname)
+        for datum in datums:
+            self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
+            logging.info('Datum imported: {}'.format(datum.__str__()))
 
-        # Read header line
-        line = fh.readline()
-        parts = line.split("\t")
-        g_idx, n_idx, s_idx, d_idx, th_idx = None, None, None, None, None
-        if 'Gravity' in parts:
-            g_idx = parts.index('Gravity')
-        if 'Station Name' in parts:
-            n_idx = parts.index('Station Name')
-        if 'Set Scatter' in parts:
-            s_idx = parts.index('Set Scatter')
-        if 'Date' in parts:
-            d_idx = parts.index('Date')
-        if 'Transfer Height' in parts:
-            th_idx = parts.index('Transfer Height')
-        if 'Gradient' in parts:
-            gr_idx = parts.index('Gradient')
-
-            while True:
-                line = fh.readline()
-                if not line:
-                    break
-                if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
-                    parts = line.split("\t")
-                    datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
-                                  meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
-                    self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
-                    logging.info('Absolute gravity data imported, station {}'.format(parts[n_idx]))
-
-    def import_abs_g_direct(self):
+    def dialog_import_abs_g_direct(self):
         """
-        Instantiates a PyQt dialog to select a directory with .project.txt files.
+        Opens a PyQt dialog to select a directory with .project.txt files.
         """
         if hasattr(self, 'abs_data_path'):
             selectabsg = SelectAbsg(self.path_absolute_data)
@@ -1831,9 +1481,6 @@ class MainProg(QtWidgets.QMainWindow):
     def export_metadata_text(self):
         """
         Exports processing summary for metadata file.
-        Returns
-        -------
-
         """
         export_metadata(self.obsTreeModel)
 
@@ -1844,7 +1491,7 @@ class MainProg(QtWidgets.QMainWindow):
         export_summary(self.obsTreeModel)
 
 
-    def add_datum_manually(self):
+    def dialog_add_datum(self):
         """
         Opens PyQt dialog to select an existing station to assign a datum value
         """
@@ -1864,9 +1511,9 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(d, 0)
             logging.info('Datum station added: {}'.format(station))
 
-    def properties_adjust(self):
+    def dialog_adjustment_properties(self):
         """
-        Instantiates PyQt dialog to set adjustment options
+        Opens PyQt dialog to set adjustment options
         """
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         adjust_options = AdjustOptions(survey.__str__(), survey.adjustment.adjustmentoptions, parent=self)
@@ -1884,11 +1531,9 @@ class MainProg(QtWidgets.QMainWindow):
                     survey.adjustment.adjustmentoptions = ao
                     self.set_adj_sd(survey, adjust_options.ao)
 
-
-
-    def tide_correction_dialog(self):
+    def dialog_tide_correction(self):
         """
-        Opens dialog to specify correction type
+        Opens PyQt dialog to specify correction type
         """
         tide_correction_dialog = TideCorrectionDialog()
         tide_correction_dialog.msg.exec_()
@@ -1940,14 +1585,14 @@ class MainProg(QtWidgets.QMainWindow):
         Export gravity change table to csv file
         """
         fn = 'GSadjust_TabularData_' + time.strftime("%Y%m%d-%H%M") + '.csv'
-        table = self.compute_gravity_change(full_table=True)
+        table = self.compute_gravity_change(self.obsTreeModel, full_table=True)
 
         with open(fn, 'w') as fid:
             wr = csv.writer(fid)
             for row in table:
                 wr.writerow(row)
 
-    def show_station_coordinates(self):
+    def dialog_station_coordinates(self):
         """
         Shows station coordinates dialog.
         :return:
@@ -2116,7 +1761,7 @@ def main():
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
     # Should probably change this to try a different location for the log file.
     try:
-        logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.WARNING)
+        logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO)
     except PermissionError:
         show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
     sys.excepthook = handle_exception

@@ -6,7 +6,7 @@ sys.path.insert(0, code_path)
 
 import pytest
 import GSadjust
-
+from data_import import import_abs_g_complete, import_abs_g_simple
 
 
 def test_readfile_exceptions():
@@ -51,3 +51,20 @@ def test_read_ScintrexCG6():
     mean = sum(first_station_data) / len(first_station_data)
     # This value calculated independently in Excel
     assert abs(mean - 2639256.214) < 0.1
+
+def testreadabsgcomplete():
+    filename = './tests/test_Absg_complete.txt'
+    datums = import_abs_g_complete(filename)
+    assert type(datums) == list
+    assert len(datums) == 5
+    assert datums[0].sd == 13.44
+    assert type(datums[1].date) == str
+    assert 1==1
+
+def test_importabsgsimple():
+    filename = './tests/test_Absg_simple.txt'
+    datums = import_abs_g_simple(filename)
+    assert type(datums) == list
+    assert len(datums) == 5
+    assert datums[0].sd == 13.44
+    assert type(datums[1].date) == str

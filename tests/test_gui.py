@@ -3,9 +3,7 @@ import pytestqt
 import GSadjust
 import os
 import gui_objects
-from time import sleep
 from PyQt5 import QtCore, Qt
-import matplotlib
 
 @pytest.mark.skipif("TRAVIS" in os.environ, reason="Doesn't work on Travis")
 def test_gui(qtbot, monkeypatch):
@@ -36,6 +34,17 @@ def test_gui(qtbot, monkeypatch):
     window.activate_survey_or_loop(survey.child(1).index())
     qtbot.wait(1000)
     window.activate_survey_or_loop(survey.child(2).index())
+    qtbot.wait(1000)
+
+    # Step through drift-correction styles
+    window.tab_drift.driftmethod_comboboxbox.setCurrentIndex(1)
+    window.tab_drift.set_drift_method()
+    qtbot.wait(1000)
+    window.tab_drift.driftmethod_comboboxbox.setCurrentIndex(2)
+    window.tab_drift.set_drift_method()
+    qtbot.wait(1000)
+    window.tab_drift.driftmethod_comboboxbox.setCurrentIndex(3)
+    window.tab_drift.set_drift_method()
     qtbot.wait(1000)
     window.tab_widget.setCurrentIndex(2)
 
@@ -88,13 +97,12 @@ def test_gui(qtbot, monkeypatch):
     # Adjustment results should be different with some observations disabled
     assert abs(sd0 - sd1) > 0.01
 
-    fig = window.plot_histogram()
-    assert type(fig) == matplotlib.figure.Figure
-    matplotlib.pyplot.close(fig)
+    # fig = window.plot_histogram()
+    # assert type(fig) == matplotlib.figure.Figure
+    # matplotlib.pyplot.close(fig)
 
     success = window.workspace_save()
     assert success == True
-
 
     window.workspace_clear()
     assert window.obsTreeModel.rowCount() == 0

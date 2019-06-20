@@ -2,7 +2,7 @@ import datetime as dt
 
 from matplotlib.dates import date2num
 
-from data_objects import ChannelList
+from data_objects import ChannelList, Datum
 
 
 def read_csv(fh):
@@ -321,3 +321,56 @@ def read_cg6tsoft(fh):
     all_survey_data.meter_type = 'CG6Tsoft'
 
     return all_survey_data
+
+
+def import_abs_g_complete(fname):
+    """
+    Imports absolute gravity data as output by A10_parse.py. Adds rows to datum_model
+    """
+    datums = list()
+
+    with open(fname, 'r') as fh:
+
+        # Read header line
+        line = fh.readline()
+        parts = line.split("\t")
+        g_idx, n_idx, s_idx, d_idx, th_idx = None, None, None, None, None
+        if 'Gravity' in parts:
+            g_idx = parts.index('Gravity')
+        if 'Station Name' in parts:
+            n_idx = parts.index('Station Name')
+        if 'Set Scatter' in parts:
+            s_idx = parts.index('Set Scatter')
+        if 'Date' in parts:
+            d_idx = parts.index('Date')
+        if 'Transfer Height' in parts:
+            th_idx = parts.index('Transfer Height')
+        if 'Gradient' in parts:
+            gr_idx = parts.index('Gradient')
+
+            while True:
+                line = fh.readline()
+                if not line:
+                    break
+                if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
+                    parts = line.split("\t")
+                    datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
+                                  meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
+                    datums.append(datum)
+    return datums
+
+def import_abs_g_simple(fname):
+    """
+    Imports absolute data from three column file, station g stdev. Adds rows to datum_model
+    """
+    datums = list()
+    with open(fname, 'r') as fh:
+        line = fh.readline()
+        while True:
+            if not line:
+                break
+            parts = line.split(" ")
+            datum = Datum(parts[0], float(parts[1]), float(parts[2]))
+            datums.append(datum)
+            line = fh.readline()
+    return datums

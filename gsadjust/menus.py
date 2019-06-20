@@ -108,8 +108,8 @@ class Menus:
         #######################################################################
         self.mnEdit = self.mainProg.menuBar().addMenu("&Edit")
         self.mnEditTideCorrection = self.create_action("&Tide correction...",
-                                              shortcut="Ctrl+T", slot=self.mainProg.tide_correction_dialog,
-                                              tip="Choose tide correction method", enabled=False)
+                                                       shortcut="Ctrl+T", slot=self.mainProg.dialog_tide_correction,
+                                                       tip="Choose tide correction method", enabled=False)
         self.mnEditOceanLoadingCorrectionAction = self.create_action("&Ocean loading correction",
                                               shortcut="Ctrl+L",
                                               slot=self.mainProg.correction_ocean_loading,
@@ -120,14 +120,14 @@ class Menus:
                                               tip="Apply atmospheric correction by loading a data file",
                                               enabled=False)
         self.mnEditShowCoordinates = self.create_action("Show station coordinates...",
-                                              slot=self.mainProg.show_station_coordinates,
-                                              enabled=False)
+                                                        slot=self.mainProg.dialog_station_coordinates,
+                                                        enabled=False)
         self.mnEditLoadCoordinates = self.create_action("Load station coordinates",
                                               slot=self.mainProg.load_station_coordinates,
                                               enabled=False)
         self.mnEditCorrectRecordedTimeAction = self.create_action("&Correct recorded time...",
-                                              slot=self.mainProg.correction_recorded_time,
-                                              tip="Correct recorded time", enabled=False)
+                                                                  slot=self.mainProg.correct_recorded_time,
+                                                                  tip="Correct recorded time", enabled=False)
         self.mnEditVerticalGradientIntervalAction = self.create_action("&Vertical gradient interval...",
                                               slot=self.mainProg.set_vertical_gradient_interval,
                                               enabled=True)
@@ -168,8 +168,8 @@ class Menus:
         self.mnAdjPyLSQ.setChecked(True)
 
         self.mnAdjOptions = self.create_action("Adjustment options...",
-                                              slot=self.mainProg.properties_adjust,
-                                              enabled=True)
+                                               slot=self.mainProg.dialog_adjustment_properties,
+                                               enabled=True)
         self.mnAdjAdjustCurrent = self.create_action("&Adjust current survey",
                                               shortcut="Ctrl+2", slot=lambda: self.mainProg.adjust_network('current'),
                                               tip="Adjust current survey", enabled=False,
@@ -194,18 +194,18 @@ class Menus:
                                               slot=self.mainProg.clear_delta_model,
                                               enabled=False)
         self.mnAdjAdd = self.create_action("Add datum observation...",
-                                              shortcut="Ctrl+D",
-                                              slot=self.mainProg.add_datum_manually,
-                                              enabled=True)
+                                           shortcut="Ctrl+D",
+                                           slot=self.mainProg.dialog_add_datum,
+                                           enabled=True)
         self.mnAdjImportAbsSimple = self.create_action("Import abs. g (simple)...",
-                                              slot=self.mainProg.import_abs_g_simple,
-                                              enabled=True)
+                                                       slot=self.mainProg.menu_import_abs_g_simple,
+                                                       enabled=True)
         self.mnAdjImportAbsFull = self.create_action("Import abs. g (complete)...",
-                                              slot=self.mainProg.import_abs_g_complete,
-                                              enabled=True)
+                                                     slot=self.mainProg.menu_import_abs_g_complete,
+                                                     enabled=True)
         self.mnAdjImportAbsDatabase = self.create_action("Import abs. g from project files...",
-                                              slot=self.mainProg.import_abs_g_direct,
-                                              enabled=True)
+                                                         slot=self.mainProg.dialog_import_abs_g_direct,
+                                                         enabled=True)
         self.mnAdjClearDatumTable = self.create_action("Clear datum table",
                                               slot=self.mainProg.clear_datum_model,
                                               enabled=False)

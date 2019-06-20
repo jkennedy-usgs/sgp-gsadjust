@@ -288,14 +288,8 @@ class TabDrift(QtWidgets.QWidget):
             x = [x for x in line[0]]
             y = [y for y in line[1]]
             new_x, new_y = [], []
-            # first = True
-            # start_idx = 0
             i = 0
             for i in range(1, len(x)):
-                # if first:
-                #     first = False
-                #     pass
-                # else:
                 x_diff = x[i] - x[i - 1]
                 if x_diff * 1440 < elapsed_time:
                     # Check that there's at least two points in the new line segment
@@ -309,13 +303,6 @@ class TabDrift(QtWidgets.QWidget):
                         new_data.append([new_x, new_y, line[2]])
                         new_x = [x[i - 1], x[i]]
                         new_y = [y[i - 1], y[i]]
-            #             new_data.append([x[start_idx:], y[start_idx:], line[2]])
-            #             if i - start_idx > 1:
-            #                 new_data.append([x[start_idx:i - 1], y[start_idx:i - 1], line[2]])
-            #             start_idx = i
-            #         elif len(x) == 2:
-            #             new_data.append([x, y, line[2]])
-            # if i - start_idx > 1:
             if len(new_x) > 0:
                 new_data.append([new_x, new_y, line[2]])
 

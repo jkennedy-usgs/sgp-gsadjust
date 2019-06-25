@@ -1217,6 +1217,7 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree.setModel(self.tree_model)
         self.tree.expand(self.tree_model.index(self.path))
         self.tree.scrollTo(self.tree_model.index(self.path))
+        self.tree.setCurrentIndex(self.tree_model.index(self.path))
         self.tree.setAnimated(False)
         self.tree.setIndentation(20)
         self.tree.setSortingEnabled(True)
@@ -1224,23 +1225,23 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree.resize(800, 480)
 
         # Buttons
-        load_button = QtWidgets.QPushButton("Load")
-        load_button.clicked.connect(self.load_a10_data)
-        ok_button = QtWidgets.QPushButton("Import")
-        ok_button.clicked.connect(self.export_and_close)
-        cancel_button = QtWidgets.QPushButton("Cancel")
-        cancel_button.clicked.connect(self.close)
+        self.load_button = QtWidgets.QPushButton("Load")
+        self.load_button.clicked.connect(self.load_a10_data)
+        self.ok_button = QtWidgets.QPushButton("Import")
+        self.ok_button.clicked.connect(self.export_and_close)
+        self.cancel_button = QtWidgets.QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.close)
 
         # Button under tree view
         button_box_left = QtWidgets.QHBoxLayout()
         button_box_left.addStretch(1)
-        button_box_left.addWidget(load_button)
+        button_box_left.addWidget(self.load_button)
 
         # Button under table
         button_box_right = QtWidgets.QHBoxLayout()
         button_box_right.addStretch(1)
-        button_box_right.addWidget(cancel_button)
-        button_box_right.addWidget(ok_button)
+        button_box_right.addWidget(self.cancel_button)
+        button_box_right.addWidget(self.ok_button)
 
         self.ProxyModel.setSourceModel(self.table_model)
         self.tree.resizeColumnToContents(0)

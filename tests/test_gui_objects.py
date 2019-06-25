@@ -3,7 +3,7 @@ import pytestqt
 from PyQt5 import QtCore
 from test_fixture_pyqt import mainprog
 
-from gui_objects import CoordinatesTable, AdjustOptions
+from gui_objects import CoordinatesTable, AdjustOptions, SelectAbsg
 
 def test_coordinates_dialog(qtbot):
     coords = dict()
@@ -40,3 +40,13 @@ def test_adjustmentoptions_dialog(qtbot, mainprog):
     ao.calc_cal_coeff_checked_or_unchecked(0)
     ao.specify_cal_coeff_checked_or_unchecked(2)
     ao.apply_current()
+
+def test_selectabsg():
+    sa = SelectAbsg('./tests/')
+    sa.show()
+    sa.load_button.click()
+    assert sa.ProxyModel.data(sa.ProxyModel.index(0,0), role=QtCore.Qt.CheckStateRole) == 0
+    sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.UserRole).checked = 2
+    assert sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.CheckStateRole) == 2
+    sa.export_and_close()
+    assert len(sa.new_datums) == 1

@@ -41,7 +41,7 @@ class A10(object):
         olf = False
         skip_grad = False
         in_comments = 0
-        project_file = open(filename)
+        project_file = open(filename, 'r', encoding='unicode_escape')
         data_array = []  # ['a']*32
         # Look for these words in the g file
         tags = re.compile(r'Project|Name|Created|Setup' +

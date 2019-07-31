@@ -1162,10 +1162,9 @@ class MainProg(QtWidgets.QMainWindow):
         """
         index = self.tab_adjust.datum_view.selectedIndexes()
         for idx in reversed(index):
-            self.tab_adjust.datum_proxy_model.beginRemoveRows(idx.parent(), idx.row(), 0)
-            self.tab_adjust.datum_proxy_model.removeRow(idx.row(), idx.parent())
-            self.tab_adjust.datum_proxy_model.endRemoveRows()
-            # survey.datum_model.removeRow(idx)
+            source_idx = self.tab_adjust.datum_proxy_model.mapToSource(idx)
+            survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+            survey.datum_model.removeRow(source_idx)
         self.tab_adjust.datum_view.update()
 
     def get_loop_threshold(self):

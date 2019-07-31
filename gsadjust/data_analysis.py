@@ -41,7 +41,7 @@ def compute_gravity_change(obstreemodel, full_table=False):
                 g_header.append(survey.name + '_sd')
                 for ii in range(survey.results_model.rowCount()):
                     adj_station = survey.results_model.data(survey.results_model.index(ii, 0),
-                                                            role=32)  # 32=QtCore.Qt.UserRole
+                                                            role=256)  # 256=QtCore.Qt.UserRole
                     if adj_station.station[:6] == station[:6]:
                         station_found = True
                         break
@@ -83,8 +83,8 @@ def compute_gravity_change(obstreemodel, full_table=False):
 
                 for ii in range(initial_survey.rowCount()):
                     initial_station = initial_survey.data(initial_survey.index(ii, 0),
-                                                          role=32)  # 32=QtCore.Qt.UserRole
-                    # Iterate through, look for matching station. If statements deal with Gravnet, which truncates
+                                                          role=256)  # 256=QtCore.Qt.UserRole
+                    # Iterate through, look for matching station. 'if' statements deal with Gravnet, which truncates
                     # station names to 6 characters
                     if len(initial_station.station) > 6 and len(station_name) > 6:
                         if initial_station.station == station_name:
@@ -98,7 +98,7 @@ def compute_gravity_change(obstreemodel, full_table=False):
                         initial_station = None
                 for ii in range(iteration_reference.rowCount()):
                     iteration_station = iteration_reference.data(iteration_reference.index(ii, 0),
-                                                                 role=32)  # 32=QtCore.Qt.UserRole
+                                                                 role=256)  # 256=QtCore.Qt.UserRole
                     # Iterate through, look for matching station
                     # if iteration_station.station == station_name[:6]:
                     #     break
@@ -118,7 +118,7 @@ def compute_gravity_change(obstreemodel, full_table=False):
 
                 for ii in range(compare_survey.rowCount()):
                     compare_station = compare_survey.data(compare_survey.index(ii, 0),
-                                                          role=32)  # 32=QtCore.Qt.UserRole
+                                                          role=256)  # 256=QtCore.Qt.UserRole
                     if len(compare_station.station) > 6 and len(station_name) > 6:
                         if compare_station.station == station_name:
                             break

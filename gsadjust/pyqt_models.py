@@ -1085,10 +1085,20 @@ class ObsTreeSurvey(ObsTreeItem):
                 if loop.checkState() == QtCore.Qt.Checked:
                     try:
                         for ii in range(loop.delta_model.rowCount()):
-
                             if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
                                 delta = loop.delta_model.data(loop.delta_model.index(ii,0),role=QtCore.Qt.UserRole)
-                                self.delta_model.insertRows(delta, 0)
+                                # Need to create a new delta here instead of just putting the original one, from the
+                                # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
+                                # overrides repopulating the delta table.
+                                if type(delta.station2) == list:
+                                    newdelta = data_objects.Delta.from_list(delta.station2)
+                                else:
+                                    newdelta = data_objects.Delta(delta.station1, delta.station2)
+                                newdelta.ls_drift = delta.ls_drift
+                                newdelta.driftcorr = delta.driftcorr
+                                newdelta.type = delta.type
+                                newdelta.loop = delta.loop
+                                self.delta_model.insertRows(newdelta, 0)
                     except Exception as e:
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded
@@ -1961,6 +1971,8 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def clearDeltas(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
+        for delta in self._deltas:
+            delta.residual = -999
         self._deltas = []
         self.endRemoveRows()
         # The ResetModel calls is necessary to remove blank rows from the table view.

@@ -17,7 +17,7 @@ unauthorized use of the software.
 from PyQt5 import QtWidgets, QtGui
 
 import gsa_plots
-from gui_objects import about_dialog
+from gui_objects import AboutDialog
 
 
 class Menus:
@@ -281,7 +281,7 @@ class Menus:
         self.mnHelpHelp = self.create_action('Help',
                                               slot=self.mainProg.show_help)
         self.mnHelpAbout = self.create_action('About',
-                                              slot=about_dialog)
+                                              slot=AboutDialog)
         self.mnHelpCheckForUpdates = self.create_action('Check for updates...',
                                               slot=self.mainProg.check_for_updates)
 

@@ -1043,12 +1043,14 @@ class TabDrift(QtWidgets.QWidget):
 
     def drift_combobox_updated(self):
         """
-        Called when either the continuous method or extrapolate/constant combobox is changed.
+        Called when either the drift method or extrapolate/constant combobox is changed.
         """
         method_key = self.drift_polydegree_combobox.currentIndex()
         startend_key = self.drift_cont_startendcombobox.currentIndex()
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         drift_method = obstreeloop.drift_method
+        self.parent.deltas_update_required()
+
         if drift_method == 'continuous':
             obstreeloop.drift_cont_method = method_key
             obstreeloop.drift_cont_startend = startend_key

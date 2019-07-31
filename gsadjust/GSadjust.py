@@ -1042,8 +1042,15 @@ class MainProg(QtWidgets.QMainWindow):
         Remove all deltas from survey delta model shown on network adjustment tab.
         """
         self.obsTreeModel.itemFromIndex(self.index_current_survey).delta_model.clearDeltas()
+        self.obsTreeModel.itemFromIndex(self.index_current_survey).results_model.clearResults()
+        self.clear_adjustment_test()
         self.deltas_update_required()
         self.update_adjust_tables()
+
+    def clear_adjustment_test(self):
+        self.tab_adjust.textAdjResults.clear()
+        survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        survey.adjustment.adjustmentresults.text = []
 
     def clear_datum_model(self):
         """
@@ -1051,6 +1058,8 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.clearDatums()
+        self.obsTreeModel.itemFromIndex(self.index_current_survey).results_model.clearResults()
+        self.clear_adjustment_test()
         self.update_adjust_tables()
 
     def clear_results_model(self):
@@ -1468,6 +1477,10 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Opens a PyQt dialog to select a directory with .project.txt files.
         """
+        if self.obsTreeModel.rowCount() == 0:
+            self.msg = show_message('Please load a survey before loading absolute-gravity data.',
+                         'Import error')
+            return
         if hasattr(self, 'abs_data_path'):
             selectabsg = SelectAbsg(self.path_absolute_data)
         else:
@@ -1664,7 +1677,7 @@ class MainProg(QtWidgets.QMainWindow):
                 msg = 'Problem Encountered Updating from GitHub\n\nError Message:\n'
                 msg += str(e)
                 QtWidgets.QMessageBox.information(self, "Update results", msg)
-                return True  # Update didn't work, start GSadjust anyway
+            return True  # Update didn't work, start GSadjust anyway
 
     def update_from_github(self):
         """

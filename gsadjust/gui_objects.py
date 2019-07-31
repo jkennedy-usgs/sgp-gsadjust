@@ -33,6 +33,7 @@ from matplotlib.dates import date2num
 from matplotlib.figure import Figure
 
 import a10
+import data_analysis
 from data_objects import Datum
 from pyqt_models import GravityChangeModel, DatumTableModel, MeterCalibrationModel
 from utils import *
@@ -490,24 +491,29 @@ def copy_cells_to_clipboard(table):
         msg = show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
 
 
-def about_dialog():
-    msg1 = '<html>GSadjust, a product of the USGS Southwest Gravity Program<br>' + \
-           '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>' + \
-           '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">' + \
-           'https://github.com/jkennedy-usgs/sgp-gsadjust</a>' + \
-           '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
-    _, ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
+class AboutDialog(QtWidgets.QDialog):
+    def __init__(self, obsTreeModel):
+        super(AboutDialog, self).__init__()
+
+        msg1 = '<html>GSadjust, a product of the USGS Southwest Gravity Program<br>' + \
+               '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>' + \
+               '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">' + \
+               'https://github.com/jkennedy-usgs/sgp-gsadjust</a>' + \
+               '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
+        _, ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
 
 
-def VerticalGradientDialog(default_interval):
-    text, ok = QtWidgets.QInputDialog.getDouble(None, "Vertical-gradient interval",
-                                                "Interval, in cm:",
-                                                default_interval,
-                                                0, 200, 1)
-    if ok:
-        return float(text)
-    else:
-        return default_interval
+class VerticalGradientDialog(QtWidgets.QInputDialog):
+    def __init__(self, default_interval):
+        super(VerticalGradientDialog, self).__init__()
+        self.show_dialog(default_interval)
+
+    def show_dialog(self, default_interval):
+        text, ok = self.getDouble(None, "Vertical-gradient interval",
+                                                    "Interval, in cm:",
+                                                    default_interval,
+                                                    0, 200, 1)
+
 
 
 class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
@@ -564,8 +570,9 @@ class GravityChangeTable(QtWidgets.QDialog):
 
     def __init__(self, MainProg, table, header, dates=None, full_table=False):
         super(GravityChangeTable, self).__init__()
-        self.header, self.table, self.dates = MainProg.compute_gravity_change()
-        self.full_header, self.full_table, _ = MainProg.compute_gravity_change(full_table=True)
+        self.header, self.table, self.dates = data_analysis.compute_gravity_change(MainProg.obsTreeModel)
+        self.full_header, self.full_table, _ = data_analysis.compute_gravity_change(MainProg.obsTreeModel,
+                                                                                    full_table=True)
         self.coords = MainProg.obsTreeModel.station_coords
         gravity_change_window = QtWidgets.QWidget()
         if full_table:
@@ -609,7 +616,7 @@ class GravityChangeTable(QtWidgets.QDialog):
 
     def map_change_window(self):
 
-        self.win = MapWindow(self.table, self.header, self.coords, self.full_table, self.full_header)
+        self.win = GravityChangeMap(self.table, self.header, self.coords, self.full_table, self.full_header)
         self.win.show()
 
     def plot_change_window(self):
@@ -640,11 +647,11 @@ class GravityChangeTable(QtWidgets.QDialog):
         plt.show()
 
 
-class MapWindow(QtWidgets.QDialog):
+class GravityChangeMap(QtWidgets.QDialog):
     station_label = None
 
     def __init__(self, table, header, coords, full_table, full_header, parent=None):
-        super(MapWindow, self).__init__(parent)
+        super(GravityChangeMap, self).__init__(parent)
         # a figure instance to plot on
         self.table = table
         self.header = header
@@ -696,8 +703,18 @@ class MapWindow(QtWidgets.QDialog):
         self.cbUnits = QtWidgets.QCheckBox("Show change in meters of water", self)
         self.cbUnits.setChecked(False)
         self.cbUnits.stateChanged.connect(self.plot)
+        self.sliderColorRange = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.sliderColorRange.valueChanged.connect(self.update_plot)
+        self.sliderColorRange.setMinimum(1)
+        self.sliderColorRange.setMaximum(15)
+        self.sliderColorRange.setValue(100)
+        self.sliderColorRange.resize(100,20)
+        self.sliderColorRange.setTickInterval(10)
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.cbUnits)
+        bbox.addSpacing(40)
+        bbox.addWidget(QtWidgets.QLabel('Color range'))
+        bbox.addWidget(self.sliderColorRange)
         bbox.addStretch(1)
         self.units_widget.setLayout(bbox)
 
@@ -751,17 +768,22 @@ class MapWindow(QtWidgets.QDialog):
 
     def update_plot(self):
         if hasattr(self, 'points'):
-            # for point in self.points:
-            #     point.remove()
+            self.cb.remove()
             self.points.remove()
             x, y, d, name = self.get_data()
-
-            self.points = self.ax.scatter(x, y, c=d, s=200, vmin=self.clim[0], vmax=self.clim[1], cmap="RdBu",
+            clim = self.get_color_lims(self.table)
+            self.points = self.ax.scatter(x, y, c=d, s=200, vmin=clim[0], vmax=clim[1], cmap="RdBu",
                                           picker=5,
                                           zorder=10,
                                           transform=ccrs.Geodetic())
+            self.cb = self.figure.colorbar(self.points)
+            if not self.cbUnits.isChecked():
+                self.cb.set_label('Gravity change, in µGal', fontsize=16)
+            elif self.cbUnits.isChecked():
+                self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
+            # self.cb.set_clim(vmin=clim[0], vmax=clim[1])
+            # self.cb.draw_all()
             self.points.name = name
-            # self.points.append(point)
             self.slider_label.setText(self.get_name())
             self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
             self.canvas.draw()
@@ -787,7 +809,6 @@ class MapWindow(QtWidgets.QDialog):
             ref_col_idx = self.full_header.index(ref_survey)
             current_survey = self.surveys[self.slider.value() - 1]
             current_col_idx = self.full_header.index(current_survey)
-            stations = [r[0] for r in self.full_table]
             for r in self.full_table:
                 sta = r[0]
                 ref_g = float(r[ref_col_idx])
@@ -820,7 +841,7 @@ class MapWindow(QtWidgets.QDialog):
                 return ref_survey + ' to ' + current_survey
 
     def plot(self):
-        self.clim = self.get_color_lims(self.table)
+        clim = self.get_color_lims(self.table)
 
         if self.btnIncremental.isChecked():
             self.slider.setRange(1, self.n_surveys)
@@ -838,7 +859,7 @@ class MapWindow(QtWidgets.QDialog):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         self.points = []
         x, y, d, names = self.get_data()
-        self.points = self.ax.scatter(x, y, c=d, s=200, vmin=self.clim[0], vmax=self.clim[1], cmap="RdBu",
+        self.points = self.ax.scatter(x, y, c=d, s=200, vmin=clim[0], vmax=clim[1], cmap="RdBu",
                                       picker=5,
                                       zorder=10,
                                       transform=ccrs.Geodetic())
@@ -847,12 +868,12 @@ class MapWindow(QtWidgets.QDialog):
         QtWidgets.QApplication.restoreOverrideCursor()
         # self.figure.colorbar(point)
         self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
-        cb = self.figure.colorbar(self.points)
+        self.cb = self.figure.colorbar(self.points)
         self.ax.set_xlabel('Distance, in meters', fontsize=16)
         if not self.cbUnits.isChecked():
-            cb.set_label('Gravity change, in µGal', fontsize=16)
+            self.cb.set_label('Gravity change, in µGal', fontsize=16)
         elif self.cbUnits.isChecked():
-            cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
+            self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
 
         self.show_background()
         self.ax.set_extent(self.axlim, crs=ccrs.Geodetic())
@@ -884,20 +905,21 @@ class MapWindow(QtWidgets.QDialog):
         self.canvas.draw()
 
     def get_color_lims(self, table):
-        margin = 0.1
-
-        row_minmax = []
-        first = True
-        for row in table:
-            if first:
-                first = False
-                continue
-            valid_data = [float(d) for d in row if float(d) > -998]
-            row_minmax.append(abs(min(valid_data)))
-            row_minmax.append(abs(max(valid_data)))
-
-        cmax = max(row_minmax)
-        clim = (cmax * -1 - cmax * margin, cmax + cmax * margin)
+        # margin = 0.1
+        # row_minmax = []
+        # first = True
+        # for row in table:
+        #     if first:
+        #         first = False
+        #         continue
+        #     valid_data = [float(d) for d in row if float(d) > -998]
+        #     row_minmax.append(abs(min(valid_data)))
+        #     row_minmax.append(abs(max(valid_data)))
+        #
+        # cmax = max(row_minmax)
+        # clim = (cmax * -1 - cmax * margin, cmax + cmax * margin)
+        slider_val = self.sliderColorRange.value() * 10
+        clim = (slider_val * -1, slider_val)
         if self.cbUnits.isChecked():
             clim = (clim[0] / 41.9, clim[1] / 41.9)
         return clim
@@ -920,7 +942,7 @@ class MapWindow(QtWidgets.QDialog):
 
 def show_full_table(MainProg):
     MainProg.popup.close()
-    header, table, dates = MainProg.compute_gravity_change(full_table=True)
+    header, table, dates = data_analysis.compute_gravity_change(MainProg.obsTreeModel, full_table=True)
     # header = table[0]
     tp_table = list(zip(*table[1:]))
     # GravityChangeTable(MainProg, tp_table, header, full_table=True)
@@ -930,10 +952,7 @@ def show_full_table(MainProg):
 
 def show_simple_table(MainProg):
     MainProg.popup.close()
-    header, table, dates = MainProg.compute_gravity_change(full_table=False)
-    # tp_table = list(zip(*table[1:]))
-    # GravityChangeTable(MainProg, tp_table, header, full_table=True)
-    # gravity_change_table = GravityChangeTable(MainProg, tp_table, header, full_table=True)
+    header, table, dates = data_analysis.compute_gravity_change(MainProg.obsTreeModel, full_table=False)
     GravityChangeTable(MainProg, table, header, dates, full_table=False)
     return
 
@@ -1224,7 +1243,9 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree.setWindowTitle("Dir View")
         self.tree.resize(800, 480)
 
-        # Buttons
+        # Buttons and checkbox
+        self.load_unpublished_cb = QtWidgets.QCheckBox('Ignore unpublished')
+        self.load_unpublished_cb.setChecked(True)
         self.load_button = QtWidgets.QPushButton("Load")
         self.load_button.clicked.connect(self.load_a10_data)
         self.ok_button = QtWidgets.QPushButton("Import")
@@ -1234,6 +1255,7 @@ class SelectAbsg(QtWidgets.QDialog):
 
         # Button under tree view
         button_box_left = QtWidgets.QHBoxLayout()
+        button_box_left.addWidget(self.load_unpublished_cb)
         button_box_left.addStretch(1)
         button_box_left.addWidget(self.load_button)
 
@@ -1283,28 +1305,35 @@ class SelectAbsg(QtWidgets.QDialog):
         Parses *.project.txt files in the selected paths. Populates the dialog table model directly.
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        files_found = False
         idxs = self.tree.selectedIndexes()
         self.table_model.clearDatums()
         for i in idxs:
             if i.model().isDir(i):
                 path = str(i.model().filePath(i))
-                for dirname, _, fileList in os.walk(path):
-                    for name in fileList:
-                        if '.project.txt' in name:
-                            files_found = True
-                            d = a10.A10(os.path.join(dirname, name))
-                            datum = Datum(d.stationname,
-                                          g=float(d.gravity),
-                                          sd=float(d.setscatter),
-                                          date=d.date,
-                                          meas_height=float(d.transferht),
-                                          gradient=float(d.gradient),
-                                          checked=0)
-                            datum.n_sets = d.processed
-                            datum.time = d.time
-                            self.table_model.insertRows(datum, 1)
-                            self.path = path
+                files_found = self.append_datums(path)
         QtWidgets.QApplication.restoreOverrideCursor()
         if not files_found:
             self.msg = show_message('No *.project.txt files found in the selected directories.', 'Import error')
+
+    def append_datums(self, path):
+        files_found = False
+        for dirname, _, fileList in os.walk(path):
+            if self.load_unpublished_cb.isChecked() and dirname.find('unpublished') != -1:
+                continue
+            else:
+                for name in fileList:
+                    if '.project.txt' in name:
+                        files_found = True
+                        d = a10.A10(os.path.join(dirname, name))
+                        datum = Datum(d.stationname,
+                                      g=float(d.gravity),
+                                      sd=float(d.setscatter),
+                                      date=d.date,
+                                      meas_height=float(d.transferht),
+                                      gradient=float(d.gradient),
+                                      checked=0)
+                        datum.n_sets = d.processed
+                        datum.time = d.time
+                        self.table_model.insertRows(datum, 1)
+                        self.path = path
+        return files_found

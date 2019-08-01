@@ -639,7 +639,7 @@ class GravityChangeTable(QtWidgets.QDialog):
                         ydata.append(float(col[i]) + ydata[-1])
                         xdata.append(self.dates[idx + 1])
 
-            plt.plot(xdata, ydata, '-o', color=cmap(i / (nstations - 1)), label=stations[i])
+            plt.plot(xdata, ydata, '-o', color=cmap(i / (nstations)), label=stations[i])
             # plt.hold
         plt.ylabel('Gravity change, in µGal')
 
@@ -661,7 +661,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.figure = Figure(figsize=(10, 8))
         self.n_surveys = (len(self.table) - 1) / 2
         self.surveys = self.get_survey_dates(header)
-        self.axlim = self.get_axis_lims(coords)
+        self.axlim = self.get_axis_lims_from_data(coords)
 
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
@@ -692,10 +692,17 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.cbBasemap.stateChanged.connect(self.plot)
         self.drpBasemap = QtWidgets.QComboBox()
         self.drpBasemap.currentIndexChanged.connect(self.plot)
+        self.sliderResolution = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.sliderResolution.setMinimum(5)
+        self.sliderResolution.setMaximum(17)
+        self.sliderResolution.setValue(12)
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.cbBasemap)
         bbox.addSpacing(10)
         bbox.addWidget(self.drpBasemap)
+        bbox.addSpacing(40)
+        bbox.addWidget(QtWidgets.QLabel('Resolution'))
+        bbox.addWidget(self.sliderResolution)
         bbox.addStretch(1)
         self.basemap_widget.setLayout(bbox)
 
@@ -869,26 +876,37 @@ class GravityChangeMap(QtWidgets.QDialog):
         # self.figure.colorbar(point)
         self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
         self.cb = self.figure.colorbar(self.points)
+
         self.ax.set_xlabel('Distance, in meters', fontsize=16)
         if not self.cbUnits.isChecked():
             self.cb.set_label('Gravity change, in µGal', fontsize=16)
         elif self.cbUnits.isChecked():
             self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
 
-        self.show_background()
+        self.show_background(self.sliderResolution.value())
         self.ax.set_extent(self.axlim, crs=ccrs.Geodetic())
+        self.ax.callbacks.connect('xlim_changed', self.on_xlims_change)
         self.slider_label.setText(self.get_name())
 
         # refresh canvas
         self.figure.canvas.mpl_connect('pick_event', self.show_point_label)
         self.canvas.draw()
 
-    def show_background(self):
+    def on_xlims_change(self, axes):
+        # jeff = 1
+        # self.show_background(self.sliderResolution.value())
+        # self.canvas.draw()
+        self.axlim = self.ax.get_extent(crs=ccrs.Geodetic())
+        self.plot()
+        # (xmin, xmax, ymin, ymax)
+        return
+
+    def show_background(self, zoom):
         if self.cbBasemap.isChecked():
             self.stamen_terrain = cimgt.GoogleTiles(url='https://server.arcgisonline.com/ArcGIS/rest/services/' +
                                                         self.maps[self.drpBasemap.currentIndex()] +
                                                         '/MapServer/tile/{z}/{y}/{x}.jpg')  # cimgt.Stamen('terrain-background')
-            self.ax.add_image(self.stamen_terrain, 12)
+            self.ax.add_image(self.stamen_terrain, zoom)
 
     def show_point_label(self, event):
         """
@@ -924,7 +942,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             clim = (clim[0] / 41.9, clim[1] / 41.9)
         return clim
 
-    def get_axis_lims(self, coords):
+    def get_axis_lims_from_data(self, coords):
         margin = 0.25
         x, y = [], []
         for c in coords.values():

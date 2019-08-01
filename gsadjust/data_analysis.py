@@ -172,7 +172,7 @@ def compute_gravity_change(obstreemodel, full_table=False):
         table = out_table
         return header, table, dates
     else:
-        header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
+        header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1 + header2
         # transpose table
         g = [list(i) for i in zip(*all_g)]
         table = [unique_station_names, lat, lon, elev]

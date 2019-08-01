@@ -345,6 +345,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_adjust_update_required.set = True
         self.label_adjust_update_required.setPixmap(self.update_adjust_icon)
         self.label_adjust_update_required.setToolTip('Update network adjustment')
+        self.set_window_title_asterisk()
 
     def adjust_update_not_required(self):
         """
@@ -361,6 +362,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_deltas_update_required.set = True
         self.label_deltas_update_required.setPixmap(self.update_deltas_icon)
         self.label_deltas_update_required.setToolTip('Update delta table')
+        self.set_window_title_asterisk()
 
     def deltas_update_not_required(self):
         """
@@ -495,6 +497,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.populate_station_coords()
             self.workspace_loaded = True
             QtWidgets.QApplication.restoreOverrideCursor()
+            self.set_window_title_asterisk()
             QtWidgets.QApplication.processEvents()
         else:
             return False
@@ -555,6 +558,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.workspace_loaded = True
         self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
         QtWidgets.QApplication.restoreOverrideCursor()
+        self.set_window_title_asterisk()
 
     def workspace_clear(self):
         """
@@ -588,7 +592,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnFileAppendLoop.setEnabled(False)
         self.menus.mnFileAppendSurvey.setEnabled(False)
         self.menus.mnFileAppendWorkspace.setEnabled(False)
-        # self.tab_adjust.__init__()
+        self.setWindowTitle('GSadjust')
 
     def workspace_save(self):
         """
@@ -599,9 +603,10 @@ class MainProg(QtWidgets.QMainWindow):
                 'Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
                 'Adjustment tab is not up to date.', 'Workspace save error')
             return False
-        success = self.obsTreeModel.save_workspace(self.workspace_savename)
-        if success:
+        fname = self.obsTreeModel.save_workspace(self.workspace_savename)
+        if fname:
             self.msg = show_message('Workspace saved', '')
+            self.set_window_title(fname)
             return True
         else:
             self.msg = show_message("Workspace save error", "Error")
@@ -619,8 +624,9 @@ class MainProg(QtWidgets.QMainWindow):
             try:
                 fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.path_data)
                 if fname:
-                    success = self.obsTreeModel.save_workspace(fname)
-                    if success:
+                    save_name = self.obsTreeModel.save_workspace(fname)
+                    if save_name:
+                        self.set_window_title(fname)
                         self.msg = show_message('Workspace saved', '')
                         self.workspace_savename = fname
                         self.menus.mnFileSaveWorkspace.setEnabled(True)
@@ -667,6 +673,7 @@ class MainProg(QtWidgets.QMainWindow):
         if obstreesurveys:
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
+            self.set_window_title(fname)
         if coords:
             self.obsTreeModel.station_coords = coords
 
@@ -880,6 +887,16 @@ class MainProg(QtWidgets.QMainWindow):
 
         self.obsTreeModel.layoutChanged.emit()
 
+    def set_window_title(self, fname):
+        self.setWindowTitle('GSadjust - ' + fname)
+
+    def set_window_title_asterisk(self):
+        title = self.windowTitle()
+        last_char = title[-1]
+        if last_char != '*':
+            title += '*'
+        self.setWindowTitle(title)
+
     def update_all_drift_plots(self):
         """
         Updates drift_tab plots and delta_models, even if not in view.
@@ -947,6 +964,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.adjust_update_required()
                 self.tab_adjust.delta_view.update()
                 self.tab_adjust.delta_view.repaint()
+            self.set_window_title_asterisk()
 
     def on_obs_tree_change(self, selected):
         """
@@ -987,6 +1005,7 @@ class MainProg(QtWidgets.QMainWindow):
             correction_type = time_correction_dialog.time_correction_type
             if correction_type != False:
                 time_correction(self.obsTreeModel, int(text), self.index_current_survey, self.index_current_loop, self.gui_data_treeview.selectedIndexes())
+                self.set_window_title_asterisk()
 
     def set_vertical_gradient_interval(self):
         """
@@ -1036,6 +1055,7 @@ class MainProg(QtWidgets.QMainWindow):
         current_loop.tare_model.insertRows(tare)
         self.tab_drift.process_tares(current_loop)
         self.update_drift_tables_and_plots()
+        self.set_window_title_asterisk()
 
     def clear_delta_model(self):
         """
@@ -1046,6 +1066,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.clear_adjustment_test()
         self.deltas_update_required()
         self.update_adjust_tables()
+        self.set_window_title_asterisk()
 
     def clear_adjustment_test(self):
         self.tab_adjust.textAdjResults.clear()
@@ -1061,6 +1082,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.itemFromIndex(self.index_current_survey).results_model.clearResults()
         self.clear_adjustment_test()
         self.update_adjust_tables()
+        self.set_window_title_asterisk()
 
     def clear_results_model(self):
         """
@@ -1102,6 +1124,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.removeRow(index[0].row(), index[0].parent())
         if self.obsTreeModel.invisibleRootItem().rowCount() == 0:
             self.workspace_clear()
+        self.set_window_title_asterisk()
 
     def rename_station(self):
         """
@@ -1116,6 +1139,7 @@ class MainProg(QtWidgets.QMainWindow):
         trigger = self.gui_data_treeview.EditKeyPressed
         event = None
         self.gui_data_treeview.edit(index, trigger, event)
+        self.set_window_title_asterisk()
 
     def delete_station(self):
         """
@@ -1128,6 +1152,7 @@ class MainProg(QtWidgets.QMainWindow):
         indexes = indexes[0::3]
         for index in reversed(indexes):
             self.obsTreeModel.removeRow(index.row(), index.parent())
+            self.set_window_title_asterisk()
         if index.row() > 0:
             self.index_current_station = index.sibling(index.row() - 1, 0)
         else:
@@ -1155,17 +1180,20 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.tare_view.update()
         self.tab_drift.process_tares(self.obsTreeModel.itemFromIndex(self.index_current_loop))
         self.update_drift_tables_and_plots()
+        self.set_window_title_asterisk()
 
     def delete_datum(self):
         """
         Called when user right-clicks a datum and selects delete from the context menu
         """
         index = self.tab_adjust.datum_view.selectedIndexes()
-        for idx in reversed(index):
-            source_idx = self.tab_adjust.datum_proxy_model.mapToSource(idx)
+        i = [self.tab_adjust.datum_proxy_model.mapToSource(idx) for idx in index]
+        i.sort(key=lambda x: x.row(), reverse=True)
+        for idx in i:
             survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-            survey.datum_model.removeRow(source_idx)
+            survey.datum_model.removeRow(idx)
         self.tab_adjust.datum_view.update()
+        self.set_window_title_asterisk()
 
     def get_loop_threshold(self):
         # Prompt user to select time threshold
@@ -1218,6 +1246,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.deltas_update_required()
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
+        self.set_window_title_asterisk()
 
     def duplicate_station(self):
         """
@@ -1242,6 +1271,7 @@ class MainProg(QtWidgets.QMainWindow):
         logging.info("Station duplicated: {}, Survey: {}, Loop: {} ".format(new_obstreestation.station_name,
                                                                             obstreesurvey.name,
                                                                             obstreeloop.name))
+        self.set_window_title_asterisk()
 
     def move_survey(self, direction=UP):
         """
@@ -1261,6 +1291,7 @@ class MainProg(QtWidgets.QMainWindow):
         survey = model.takeRow(row_number)
         model.insertRow(new_row, survey)
         self.index_current_survey = model.indexFromItem(survey[0])
+        self.set_window_title_asterisk()
         return True
 
     def new_loop(self):
@@ -1272,6 +1303,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.activate_survey_or_loop(self.index_current_loop)
         self.update_drift_tables_and_plots(update=True)
         self.plot_samples()
+        self.set_window_title_asterisk()
 
     def new_loop_from_indexes(self, indexes):
         """
@@ -1316,6 +1348,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.layoutChanged.emit()
             self.index_current_loop = new_obstreeloop.index()
             self.index_current_station = obstreeloop.child(0, 0).index()
+            self.set_window_title_asterisk()
 
     def treeview_context_menu(self, point):
         """
@@ -1457,6 +1490,7 @@ class MainProg(QtWidgets.QMainWindow):
         for datum in datums:
             self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
             logging.info('Datum imported: {}'.format(datum.__str__()))
+        self.set_window_title_asterisk()
 
 
     def menu_import_abs_g_complete(self):
@@ -1471,6 +1505,7 @@ class MainProg(QtWidgets.QMainWindow):
         for datum in datums:
             self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
             logging.info('Datum imported: {}'.format(datum.__str__()))
+        self.set_window_title_asterisk()
 
     def dialog_import_abs_g_direct(self):
         """
@@ -1489,6 +1524,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.path_absolute_data = selectabsg.path
         for nd in nds:
             self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(nd, 0)
+        self.set_window_title_asterisk()
 
     def export_metadata_text(self):
         """
@@ -1501,7 +1537,6 @@ class MainProg(QtWidgets.QMainWindow):
         Write complete summary of data and adjustment, with the intent that the processing can be re-created later
         """
         export_summary(self.obsTreeModel)
-
 
     def dialog_add_datum(self):
         """
@@ -1522,6 +1557,7 @@ class MainProg(QtWidgets.QMainWindow):
             d = Datum(str(station))
             self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(d, 0)
             logging.info('Datum station added: {}'.format(station))
+            self.set_window_title_asterisk()
 
     def dialog_adjustment_properties(self):
         """
@@ -1542,6 +1578,7 @@ class MainProg(QtWidgets.QMainWindow):
                     survey = self.obsTreeModel.invisibleRootItem().child(i)
                     survey.adjustment.adjustmentoptions = ao
                     self.set_adj_sd(survey, adjust_options.ao)
+            self.set_window_title_asterisk()
 
     def dialog_tide_correction(self):
         """
@@ -1622,11 +1659,26 @@ class MainProg(QtWidgets.QMainWindow):
         # TODO: load station coordinates dialog
         return
 
-    def close_windows(self):
-        """
-        Function for closing all windows
-        """
-        self.close()
+    # def close_windows(self):
+    #     """
+    #     Function for closing all windows
+    #     """
+    #     if self.windowTitle()[-1] == '*':
+    #         self.clo
+    #     self.close()
+
+    def closeEvent(self, event):
+        if self.windowTitle()[-1] == '*':
+            quit_msg = "The workspace isn't saved. Are you sure you want to exit the program?"
+            reply = QtWidgets.QMessageBox.question(self, 'Message',
+                                               quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if reply == QtWidgets.QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
 
     @staticmethod
     def show_help():
@@ -1793,8 +1845,7 @@ def main():
 
         app.exec_()
     else:
-        ex.close_windows()
-
+        ex.close()
 
 # Import here to avoid circular import error
 from gui_objects import show_message, SelectAbsg, AdjustOptions, LoopOptions

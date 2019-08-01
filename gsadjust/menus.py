@@ -82,7 +82,7 @@ class Menus:
                                               slot=self.mainProg.workspace_open_getfile)
         self.mnFileExitAction = self.create_action("&Exit",
                                               shortcut="Alt+F4",
-                                              slot=self.mainProg.close_windows,
+                                              slot=self.mainProg.close,
                                               tip="Exit App")
 
         # add actions to menu

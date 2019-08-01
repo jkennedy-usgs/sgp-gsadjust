@@ -1349,7 +1349,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             logging.info('Pickling workspace to {}'.format(fname))
         except Exception as e:
             return False
-        return True
+        return fname
 
 
 class RomanTableModel(QtCore.QAbstractTableModel):

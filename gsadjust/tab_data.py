@@ -246,7 +246,7 @@ class TabData(QtWidgets.QWidget):
         axe.xaxis.set_major_formatter(xfmt)
         plt.setp(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
         # Scale y axis to mean +/- 10. If a larger range is needed, color the axis red as a warning.
-        if serie_type == 'gravity':
+        if serie_type == 'Gravity':
             g_range_pos = max(seriey) - mean_g
             g_range_neg = mean_g - min(seriey)
             if g_range_neg <= 10 and g_range_pos <= 10:

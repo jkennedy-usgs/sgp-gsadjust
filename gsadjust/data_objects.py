@@ -694,16 +694,16 @@ class SimpleDelta:
 
     def __init__(self, delta):
         # Normal delta
-        if delta.type == 'normal':
-            self.sta1 = delta.station1.key
-            self.sta2 = delta.station2.key
-        elif delta.type == 'list':
-            self.sta1 = None
-            self.sta2 = []
-            for threepoint in delta.station2:
-                stations = [threepoint.station1.key, threepoint.station2[0].key, threepoint.station2[1].key]
-                self.sta2.append(stations)
-        # self.key = delta.key
+        if type(delta) == Delta:  # Can be created either from a Delta object or when loading JSON data
+            if delta.type == 'normal':
+                self.sta1 = delta.station1.key
+                self.sta2 = delta.station2.key
+            elif delta.type == 'list':
+                self.sta1 = None
+                self.sta2 = []
+                for threepoint in delta.station2:
+                    stations = [threepoint.station1.key, threepoint.station2[0].key, threepoint.station2[1].key]
+                    self.sta2.append(stations)
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift

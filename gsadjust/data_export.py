@@ -1,12 +1,32 @@
+#!/usr/bin/env python
+#  -*- coding: utf-8 -*-
+"""
+data_export.py
+===============
+
+Data export code for GSadjust.
+--------------------------------------------------------------------------------------------------------------------
+
+This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
+timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related
+material nor shall the fact of release constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
+unauthorized use of the software.
+"""
 import logging
 import time
+import os
 from PyQt5 import QtCore
+import csv
 
-def export_metadata(obsTreeModel):
+from data_analysis import compute_gravity_change
+
+def export_metadata(obsTreeModel, data_path):
     """
     Write metadata text to file. Useful for USGS data releases.
     """
-    fn = 'GSadjust_MetadataText_' + time.strftime("%Y%m%d-%H%M") + '.txt'
+    fn = os.path.join(data_path, 'GSadjust_MetadataText_' + time.strftime("%Y%m%d-%H%M") + '.txt')
     results_written, first = False, False
     fmt = '%Y-%m-%d'
     with open(fn, 'w') as fid:
@@ -48,7 +68,7 @@ def export_metadata(obsTreeModel):
         msg = show_message('No network adjustment results', 'Write error')
 
 
-def export_summary(obsTreeModel):
+def export_summary(obsTreeModel, data_path):
     """
     Write summary of procesing to text file. Can be used to reproduce results.
 
@@ -60,7 +80,7 @@ def export_summary(obsTreeModel):
     -------
 
     """
-    fn = 'GSadjust_Summary_' + time.strftime("%Y%m%d-%H%M") + '.txt'
+    fn = os.path.join(data_path, 'GSadjust_Summary_' + time.strftime("%Y%m%d-%H%M") + '.txt')
     # Write header info
     with open(fn, 'w') as fid:
         fid.write('# GSadjust processing summary, {}\n#\n'.format(time.strftime("%Y%m%d-%H%M")))
@@ -101,3 +121,16 @@ def export_summary(obsTreeModel):
             for ii in range(survey.results_model.rowCount()):
                 adj_sta = survey.results_model.data(survey.results_model.index(ii, 0), role=QtCore.Qt.UserRole)
                 fid.write('{}\n'.format(str(adj_sta)))
+
+def export_data(obstreemodel, data_path):
+    """
+    Export gravity change table to csv file
+    """
+    fn = os.path.join(data_path, 'GSadjust_TabularData_' + time.strftime("%Y%m%d-%H%M") + '.csv')
+    table = compute_gravity_change(obstreemodel, full_table=True)
+
+    with open(fn, 'w') as fid:
+        wr = csv.writer(fid)
+        wr.writerow(table[0])
+        for row in table[1]:
+            wr.writerow(row)

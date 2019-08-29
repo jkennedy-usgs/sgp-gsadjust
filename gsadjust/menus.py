@@ -78,8 +78,10 @@ class Menus:
                                               shortcut="F12",
                                               slot=self.mainProg.workspace_save_as,
                                               enabled=False)
-        self.mnFileLoadWorkspaceAction = self.create_action("Open workspace...",
+        self.mnFileLoadWorkspaceAction = self.create_action("Open workspace (.p format)...",
                                               slot=self.mainProg.workspace_open_getfile)
+        self.mnFileLoadJSONAction = self.create_action("Open workspace...",
+                                              slot=self.mainProg.workspace_open_getjson)
         self.mnFileExitAction = self.create_action("&Exit",
                                               shortcut="Alt+F4",
                                               slot=self.mainProg.close,
@@ -98,6 +100,7 @@ class Menus:
                                        None,
                                        self.mnFileSaveWorkspace,
                                        self.mnFileSaveWorkspaceAs,
+                                       self.mnFileLoadJSONAction,
                                        self.mnFileLoadWorkspaceAction,
                                        self.mnFileClearWorkspace,
                                        None,
@@ -252,11 +255,11 @@ class Menus:
         self.mnToolsNGMap = self.create_action('Network graph - map view',
                                               slot=self.mainProg.plot_network_graph_map)
         self.mnToolsWriteMetadataText = self.create_action('Write metadata text',
-                                              slot=self.mainProg.export_metadata_text)
+                                              slot=self.mainProg.write_metadata_text)
         self.mnToolsWriteTabularOutput = self.create_action('Write tabular data',
                                               slot=self.mainProg.write_tabular_data)
         self.mnToolsWriteSummary = self.create_action('Write adjustment summary',
-                                              slot=self.mainProg.export_summary_text)
+                                              slot=self.mainProg.write_summary_text)
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
                                               slot=self.mainProg.show_gravity_change_table,
                                               tip="Compute gravity change", enabled=False)

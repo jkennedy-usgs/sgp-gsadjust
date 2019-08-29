@@ -103,8 +103,6 @@ Survey.
 """
 
 import copy
-import csv
-import datetime as dt
 import logging
 import os
 # Standard library modules
@@ -121,8 +119,8 @@ from matplotlib.dates import num2date
 
 # GSadjust modules
 from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, import_abs_g_complete, import_abs_g_simple
-from data_export import export_metadata, export_summary
-from data_objects import Datum, Tare, ChannelList, Delta
+from data_export import export_metadata, export_summary, export_data
+from data_objects import Datum, Tare, ChannelList, Delta, SimpleDelta
 from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
 from gui_objects import AddDatumFromList, CoordinatesTable
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
@@ -646,8 +644,9 @@ class MainProg(QtWidgets.QMainWindow):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.path_data)
         if fname:
             if fname[-2:] != '.p':
-                self.msg = show_message('Saved workspaces should have a .p extension. ' +
-                                        'Please use "Open raw...data" to load a data file', 'File load error')
+                self.msg = show_message('Saved workspaces should have a .p or .gsa extension. ' +
+                                        'Please use "Open workspace..." to load a .gsa file, or ' +
+                                        '"Open raw...data" to load a data file.', 'File load error')
                 return
 
             if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
@@ -660,7 +659,34 @@ class MainProg(QtWidgets.QMainWindow):
             else:
                 self.workspace_open(fname)
 
-    def workspace_open(self, fname):
+        self.path_data = os.path.dirname(str(fname))
+
+    def workspace_open_getjson(self):
+        """
+        Gets filename to open and asks whether to  append or overwrite, if applicable.
+        :return:
+        """
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.path_data)
+        if fname:
+            if fname[-4:] != '.gsa':
+                self.msg = show_message('Saved workspaces should have a .gsa extension. ' +
+                                        'Please use "Open raw...data" to load a data file' +
+                                        ' or "Open workspace (.p format)" to open a workspace' +
+                                        ' with .p extension.', 'File load error')
+                return
+
+            if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
+                overwrite_tree_dialog = Overwrite()
+                if overwrite_tree_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                    self.workspace_clear()
+                    self.workspace_open_json(fname)
+                else:
+                    return
+            else:
+                self.workspace_open_json(fname)
+        self.path_data = os.path.dirname(str(fname))
+
+    def workspace_open_json(self, fname):
         """
         Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
         pickled and are removed in workspace_save).
@@ -670,6 +696,23 @@ class MainProg(QtWidgets.QMainWindow):
         # try:
         QtWidgets.QApplication.processEvents()
         obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(fname)
+        if obstreesurveys:
+            self.workspace_savename = fname
+            self.populate_obstreemodel(obstreesurveys, delta_models)
+            self.set_window_title(fname)
+        if coords:
+            self.obsTreeModel.station_coords = coords
+
+    def workspace_open(self, fname):
+        """
+        Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
+        pickled and are removed in workspace_save).
+        """
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
+        # try:
+        QtWidgets.QApplication.processEvents()
+        obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace_p(fname)
         if obstreesurveys:
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
@@ -746,18 +789,22 @@ class MainProg(QtWidgets.QMainWindow):
                 i = 0
                 try:
                     if simpledelta.type == 'normal':
-                        station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
-                        station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
-                        if station1 is not None and station2 is not None:
-                            d = Delta(station1, station2,
-                                      adj_sd=simpledelta.adj_sd,
-                                      driftcorr=simpledelta.driftcorr,
-                                      ls_drift=simpledelta.ls_drift,
-                                      delta_type=simpledelta.type,
-                                      checked=simpledelta.checked,
-                                      loop=simpledelta.loop)
-                        else:
-                            logging.error('')
+                        if type(simpledelta) == SimpleDelta:
+                            station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
+                            station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
+                            if station1 is not None and station2 is not None:
+                                d = Delta(station1, station2,
+                                          adj_sd=simpledelta.adj_sd,
+                                          driftcorr=simpledelta.driftcorr,
+                                          ls_drift=simpledelta.ls_drift,
+                                          delta_type=simpledelta.type,
+                                          checked=simpledelta.checked,
+                                          loop=simpledelta.loop)
+                            else:
+                                logging.error('')
+                        # For dealing with old-style .p workspaces
+                        elif type(simpledelta) == Delta:
+                            d = simpledelta
                     elif simpledelta.type == 'list':
                         if not hasattr(simpledelta, 'key'):
                             list_of_deltas = []
@@ -1526,17 +1573,23 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(nd, 0)
         self.set_window_title_asterisk()
 
-    def export_metadata_text(self):
+    def write_metadata_text(self):
         """
         Exports processing summary for metadata file.
         """
-        export_metadata(self.obsTreeModel)
+        export_metadata(self.obsTreeModel, self.path_data)
 
-    def export_summary_text(self):
+    def write_summary_text(self):
         """
         Write complete summary of data and adjustment, with the intent that the processing can be re-created later
         """
-        export_summary(self.obsTreeModel)
+        export_summary(self.obsTreeModel, self.path_data)
+
+    def write_tabular_data(self):
+        """
+        Write data to file
+        """
+        export_data(self.obsTreeModel, self.path_data)
 
     def dialog_add_datum(self):
         """
@@ -1628,18 +1681,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.deltas_update_required()
             self.adjust_update_required()
         self.plot_samples()
-
-    def write_tabular_data(self):
-        """
-        Export gravity change table to csv file
-        """
-        fn = 'GSadjust_TabularData_' + time.strftime("%Y%m%d-%H%M") + '.csv'
-        table = self.compute_gravity_change(self.obsTreeModel, full_table=True)
-
-        with open(fn, 'w') as fid:
-            wr = csv.writer(fid)
-            for row in table:
-                wr.writerow(row)
 
     def dialog_station_coordinates(self):
         """

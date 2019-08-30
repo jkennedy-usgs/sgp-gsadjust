@@ -110,7 +110,7 @@ class TabDrift(QtWidgets.QWidget):
         self.tension_label = QtWidgets.QLabel()
         self.tension_label.setText('{:2.2f}'.format(self.tension_slider.value()))
         self.tension_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.drift_cont_methodcombobox_key = {0: "None",
+        self.drift_cont_methodcombobox_key = {0: "Constant",
                                               1: "Spline",
                                               2: "1st order polynomial",
                                               3: "2nd order polynomial",
@@ -697,8 +697,9 @@ class TabDrift(QtWidgets.QWidget):
                 # relatively low to maintain performance.
                 xp = np.linspace(min(drift_x), max(drift_x), 50)  # constant
                 method_key = self.drift_polydegree_combobox.currentIndex()
-                if method_key == 0:  # no drift correction
-                    yp = np.zeros(xp.size)
+                if method_key == 0:  # constant drift correction
+                    mean_drift = sum(drift_rate) / len(drift_rate)
+                    yp = np.zeros(xp.size) + mean_drift
                 else:
                     x0 = [f - np.min(drift_x) for f in drift_x]
                     xp0 = [f - np.min(xp) for f in xp]
@@ -719,21 +720,24 @@ class TabDrift(QtWidgets.QWidget):
                             logging.info('Spline drift correction, tension={}'.format(self.tension_slider.value()))
                         except:
                             self.msg = show_message('Insufficient drift observations for spline method', 'Error')
-                    elif method_key == 2:  # 1st order poly
-                        z = np.polyfit(x0, drift_rate, 1)
-                        p = np.poly1d(z)
-                        yp = p(xp0)
-                        logging.info('First-order poly drift correction')
-                    elif method_key == 3:  # 2nd order poly
-                        z = np.polyfit(x0, drift_rate, 2)
-                        p = np.poly1d(z)
-                        yp = p(xp0)
-                        logging.info('Second-order poly drift correction')
-                    elif method_key == 4:  # 3rd order poly
-                        z = np.polyfit(x0, drift_rate, 3)
-                        p = np.poly1d(z)
-                        yp = p(xp0)
-                        logging.info('Third-order poly drift correction')
+                            self.drift_polydegree_combobox.setCurrentIndex(0)
+                            return
+                    else:
+                        # Polynomial interpolation. Degree is one less than the method key, e.g.,
+                        #     method_key == 2 is 1st orderpolynomial, etc.
+                        try:
+                            z = np.polyfit(x0, drift_rate, method_key - 1)
+                            p = np.poly1d(z)
+                            yp = p(xp0)
+                            logging.info('Polynomial drift correction degree {}'.format(method_key - 1))
+                            obstreeloop.drift_cont_method = 0
+                        except np.linalg.LinAlgError as e:
+                            logging.error(e)
+                            self.msg = show_message('Insufficient drift observations for '
+                                                    'polynomial method', 'Error')
+                            self.drift_polydegree_combobox.setCurrentIndex(0)
+                            obstreeloop.drift_cont_method = 0
+                            return
 
                 # Method for extrapolating beyond fitted drift curve extene
                 if self.drift_cont_startendcombobox.currentIndex() == 1:  # constant
@@ -768,6 +772,8 @@ class TabDrift(QtWidgets.QWidget):
                     self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                     self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
                     self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                    if (max(yp) - min(yp)) < 0.0001:
+                        self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) -10, np.round(yp[0], 0) + 10)
                     self.axes_drift_cont_upper.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                     self.drift_cont_canvasbot.draw()
                     self.drift_cont_canvastop.draw()
@@ -1045,6 +1051,7 @@ class TabDrift(QtWidgets.QWidget):
         """
         Called when either the drift method or extrapolate/constant combobox is changed.
         """
+
         method_key = self.drift_polydegree_combobox.currentIndex()
         startend_key = self.drift_cont_startendcombobox.currentIndex()
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)

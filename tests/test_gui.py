@@ -61,14 +61,14 @@ def test_gui(qtbot, monkeypatch):
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
 
-    test_workspace = 'test1.p'
+    test_workspace = 'test1.gsa'
     success = window.obsTreeModel.save_workspace(test_workspace)
-    assert success == True
+    assert success == 'test1.gsa'
 
     window.workspace_clear()
     assert window.obsTreeModel.rowCount() == 0
 
-    window.workspace_open(test_workspace)
+    window.workspace_open_json(test_workspace)
     survey = window.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0)
     assert loop.rowCount() == 12
@@ -107,7 +107,7 @@ def test_gui(qtbot, monkeypatch):
     window.workspace_clear()
     assert window.obsTreeModel.rowCount() == 0
 
-    window.workspace_open(test_workspace)
+    window.workspace_open_json(test_workspace)
     window.adjust_network()
     for line in survey.adjustment.adjustmentresults.text:
         elems = line.split(' ')

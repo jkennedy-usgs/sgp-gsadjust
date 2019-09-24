@@ -134,23 +134,7 @@ from tab_drift import TabDrift
 from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
 from data_correction import time_correction
-from data_analysis import compute_gravity_change
 from utils import *
-"""
-To install conda env:
-conda create -n pyg35 python=3.5 numpy scipy=0.19 pyqt=5 networkx matplotlib pywin32 
-
-(scipy 1.0 causes a bug with pyinstaller)
-
-installer:
-conda install pyinstaller 
-pip install pefile pypiwin32
-
-Run in a conda env named pyg35
-$>activate pyg
-$>pyinstaller --onefile GSadjust.spec
-
-"""
 
 
 class MainProg(QtWidgets.QMainWindow):
@@ -1787,8 +1771,8 @@ class MainProg(QtWidgets.QMainWindow):
             repo = Repo(self.path_install)
             fetch = [r for r in repo.remotes if r.name == 'origin'][0].fetch()
             master = [f for f in fetch if f.name == 'origin/master'][0]
-
-            merge_msg = repo.git.merge(master.name)
+            repo.git.reset('--hard')
+            repo.git.merge(master.name)
 
             msg = 'Updated successfully downloaded from GitHub. Please\n' \
                   'restart GSadjust.'
@@ -1799,7 +1783,7 @@ class MainProg(QtWidgets.QMainWindow):
             msg = 'Problem Encountered Updating from GitHub\n\n' \
                   'Please upgrade to the latest release by reinstalling the ' \
                   'application from GitHub ' \
-                  '\n(https://github.com/usgs/fort-pymdwizard/releases)\n\n' \
+                  '\n(https://github.com/jkennedy-usgs/sgp-gsadjust/releases)\n\n' \
                   'Error Message:\n'
             msg += str(e)
             QtWidgets.QMessageBox.information(self, "Update results", msg)

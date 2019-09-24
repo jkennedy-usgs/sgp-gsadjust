@@ -904,6 +904,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     A[row, self.adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
                 except:
                     self.msg = show_message('Key error. Do Datum station names match delta observations?', 'Inversion error')
+                    return
 
             # Populate column(s) for drift, if included in network adjustment
             if delta.ls_drift is not None:

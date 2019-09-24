@@ -840,14 +840,14 @@ class TabDrift(QtWidgets.QWidget):
         orig_method = obstreeloop.drift_method
         obstreeloop.drift_method = method
 
+        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
         # These control the visibility of different tables
         # update is an int (index of menu item) when this function is called from the
-        #   menu-item callback
+        # menu-item callback
         if type(update) is int or update is True:
             if method == 'none':
                 self.drift_none()
             if method == 'netadj':
-                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
                 self.drift_adjust()
             if method == 'roman':
                 self.drift_roman()

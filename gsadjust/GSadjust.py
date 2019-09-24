@@ -447,7 +447,7 @@ class MainProg(QtWidgets.QMainWindow):
         # the existing data (only if there is existing data).
         elif self.obsTreeModel.invisibleRootItem().rowCount() > 0:
             overwrite_tree_dialog = Overwrite()
-            if overwrite_tree_dialog.exec_() == QtWidgets.QDialog.Accepted:
+            if overwrite_tree_dialog.exec_():
                 self.workspace_clear()
             else:
                 return
@@ -545,6 +545,10 @@ class MainProg(QtWidgets.QMainWindow):
         Append previously-saved workspace to current workspace.
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.path_data)
+        if fname[-1] is 'p':
+            self.msg = show_message('If trying to append a .p file, please save it as a .gsa file first.',
+                                    'Import error')
+            return
         obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(fname)
         # TODO: Do something with coords (append to table if not already there)
         for survey in obstreesurveys:
@@ -651,7 +655,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
                 overwrite_tree_dialog = Overwrite()
-                if overwrite_tree_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                if overwrite_tree_dialog.exec_():
                     self.workspace_clear()
                     self.workspace_open(fname)
                 else:
@@ -677,7 +681,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
                 overwrite_tree_dialog = Overwrite()
-                if overwrite_tree_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                if overwrite_tree_dialog.exec_():
                     self.workspace_clear()
                     self.workspace_open_json(fname)
                 else:
@@ -688,8 +692,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def workspace_open_json(self, fname):
         """
-        Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
-        pickled and are removed in workspace_save).
+        Loads data from JSON file. Restores PyQt tables to Survey object
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
@@ -1473,8 +1476,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.adjust_update_not_required()
 
     def show_gravity_change_table(self):
-        header, table, dates = compute_gravity_change(self.obsTreeModel)
-        GravityChangeTable(self, table, header, dates=dates, full_table=False)
+        GravityChangeTable(self, full_table=False)
 
     def plot_network_graph_circular(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)

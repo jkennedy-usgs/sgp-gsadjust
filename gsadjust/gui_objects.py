@@ -70,16 +70,17 @@ class Overwrite(QtWidgets.QMessageBox):
         self.overwrite = False
         # self.msg = QtWidgets.QMessageBox()
         self.setText("Overwrite existing data?")
-        self.addButton(QtWidgets.QPushButton('Overwrite'), QtWidgets.QMessageBox.YesRole)
-        self.addButton(QtWidgets.QPushButton('Cancel'), QtWidgets.QMessageBox.RejectRole)
-        self.buttonClicked.connect(self.onClicked)
+        ow_button = QtWidgets.QPushButton('Overwrite')
+        ow_button.clicked.connect(self.onClicked)
+
+        cancel_button = QtWidgets.QPushButton('Cancel')
+        cancel_button.clicked.connect(self.close)
+        self.addButton(cancel_button, 0)
+        self.addButton(ow_button, 1)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):
-        if btn.text() == 'Overwrite':
-            self.accept()
-        else:
-            self.reject()
+        self.accept()
 
 
 class CoordinatesTable(QtWidgets.QDialog):
@@ -568,9 +569,16 @@ class GravityChangeTable(QtWidgets.QDialog):
     :param header:
     """
 
-    def __init__(self, MainProg, table, header, dates=None, full_table=False):
+    def __init__(self, MainProg, full_table=False):
         super(GravityChangeTable, self).__init__()
-        self.header, self.table, self.dates = data_analysis.compute_gravity_change(MainProg.obsTreeModel)
+        result = data_analysis.compute_gravity_change(MainProg.obsTreeModel)
+        if not result:
+            self.msg = show_message('Some gravity values are less than 0. Increase the survey datum(s) ' \
+                                    'so that all gravity values are greater than 0 before calculating ' \
+                                    'gravity change.', 'Calculation error')
+            return
+        else:
+            self.header, self.table, self.dates = result[0], result[1], result[2]
         self.full_header, self.full_table, _ = data_analysis.compute_gravity_change(MainProg.obsTreeModel,
                                                                                     full_table=True)
         self.coords = MainProg.obsTreeModel.station_coords
@@ -676,6 +684,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.btnIncremental.setChecked(True)
         self.btnReference = QtWidgets.QRadioButton("Change relative to", self)
         self.drpReference = QtWidgets.QComboBox()
+        self.drpReference.currentIndexChanged.connect(self.plot)
         self.btnIncremental.toggled.connect(self.plot)
         self.btnReference.toggled.connect(self.plot)
         bbox = QtWidgets.QHBoxLayout()
@@ -960,18 +969,13 @@ class GravityChangeMap(QtWidgets.QDialog):
 
 def show_full_table(MainProg):
     MainProg.popup.close()
-    header, table, dates = data_analysis.compute_gravity_change(MainProg.obsTreeModel, full_table=True)
-    # header = table[0]
-    tp_table = list(zip(*table[1:]))
-    # GravityChangeTable(MainProg, tp_table, header, full_table=True)
-    GravityChangeTable(MainProg, tp_table, header, dates, full_table=True)
+    GravityChangeTable(MainProg, full_table=True)
     return
 
 
 def show_simple_table(MainProg):
     MainProg.popup.close()
-    header, table, dates = data_analysis.compute_gravity_change(MainProg.obsTreeModel, full_table=False)
-    GravityChangeTable(MainProg, table, header, dates, full_table=False)
+    GravityChangeTable(MainProg, full_table=False)
     return
 
 

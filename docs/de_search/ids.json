@@ -52,10 +52,12 @@
 	"51": ["Tide correction", "tide_correction.htm"],
 	"52": ["Show/edit station coordinates", "show_edit_station_coordinates.htm"],
 	"53": ["Calculating gravity change over time", "calculating_gravity_change_over_time.htm"],
-	"54": ["7. Considerations", "considerations.htm"],
-	"55": ["Dynamic data links between tabs and status indicators", "dynamic_data_links_between_tabs_and_status_indicators.htm"],
-	"56": ["Numpy vs Gravnet inversion", "numpy_vs_gravnet_inversion.htm"],
-	"57": ["Vertical gradients", "vertical_gradients.htm"],
-	"58": ["Saving and loading the workspace", "saving_and_loading_the_workspace.htm"],
-	"59": ["Multiple meters", "multiple_meters.htm"]
+	"54": ["Plotting gravity time-series", "plotting_gravity_time_series.htm"],
+	"55": [" Map-view gravity change", "_map_view_gravity_change.htm"],
+	"56": ["7. Considerations", "considerations.htm"],
+	"57": ["Dynamic data links between tabs and status indicators", "dynamic_data_links_between_tabs_and_status_indicators.htm"],
+	"58": ["Numpy vs Gravnet inversion", "numpy_vs_gravnet_inversion.htm"],
+	"59": ["Vertical gradients", "vertical_gradients.htm"],
+	"60": ["Saving and loading the workspace", "saving_and_loading_the_workspace.htm"],
+	"61": ["Multiple meters", "multiple_meters.htm"]
 }

@@ -9,6 +9,16 @@ def compute_gravity_change(obstreemodel, full_table=False):
     :param full_table: if True, entire tabular output file for data release is shown. Includes station
     coordinates, g, standard deviation, and gravity change.
     """
+
+    # Check that all values are positive (it should work either way, but it avoids confusion)
+    for i in range(obstreemodel.invisibleRootItem().rowCount()):
+        survey = obstreemodel.invisibleRootItem().child(i)
+        for ii in range(survey.results_model.rowCount()):
+            adj_station = survey.results_model.data(survey.results_model.index(ii, 0),
+                                                    role=256)  # 256=QtCore.Qt.UserRole
+            if adj_station.g < 0:
+                return False
+
     compare_station, initial_station, iteration_station, iteration_name = None, None, None, None
     logging.info('Calculating gravity change')
     first = True
@@ -170,7 +180,7 @@ def compute_gravity_change(obstreemodel, full_table=False):
     if not full_table:
         header = ['station'] + header1 + header2
         table = out_table
-        return header, table, dates
+        return (header, table, dates)
     else:
         header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1 + header2
         # transpose table
@@ -182,7 +192,7 @@ def compute_gravity_change(obstreemodel, full_table=False):
         # transpose back
         table = [list(i) for i in zip(*table)]
         # table = [header] + table
-        return header, table, dates
+        return (header, table, dates)
 
 
 def adjusted_vs_observed_datum_analysis(self):

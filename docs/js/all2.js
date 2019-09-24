@@ -11,8 +11,8 @@ DR_EXPLAIN.dataManager = (function() {
     var drex_node_child_start = data_menu.DREX_NODE_CHILD_START;
     var drex_node_child_end = data_menu.DREX_NODE_CHILD_END;
 
-    var drex_node_parent = [];
-    var drex_node_deep = [];
+    var drex_node_parent = new Array();
+    var drex_node_deep = new Array();
 
     var drex = {};
 
@@ -25,7 +25,7 @@ DR_EXPLAIN.dataManager = (function() {
       this.deep = drex_node_deep[this.node_index];
 
       this.children = function(){
-        var result = [];
+        var result = new Array();
         for (var i = drex_node_child_start[this.node_index]; i < drex_node_child_end[this.node_index]; i++)
           result.push(new drex_node(i));
         return result;
@@ -45,7 +45,8 @@ DR_EXPLAIN.dataManager = (function() {
             return false;
         return (this.node_index == drex.active_node.node_index);
       };
-    }
+    };
+
     var initMenu = function() {
 
         drex_node_parent[0] = -1;
@@ -59,7 +60,7 @@ DR_EXPLAIN.dataManager = (function() {
           }
         }
 
-        drex = {};
+        drex = new Object();
         drex.nodes_count = drex_node_names.length;
 
         drex.root_node = function()
@@ -88,7 +89,7 @@ DR_EXPLAIN.dataManager = (function() {
       this.deep = drex_keyword_deep[this.keyword_index];
 
       this.children = function(){
-        var result = [];
+        var result = new Array();
         for (var i = drex_keyword_child_start[this.keyword_index]; i < drex_keyword_child_end[this.keyword_index]; i++)
           result.push(new drex_keyword(i));
         return result;
@@ -108,14 +109,14 @@ DR_EXPLAIN.dataManager = (function() {
         if (drex_keyword_child_start[this.keyword_index] >= drex_keyword_child_end[this.keyword_index])
           return 0;
         return drex_keyword_child_start[this.keyword_index] - drex_keyword_child_end[this.keyword_index];
-      };
+      }
       this.parent = function(){
         if (drex_keyword_parent[this.keyword_index] == -1)
             return null;
         return new drex_keyword(drex_keyword_parent[this.keyword_index]);
       };
       this.nodes = function(){
-        var result = [];
+        var result = new Array();
         for (var i = drex_keyword_nodes_start[this.keyword_index]; i < drex_keyword_nodes_end[this.keyword_index]; i++)
           result.push(new drex_node(drex_keyword_nodes[i]));
         return result;
@@ -123,7 +124,11 @@ DR_EXPLAIN.dataManager = (function() {
       this.isActive = function(){
         return this.keyword_index != 0;
       };
-    }
+    };
+
+
+
+
     var data_index = DR_EXPLAIN.data_index;
 
     var drex_node_keywords = data_index.DREX_NODE_KEYWORDS;
@@ -134,8 +139,8 @@ DR_EXPLAIN.dataManager = (function() {
     var drex_keyword_child_start = data_index.DREX_KEYWORD_CHILD_START;
     var drex_keyword_child_end = data_index.DREX_KEYWORD_CHILD_END;
 
-    var drex_keyword_parent = [];
-    var drex_keyword_deep = [];
+    var drex_keyword_parent = new Array();
+    var drex_keyword_deep = new Array();
 
     var drex_keyword_nodes = new Array(drex_node_keywords.length);
     var drex_keyword_nodes_start = new Array(drex_keyword_names.length);
@@ -185,7 +190,7 @@ DR_EXPLAIN.dataManager = (function() {
 
 
         drex_node.prototype.keywords = function(){
-            var result = [];
+            var result = new Array();
             for (var i = drex_node_keywords_start[this.node_index]; i < drex_node_keywords_end[this.node_index]; i++)
               result.push(new drex_keyword(drex_node_keywords[i]));
             return result;
@@ -233,6 +238,10 @@ DR_EXPLAIN.dataManager = (function() {
 
         getErrorInLocalSearch: function() {
             return data_search.DREXPLAIN_ERROR_LOCAL_SEARCH;
+        },
+
+        getErrorInRemoteSearch: function(code) {
+            return data_search.DREXPLAIN_ERROR_REMOTE_SEARCH.replace('{0}', code.toString());
         },
 
         getSearchTextEmptyString: function() {
@@ -605,8 +614,8 @@ DR_EXPLAIN.wordSplitter = (function() {
     }
     var Ranges = function() {
         this.filled = false;
-        this.starts = [];
-        this.ends = [];
+        this.starts = new Array();
+        this.ends = new Array();
         this.contains
     };
     Ranges.prototype.addRange = function(start, end)
@@ -625,7 +634,7 @@ DR_EXPLAIN.wordSplitter = (function() {
             return false;
         --it;
         var nBegin = this.starts[it];
-        var nEnd = this.ends[it];
+        var nEnd = this.ends[it]
         if (nBegin <= val && val < nEnd)
             return true;
         return false;
@@ -755,8 +764,8 @@ DR_EXPLAIN.wordSplitter = (function() {
     function splitString(str)
     {
         var chars = toCodePoints(str);
-        var result = [];
-        var word = [];
+        var result = new Array();
+        var word = new Array();
         for (var i = 0; i <= chars.length; ++i)
         {
             if (i != chars.length && isWordSymbol(chars[i]) && !isPunctuationSymbol(chars[i]))
@@ -768,7 +777,7 @@ DR_EXPLAIN.wordSplitter = (function() {
                 if (word.length != 0)
                 {
                     result.push(fromCodePoints(word));
-                    word = [];
+                    word = new Array();
                 }
             }
         }
@@ -786,10 +795,9 @@ DR_EXPLAIN.wordSplitter = (function() {
 /*js/drexplain/drexplain.search-engine.js*/
 DR_EXPLAIN.namespace( 'DR_EXPLAIN.searchEngine' );
 DR_EXPLAIN.searchEngine = (function() {
-    function isLocalSearch()
+    function isRemoteSearch()
     {
-        var local = /file:/i;
-        return local.test(dirname());
+        return window.location.protocol === 'https:' || window.location.protocol === 'http:';
     }
     /**
     * Append a tag to the properties of an object for each item in an array
@@ -904,10 +912,10 @@ DR_EXPLAIN.searchEngine = (function() {
     var strSearchInProgress = "Searching...";
     */
 
-    var IndexOfFiles = [];
-    var StringsForSearch = [];
-    var StringPairArray = [];
-    var SearchResults=[];
+    var IndexOfFiles = new Array();
+    var StringsForSearch = new Array();
+    var StringPairArray = new Array();
+    var SearchResults=new Array();
     var iStringToSearch=0;
     var HTTP = {};
 
@@ -957,8 +965,8 @@ DR_EXPLAIN.searchEngine = (function() {
                 catch(e)
                 {
                     //Something is wrong, abort search
-                    SearchResults = [];
-                    SearchResults[0] = [];
+                    SearchResults = new Array();
+                    SearchResults[0] = new Array();
                     SearchResults[0][0] = "Error!";
                     SearchResults[0][1] = "mailto:help@drexplain.com";
                     getSearchResultOutput();
@@ -969,13 +977,13 @@ DR_EXPLAIN.searchEngine = (function() {
                 for (var i = 0; i < SearchResults.length; i++)
                 {
                     id = SearchResults[i];
-                    SearchResults[i] = [];
+                    SearchResults[i] = new Array();
                     SearchResults[i][0] = arrFileId[id][0];
                     SearchResults[i][1] = arrFileId[id][1];
                 }
                 getSearchResultOutput();
             }
-        };
+        }
         request.send(null);
 
     }
@@ -1004,7 +1012,7 @@ DR_EXPLAIN.searchEngine = (function() {
 
         var isFirstIteration = true;
         var wasFound        = false;
-        var curResults = [];
+        var curResults = new Array();
         for (var i = 0; i < arrFileStrings.length; i++)
         {
             if (arrFileStrings[i].s.indexOf(stToSearch) == 0)
@@ -1111,11 +1119,11 @@ DR_EXPLAIN.searchEngine = (function() {
             }
 
             //Replace strings for search with pairs (string,index file)
-            StringPairArray[i] = [];
+            StringPairArray[i] = new Array();
             StringPairArray[i][0]=st;
             StringPairArray[i][1]=IndexOfFiles[j].fileName;
         }
-        SearchResults=[];
+        SearchResults=new Array();
         iStringToSearch=0;
         SearchForNextString();
     }
@@ -1124,13 +1132,14 @@ DR_EXPLAIN.searchEngine = (function() {
     //Fills IndexOfFiles array
     function GetIndex()
     {
-        SearchResults=[];
+        SearchResults=new Array();
         NextStringToSearch=0; //?
         var sURL = dirname() + "/de_search/prefixes.json";
         request.open("GET", sURL);
         request.onreadystatechange = function() {
-            if (request.readyState == 4)
-                if(request.status == 200 || request.status == 0)
+            if (request.readyState === 4)
+            {
+                if (request.status === 200 || request.status === 0 && request.responseText !== '')
                 {
                     try
                     {
@@ -1138,10 +1147,24 @@ DR_EXPLAIN.searchEngine = (function() {
                     }
                     catch(e)
                     {
+                        $(document).trigger("searchError");
+                        if (isRemoteSearch())
+                            DR_EXPLAIN.searchManager.showRemoteSearchError(-34);
+                        else
+                            DR_EXPLAIN.searchManager.showLocalSearchError();
                         return;
                     }
                     AttachFilesToStrings();
                 }
+                else
+                {
+                    $(document).trigger("searchError");
+                    if (isRemoteSearch())
+                        DR_EXPLAIN.searchManager.showRemoteSearchError(request.status);
+                    else
+                        DR_EXPLAIN.searchManager.showLocalSearchError();
+                }
+            }
         };
         request.send(null);
     }
@@ -1173,38 +1196,29 @@ DR_EXPLAIN.searchEngine = (function() {
 
     function isEmpty(sToCheck) {
         var sTest;
-        sTest = trim(sToCheck);
+        sTest = trim(sToCheck)
         if (sTest == null || sTest == "") {
             return true;
         }
         return false;
     }
 
-    function  DoesNotOperaSupportLocalSearch()
-    {
-        var version = jQuery.browser.version || "0";
-        var splitVersion = version.split('.');
-        return $.browser.opera && ((parseInt(splitVersion[0]) > 12) || ((parseInt(splitVersion[0]) == 12) && (parseInt(splitVersion[1]) >= 2)))
-    }
-
     function searchmain(str)
     {
-        if (isLocalSearch() && ($.browser.chrome || DoesNotOperaSupportLocalSearch()  ) )
-            throw Error("LocalSearchNotSupportedInCurrentBrowser");
         $( document ).trigger( "searchBegin" );
-        SearchResults=[];
+        SearchResults=new Array();
         iStringToSearch=0;
 
         //Split the string into words
         var strs = DR_EXPLAIN.wordSplitter.splitString(str);
-        StringsForSearch = [];
+        StringsForSearch = new Array();
         for (var i = 0; i < strs.length; ++i)
             if (!isEmpty(strs[i]))
                 StringsForSearch.push(strs[i]);
-            //Download index.txt asynchronously and fill array of indexes
-            GetIndex();
+        //Download index.txt asynchronously and fill array of indexes
+        GetIndex();
 
-            return 1;
+        return 1;
     }
 
     function max(a,b){
@@ -1421,19 +1435,7 @@ DR_EXPLAIN.searchManager = (function(){
             if (queryArray.length == 0 || queryArray[0] == '')
                 this.showSearchTextEmptyString();
             else
-            {
-                try {
-                    this.searchEngine.doSearch(s);
-                }
-                catch(e){
-                    if (e.message == "LocalSearchNotSupportedInCurrentBrowser")
-                    {
-                        var $msg = $( '<div class="b-tree__searchResultText">' + this.dataManager.getErrorInLocalSearch() + '</div>' );
-                        this.dom.tabs.search.$tree.html( $msg );
-                        $( document ).trigger( "searchCompleteBuildTree" );
-                    }
-                }
-            }
+                this.searchEngine.doSearch(s);
         },
 
         searchComplete: function() {
@@ -1467,6 +1469,20 @@ DR_EXPLAIN.searchManager = (function(){
         showSearchTextEmptyString: function() {
             this.highlightManager.hide();
             var $msg = $( '<div class="b-tree__searchResultText">' + this.dataManager.getSearchTextEmptyString() + '</div>' );
+            this.dom.tabs.search.$tree.html( $msg );
+            $( document ).trigger( "searchCompleteBuildTree" );
+        },
+
+        showLocalSearchError: function() {
+            this.highlightManager.hide();
+            var $msg = $( '<div class="b-tree__searchResultText">' + this.dataManager.getErrorInLocalSearch() + '</div>' );
+            this.dom.tabs.search.$tree.html( $msg );
+            $( document ).trigger( "searchCompleteBuildTree" );
+        },
+
+        showRemoteSearchError: function(code) {
+            this.highlightManager.hide();
+            var $msg = $( '<div class="b-tree__searchResultText">' + this.dataManager.getErrorInRemoteSearch(code) + '</div>' );
             this.dom.tabs.search.$tree.html( $msg );
             $( document ).trigger( "searchCompleteBuildTree" );
         },
@@ -1534,6 +1550,14 @@ DR_EXPLAIN.searchManager = (function(){
 
         doSearchIfQueryStringNotEmpty: function() {
             _class.doSearchIfQueryStringNotEmpty();
+        },
+
+        showLocalSearchError: function() {
+            _class.showLocalSearchError();
+        },
+
+        showRemoteSearchError: function(code) {
+            _class.showRemoteSearchError(code);
         }
     };
 
@@ -1560,7 +1584,7 @@ DR_EXPLAIN.highlightManager = (function(){
 
         show: function( wordsArr ) {
             this.hide();
-            var tempArr = [];
+            var tempArr = new Array();
             for ( var index = 0; index < wordsArr.length; index += 1 )
                 tempArr.push(wordsArr[index]);
             tempArr.sort(function(a, b){
@@ -1609,6 +1633,7 @@ DR_EXPLAIN.tabController = (function(){
         DREX_SHOW_MENU: 1,
         DREX_SHOW_SEARCH: 1,
         DREX_SHOW_INDEX: 1,
+        DREXPLAIN_MAKE_TAB_COUNT: 3,
 
         tabArr: [],
         urlEncoder: null,
@@ -1849,6 +1874,10 @@ DR_EXPLAIN.tabController = (function(){
 
         doSetScrollTopByUrlEncoder: function() {
             _class.doSetScrollTopByUrlEncoder();
+        },
+
+        tabsCount: function() {
+            return _class.DREXPLAIN_MAKE_TAB_COUNT;
         },
 
         isMenuTabShown: function() {
@@ -2413,11 +2442,11 @@ DR_EXPLAIN.workZoneSizer = (function(){
 
             $(document).on('sideNavTopmostPresent', function() {
                 that.recalculateAll();
-            });
+            })
 
             $(document).on('sideNavTopmostDismiss', function() {
                 that.recalculateAll();
-            });
+            })
 
             $( window ).resize(function() {
                 clearTimeout( that.timeoutId );
@@ -3372,13 +3401,13 @@ DR_EXPLAIN.navTree_Menu = (function(){
         for (var i = 0; i < VarTOpnd.length; i++)
             menuMinimized[i] ^= VarTOpnd[i];
 
-        var bits = [];
+        var bits = new Array();
         for (var i = 0; i < menuMinimized.length; i++)
             bits.push(menuMinimized[i]);
 
 
         var bytes = this.utils.bitsToByte(bits, 7);
-        bits = [];
+        bits = new Array();
         for (var i = 0; i < bytes.length; i++)
             if (bytes[i] == 0)
                 bits.push(0);
@@ -3419,7 +3448,7 @@ DR_EXPLAIN.navTree_Menu = (function(){
 
             var prefixLen = this.utils.encodingPrefixLen(VarTOpnd.length, 7);
             var readPos = prefixLen;
-            var result = [];
+            var result = new Array();
             for (var i = 0; i < prefixLen * 8; i++)
                 if (bits[i] == 0)
                     result.push(0);
@@ -3712,7 +3741,11 @@ DR_EXPLAIN.navTree_Search = (function(){
 
 /*js/app.js*/
 function initTabs() {
-    var app = DR_EXPLAIN;
+	var app = DR_EXPLAIN;
+
+    if (app.tabController.tabsCount() == 0)
+        return;
+
     app.navTree_Menu.init();
     app.navTree_Index.init();
     app.navTree_Search.init();

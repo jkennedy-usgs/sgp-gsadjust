@@ -21,8 +21,7 @@ unauthorized use of the software.
 import datetime as dt
 import os
 
-import cartopy.crs as ccrs
-import cartopy.io.img_tiles as cimgt
+
 import matplotlib
 matplotlib.use('qt5agg')
 import matplotlib.pyplot as plt
@@ -656,9 +655,26 @@ class GravityChangeTable(QtWidgets.QDialog):
 
 
 class GravityChangeMap(QtWidgets.QDialog):
+
     station_label = None
+    cartopy_imported = False
+    try:
+        import cartopy.crs as ccrs
+        import cartopy.io.img_tiles as cimgt
+        cartopy_imported = True
+    except:
+        jeff = 1
 
     def __init__(self, table, header, coords, full_table, full_header, parent=None):
+        if not self.cartopy_imported:
+            import platform
+            if platform.system() is 'Darwin':
+                msg = show_message('Using a basemap on Mac platforms requires installation of the Geos library. ' +
+                                   'Please install with homebrew ("homebrew install geos") or from ' +
+                                   'http://www.kyngchaos.com/software/frameworks', 'Import error')
+            else:
+                msg = show_message('Error loading cartopy.', 'Import error')
+            return
         super(GravityChangeMap, self).__init__(parent)
         # a figure instance to plot on
         self.table = table
@@ -763,7 +779,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         layout.addStretch(1)
         layout.addWidget(self.canvas)
         layout.addWidget(self.slider_label)
-
+        self.setWindowTitle('Gravity Change Map')
         layout.addWidget(self.slider)
         layout.addStretch(1)
         self.setLayout(layout)
@@ -791,7 +807,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.points = self.ax.scatter(x, y, c=d, s=200, vmin=clim[0], vmax=clim[1], cmap="RdBu",
                                           picker=5,
                                           zorder=10,
-                                          transform=ccrs.Geodetic())
+                                          transform=self.ccrs.Geodetic())
             self.cb = self.figure.colorbar(self.points)
             if not self.cbUnits.isChecked():
                 self.cb.set_label('Gravity change, in µGal', fontsize=16)
@@ -869,7 +885,7 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         map_center = (self.axlim[0] + self.axlim[1]) / 2
         self.ax = self.figure.add_subplot(1, 1, 1,
-                                          projection=ccrs.AlbersEqualArea(map_center))  # self.stamen_terrain.crs)
+                                          projection=self.ccrs.AlbersEqualArea(map_center))  # self.stamen_terrain.crs)
         self.ax.clear()
 
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -878,7 +894,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.points = self.ax.scatter(x, y, c=d, s=200, vmin=clim[0], vmax=clim[1], cmap="RdBu",
                                       picker=5,
                                       zorder=10,
-                                      transform=ccrs.Geodetic())
+                                      transform=self.ccrs.Geodetic())
         self.points.name = names
 
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -893,7 +909,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
 
         self.show_background(self.sliderResolution.value())
-        self.ax.set_extent(self.axlim, crs=ccrs.Geodetic())
+        self.ax.set_extent(self.axlim, crs=self.ccrs.Geodetic())
         self.ax.callbacks.connect('xlim_changed', self.on_xlims_change)
         self.slider_label.setText(self.get_name())
 
@@ -902,17 +918,16 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.canvas.draw()
 
     def on_xlims_change(self, axes):
-        # jeff = 1
         # self.show_background(self.sliderResolution.value())
         # self.canvas.draw()
-        self.axlim = self.ax.get_extent(crs=ccrs.Geodetic())
+        self.axlim = self.ax.get_extent(crs=self.ccrs.Geodetic())
         self.plot()
         # (xmin, xmax, ymin, ymax)
         return
 
     def show_background(self, zoom):
         if self.cbBasemap.isChecked():
-            self.stamen_terrain = cimgt.GoogleTiles(url='https://server.arcgisonline.com/ArcGIS/rest/services/' +
+            self.stamen_terrain = self.cimgt.GoogleTiles(url='https://server.arcgisonline.com/ArcGIS/rest/services/' +
                                                         self.maps[self.drpBasemap.currentIndex()] +
                                                         '/MapServer/tile/{z}/{y}/{x}.jpg')  # cimgt.Stamen('terrain-background')
             self.ax.add_image(self.stamen_terrain, zoom)

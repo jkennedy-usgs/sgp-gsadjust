@@ -1844,7 +1844,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     # GSadjust starts in different directories on Mac and Windows
     if sys.platform == 'darwin':
-        os.chdir('../../')
+        os.chdir('../')
     else:
         os.chdir('../sgp-gsadjust')
 

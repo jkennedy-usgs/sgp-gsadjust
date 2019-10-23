@@ -31,6 +31,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
 
+import logging
 import a10
 import data_analysis
 from data_objects import Datum
@@ -622,9 +623,21 @@ class GravityChangeTable(QtWidgets.QDialog):
         MainProg.popup.show()
 
     def map_change_window(self):
-
-        self.win = GravityChangeMap(self.table, self.header, self.coords, self.full_table, self.full_header)
-        self.win.show()
+        try:
+            logging.info('try importing cartopy')
+            # This SSL section needed to avoid certificate errors on Mac (?)
+            import ssl
+            if hasattr(ssl, '_create_unverified_context'):
+                ssl._create_default_https_context = ssl._create_unverified_context
+            import cartopy.crs as ccrs
+            import cartopy.io.img_tiles as cimgt
+            self.win = GravityChangeMap(self.table, self.header, self.coords, self.full_table, self.full_header)
+            self.win.show()
+        except (OSError, ImportError) as e:
+            logging.info('Cartopy import error')
+            self.msg = show_message('Map view plots on Mac or Linux platforms requires installation of the Geos' +
+                                    ' and Proj libraries. ' +
+                                    'Please install with homebrew ("brew install geos proj").', 'Import error')
 
     def plot_change_window(self):
         plt.figure(figsize=(12, 8))
@@ -657,24 +670,13 @@ class GravityChangeTable(QtWidgets.QDialog):
 class GravityChangeMap(QtWidgets.QDialog):
 
     station_label = None
-    cartopy_imported = False
     try:
         import cartopy.crs as ccrs
         import cartopy.io.img_tiles as cimgt
-        cartopy_imported = True
-    except:
-        jeff = 1
+    except Exception as e:
+        logging.info(e)
 
     def __init__(self, table, header, coords, full_table, full_header, parent=None):
-        if not self.cartopy_imported:
-            import platform
-            if platform.system() is 'Darwin':
-                msg = show_message('Using a basemap on Mac platforms requires installation of the Geos library. ' +
-                                   'Please install with homebrew ("homebrew install geos") or from ' +
-                                   'http://www.kyngchaos.com/software/frameworks', 'Import error')
-            else:
-                msg = show_message('Error loading cartopy.', 'Import error')
-            return
         super(GravityChangeMap, self).__init__(parent)
         # a figure instance to plot on
         self.table = table
@@ -909,7 +911,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
 
         self.show_background(self.sliderResolution.value())
-        self.ax.set_extent(self.axlim, crs=self.ccrs.Geodetic())
+        self.ax.set_extent(self.axlim) #, crs=self.ccrs.Geodetic())
         self.ax.callbacks.connect('xlim_changed', self.on_xlims_change)
         self.slider_label.setText(self.get_name())
 

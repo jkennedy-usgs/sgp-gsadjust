@@ -10,7 +10,7 @@ June 2019
 Jeff Kennedy, USGS
 jkennedy@usgs.gov
 
-GSadjust is a Python 3.5/PyQt5 program that provides a graphical user interface for post-processing combined
+GSadjust is a Python 3.6/PyQt5 program that provides a graphical user interface for post-processing combined
 relative- and absolute- gravity surveys.
 
 GSadjust was originally based on PyGrav:

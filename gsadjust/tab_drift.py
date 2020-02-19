@@ -24,12 +24,13 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
-from scipy.interpolate import UnivariateSpline
+
 
 from data_objects import Delta
 from gui_objects import IncrMinuteTimeEdit, show_message
 from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop
-
+from drift_roman import drift_roman
+from drift_continuous import drift_continuous
 
 ###########################################################################
 # GSadjust drift tab
@@ -363,7 +364,7 @@ class TabDrift(QtWidgets.QWidget):
         return delta_model
 
     @staticmethod
-    def calc_cont_dg(xp, yp, data, loop_name):
+    def populate_continuous_deltamodel(deltas):
         """
         Calculates delta-g's while removing drift using the input drift model
         :param xp: times of continuous drift model
@@ -372,38 +373,8 @@ class TabDrift(QtWidgets.QWidget):
         :return: PyQt DeltaTableModel
         """
         delta_model = DeltaTableModel()
-        first = True
-        ypsum = [0]
-        delta_list = []
-        for x, drift_rate in zip(xp, yp):
-            if first:
-                first = False
-                prev_x = x
-            else:
-                prev_sum = ypsum[-1]
-                interval = (x - prev_x) * 24
-                prev_x = x
-                ypsum.append(prev_sum + drift_rate * interval)
-
-        xp = xp.tolist()
-        yp = ypsum  # yp = yp.tolist()
-        first = True
-        for station in data:
-            if first:
-                first = False
-                prev_station = station
-                continue
-            drift1_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean))
-            drift1 = yp[drift1_idx]
-            drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean))
-            drift2 = yp[drift2_idx]
-            delta = Delta(prev_station,
-                          station,
-                          driftcorr=drift2 - drift1,
-                          loop=loop_name)
-            delta_list.append(delta)
+        for delta in deltas:
             delta_model.insertRows(delta, 0)
-            prev_station = station
         return delta_model
 
     @staticmethod
@@ -419,102 +390,11 @@ class TabDrift(QtWidgets.QWidget):
         :return: tuple with 2 pyqt models (for dg samples and average dg) and plot data for vertical lines
         """
         # assumes stations in data are in chronological order
-
         roman_dg_model = RomanTableModel()
-        vert_lines = []
-        station_list = [i.station_name for i in data]
-        unique_stations = list(set(station_list))
+        deltas, vert_lines = drift_roman(data, loop_name, time_threshold=None)
 
-        # store initial value at each station
-        initial_g = dict()
-
-        # Easiest case: all g values are relative to the initial g at that station
-        if time_threshold is None:
-            for station_name in unique_stations:
-                for station in data:
-                    if station.station_name == station_name:
-                        initial_g[station_name] = station.gmean
-                        break
-        else:
-            # If time_threshold is specified (checked in the GUI) we need to build a list of possible initial g values
-            # for each station. Possible values are those occurring after a gap >= time_threshold (i.e., if there is a
-            # gap, reset the initial g that's subtracted from the measurements. This makes the lines start at y = 0 on
-            # the plots.
-            #
-            # Builds the dictionary:
-            # initial_g{key:station_name value:(time, g)}
-            for station_name in unique_stations:
-                stations = []
-                for station in data:
-                    if station.station_name == station_name:
-                        stations.append(station)
-                iter_stations = iter(stations)
-                first_station = next(iter_stations)
-                initial_xy = [(first_station.tmean, first_station.gmean)]
-                for station in iter_stations:
-                    if (station.tmean - first_station.tmean) * 1440 > time_threshold:
-                        initial_xy.append((station.tmean, station.gmean))
-                    first_station = station
-                initial_g[station_name] = initial_xy
-
-        # For each station in data, loop over all the other stations looking for two observations that bracket the
-        # first station
-        for station in data:
-            for other_station in unique_stations:
-                # Ignore it if its the same station
-                if other_station == station.station_name:
-                    continue
-                else:
-                    # get all occurrences of the other station
-                    other_stations = [i for i in data if i.station_name == other_station]
-                    if len(other_stations) > 1:
-                        iter_stations = iter(other_stations)
-                        other1 = next(iter_stations)
-                        for other2 in iter_stations:
-                            # Check for 3-point configuration (2 observations at other station bracket the initial obs)
-                            if other1.tmean < station.tmean < other2.tmean:
-                                # Check that time_threshold is met, or not set
-                                if time_threshold is None or \
-                                        (other2.tmean - other1.tmean) * 1440 < time_threshold:
-                                    delta = Delta(station,
-                                                  (other1, other2),
-                                                  delta_type='three_point',
-                                                  loop=loop_name)
-                                    sta2_dg = other2.gmean - other1.gmean
-                                    # this is the drift correction
-                                    time_prorate = (station.tmean - other1.tmean) / (
-                                            other2.tmean - other1.tmean)
-                                    # Look for previous occupation at same station. If there is a break > time_threshold
-                                    # between the previous and current occupation, we need to account for the shift in
-                                    # initial g. Each station has a unique initial g (that might change,
-                                    # depending on the time_threshold).
-                                    if time_threshold is not None:
-                                        initial_gees = initial_g[other1.station_name]
-                                        other_initial_g = initial_gees[0][1]
-                                        if len(initial_gees) > 1:
-                                            for initial_xy in initial_gees[1:]:
-                                                if other1.tmean >= initial_xy[0]:
-                                                    other_initial_g = initial_xy[1]
-                                        initial_gees = initial_g[station.station_name]
-                                        station_initial_g = initial_gees[0][1]
-                                        if len(initial_gees) > 1:
-                                            for initial_xy in initial_gees[1:]:
-                                                if station.tmean >= initial_xy[0]:
-                                                    station_initial_g = initial_xy[1]
-                                    # Easy case: everything relative to the initial observation.
-                                    else:
-                                        other_initial_g = initial_g[other1.station_name]
-                                        station_initial_g = initial_g[station.station_name]
-
-                                    vert_lines.append([(station.tmean, station.tmean),
-                                                       ((other_initial_g -
-                                                         other1.gmean -
-                                                         (sta2_dg * time_prorate)) * -1,
-                                                        station.gmean - station_initial_g)])
-
-                                    roman_dg_model.insertRows(delta, 0)
-                            other1 = other2
-
+        for delta in deltas:
+            roman_dg_model.insertRows(delta, 0)
         # If there is more than one delta-g between a given station pair, average them
         # Setup dict to store averages '(sta1, sta2)':[g]
         avg_dg = dict()
@@ -692,92 +572,37 @@ class TabDrift(QtWidgets.QWidget):
                                                               (event, self.axes_drift_cont_upper))
                     self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
                     self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
+                try:
+                    deltas, xp, yp = drift_continuous(data, drift_x,
+                                                   drift_rate,
+                                                   self.drift_polydegree_combobox.currentIndex(),
+                                                   self.tension_slider.value(),
+                                                   self.drift_cont_startendcombobox.currentIndex(),
+                                                   min_time, max_time, obstreeloop.name)
+                    delta_model = self.populate_continuous_deltamodel(deltas)
 
-                # Interpolate drift model: polynomial, spline, etc. at xp number of points. xp needs to remain
-                # relatively low to maintain performance.
-                xp = np.linspace(min(drift_x), max(drift_x), 50)  # constant
-                method_key = self.drift_polydegree_combobox.currentIndex()
-                if method_key == 0:  # constant drift correction
-                    mean_drift = sum(drift_rate) / len(drift_rate)
-                    yp = np.zeros(xp.size) + mean_drift
-                else:
-                    x0 = [f - np.min(drift_x) for f in drift_x]
-                    xp0 = [f - np.min(xp) for f in xp]
-                    idx = sorted(range(len(x0)), key=lambda xpt: x0[xpt])
-                    x_sorted, drift_rate_sorted = [], []
-                    for i in idx:
-                        x_sorted.append(x0[i])
-                        drift_rate_sorted.append(drift_rate[i])
-                    x0 = x_sorted
-                    drift_rate = drift_rate_sorted
-                    if method_key == 9:
-                        pass
-                    if method_key == 1:  # spline
-                        try:
-                            s = UnivariateSpline(x0, drift_rate, k=3, s=self.tension_slider.value())
-                            xs = np.linspace(x0[0], x0[-1], 50)
-                            yp = s(xs)
-                            logging.info('Spline drift correction, tension={}'.format(self.tension_slider.value()))
-                        except:
-                            self.msg = show_message('Insufficient drift observations for spline method', 'Error')
-                            self.drift_polydegree_combobox.setCurrentIndex(0)
-                            return
-                    else:
-                        # Polynomial interpolation. Degree is one less than the method key, e.g.,
-                        #     method_key == 2 is 1st orderpolynomial, etc.
-                        try:
-                            z = np.polyfit(x0, drift_rate, method_key - 1)
-                            p = np.poly1d(z)
-                            yp = p(xp0)
-                            logging.info('Polynomial drift correction degree {}'.format(method_key - 1))
-                            obstreeloop.drift_cont_method = 0
-                        except np.linalg.LinAlgError as e:
-                            logging.error(e)
-                            self.msg = show_message('Insufficient drift observations for '
-                                                    'polynomial method', 'Error')
-                            self.drift_polydegree_combobox.setCurrentIndex(0)
-                            obstreeloop.drift_cont_method = 0
-                            return
+                    if update:
+                        self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
+                        self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
+                        self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                        if (max(yp) - min(yp)) < 0.0001:
+                            self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) - 10, np.round(yp[0], 0) + 10)
+                        self.axes_drift_cont_upper.set_title(
+                            'Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
+                        self.drift_cont_canvasbot.draw()
+                        self.drift_cont_canvastop.draw()
+                    return delta_model
+                except IndexError as e:
+                    self.msg = show_message('Insufficient drift observations for spline method', 'Error')
+                    self.drift_polydegree_combobox.setCurrentIndex(0)
+                except np.linalg.LinAlgError as e:
+                    logging.error(e)
+                    self.msg = show_message('Insufficient drift observations for '
+                                            'polynomial method', 'Error')
+                    self.drift_polydegree_combobox.setCurrentIndex(0)
+                    obstreeloop.drift_cont_method = 0
 
-                # Method for extrapolating beyond fitted drift curve extene
-                if self.drift_cont_startendcombobox.currentIndex() == 1:  # constant
-                    new_xp = np.linspace(min_time, min(drift_x), 20)
-                    new_xp = np.append(new_xp, xp)
-                    new_xp = np.append(new_xp, np.linspace(max(drift_x), max_time, 20))
-                    xp = new_xp
-                    new_yp = np.ones(20) * yp[0]
-                    new_yp = np.append(new_yp, yp)
-                    new_yp = np.append(new_yp, np.ones(20) * yp[-1])
-                    yp = new_yp
-                else:  # linear extrapolation from first two (and last two) points
-                    # get first two points
-                    x = xp[:2]
-                    y = yp[:2]
-                    z = np.polyfit(x, y, 1)
-                    p = np.poly1d(z)
-                    new_xp1 = np.linspace(min_time, min(drift_x), 20)
-                    yp1 = p(new_xp1)
-                    x = xp[-2:]
-                    y = yp[-2:]
-                    z = np.polyfit(x, y, 1)
-                    p = np.poly1d(z)
-                    new_xp2 = np.linspace(max(drift_x), max_time, 20)
-                    yp2 = p(new_xp2)
-                    xp_temp = np.append(new_xp1, xp)
-                    xp = np.append(xp_temp, new_xp2)
-                    yp_temp = np.append(yp1, yp)
-                    yp = np.append(yp_temp, yp2)
-                delta_model = self.calc_cont_dg(xp, yp, data, obstreeloop.name)
-                if update:
-                    self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
-                    self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
-                    self.axes_drift_cont_lower.plot(xp, yp, 'k-')
-                    if (max(yp) - min(yp)) < 0.0001:
-                        self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) -10, np.round(yp[0], 0) + 10)
-                    self.axes_drift_cont_upper.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
-                    self.drift_cont_canvasbot.draw()
-                    self.drift_cont_canvastop.draw()
-                return delta_model
+                # return drift_continuous()
             else:
                 self.msg = show_message('No data available for plotting', 'Plot error')
 

@@ -122,6 +122,7 @@ from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_sci
 from data_export import export_metadata, export_summary, export_data
 from data_objects import Datum, Tare, ChannelList, Delta, SimpleDelta
 from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
+from gsa_plots import plot_loop_animation
 from gui_objects import AddDatumFromList, CoordinatesTable
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
@@ -246,6 +247,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnStationDelete = self.menus.create_action('Delete station(s)', slot=self.delete_station)
         self.menus.mnStationDuplicate = self.menus.create_action('Duplicate station', slot=self.duplicate_station)
         self.menus.mnDataNewLoop = self.menus.create_action('Move stations to new loop', slot=self.new_loop)
+        self.menus.mnLoopAnimate = self.menus.create_action('Animate loop', slot=self.animate_loop)
 
         # self.resize(600,800)
         self.path_install = os.getcwd()
@@ -1125,6 +1127,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.itemFromIndex(self.index_current_survey).results_model.clearResults()
         self.update_adjust_tables()
 
+    def animate_loop(self):
+        loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        p = plot_loop_animation(loop)
+        return p
+
     def properties_loop(self):
         """
         Show popup dialog to specify loop properties.
@@ -1462,6 +1469,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDelete)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
         # enable as appropriate
         indexes = self.gui_data_treeview.selectedIndexes()
         if indexes:

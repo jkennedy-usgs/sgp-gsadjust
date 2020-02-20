@@ -140,8 +140,11 @@ class Menus:
         self.mnEditAddTareDialog = self.create_action("Add tare...",
                                               slot=self.mainProg.add_tare,
                                               enabled=True)
-        self.mnEditLoops = self.create_action("Divide selected loop...",
+        self.mnEditLoops = self.create_action("Divide selected loop by time...",
                                               slot=self.mainProg.get_loop_threshold,
+                                              enabled=True)
+        self.mnDivideLoopByHeight = self.create_action("Divide station by height...",
+                                              slot=self.mainProg.divide_by_height,
                                               enabled=True)
         # add actions to menu
         self.add_actions(self.mnEdit,
@@ -152,6 +155,7 @@ class Menus:
                           #self.mnEditLoadCoordinates,
                           None,
                           self.mnEditLoops,
+                          self.mnDivideLoopByHeight,
                           self.mnEditAddTareDialog,
                           None,
                           self.mnEditVerticalGradientIntervalAction,

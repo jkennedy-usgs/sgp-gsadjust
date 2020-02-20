@@ -1241,6 +1241,70 @@ class MainProg(QtWidgets.QMainWindow):
             return
         self.divide_survey(loop_thresh)
 
+    def divide_by_height(self):
+        """
+        Called from "Divide loop..." menu command. Shows a dialog to specify a time interval, then scans the current
+        loop and divides station occupations separated by the time interval (or greater) into a loop. Useful primarily
+        when several day's data is in a single file.
+        """
+        # Clear survey delta table, it causes problems otherwise
+        self.clear_delta_model()
+
+        # Store the original current loop index so it can be restored.
+        original_loop_index = self.index_current_loop
+
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        indexes = []
+        if obstreeloop.rowCount() > 1:
+            self.msg = show_message("Loop must have a single station to divide by height.", "GSadjust error")
+            return
+
+        station = obstreeloop.child(0)
+        height = station.height[0]
+        height_idx = 0
+        n_samples = len(station.height)
+        count_dict = dict()
+        heights = set(station.height)
+        for h in heights:
+            count_dict[h] = 0
+        for idx, h in enumerate(station.height):
+            if h != height or idx == len(station.height) - 1:
+                new_station = ChannelList()
+                for k, v in station.__dict__.items():
+                    try:  # some fields have no len()
+                        if len(v) == n_samples:
+                            # temp_sta = new_station.extract_subset_idx(height_idx, idx)
+                            setattr(new_station, k, v[height_idx:idx])
+                        else:
+                            setattr(new_station, k, v)
+                    except Exception as e:
+                        continue
+
+                # new_station = 0
+                # # obstreestation = self.obsTreeModel.itemFromIndex(index)
+                # new_station_count = float(obstreestation.station_count) + 0.1
+                if height == 0:
+                    name = station.station_name
+                else:
+                    name = station.station_name + "_{:.3f}".format(height)
+                new_obstreestation = ObsTreeStation(new_station, name, "{}".format(int(count_dict[height])))
+                count_dict[height] += 1
+                obstreeloop.appendRow([new_obstreestation,
+                                       QtGui.QStandardItem('a'),
+                                       QtGui.QStandardItem('a')])
+                height_idx = idx
+                height = h
+
+        obstreeloop.removeRow(0)
+        self.index_current_station = obstreeloop.child(0).index()
+        # self.index_current_loop = original_loop_index
+        self.update_drift_tables_and_plots()
+        self.deltas_update_required()
+        self.obsTreeModel.layoutChanged.emit()
+        QtWidgets.QApplication.restoreOverrideCursor()
+        self.set_window_title_asterisk()
+
     def divide_survey(self, loop_thresh):
         """
         Called from "Divide loop..." menu command. Shows a dialog to specify a time interval, then scans the current

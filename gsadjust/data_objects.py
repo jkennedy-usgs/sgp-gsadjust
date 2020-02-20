@@ -60,6 +60,7 @@ class ChannelList:
         self.elev = []  # Elevation
         self.lat = []  # Station latitude
         self.long = []  # Station longitude
+        self.height = []  # meter height
 
         # A station gravity value (.grav or .gmean) is calculated "on the fly" from .raw_grav, .etc,
         # and .tare as a property in the ObsTreeFunction class

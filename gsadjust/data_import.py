@@ -142,8 +142,8 @@ def read_burris(fh):
             vals_temp = line.split()
         # Numbers are columns in the imported file
         c_station, c_oper, c_meter, c_date, c_time = 0, 1, 2, 3, 4
-        c_dial, c_feedback, c_tide, c_tilt = 6, 7, 8, 9
-        c_grav, c_elev, c_lat, c_long = 5, 13, 14, 15
+        c_grav, c_dial, c_feedback, c_tide, c_tilt = 5, 6, 7, 8, 9
+        c_height, c_elev, c_lat, c_long = 12, 13, 14, 15
         if len(vals_temp) == 15:  # no meter operator specified
             c_dial -= 1
             c_feedback -= 1
@@ -156,6 +156,7 @@ def read_burris(fh):
             c_elev -= 1
             c_lat -= 1
             c_long -= 1
+            c_height -= 1
             all_survey_data.oper.append('None')
         else:
             all_survey_data.oper.append(vals_temp[c_oper])
@@ -168,6 +169,7 @@ def read_burris(fh):
         # fill object properties:
         all_survey_data.station.append(vals_temp[0].strip())
         all_survey_data.elev.append(float(vals_temp[c_elev]))
+        all_survey_data.height.append(float(vals_temp[c_height]))
         all_survey_data.lat.append(float(vals_temp[c_lat]))
         all_survey_data.long.append(float(vals_temp[c_long]))
         # remove Earth tide correction; it's added in using the @grav property

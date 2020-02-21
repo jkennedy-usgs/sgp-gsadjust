@@ -108,6 +108,7 @@ class CustomMainWindow(QtWidgets.QMainWindow):
 
 class CustomFigCanvas(FigureCanvas, TimedAnimation):
     def __init__(self, xlim, ylim, n):
+        n_head = 10
         self.addedY, self.addedX = [], []
         print('Matplotlib Version:', matplotlib.__version__)
         self.xlim, self.ylim = xlim, ylim
@@ -121,14 +122,20 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         self.ax1.set_xlabel('Longitude')
         self.ax1.set_ylabel('Latitude')
         self.points_blue = plt.Line2D([], [], marker='o', linewidth=0, color='0.5')
-        self.lines_red = Line2D([], [], color='red', linewidth=2)
+        self.lines_red = []
+        a = list(np.logspace(1,0,5)/10)
+        a += [0, 0, 0, 0, 0]
+        a.reverse()
+        for i in range(n_head):
+            self.lines_red.append(Line2D([], [], color='red', linewidth=4, alpha = a[i]))
         self.lines_gray = Line2D([], [], color='0.5', linewidth=1)
         self.points_red = Line2D([], [], color='red', marker='o', markeredgecolor='r', linewidth=0)
 
         self.ax1.add_line(self.points_red)
         self.ax1.add_line(self.points_blue)
         self.ax1.add_line(self.lines_gray)
-        self.ax1.add_line(self.lines_red)
+        for line in self.lines_red:
+            self.ax1.add_line(line)
         self.ax1.set_xlim(xlim[0], xlim[1])
         self.ax1.set_ylim(ylim[0], ylim[1])
         self.title = self.ax1.text(0.15, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
@@ -144,8 +151,10 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         return iter(range(self.n.size))
 
     def _init_draw(self):
-        lines = [self.points_blue, self.points_red, self.lines_red, self.lines_gray]  #, self.line1_tail]  #, self.line1_head]
+        lines = [self.points_blue, self.points_red, self.lines_gray]  #, self.line1_tail]  #, self.line1_head]
         for l in lines:
+            l.set_data([], [])
+        for l in self.lines_red:
             l.set_data([], [])
 
     def addData(self, x, value, date):
@@ -164,14 +173,81 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         #     pass
 
     def _draw_frame(self, framedata):
+        MAP = 'winter'
+        RESFACT = 10
         if len(self.addedX) > 0:
             self.points_blue.set_data(self.addedX, self.addedY)
             self.points_red.set_data(self.addedX[-1], self.addedY[-1])
         if len(self.addedX) > 1:
             self.lines_gray.set_data(self.addedX, self.addedY)
-            self.lines_red.set_data(self.addedX[-2:], self.addedY[-2:])
-        self._drawn_artists = [self.lines_gray, self.lines_red, self.points_blue, self.points_red, self.title]  #[
+            # hrp = highResPoints(self.addedX[-2:], self.addedY[-2:])
+            xHiRes, yHiRes = highResPoints(self.addedX[-2:], self.addedY[-2:], 1)
+            npointsHiRes = len(xHiRes)
+            cm = plt.get_cmap(MAP)
+            for idx, line in enumerate(self.lines_red):
+                line.set_data(xHiRes[idx:idx+2], yHiRes[idx:idx+2])
+            #
+            # self.ax1.set_color_cycle([cm(1. * i / (npointsHiRes - 1))
+            #                      for i in range(npointsHiRes - 1)])
+            # for i in range(len(self.lines_red) - 1):
+            #     self.ax1(xHiRes[i:i + 2], yHiRes[i:i + 2],
+            #              alpha=float(i) / (npointsHiRes - 1),
+            #              color=COLOR)
+        # This is the drawing order
+        self._drawn_artists = []
+        self._drawn_artists.append(self.lines_gray)
+        for line in self.lines_red:
+            self._drawn_artists.append(line)
+        for p in [self.points_blue, self.points_red, self.title]:
+            self._drawn_artists.append(p)
 
+
+def highResPoints(x,y,factor=10):
+    '''
+    Take points listed in two vectors and return them at a higher
+    resultion. Create at least factor*len(x) new points that include the
+    original points and those spaced in between.
+
+    Returns new x and y arrays as a tuple (x,y).
+    '''
+    NPOINTS = 2
+    RESFACT = 5
+    # r is the distance spanned between pairs of points
+    r = [0]
+    for i in range(1,len(x)):
+        dx = x[i]-x[i-1]
+        dy = y[i]-y[i-1]
+        r.append(np.sqrt(dx*dx+dy*dy))
+    r = np.array(r)
+
+    # rtot is a cumulative sum of r, it's used to save time
+    rtot = []
+    for i in range(len(r)):
+        rtot.append(r[0:i].sum())
+    rtot.append(r.sum())
+
+    dr = rtot[-1]/(NPOINTS*RESFACT-1)
+    xmod=[x[0]]
+    ymod=[y[0]]
+    rPos = 0 # current point on walk along data
+    rcount = 1
+    while rPos < r.sum():
+        x1,x2 = x[rcount-1],x[rcount]
+        y1,y2 = y[rcount-1],y[rcount]
+        dpos = rPos-rtot[rcount]
+        theta = np.arctan2((x2-x1),(y2-y1))
+        rx = np.sin(theta)*dpos+x1
+        ry = np.cos(theta)*dpos+y1
+        xmod.append(rx)
+        ymod.append(ry)
+        rPos+=dr
+        while rPos > rtot[rcount+1]:
+            rPos = rtot[rcount+1]
+            rcount+=1
+            if rcount>rtot[-1]:
+                break
+
+    return xmod,ymod
 
 def plot_loop_animation(obstreeloop):
     lat, lon, dates = [], [], []

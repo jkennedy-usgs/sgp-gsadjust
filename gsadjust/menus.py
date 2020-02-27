@@ -290,7 +290,8 @@ class Menus:
         self.mnHelpAbout = self.create_action('About',
                                               slot=AboutDialog)
         self.mnHelpCheckForUpdates = self.create_action('Check for updates...',
-                                              slot=self.mainProg.check_for_updates)
+                                                        slot=lambda:
+                                                        self.mainProg.check_for_updates(True))
 
         self.add_actions(self.mnHelp, (self.mnHelpHelp,
                                        self.mnHelpAbout,

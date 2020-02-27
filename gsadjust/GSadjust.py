@@ -946,7 +946,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def update_adjust_tables(self):
         """
-        Update delta-g and datum tables after selecting a new survey in the tree view
+        Update delta-g and datum tables after selecting a new survey in the tree view, or after a network adjustment
         """
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         try:
@@ -971,6 +971,8 @@ class MainProg(QtWidgets.QMainWindow):
         except:
             pass
 
+        self.refresh_tables()
+
     def update_drift_tables_and_plots(self, update=True):
         """
         First updates the drift_method combobox, then calls set_drift_method to update plots.
@@ -986,6 +988,10 @@ class MainProg(QtWidgets.QMainWindow):
         """
         self.tab_adjust.delta_proxy_model.beginResetModel()
         self.tab_adjust.delta_proxy_model.endResetModel()
+        self.tab_adjust.datum_proxy_model.beginResetModel()
+        self.tab_adjust.datum_proxy_model.endResetModel()
+        self.tab_adjust.results_proxy_model.beginResetModel()
+        self.tab_adjust.results_proxy_model.endResetModel()
 
     def on_obs_checked_change(self, selected):
         """
@@ -1787,7 +1793,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         webbrowser.open('file://' + os.path.realpath('./docs/index.htm'))
 
-    def check_for_updates(self, show_uptodate_msg=True, parent=None):
+    def check_for_updates(self, show_uptodate_msg, parent=None):
         """
         Check if the usgs_root repo is at the same commit as this installation
         Parameters
@@ -1805,9 +1811,12 @@ class MainProg(QtWidgets.QMainWindow):
             os.environ["PATH"] += os.pathsep + gitpath
             from git import Repo
             # install_dir = utils.get_install_dname('pymdwizard')
+            logging.info('Checking for updates')
             repo = Repo(self.path_install)
             fetch = [r for r in repo.remotes if r.name == 'origin'][0].fetch()
             master = [f for f in fetch if f.name == 'origin/master'][0]
+            for f in fetch:
+                logging.info('Git fetched: {}'.format(f))
 
             if repo.head.commit != master.commit:
                 msg = "An update is available for GSadjust.\n"
@@ -1818,12 +1827,14 @@ class MainProg(QtWidgets.QMainWindow):
                 if confirm == QtWidgets.QMessageBox.Yes:
                     return self.update_from_github()
             elif show_uptodate_msg:
+                logging.info('Git checked, GSadjust is up to date.')
                 msg = "GSadjust is up to date."
                 QtWidgets.QMessageBox.information(self, "No Update Needed", msg)
                 return True
             return True
 
         except BaseException as e:
+            logging.info('Git update failed: {}'.format(e))
             if show_uptodate_msg:
                 msg = 'Problem Encountered Updating from GitHub\n\nError Message:\n'
                 msg += str(e)
@@ -1846,13 +1857,14 @@ class MainProg(QtWidgets.QMainWindow):
             master = [f for f in fetch if f.name == 'origin/master'][0]
             repo.git.reset('--hard')
             repo.git.merge(master.name)
-
+            logging.info('Git update successful')
             msg = 'Updated successfully downloaded from GitHub. Please\n' \
                   'restart GSadjust.'
             QtWidgets.QMessageBox.information(self, "Update results", msg)
             return False  # Don't launch GSadjust, need to restart to install updates
 
         except BaseException as e:
+            logging.info('Git update failed: {}'.format(e))
             msg = 'Problem Encountered Updating from GitHub\n\n' \
                   'Please upgrade to the latest release by reinstalling the ' \
                   'application from GitHub ' \
@@ -1938,7 +1950,7 @@ def main():
     app.processEvents()
     splash.finish(ex)
 
-    if ex.check_for_updates(show_uptodate_msg=False, parent=splash):
+    if ex.check_for_updates(False, parent=splash):
         app.setWindowIcon(QtGui.QIcon('./gsadjust/resources/g.png'))
         ex.showMaximized()
         app.processEvents()

@@ -2,11 +2,11 @@ import numpy as np
 import logging
 import datetime as dt
 
-def compute_gravity_change(obstreemodel, full_table=False):
+def compute_gravity_change(obstreemodel, table_type='simple'):
     """
     Shows PyQt table of gravity change.
 
-    :param full_table: if True, entire tabular output file for data release is shown. Includes station
+    :param table_type: if True, entire tabular output file for data release is shown. Includes station
     coordinates, g, standard deviation, and gravity change.
     """
 
@@ -36,7 +36,24 @@ def compute_gravity_change(obstreemodel, full_table=False):
     out_table_iteration, out_table_cumulative = [], []
     header1, header2 = [], []
     lat, lon, elev, all_g = [], [], [], []
-    if full_table:
+    dates = []
+    if table_type == 'list':
+        date_col, station_col, sd_col = [], [], []
+        for i in range(obstreemodel.invisibleRootItem().rowCount()):
+            survey = obstreemodel.invisibleRootItem().child(i)
+            dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
+            header = ['Station', 'Date', 'g','Std. dev.']
+            for ii in range(survey.results_model.rowCount()):
+                adj_station = survey.results_model.data(survey.results_model.index(ii, 0),
+                                                        role=256)  # 256=QtCore.Qt.UserRole
+                station_col.append(adj_station.station)
+                date_col.append(survey.name)
+                all_g.append(adj_station.g)
+                sd_col.append(adj_station.sd)
+        table = [station_col, date_col, all_g, sd_col]
+        return (header, table, dates)
+
+    if table_type == 'full':
         for station in unique_station_names:
             station_g = []
             g_header = []
@@ -63,13 +80,12 @@ def compute_gravity_change(obstreemodel, full_table=False):
                     station_g.append('-999')
             all_g.append(station_g)
 
-    dates = []
     for i in range(obstreemodel.invisibleRootItem().rowCount()):
         survey = obstreemodel.invisibleRootItem().child(i)
         dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
         diff_cumulative = []
         diff_iteration = []
-        if full_table:
+        if table_type == 'full':
             diff_cumulative_sd, diff_iteration_sd = [], []
         if first:
             # Calculate both the between-survey change and the change from the initial survey
@@ -79,10 +95,10 @@ def compute_gravity_change(obstreemodel, full_table=False):
             iteration_name = reference_name
             first = False
         else:
-            if not full_table:
+            if table_type == 'simple':
                 header1.append(str(iteration_name) + '_to_' + str(survey.name))
                 header2.append(str(reference_name) + '_to_' + str(survey.name))
-            else:
+            elif table_type == 'full':
                 header1.append('dH2O_' + str(iteration_name) + '_to_' + str(survey.name))
                 header1.append('dH2O_sd_' + str(iteration_name) + '_to_' + str(survey.name))
                 header2.append('dH2O_' + str(reference_name) + '_to_' + str(survey.name))
@@ -141,9 +157,9 @@ def compute_gravity_change(obstreemodel, full_table=False):
                         compare_station = None
 
                 if initial_station is not None and compare_station is not None:
-                    if not full_table:
+                    if table_type == 'simple':
                         diff_cumulative.append("{:0.1f}".format(compare_station.g - initial_station.g))
-                    else:
+                    elif table_type == 'full':
                         diff_cumulative.append("{:0.2f}".format((compare_station.g - initial_station.g) / 41.9))
                         var = np.sqrt(compare_station.sd ** 2 + initial_station.sd ** 2) / 41.9
                         if np.isnan(var):
@@ -152,12 +168,12 @@ def compute_gravity_change(obstreemodel, full_table=False):
                             diff_cumulative_sd.append("{:0.2f}".format(var))
                 else:
                     diff_cumulative.append("-999")
-                    if full_table:
+                    if table_type == 'full':
                         diff_cumulative_sd.append("-999")  # for sd column
                 if iteration_station is not None and compare_station is not None:
-                    if not full_table:
+                    if table_type == 'simple':
                         diff_iteration.append("{:0.1f}".format(compare_station.g - iteration_station.g))
-                    else:
+                    elif table_type == 'full':
                         diff_iteration.append("{:0.2f}".format((compare_station.g - iteration_station.g) / 41.9))
                         var = np.sqrt(compare_station.sd ** 2 + iteration_station.sd ** 2) / 41.9
                         if np.isnan(var):
@@ -166,22 +182,22 @@ def compute_gravity_change(obstreemodel, full_table=False):
                             diff_iteration_sd.append("{:0.2f}".format(var))
                 else:
                     diff_iteration.append("-999")
-                    if full_table:
+                    if table_type == 'full':
                         diff_iteration_sd.append("-999")  # for sd column
             out_table_iteration.append(diff_iteration)
             out_table_cumulative.append(diff_cumulative)
-            if full_table:
+            if table_type == 'full':
                 out_table_iteration.append(diff_iteration_sd)
                 out_table_cumulative.append(diff_cumulative_sd)
             iteration_reference = compare_survey
             iteration_name = survey.name
     out_table = [list(unique_station_names)] + out_table_iteration + out_table_cumulative
 
-    if not full_table:
+    if table_type == 'simple':
         header = ['station'] + header1 + header2
         table = out_table
         return (header, table, dates)
-    else:
+    elif table_type == 'full':
         header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1 + header2
         # transpose table
         g = [list(i) for i in zip(*all_g)]

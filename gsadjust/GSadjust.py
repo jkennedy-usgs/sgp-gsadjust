@@ -1533,7 +1533,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.adjust_update_not_required()
 
     def show_gravity_change_table(self):
-        GravityChangeTable(self, full_table=False)
+        GravityChangeTable(self, table_type='simple')
 
     def plot_network_graph_circular(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
@@ -1841,7 +1841,7 @@ class MainProg(QtWidgets.QMainWindow):
         try:
             from git import Repo
             # install_dir = utils.get_install_dname('pymdwizard')
-            repo = Repo(self.path_install)
+            repo = Repo(self.path_install, )
             fetch = [r for r in repo.remotes if r.name == 'origin'][0].fetch()
             master = [f for f in fetch if f.name == 'origin/master'][0]
             repo.git.reset('--hard')

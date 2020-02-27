@@ -2405,20 +2405,20 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
     There is only one such model per campaign. Gravity change is calculated when the respective menu item is chosen.
     """
 
-    def __init__(self, header, table, full_table=False, parent=None):
+    def __init__(self, header, table, table_type='simple', parent=None):
         self.__headers = header
         QtCore.QAbstractTableModel.__init__(self, parent)
         self.unchecked = {}
-        self.createArrayData(table, full_table)
+        self.createArrayData(table, table_type)
 
-    def createArrayData(self, table, full_table):
+    def createArrayData(self, table, table_type):
         """
         Create the np array data for table display, and update the ChannelList_obj. This function can be called from
         outside to update the table display
         """
-        if not full_table:
+        if table_type == 'simple' or table_type == 'list':
             array = np.array(table).transpose()
-        else:
+        elif table_type == 'full':
             array = np.array(table)
         self.array_data = array
 
@@ -2439,7 +2439,10 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
             row = index.row()
             column = index.column()
             string_data = str(self.array_data[row][column])
-            return string_data
+            try:
+                return '{:.1f}'.format(float(string_data))
+            except ValueError:
+                return string_data
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole:

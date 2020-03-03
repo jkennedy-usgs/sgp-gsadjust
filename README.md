@@ -16,7 +16,7 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 
 **Installing GSadjust**
 
-**NEW! (2019-07-18):** A portable Windows version is [now available](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/0.97). Simply download the .zip and unzip to the folder of your choice, then launch the GSadjust shortcut.
+**NEW! (2020-03-01):** A portable Windows version is [now available](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/0.99). Simply download the .zip and unzip to the folder of your choice, then launch the GSadjust shortcut.
 
 ## Data selection interface
 * Select/deselect samples and stations

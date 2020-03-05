@@ -536,7 +536,7 @@ class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
                 survey = obsTreeModel.invisibleRootItem().child(i)
                 for ii in range(survey.datum_model.rowCount()):
                     datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                    if datum.station == name:
+                    if datum.station == name and datum.residual > -998 and datum.checked == 2:
                         xdata.append(date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d')))
                         ydata_obs.append(datum.g)
                         ydata_adj.append(datum.g + datum.residual)

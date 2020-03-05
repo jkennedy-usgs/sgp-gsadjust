@@ -224,7 +224,7 @@ class Menus:
                                               slot=self.mainProg.plot_datum_vs_adjusted,
                                               enabled=False)
         self.mnAdjPlotObservedAdjustedAbs = self.create_action("Plot adjusted datum vs. measured (time series)",
-                                              slot=gsa_plots.plot_datum_comparison_timeseries,
+                                              slot=self.mainProg.plot_datum_comparison_timeseries,
                                               enabled=False)
         # self.mnAdjCompareAllDatum = self.create_action("Plot absolute vs. relative offset",
         #                                                slot=self.mainProg.plot_compare_datum_all,

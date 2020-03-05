@@ -1233,7 +1233,10 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 else:
                     m = index.model().itemFromIndex(index)
                 if type(m) is ObsTreeLoop or type(m) is ObsTreeSurvey:
-                    return m.tooltip
+                    try:
+                        return m.tooltip
+                    except Exception as e:
+                        return ''
 
     def setData(self, index, value, role):
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:

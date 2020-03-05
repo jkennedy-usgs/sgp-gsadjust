@@ -117,13 +117,16 @@ import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 from matplotlib.dates import num2date
 
-# GSadjust modules
-from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, import_abs_g_complete, import_abs_g_simple
+from data_correction import time_correction
 from data_export import export_metadata, export_summary, export_data
+# GSadjust modules
+from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, import_abs_g_complete, \
+    import_abs_g_simple
 from data_objects import Datum, Tare, ChannelList, Delta, SimpleDelta
-from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
 from gsa_plots import plot_loop_animation
+from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
 from gui_objects import AddDatumFromList, CoordinatesTable
+from gui_objects import FigureDatumComparisonTimeSeries
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
 from menus import Menus
@@ -134,7 +137,6 @@ from tab_data import TabData
 from tab_drift import TabDrift
 from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
-from data_correction import time_correction
 from utils import *
 
 
@@ -1554,6 +1556,9 @@ class MainProg(QtWidgets.QMainWindow):
     def plot_datum_vs_adjusted(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         plot_compare_datum_to_adjusted(survey)
+
+    def plot_datum_comparison_timeseries(self):
+        FigureDatumComparisonTimeSeries(self.obsTreeModel)
 
     def plot_histogram(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)

@@ -377,10 +377,10 @@ def plot_network_graph(survey, coords, shape='circular'):
         plt.autoscale(enable=True, axis='both', tight=True)
         plt.axis('off')
         plt.show()
-
-
-def plot_datum_comparison_timeseries(self):
-    """
-    Creating a PyQt window heree in preparation for eventually having a tabbed plot window with various diagnostics
-    """
-    _ = FigureDatumComparisonTimeSeries(self.obsTreeModel)
+#
+#
+# def plot_datum_comparison_timeseries(self):
+#     """
+#     Creating a PyQt window heree in preparation for eventually having a tabbed plot window with various diagnostics
+#     """
+#     _ = FigureDatumComparisonTimeSeries(self.obsTreeModel)

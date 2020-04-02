@@ -127,9 +127,9 @@ def export_data(obstreemodel, data_path):
     Export gravity change table to csv file
     """
     fn = os.path.join(data_path, 'GSadjust_TabularData_' + time.strftime("%Y%m%d-%H%M") + '.csv')
-    table = compute_gravity_change(obstreemodel, table_type=True)
+    table = compute_gravity_change(obstreemodel, table_type='full')
 
-    with open(fn, 'w') as fid:
+    with open(fn, 'w', newline='\n') as fid:
         wr = csv.writer(fid)
         wr.writerow(table[0])
         for row in table[1]:

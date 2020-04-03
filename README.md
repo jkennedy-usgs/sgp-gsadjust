@@ -15,6 +15,7 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 **Online help is available at [https://jkennedy-usgs.github.io/sgp-gsadjust/](https://jkennedy-usgs.github.io/sgp-gsadjust/)**
 
 **Installing GSadjust**
+
 Windows: Download the [.zip](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/v0.99) and unzip to the folder of your choice, then launch the GSadjust shortcut.
 
 ## Data selection interface

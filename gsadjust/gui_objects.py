@@ -229,12 +229,20 @@ class LoopOptions(QtWidgets.QDialog):
         buttonBox = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
         buttonBox.addButton(cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
         buttonBox.addButton(ok_button, QtWidgets.QDialogButtonBox.ActionRole)
-
-        self.operator_edit = QtWidgets.QLineEdit(self.loops[0].oper)
-        self.meter_edit = QtWidgets.QLineEdit(self.loops[0].meter)
+        # Sometimes these are undefined:
+        try:
+            self.operator_edit = QtWidgets.QLineEdit(self.loops[0].oper)
+        except AttributeError:
+            self.operator_edit = QtWidgets.QLineEdit('')
+        try:
+            self.meter_edit = QtWidgets.QLineEdit(self.loops[0].meter)
+        except AttributeError:
+            self.meter_edit = QtWidgets.QLineEdit('')
         self.comment_edit = QtWidgets.QTextEdit()
-        self.comment_edit.setPlainText(self.loops[0].comment)
-
+        try:
+            self.comment_edit.setPlainText(self.loops[0].comment)
+        except:
+            self.comment_edit.setPlainText('')
         grid = QtWidgets.QGridLayout()
         grid.addWidget(QtWidgets.QLabel('Operator'), 1, 0)
         grid.addWidget(self.operator_edit, 1, 1)

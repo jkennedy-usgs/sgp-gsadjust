@@ -229,9 +229,9 @@ class ObsTreeLoop(ObsTreeItem):
         self.drift_cont_method = 0  # If continuous model, also need to keep track of which type of model
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
-        self.meter = None  # Meter S/N, for the case where multiple meters are calibrated
-        self.comment = None
-        self.oper = None
+        self.meter = ''  # Meter S/N, for the case where multiple meters are calibrated
+        self.comment = ''
+        self.oper = ''
 
     def __str__(self):
         return 'Loop: {}, ' \
@@ -247,16 +247,29 @@ class ObsTreeLoop(ObsTreeItem):
                                             self.drift_netadj_method)
 
     @property
+    # To accomodate legacy files, which might have meter and oper set to None:
     def tooltip(self):
+        if not hasattr(self, 'drift_method'):
+            dm = ''
+        else:
+            dm = self.drift_method
+        if not hasattr(self, 'meter'):
+            m = ''
+        else:
+            m = self.meter
+        if not hasattr(self, 'oper'):
+            o = ''
+        else:
+            o = self.oper
+        if not hasattr(self, 'comment'):
+            c = ''
+        else:
+            c = self.comment
         return 'Loop: {}\n' \
                'Drift method: {}\n' \
                'Meter: {}\n' \
                'Operator: {}\n' \
-               'Comment: {}'.format(self.name,
-                                    self.drift_method,
-                                    self.meter,
-                                    self.oper,
-                                    self.comment)
+               'Comment: {}'.format(self.name, dm, m, o, c)
 
     @property
     def meter_type(self):

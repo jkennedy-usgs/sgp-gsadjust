@@ -457,9 +457,17 @@ class ObsTreeSurvey(ObsTreeItem):
             sd.loop = delta['loop']
             sd.ls_drift = delta['ls_drift']
             sd.type = delta['type']
+            try:
+                sd.assigned_dg = delta['assigned_dg']
+            except:
+                pass
             d = data_objects.SimpleDelta(sd)
-            d.sta1 = delta['sta1']
-            d.sta2 = delta['sta2']
+            try:
+                d.sta1 = delta['sta1']
+                d.sta2 = delta['sta2']
+            except KeyError as e:
+                # Raised if delta type is 'assigned'
+                pass
             deltas.append(d)
         temp.deltas = deltas
         for datum in simple_survey['datums']:
@@ -2030,6 +2038,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                                 brush = QtGui.QBrush(QtCore.Qt.lightGray)
                     except:
                         catch=1
+                elif delta.type == 'assigned':
+                    if column == DELTA_G:
+                        brush = QtGui.QBrush(QtCore.Qt.red)
                 return brush
             if role == QtCore.Qt.DisplayRole:
                 if column == DELTA_STATION1:
@@ -2084,6 +2095,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 if len(str(value)) > 0:
                     if column == DELTA_ADJ_SD:
                         delta.adj_sd = float(value)
+                    if column == DELTA_G:
+                        delta.type = 'assigned'
+                        delta.assigned_dg = float(value)
                     self.dataChanged.emit(index, index)
                     self.signal_adjust_update_required.emit()
                 return True

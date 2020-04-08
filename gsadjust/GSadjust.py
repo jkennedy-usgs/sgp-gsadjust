@@ -741,7 +741,11 @@ class MainProg(QtWidgets.QMainWindow):
             self.index_current_loop_survey = firstsurvey.index()
             self.index_current_station_loop = firstloop.index()
             self.index_current_station_survey = firstsurvey.index()
-            self.populate_station_coords()
+            try:
+                self.populate_station_coords()
+            except Exception as e:
+                # sometimes coordinates aren't valid
+                pass
             self.menus.mnFileSaveWorkspace.setEnabled(True)
             self.menus.mnAdjAdjust.setEnabled(True)
             self.menus.mnAdjAdjustCurrent.setEnabled(True)
@@ -758,8 +762,8 @@ class MainProg(QtWidgets.QMainWindow):
             # workspace, the loop deltas first have to be created by update_all_drift_plots(), then the survey delta
             # table can be updated.
             self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
-            for survey in obstreesurveys:
-                self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
+            # for survey in obstreesurveys:
+            #     self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
             self.update_adjust_tables()
             pbar.progressbar.setValue(5)
             QtWidgets.QApplication.processEvents()
@@ -792,7 +796,7 @@ class MainProg(QtWidgets.QMainWindow):
                                           checked=simpledelta.checked,
                                           loop=simpledelta.loop)
                             else:
-                                logging.error('')
+                                logging.error('Delta recreation error')
                         # For dealing with old-style .p workspaces
                         elif type(simpledelta) == Delta:
                             d = simpledelta
@@ -818,12 +822,24 @@ class MainProg(QtWidgets.QMainWindow):
                                 d = return_delta_given_key(simpledelta.key, deltas)
                             except:
                                 return
+                    elif simpledelta.type == 'assigned':
+                        station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
+                        station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
+                        d = Delta(station1, station2,
+                                  adj_sd=simpledelta.adj_sd,
+                                  driftcorr=simpledelta.driftcorr,
+                                  ls_drift=simpledelta.ls_drift,
+                                  delta_type=simpledelta.type,
+                                  checked=simpledelta.checked,
+                                  loop=simpledelta.loop)
+                        d.assigned_dg = simpledelta.assigned_dg
                     if d:
                         i += 1
                         surveys[idx].delta_model.insertRows(d, 0)
                     else:  # unable to create delta
-                        self.msg = show_message('Error populating delta table. Please update delta table on Adjust tab',
-                                                'Import error')
+                        self.msg = show_message('Import error',
+                                                'Error populating delta table. Please update delta '
+                                                               'table on Adjust tab',)
                 except:
                     self.msg = show_message('Import error', 'Import error')
 

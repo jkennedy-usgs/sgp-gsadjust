@@ -139,7 +139,7 @@ class Delta:
         self.checked = checked
         self.adj_sd = adj_sd
         self.type = delta_type
-        if self.type == 'normal':
+        if self.type == 'normal' or self.type == 'assigned':
             self.meter = sta2.meter[0]
         # Roman correction: list of deltas
         elif self.type == 'list':
@@ -152,6 +152,7 @@ class Delta:
         self.ls_drift = ls_drift  # degree of drift, if included in network adjustment
         self.cal_coeff = cal_coeff
         self.loop = loop
+        self.assigned_dg = None
 
     @classmethod
     def from_list(cls, list_of_deltas):
@@ -205,7 +206,7 @@ class Delta:
                 return np.std(s)
             else:
                 return 3.0
-        elif self.type == 'normal':
+        elif self.type == 'normal' or self.type == 'assigned':
             s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
             return s
         elif self.type == 'three_point':
@@ -248,8 +249,10 @@ class Delta:
             dg_all = [np.abs(delta.dg) for delta in self.station2]
             dg = np.mean(dg_all)
         # Normal delta
-        else:
+        elif self.type == 'normal':
             dg = self.station2.gmean - self.station1.gmean - self.driftcorr
+        elif self.type == 'assigned':
+            dg = self.assigned_dg
 
         return dg
 
@@ -695,8 +698,8 @@ class SimpleDelta:
 
     def __init__(self, delta):
         # Normal delta
-        if type(delta) == Delta:  # Can be created either from a Delta object or when loading JSON data
-            if delta.type == 'normal':
+        if type(delta) == Delta:  # Can be created either from a Delta object (saving) or when loading JSON data
+            if delta.type == 'normal' or delta.type == 'assigned':
                 self.sta1 = delta.station1.key
                 self.sta2 = delta.station2.key
             elif delta.type == 'list':
@@ -705,6 +708,10 @@ class SimpleDelta:
                 for threepoint in delta.station2:
                     stations = [threepoint.station1.key, threepoint.station2[0].key, threepoint.station2[1].key]
                     self.sta2.append(stations)
+        try:
+            self.assigned_dg = delta.assigned_dg
+        except:
+            pass
         self.adj_sd = delta.adj_sd
         self.type = delta.type
         self.ls_drift = delta.ls_drift

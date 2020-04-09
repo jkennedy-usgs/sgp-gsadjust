@@ -23,7 +23,7 @@ def test_channellist(test_channellist_fixture, mean_g, station_length, station_s
 
 
 @pytest.mark.parametrize('test_twostations_fixture, true_delta_g, true_sd',[
-                         ('./tests/channellist_scintrex.p', 2159.339, 11.94092),
+                         ('./tests/channellist_scintrex.p', 2159.339, 1.5894),
                          ('./tests/channellist_burris.p', -3205.8182, 3.8052),
                          ], indirect=['test_twostations_fixture'])
 def test_delta_normal(test_twostations_fixture, true_delta_g, true_sd):

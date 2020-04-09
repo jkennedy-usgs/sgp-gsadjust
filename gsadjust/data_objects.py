@@ -200,17 +200,26 @@ class Delta:
         Standard deviation determined from drift correction. Default value for network adjustment.
         :return: float
         """
-        if self.type == 'list':
-            if len(self.station2) > 1:
-                s = [np.abs(delta.dg) for delta in self.station2]
-                return np.std(s)
-            else:
+        try:
+            if self.type == 'list':
+                if len(self.station2) > 1:
+                    s = [np.abs(delta.dg) for delta in self.station2]
+                    return np.std(s)
+                else:
+                    return 3.0
+            elif self.type == 'normal' or self.type == 'assigned':
+                if hasattr(self.station1, 'asd'):
+                    if self.station1.asd:
+                        s = np.sqrt(self.station2.asd ** 2 + self.station1.asd ** 2)
+                    else:
+                        s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
+                else:
+                    s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
+                return s
+            elif self.type == 'three_point':
                 return 3.0
-        elif self.type == 'normal' or self.type == 'assigned':
-            s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
-            return s
-        elif self.type == 'three_point':
-            return 3.0
+        except:
+            return -999
 
     @property
     def sta1(self):

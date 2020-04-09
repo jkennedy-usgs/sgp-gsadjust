@@ -68,7 +68,9 @@ class ObsTreeStation(ObsTreeItem):
         super(ObsTreeStation, self).__init__()  # call properties from the baseclass
         self.__dict__ = copy.deepcopy(k.__dict__)
         self.station_name = station_name
-        self.station_count = station_count  # Records the number of times the station is occupied in a loop
+        self.station_count = station_count
+        if not hasattr(k, 'asd'):
+            asd = None# Records the number of times the station is occupied in a loop
         if hasattr(k, 'checked'):
             self.setCheckState(k.checked)
         # For legacy .p files
@@ -154,6 +156,32 @@ class ObsTreeStation(ObsTreeItem):
             return -999
 
     @property
+    def t_stdev(self):
+        try:
+            if self.sd[0] == -999:
+                return 1
+            else:
+                ttmp = np.array([self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+                num = np.zeros(len(ttmp))
+                for i in range(len(ttmp)):
+                    num[i] = self._weights_()[i] * (ttmp[i] - np.mean(ttmp)) ** 2
+                sd = np.sqrt(np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
+                # self._weights_()))
+                return sd
+        except:
+            return -999
+
+    @property
+    def original_sd(self):
+        sdtmp = np.array([self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+        gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+        num = np.zeros(len(sdtmp))
+        for i in range(len(sdtmp)):
+            num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
+        sd = np.sqrt(np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))
+        return sd
+
+    @property
     def stdev(self):
         """
         The try-except block handles errors when all keepdata == 0.
@@ -162,6 +190,9 @@ class ObsTreeStation(ObsTreeItem):
         it shows S.D. on the display but does not record it).
         """
         try:
+            if hasattr(self, 'asd'):
+                if self.asd:
+                    return self.asd
             if self.sd[0] == -999:  # Burris meter: return the S.D. calculated from all the samples at a station
                 gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 if len(gtmp) == 1:  # Can't take S.D. if there's only one sample
@@ -170,7 +201,13 @@ class ObsTreeStation(ObsTreeItem):
                     return float(np.std(gtmp))
             else:  # Scintrex: return the average SD of the samples
                 sdtmp = np.array([self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-                sd = np.mean(sdtmp)  # np.sqrt(1. / sum(self._weights_()))
+                sd = np.mean(sdtmp)  #
+                gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+                num = np.zeros(len(sdtmp))
+                for i in range(len(sdtmp)):
+                    num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp))**2
+                sd = np.sqrt(np.sum(num)/((len(self._weights_())-1) * np.sum(self._weights_())))# np.sqrt(1. / sum(
+                # self._weights_()))
                 return sd
         except:
             return -999
@@ -370,21 +407,24 @@ class ObsTreeLoop(ObsTreeItem):
                     unique_stations.add(station.station_name)
 
         for unique_station in unique_stations:
-            x = []
-            y = []
+            x, y, y_sd, t_sd = [], [], [], []
             for i in range(self.rowCount()):
                 station = self.child(i)
                 if self.child(i).data(role=QtCore.Qt.CheckStateRole) == 2:
                     if station.station_name == unique_station:
                         x.append(station.tmean)
                         y.append(station.gmean)
-            new_x, new_y = [], []
+                        y_sd.append(station.original_sd)
+                        t_sd.append(station.t_stdev)
+            new_x, new_y, new_y_sd, new_t_sd = [], [], [], []
             # -999's can occur when all samples at a station are unchecked
             for idx, i in enumerate(x):
                 if i != -999:
                     new_x.append(i)
                     new_y.append(y[idx])
-            plot_data.append([new_x, new_y, unique_station])
+                    new_y_sd.append(y_sd[idx])
+                    new_t_sd.append(t_sd[idx])
+            plot_data.append([new_x, new_y, unique_station, new_y_sd, new_t_sd])
 
         # sort plot_data by initial x in each line
         plot_data_sorted = []

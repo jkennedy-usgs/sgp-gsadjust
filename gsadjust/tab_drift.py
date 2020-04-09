@@ -25,12 +25,12 @@ from matplotlib.dates import DateFormatter
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
 
-
 from data_objects import Delta
 from gui_objects import IncrMinuteTimeEdit, show_message
 from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop
 from drift_roman import drift_roman
 from drift_continuous import drift_continuous
+
 
 ###########################################################################
 # GSadjust drift tab
@@ -103,6 +103,10 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_plot_hz_extent.setChecked(False)
         self.drift_plot_hz_extent.stateChanged.connect(self.plot_drift)
 
+        self.drift_plot_weighted = QtWidgets.QCheckBox('Weight drift observations')
+        self.drift_plot_weighted.setChecked(False)
+        self.drift_plot_weighted.stateChanged.connect(self.update_weighted)
+
         self.tension_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.tension_slider.setRange(10, 2500)
         self.tension_slider.setValue(1250)
@@ -143,13 +147,15 @@ class TabDrift(QtWidgets.QWidget):
         grid.addWidget(QtWidgets.QLabel('Behavior at start/end:'), 2, 0)
         grid.addWidget(self.drift_cont_startendcombobox, 2, 1)
         grid.addWidget(self.drift_screen_elapsed_time, 3, 0)
-        grid.addWidget(self.drift_plot_hz_extent, 4, 0)
         grid.addWidget(self.drift_time_spinner, 3, 1)
-        grid.addWidget(QtWidgets.QLabel('Spline tension:'), 6, 0)
-        grid.addWidget(self.tension_slider, 6, 1)
-        grid.addWidget(self.tension_label, 6, 2)
-        grid.addWidget(QtWidgets.QLabel('Vertical line offset'), 5, 0)
-        grid.addWidget(self.offset_slider, 5, 1)
+        grid.addWidget(self.drift_plot_hz_extent, 4, 0)
+        grid.addWidget(self.drift_plot_weighted, 5, 0)
+        grid.addWidget(QtWidgets.QLabel('Vertical line offset'), 6, 0)
+        grid.addWidget(self.offset_slider, 6, 1)
+        grid.addWidget(QtWidgets.QLabel('Spline tension:'), 7, 0)
+        grid.addWidget(self.tension_slider, 7, 1)
+        grid.addWidget(self.tension_label, 7, 2)
+
         grid_widget.setLayout(grid)
         drift_control_sublayout.addWidget(grid_widget)
 
@@ -308,6 +314,14 @@ class TabDrift(QtWidgets.QWidget):
                 new_data.append([new_x, new_y, line[2]])
 
         return new_data
+
+    def update_weighted(self):
+        """
+        Callback for weight drift observations
+        """
+        model = self.plot_drift()
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
+        self.update_delta_model(obstreeloop.drift_method, model)
 
     def update_tension(self):
         """
@@ -573,20 +587,24 @@ class TabDrift(QtWidgets.QWidget):
                     self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
                     self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
                 try:
-                    deltas, xp, yp = drift_continuous(data, drift_x,
-                                                   drift_rate,
-                                                   self.drift_polydegree_combobox.currentIndex(),
-                                                   self.tension_slider.value(),
-                                                   self.drift_cont_startendcombobox.currentIndex(),
-                                                   min_time, max_time, obstreeloop.name)
+                    deltas, xp, yp = drift_continuous(data, plot_data, drift_x,
+                                                      drift_rate,
+                                                      self.drift_polydegree_combobox.currentIndex(),
+                                                      self.tension_slider.value(),
+                                                      self.drift_cont_startendcombobox.currentIndex(),
+                                                      self.drift_plot_weighted.checkState(),
+                                                      min_time, max_time, obstreeloop.name)
                     delta_model = self.populate_continuous_deltamodel(deltas)
 
                     if update:
                         self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                         self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
                         self.axes_drift_cont_lower.plot(xp, yp, 'k-')
-                        if (max(yp) - min(yp)) < 0.0001:
-                            self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) - 10, np.round(yp[0], 0) + 10)
+                        # if (max(yp) - min(yp)) < 0.0001:
+                        #     self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) - 10, np.round(yp[0], 0) + 10)
+                        # else:
+                        self.axes_drift_cont_lower.set_ylim(np.round(min(drift_rate), 0) - 5, np.round(max(drift_rate),
+                                                                                                       0) + 5)
                         self.axes_drift_cont_upper.set_title(
                             'Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                         self.drift_cont_canvasbot.draw()
@@ -805,6 +823,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_polydegree_combobox.setEnabled(True)
         self.drift_cont_startendcombobox.setEnabled(False)
         self.drift_plot_hz_extent.setEnabled(False)
+        self.drift_plot_weighted.setEnabled(False)
         # self.delta_view.show()
         self.dg_samples_view.hide()
 
@@ -826,6 +845,7 @@ class TabDrift(QtWidgets.QWidget):
         self.tension_slider.setEnabled(False)
         self.offset_slider.setEnabled(False)
         self.drift_plot_hz_extent.setEnabled(False)
+        self.drift_plot_weighted.setEnabled(False)
         self.drift_cont_startendcombobox.setEnabled(False)
         self.drift_polydegree_combobox.setEnabled(False)
 
@@ -851,6 +871,7 @@ class TabDrift(QtWidgets.QWidget):
         self.tension_slider.setEnabled(True)
         self.offset_slider.setEnabled(True)
         self.drift_plot_hz_extent.setEnabled(True)
+        self.drift_plot_weighted.setEnabled(True)
         self.drift_cont_startendcombobox.setEnabled(True)
         self.drift_polydegree_combobox.setEnabled(True)
 
@@ -870,6 +891,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_polydegree_combobox.setEnabled(False)
         self.drift_cont_startendcombobox.setEnabled(False)
         self.drift_plot_hz_extent.setEnabled(False)
+        self.drift_plot_weighted.setEnabled(False)
         self.dg_samples_view.hide()
 
     def drift_combobox_updated(self):

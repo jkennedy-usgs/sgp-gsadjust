@@ -4,15 +4,45 @@ from scipy.interpolate import UnivariateSpline
 from data_objects import Delta
 
 
-def drift_continuous(plot_data, drift_x, drift_rate, method_key, tension_slider_value, extrapolation_type, min_time,
-                     max_time, loop_name):
+def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_slider_value, extrapolation_type,
+                     weight_obs, min_time, max_time, loop_name):
     # Interpolate drift model: polynomial, spline, etc. at xp number of points. xp needs to remain
     # relatively low to maintain performance.
-    xp = np.linspace(min(drift_x), max(drift_x), 50)  # constant
+    xp = np.linspace(min(drift_x), max(drift_x), 500)  # constant
+    drift_stats = None
     # method_key = self.drift_polydegree_combobox.currentIndex()
     if method_key == 0:  # constant drift correction
-        mean_drift = sum(drift_rate) / len(drift_rate)
-        yp = np.zeros(xp.size) + mean_drift
+        if weight_obs == 0:
+            mean_drift = sum(drift_rate) / len(drift_rate)
+            yp = np.zeros(xp.size) + mean_drift
+        else:
+            drifts, drift_w = [], []
+            for station_data in plot_data:
+                t, R, Rsd, tsd = station_data[0], station_data[1], station_data[3], station_data[4]
+                if len(t) > 1:
+                    for i in range(1, len(t)):
+                        dr = R[i] - R[0]
+                        dt = t[i] - t[0]
+                        sdr = np.sqrt(Rsd[i]**2 + Rsd[0]**2)
+                        sdt = np.sqrt(tsd[i]**2 + tsd[0]**2)
+                        drifts.append(dr/dt/24)
+                        drift_sd = np.sqrt(
+                            sdr**2/dt**2 + (dr**2/dt**4)*sdt**2
+                        )
+                        drift_w.append(1/drift_sd**2)
+            num = []
+            for idx, w in enumerate(drift_w):
+                num.append(w * drifts[idx])
+            mean_drift = np.sum(num)/np.sum(drift_w)
+            num = []
+            for idx, w in enumerate(drift_w):
+                num.append(w * (drifts[idx] - mean_drift) ** 2)
+            sigma_d = np.sqrt(np.sum(num)/((len(drift_w) - 1) * np.sum(drift_w)))
+            drift_stats = dict()
+            drift_stats['t0'] = plot_data[0][0][0]
+            drift_stats['sigma_d'] = sigma_d
+            drift_stats['mean_drift'] = mean_drift
+            yp = np.zeros(xp.size) + mean_drift
     else:
         x0 = [f - np.min(drift_x) for f in drift_x]
         xp0 = [f - np.min(xp) for f in xp]
@@ -47,13 +77,13 @@ def drift_continuous(plot_data, drift_x, drift_rate, method_key, tension_slider_
 
     # Method for extrapolating beyond fitted drift curve extene
     if extrapolation_type == 1:  # constant
-        new_xp = np.linspace(min_time, min(drift_x), 20)
+        new_xp = np.linspace(min_time, min(drift_x), 200)
         new_xp = np.append(new_xp, xp)
-        new_xp = np.append(new_xp, np.linspace(max(drift_x), max_time, 20))
+        new_xp = np.append(new_xp, np.linspace(max(drift_x), max_time, 200))
         xp = new_xp
-        new_yp = np.ones(20) * yp[0]
+        new_yp = np.ones(200) * yp[0]
         new_yp = np.append(new_yp, yp)
-        new_yp = np.append(new_yp, np.ones(20) * yp[-1])
+        new_yp = np.append(new_yp, np.ones(200) * yp[-1])
         yp = new_yp
     else:  # linear extrapolation from first two (and last two) points
         # get first two points
@@ -61,22 +91,22 @@ def drift_continuous(plot_data, drift_x, drift_rate, method_key, tension_slider_
         y = yp[:2]
         z = np.polyfit(x, y, 1)
         p = np.poly1d(z)
-        new_xp1 = np.linspace(min_time, min(drift_x), 20)
+        new_xp1 = np.linspace(min_time, min(drift_x), 200)
         yp1 = p(new_xp1)
         x = xp[-2:]
         y = yp[-2:]
         z = np.polyfit(x, y, 1)
         p = np.poly1d(z)
-        new_xp2 = np.linspace(max(drift_x), max_time, 20)
+        new_xp2 = np.linspace(max(drift_x), max_time, 200)
         yp2 = p(new_xp2)
         xp_temp = np.append(new_xp1, xp)
         xp = np.append(xp_temp, new_xp2)
         yp_temp = np.append(yp1, yp)
         yp = np.append(yp_temp, yp2)
-    delta_list = calc_cont_dg(xp, yp, plot_data, loop_name)
+    delta_list = calc_cont_dg(xp, yp, data, loop_name, drift_stats)
     return delta_list, xp, yp
 
-def calc_cont_dg(xp, yp, data, loop_name):
+def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
     """
     Calculates delta-g's while removing drift using the input drift model
     :param xp: times of continuous drift model
@@ -101,6 +131,12 @@ def calc_cont_dg(xp, yp, data, loop_name):
     yp = ypsum  # yp = yp.tolist()
     first = True
     for station in data:
+        if drift_stats:
+            station.asd = np.sqrt(station.original_sd**2 +
+                                  ((station.tmean - drift_stats['t0'])*24)**2*drift_stats['sigma_d']**2 +
+                                  np.sqrt(station.t_stdev**2 + data[0].t_stdev**2) * drift_stats['mean_drift']**2)
+        else:
+            station.asd = None
         if first:
             first = False
             prev_station = station

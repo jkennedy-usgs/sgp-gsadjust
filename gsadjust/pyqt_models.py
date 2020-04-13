@@ -2260,7 +2260,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                 strdata = "%3.0f" % float(self.arraydata[row][column])
             elif self.__headers[column] == u"g (\u00b5gal)" or \
                     self.__headers[column] == u"sd (\u00b5gal)":
-                strdata = "%8.0f" % float(self.arraydata[row][column])
+                strdata = "%8.1f" % float(self.arraydata[row][column])
             else:
                 strdata = str(self.arraydata[row][column])
             return strdata

@@ -219,6 +219,7 @@ def read_cg6(fh):
         c_station, c_date, c_time, c_sd = 0, 1, 2, 5
         c_tiltx, c_tilty = 8, 9
         c_tide, c_tilt, c_temp = 11, 12, 13
+        c_dur = 15
         c_grav, c_elev, c_lat, c_long = 3, 19, 17, 18
 
         date_temp = vals_temp[c_date].split('-')
@@ -230,7 +231,8 @@ def read_cg6(fh):
         all_survey_data.elev.append(float(vals_temp[c_elev]))
         all_survey_data.lat.append(float(vals_temp[c_lat]))
         all_survey_data.long.append(float(vals_temp[c_long]))
-        all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000.)
+        all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000. -
+                                        float(vals_temp[c_tide]) * 1000.)
         all_survey_data.tare.append(0)
         all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.)
         all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.)
@@ -239,7 +241,7 @@ def read_cg6(fh):
         all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.)
         all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.)
         all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.)
-        all_survey_data.dur.append(5)
+        all_survey_data.dur.append(int(vals_temp[c_dur]))
         all_survey_data.rej.append(5)
         all_survey_data.t.append(date2num(dt.datetime(int(date_temp[0]),
                                                       int(date_temp[1]),

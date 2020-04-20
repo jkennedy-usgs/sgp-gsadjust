@@ -337,7 +337,7 @@ def import_abs_g_complete(fname):
 
         # Read header line
         line = fh.readline()
-        parts = line.split("\t")
+        parts = [p.strip() for p in line.split("\t")]
         g_idx, n_idx, s_idx, d_idx, th_idx = None, None, None, None, None
         if 'Gravity' in parts:
             g_idx = parts.index('Gravity')
@@ -356,11 +356,14 @@ def import_abs_g_complete(fname):
                 line = fh.readline()
                 if not line:
                     break
-                if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
-                    parts = line.split("\t")
-                    datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
-                                  meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
-                    datums.append(datum)
+                try:
+                    if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
+                        parts = line.split("\t")
+                        datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
+                                      meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
+                        datums.append(datum)
+                except ValueError:
+                    pass  # Log this error?
     return datums
 
 def import_abs_g_simple(fname):

@@ -481,14 +481,17 @@ class TabData(QtWidgets.QWidget):
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         qmodelindex = self.data_view.selectedIndexes()
+        indx2 = None
         for indx in list(qmodelindex)[:-1]:
             # because the setData function currently only works for column 0,
             # then pass the index of the element with same row as selected (if
             # the user does not select element from first column) and column=0
             indx2 = indx.sibling(indx.row(), 0)
             self.parent.station_model.setData(indx2, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole, silent=True)
-        self.parent.station_model.setData(indx2, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
-        QtWidgets.QApplication.restoreOverrideCursor()
+        
+        if indx2:
+            self.parent.station_model.setData(indx2, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
+            QtWidgets.QApplication.restoreOverrideCursor()
 
     def uncheckselected(self):
         """

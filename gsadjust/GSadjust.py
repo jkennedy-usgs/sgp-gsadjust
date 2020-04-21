@@ -263,21 +263,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
 
         # Enable menus
-        self.menus.mnFileAppendLoop.setEnabled(True)
-        self.menus.mnFileAppendSurvey.setEnabled(True)
-        self.menus.mnFileAppendWorkspace.setEnabled(True)
-        self.menus.mnFileSaveWorkspaceAs.setEnabled(True)
-        self.menus.mnEditTideCorrection.setEnabled(True)
-        self.menus.mnEditCorrectRecordedTimeAction.setEnabled(True)
-        self.menus.mnEditShowCoordinates.setEnabled(True)
-        self.menus.mnEditLoadCoordinates.setEnabled(True)
-        self.menus.mnAdjUpdateDeltas.setEnabled(True)
-        self.menus.mnAdjUpdateDeltasCurrentSurvey.setEnabled(True)
-        self.menus.mnAdjUpdateDeltasCurrentLoop.setEnabled(True)
-        self.menus.mnAdjClearDeltaTable.setEnabled(True)
-        self.menus.mnAdjClearDatumTable.setEnabled(True)
-        self.menus.mnAdjUpdateDeltas.setEnabled(True)
-        self.menus.mnAdjUpdateDeltasCurrentSurvey.setEnabled(True)
+        self.menus.set_state(MENU_STATE.INIT)
 
         # Resize, expand tree view
         self.gui_data_treeview.setModel(self.obsTreeModel)
@@ -555,8 +541,6 @@ class MainProg(QtWidgets.QMainWindow):
         Clears all models and refreshes view.
         """
         logging.info("Workspace cleared")
-        self.menus.mnFileSaveWorkspace.setEnabled(False)
-        self.menus.mnFileSaveWorkspaceAs.setEnabled(False)
         self.obsTreeModel = ObsTreeModel()
         self.gui_data_treeview.setModel(None)
         self.gui_data_treeview.update()
@@ -1490,19 +1474,9 @@ class MainProg(QtWidgets.QMainWindow):
             index = indexes[0]
             item = index.model().itemFromIndex(index)
             if type(item) is ObsTreeStation:
-                self.menus.mnDeleteSurvey.setEnabled(False)
-                self.menus.mnDeleteLoop.setEnabled(False)
-                self.menus.mnStationDelete.setEnabled(True)
-                self.menus.mnStationDuplicate.setEnabled(True)
-                self.menus.mnStationRename.setEnabled(True)
-                self.menus.mnDataNewLoop.setEnabled(True)
+                self.menus.set_state(MENU_STATE.OBS_TREE_STATION)
             elif type(item) is ObsTreeLoop or type(item) is ObsTreeSurvey:
-                self.menus.mnDeleteSurvey.setEnabled(True)
-                self.menus.mnDeleteLoop.setEnabled(True)
-                self.menus.mnStationDelete.setEnabled(False)
-                self.menus.mnStationDuplicate.setEnabled(False)
-                self.menus.mnDataNewLoop.setEnabled(False)
-                self.menus.mnStationRename.setEnabled(False)
+                self.menus.set_state(MENU_STATE.OBS_TREE_LOOP_OR_SURVEY)
 
             self.gui_data_treeview_popup_menu.exec_(self.gui_data_treeview.mapToGlobal(point))
 
@@ -1535,9 +1509,8 @@ class MainProg(QtWidgets.QMainWindow):
             obstreesurvey.run_inversion(adj_type)
         # Tools available if there is more than one survey
         if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
-            self.menus.mnToolsComputeGravityChangeAction.setEnabled(True)
-            self.menus.mnToolsLOO.setEnabled(True)
-            self.menus.mnAdjPlotObservedAdjustedAbs.setEnabled(True)
+            self.menus.set_state(MENU_STATE.MORE_THAN_ONE_SURVEY)
+
         self.menus.mnAdjPlotCompareDatum.setEnabled(True)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()

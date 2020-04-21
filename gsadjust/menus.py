@@ -20,14 +20,37 @@ import gsa_plots
 from gui_objects import AboutDialog
 
 class MENU_STATE:
+    INIT = -1
     CLEAR = 0
     ACTIVE_WORKSPACE = 1
     OBS_TREE_MODEL = 2
-    DELTA_MODEL = 3
+    OBS_TREE_STATION = 3
+    OBS_TREE_LOOP_OR_SURVEY = 4
+    DELTA_MODEL = 5
+    MORE_THAN_ONE_SURVEY = 6
 
 
 _ENABLED_MENUS = {
+    MENU_STATE.INIT: [
+        ('mnFileAppendLoop', True),
+        ('mnFileAppendSurvey', True),
+        ('mnFileAppendWorkspace', True),
+        ('mnFileSaveWorkspaceAs', True),
+        ('mnEditTideCorrection', True), 
+        ('mnEditCorrectRecordedTimeAction', True),
+        ('mnEditShowCoordinates', True),
+        ('mnEditLoadCoordinates', True),
+        ('mnAdjUpdateDeltas', True),
+        ('mnAdjUpdateDeltasCurrentSurvey', True), 
+        ('mnAdjUpdateDeltasCurrentLoop', True),
+        ('mnAdjClearDeltaTable', True),
+        ('mnAdjClearDatumTable', True),
+        ('mnAdjUpdateDeltas', True),
+        ('mnAdjUpdateDeltasCurrentSurvey', True), 
+    ],
     MENU_STATE.CLEAR: [
+        ('mnFileSaveWorkspace', False),
+        ('mnFileSaveWorkspaceAs', False),
         ('mnEditLoadCoordinates', False),
         ('mnEditShowCoordinates', False),
         ('mnFileAppendLoop', False),
@@ -45,10 +68,31 @@ _ENABLED_MENUS = {
         ('mnAdjPlotCompareDatum', False),
         ('mnAdjPlotObservedAdjustedAbs', False),
     ],
+    MENU_STATE.OBS_TREE_STATION: [
+        ('mnDeleteSurvey', False),
+        ('mnDeleteLoop', False),
+        ('mnStationDelete', True),
+        ('mnStationDuplicate', True),
+        ('mnStationRename', True),
+        ('mnDataNewLoop', True),
+    ],
+    MENU_STATE.OBS_TREE_LOOP_OR_SURVEY: [
+        ('mnDeleteSurvey', True),
+        ('mnDeleteLoop', True),
+        ('mnStationDelete', False),
+        ('mnStationDuplicate', False),
+        ('mnStationRename', False),
+        ('mnDataNewLoop', False),
+    ],
     MENU_STATE.DELTA_MODEL: [
         ('mnAdjClearDeltaTable', True),
         ('mnAdjAdjust', True),
         ('mnAdjAdjustCurrent', True),
+    ],
+    MENU_STATE.MORE_THAN_ONE_SURVEY: [
+        ('mnToolsComputeGravityChangeAction', True),
+        ('mnToolsLOO', True),
+        ('mnAdjPlotObservedAdjustedAbs', True),
     ]
 }
 

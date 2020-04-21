@@ -19,8 +19,43 @@ from PyQt5 import QtWidgets, QtGui
 import gsa_plots
 from gui_objects import AboutDialog
 
+class MENU_STATE:
+    CLEAR = 0
+    ACTIVE_WORKSPACE = 1
+    OBS_TREE_MODEL = 2
+    DELTA_MODEL = 3
+
+
+_ENABLED_MENUS = {
+    MENU_STATE.CLEAR: [
+        ('mnEditLoadCoordinates', False),
+        ('mnEditShowCoordinates', False),
+        ('mnFileAppendLoop', False),
+        ('mnFileAppendSurvey', False),
+        ('mnFileAppendWorkspace', False), 
+    ],
+    MENU_STATE.ACTIVE_WORKSPACE: [
+        ('mnFileSaveWorkspace', True),
+    ],
+    MENU_STATE.OBS_TREE_MODEL: [
+        ('mnAdjAdjust', True),
+        ('mnAdjAdjustCurrent', True),
+        ('mnToolsLOO', False),
+        ('mnToolsComputeGravityChangeAction', False),
+        ('mnAdjPlotCompareDatum', False),
+        ('mnAdjPlotObservedAdjustedAbs', False),
+    ],
+    MENU_STATE.DELTA_MODEL: [
+        ('mnAdjClearDeltaTable', True),
+        ('mnAdjAdjust', True),
+        ('mnAdjAdjustCurrent', True),
+    ]
+}
+
+
 
 class Menus:
+
     def __init__(self, mainProg):
         self.mainProg = mainProg
         """
@@ -328,3 +363,13 @@ class Menus:
                 target.addSeparator()
             else:
                 target.addAction(action)
+
+    def set_state(self, *args):
+        for state in args:
+            if state not in _ENABLED_MENUS:
+                raise Exception("Invalid menu state: " % state)
+            
+            for menu, enabled in _ENABLED_MENUS[state]:
+                getattr(self, menu).setEnabled(enabled)
+
+        

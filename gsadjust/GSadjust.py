@@ -129,7 +129,7 @@ from gui_objects import AddDatumFromList, CoordinatesTable
 from gui_objects import FigureDatumComparisonTimeSeries
 from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
 from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
-from menus import Menus
+from menus import Menus, MENU_STATE
 from pyqt_models import BurrisTableModel, ScintrexTableModel
 from pyqt_models import ObsTreeModel, TareTableModel
 from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
@@ -576,12 +576,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.update()
         self.tab_adjust.textAdjResults.clear()
 
-        self.menus.mnEditLoadCoordinates.setEnabled(False)
-        self.menus.mnEditShowCoordinates.setEnabled(False)
-
-        self.menus.mnFileAppendLoop.setEnabled(False)
-        self.menus.mnFileAppendSurvey.setEnabled(False)
-        self.menus.mnFileAppendWorkspace.setEnabled(False)
+        self.menus.set_state(MENU_STATE.CLEAR)
         self.setWindowTitle('GSadjust')
 
     def workspace_save(self):
@@ -619,14 +614,14 @@ class MainProg(QtWidgets.QMainWindow):
                         self.set_window_title(fname)
                         self.msg = show_message('Workspace saved', '')
                         self.workspace_savename = fname
-                        self.menus.mnFileSaveWorkspace.setEnabled(True)
+                        self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE)
                     else:
                         self.msg = show_message("Workspace save error", "Error")
 
             except Exception as e:
                 self.msg = show_message("Workspace save error", "Error")
                 logging.exception(e, exc_info=True)
-                self.menus.mnFileSaveWorkspace.setEnabled(False)
+                self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE)
 
     def workspace_open_getfile(self):
         """
@@ -746,13 +741,8 @@ class MainProg(QtWidgets.QMainWindow):
             except Exception as e:
                 # sometimes coordinates aren't valid
                 pass
-            self.menus.mnFileSaveWorkspace.setEnabled(True)
-            self.menus.mnAdjAdjust.setEnabled(True)
-            self.menus.mnAdjAdjustCurrent.setEnabled(True)
-            self.menus.mnToolsLOO.setEnabled(False)
-            self.menus.mnToolsComputeGravityChangeAction.setEnabled(False)
-            self.menus.mnAdjPlotCompareDatum.setEnabled(False)
-            self.menus.mnAdjPlotObservedAdjustedAbs.setEnabled(False)
+
+            self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE, MENU_STATE.OBS_TREE_MODEL)
 
             self.workspace_loaded = True
             self.update_all_drift_plots()
@@ -904,9 +894,8 @@ class MainProg(QtWidgets.QMainWindow):
             self.deltas_update_not_required()
             self.adjust_update_required()
             self.update_adjust_tables()
-        self.menus.mnAdjClearDeltaTable.setEnabled(True)
-        self.menus.mnAdjAdjust.setEnabled(True)
-        self.menus.mnAdjAdjustCurrent.setEnabled(True)
+
+        self.menus.set_state(MENU_STATE.DELTA_MODEL)
 
     def activate_survey_or_loop(self, index):
         """

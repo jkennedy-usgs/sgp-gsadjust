@@ -16,6 +16,7 @@ import time
 import threading
 import matplotlib
 
+
 def plot_compare_datum_to_adjusted(survey):
     """
     Bar plot of difference between specified datum (in datum table) and adjustment result.

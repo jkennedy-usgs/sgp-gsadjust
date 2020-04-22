@@ -339,13 +339,11 @@ class TabDrift(QtWidgets.QWidget):
         :param data: list of stations from which to calculate delta-g
         :return: PyQt DeltaTableModel
         """
-        first = True
         delta_model = DeltaTableModel()
+        # Take the first station from the list, or None if there aren't any.
+        prev_station = data.pop(0) if data else None
+
         for station in data:
-            if first:
-                first = False
-                prev_station = station
-                continue
             delta = Delta(prev_station,
                           station,
                           driftcorr=0.0,
@@ -361,13 +359,11 @@ class TabDrift(QtWidgets.QWidget):
         :param loop_name: stored with Delta object, used later in network adjustment
         :return: PyQt DeltaTableModel
         """
-        first = True
         delta_model = DeltaTableModel()
+        # Take the first station from the list, or None if there aren't any.
+        prev_station = data.pop(0) if data else None
+
         for station in data:
-            if first:
-                first = False
-                prev_station = station
-                continue
             delta = Delta(prev_station,
                           station,
                           driftcorr=0.0,

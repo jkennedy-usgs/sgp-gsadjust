@@ -1961,7 +1961,7 @@ def main():
         logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO)
     except PermissionError:
         show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
-    # sys.excepthook = handle_exception
+    sys.excepthook = handle_exception
 
     splash_pix = QtGui.QPixmap('./gsadjust/resources/Splash.png')
     splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)

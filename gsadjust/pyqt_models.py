@@ -313,27 +313,17 @@ class ObsTreeLoop(ObsTreeItem):
     @property
     # To accomodate legacy files, which might have meter and oper set to None:
     def tooltip(self):
-        if not hasattr(self, 'drift_method'):
-            dm = ''
-        else:
-            dm = self.drift_method
-        if not hasattr(self, 'meter'):
-            m = ''
-        else:
-            m = self.meter
-        if not hasattr(self, 'oper'):
-            o = ''
-        else:
-            o = self.oper
-        if not hasattr(self, 'comment'):
-            c = ''
-        else:
-            c = self.comment
         return 'Loop: {}\n' \
                'Drift method: {}\n' \
                'Meter: {}\n' \
                'Operator: {}\n' \
-               'Comment: {}'.format(self.name, dm, m, o, c)
+               'Comment: {}'.format(
+                   self.name, 
+                   self.__dict__.get('drift_method', ''), 
+                   self.__dict__.get('meter', ''), 
+                   self.__dict__.get('oper', ''), 
+                   self.__dict__.get('comment', ''),
+                )
 
     @property
     def display_column_map(self):

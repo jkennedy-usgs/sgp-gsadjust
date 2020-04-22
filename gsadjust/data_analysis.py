@@ -112,49 +112,31 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                                                           role=256)  # 256=QtCore.Qt.UserRole
                     # Iterate through, look for matching station. 'if' statements deal with Gravnet, which truncates
                     # station names to 6 characters
-                    if len(initial_station.station) > 6 and len(station_name) > 6:
-                        if initial_station.station == station_name:
-                            break
-                    elif len(initial_station.station) > 6:
-                        if initial_station.station[:6] == station_name:
-                            break
-                    elif initial_station.station == station_name:
+                    if (initial_station.station == station_name or initial_station.station[:6] == station_name):
                         break
-                    else:
-                        initial_station = None
+                else:
+                    # If we get to the end without breaking, set it to None.
+                    initial_station = None
+
                 for ii in range(iteration_reference.rowCount()):
                     iteration_station = iteration_reference.data(iteration_reference.index(ii, 0),
                                                                  role=256)  # 256=QtCore.Qt.UserRole
-                    # Iterate through, look for matching station
-                    # if iteration_station.station == station_name[:6]:
-                    #     break
-                    # else:
-                    #     iteration_station = None
-
-                    if len(iteration_station.station) > 6 and len(station_name) > 6:
-                        if iteration_station.station == station_name:
-                            break
-                    elif len(iteration_station.station) > 6:
-                        if iteration_station.station[:6] == station_name:
-                            break
-                    elif iteration_station.station == station_name:
+                    if (iteration_station.station == station_name or iteration_station.station[:6] == station_name):
                         break
-                    else:
-                        iteration_station = None
+
+                else:
+                    # If we get to the end without breaking, set it to None.
+                    iteration_station = None
 
                 for ii in range(compare_survey.rowCount()):
                     compare_station = compare_survey.data(compare_survey.index(ii, 0),
                                                           role=256)  # 256=QtCore.Qt.UserRole
-                    if len(compare_station.station) > 6 and len(station_name) > 6:
-                        if compare_station.station == station_name:
-                            break
-                    elif len(compare_station.station) > 6:
-                        if compare_station.station[:6] == station_name:
-                            break
-                    elif compare_station.station == station_name:
+
+                    if (compare_station.station == station_name or compare_station.station[:6] == station_name):
                         break
-                    else:
-                        compare_station = None
+                else:
+                    # If we get to the end without breaking, set it to None.
+                    compare_station = None
 
                 if initial_station is not None and compare_station is not None:
                     if table_type == 'simple':
@@ -245,27 +227,31 @@ def adjusted_vs_observed_datum_analysis(self):
             done = False
             adj_g = None
             for ii in range(obstreesurvey.datum_model.rowCount()):
-                if not done:
-                    idx = obstreesurvey.datum_model.index(ii, 0)
-                    datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
-                    if datum.station == station:
-                        checkstate = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.CheckStateRole)
-                        obstreesurvey.datum_model.setData(idx, 0, QtCore.Qt.CheckStateRole)
-                        if self.menus.mnAdjPyLSQ.isChecked():
-                            adj_type = 'PyLSQ'
-                        else:
-                            adj_type = 'Gravnet'
-                        obstreesurvey.run_inversion(adj_type)
-                        # Restore check state
-                        obstreesurvey.datum_model.setData(idx, checkstate, QtCore.Qt.CheckStateRole)
-                        for iii in range(obstreesurvey.results_model.rowCount()):
-                            idx = obstreesurvey.results_model.index(iii, 0)
-                            adj_station = obstreesurvey.results_model.data(idx, role=QtCore.Qt.UserRole)
+                idx = obstreesurvey.datum_model.index(ii, 0)
+                datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+                if datum.station == station:
+                    checkstate = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.CheckStateRole)
+                    obstreesurvey.datum_model.setData(idx, 0, QtCore.Qt.CheckStateRole)
+                    if self.menus.mnAdjPyLSQ.isChecked():
+                        adj_type = 'PyLSQ'
+                    else:
+                        adj_type = 'Gravnet'
+                    obstreesurvey.run_inversion(adj_type)
+                    # Restore check state
+                    obstreesurvey.datum_model.setData(idx, checkstate, QtCore.Qt.CheckStateRole)
+                    for iii in range(obstreesurvey.results_model.rowCount()):
+                        idx = obstreesurvey.results_model.index(iii, 0)
+                        adj_station = obstreesurvey.results_model.data(idx, role=QtCore.Qt.UserRole)
 
-                            if adj_station.station == station:
-                                adj_g = adj_station.g + (datum.gradient * datum.meas_height)
-                                done = True
-                                break
+                        if adj_station.station == station:
+                            adj_g = adj_station.g + (datum.gradient * datum.meas_height)
+                            done = True
+                            break
+
+                if done:
+                    # Fall out if done is set.
+                    break
+
             if adj_g:
                 station_adj_g.append(adj_g)
                 station_obs_g.append(datum.g)

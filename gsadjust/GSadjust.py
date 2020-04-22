@@ -1511,7 +1511,7 @@ class MainProg(QtWidgets.QMainWindow):
         if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
             self.menus.set_state(MENU_STATE.MORE_THAN_ONE_SURVEY)
 
-        self.menus.mnAdjPlotCompareDatum.setEnabled(True)
+        self.menus.set_state(MENU_STATE.COMPARE_DATUM)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()

@@ -28,6 +28,7 @@ class MENU_STATE:
     OBS_TREE_LOOP_OR_SURVEY = 4
     DELTA_MODEL = 5
     MORE_THAN_ONE_SURVEY = 6
+    COMPARE_DATUM = 7
 
 
 _ENABLED_MENUS = {
@@ -93,6 +94,9 @@ _ENABLED_MENUS = {
         ('mnToolsComputeGravityChangeAction', True),
         ('mnToolsLOO', True),
         ('mnAdjPlotObservedAdjustedAbs', True),
+    ],
+    MENU_STATE.COMPARE_DATUM: [
+        ('mnAdjPlotCompareDatum', True),
     ]
 }
 

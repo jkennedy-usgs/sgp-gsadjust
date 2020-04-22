@@ -729,15 +729,11 @@ class ObsTreeSurvey(ObsTreeItem):
                 drift_term = '-T' + str(unique_ls[0])
 
         # Remove old gravnet files
-        try:
-            os.remove(self.name + '.gra')
-            os.remove(self.name + '.err')
-            os.remove(self.name + '.his')
-            os.remove(self.name + '.met')
-            os.remove(self.name + '.res')
-            os.remove(self.name + '.sta')
-        except OSError:
-            pass
+        for ext in ['gra', 'err', 'his', 'met', 'res', 'sta']:
+            try:
+                os.remove('{}.{}'.format(self.name, ext))
+            except OSError:
+                pass
 
         # Warn if station names will be truncated
         truncate_warning = False

@@ -1314,6 +1314,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index)
                     return m.checkState()
             elif role == QtCore.Qt.ToolTipRole:
+                m = index.model().itemFromIndex(index)
                 return m.tooltip
 
     def setData(self, index, value, role):
@@ -2347,8 +2348,6 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
     signal_check_station = QtCore.pyqtSignal()
 
     def __init__(self, ChannelList_obj, parent=None):
-        self._headers = ["Station", "Oper", "Meter", "Date", u"g (\u00b5gal)", "Dial setting", "Feedback",
-                          "Tide corr.", "Elev.", "Lat", "Long"]
         QtCore.QAbstractTableModel.__init__(self, parent)
         self.unchecked = {}
         self.ChannelList_obj = None

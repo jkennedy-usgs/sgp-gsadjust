@@ -482,13 +482,14 @@ class ObsTreeSurvey(ObsTreeItem):
         return self.name
 
     @classmethod
-    def from_json(cls, simple_survey):
+    def from_json(cls, data):
         """
         When loading a workspace, repopulate PyQt models
         """
-        temp = cls(simple_survey['name'])
+        temp = cls(data['name'])
+
         deltas = []
-        for delta in simple_survey['deltas']:
+        for delta in data['deltas']:
             from types import SimpleNamespace
             sd = SimpleNamespace()
             sd.adj_sd = delta['adj_sd']
@@ -509,34 +510,49 @@ class ObsTreeSurvey(ObsTreeItem):
                 # Raised if delta type is 'assigned'
                 pass
             deltas.append(d)
+
         temp.deltas = deltas
-        for datum in simple_survey['datums']:
+       
+        for datum in data['datums']:
             d = data_objects.Datum(datum['station'])
             d.__dict__ = datum
             temp.datum_model.insertRows(d, 0)
 
         ao = data_objects.AdjustmentOptions()
-        ao.__dict__ = simple_survey['adjoptions']
+        ao.__dict__ = data['adjoptions']
         temp.adjustment.adjustmentoptions = ao
-        # temp.adjustment.adjustmentoptions = simple_survey.adjoptions
 
-        if 'checked' in simple_survey:
-            temp.setCheckState(simple_survey['checked'])
+        if 'checked' in data:
+            temp.setCheckState(data['checked'])
         return temp
 
-    @classmethod
-    def from_simplesurvey(cls, simple_survey):
-        """
-        When loading a workspace, repopulate PyQt models
-        """
-        temp = cls(simple_survey.name)
-        temp.deltas = simple_survey.deltas
-        for datum in simple_survey.datums:
-            temp.datum_model.insertRows(datum, 0)
-        temp.adjustment.adjustmentoptions = simple_survey.adjoptions
-        if hasattr(simple_survey,'checked'):
-            temp.setCheckState(simple_survey.checked)
-        return temp
+    def to_json(self):
+        loops = []
+        deltas = []
+        datums = []
+        # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
+        # loop delta_models; those are recreated when the workspace is loaded.
+        for i in range(self.delta_model.rowCount()):
+            ind = self.delta_model.createIndex(i, 0)
+            delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+            simpledelta = data_objects.SimpleDelta(delta)
+            deltas.append(simpledelta)
+        for i in range(self.datum_model.rowCount()):
+            ind = self.datum_model.createIndex(i, 0)
+            datums.append(self.datum_model.data(ind, QtCore.Qt.UserRole))
+        for i in range(self.rowCount()):
+            obstreeloop = self.child(i)
+            simpleloop = data_objects.SimpleLoop(obstreeloop)
+            loops.append(simpleloop)
+
+        return {
+            'loops': jsons.dump(loops),
+            'deltas': jsons.dump(deltas),
+            'datums': jsons.dump(datums),
+            'checked': self.checkState(),
+            'name': self.name,
+            'adjoptions': jsons.dump(self.adjustment.adjustmentoptions)
+        }
 
     @property
     def tooltip(self):
@@ -555,6 +571,27 @@ class ObsTreeSurvey(ObsTreeItem):
         for station in self.iter_stations():
             meters.append(station.meter[0])  # Get the first entry; Assume meter number can't change at a station
         return list(set(meters))
+
+    @property
+    def loops(self):
+        return [self.child(i) for i in range(self.rowCount())]
+    
+    # @property
+    # def deltas(self):
+    #     deltas = []
+    #     for i in range(self.delta_model.rowCount()):
+    #         ind = self.delta_model.createIndex(i, 0)
+    #         delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+    #         deltas.append(delta)
+    #     return deltas
+       
+    @property
+    def datums(self):
+        datums = []
+        for i in range(self.datum_model.rowCount()):
+            ind = self.datum_model.createIndex(i, 0)
+            datums.append(self.datum_model.data(ind, QtCore.Qt.UserRole))
+        return datums
 
     @property
     def loop_count(self):
@@ -1224,6 +1261,16 @@ class ObsTreeSurvey(ObsTreeItem):
                                      "GSadjust error")
         return True
 
+
+def survey_serializer(obj, cls, **kwargs):
+    """
+    Handle serialization of ObsTreeSurvey via .to_json() method.
+    """
+    return obj.to_json()
+
+jsons.set_serializer(survey_serializer, ObsTreeSurvey)    
+
+
 class ObsTreeModel(QtGui.QStandardItemModel):
     """
     Tree model that shows station name, date, and average g value.
@@ -1405,47 +1452,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         surveys = []
         for i in range(self.rowCount()):
             obstreesurvey = self.itemFromIndex(self.index(i, 0))
-            simple_survey = data_objects.SimpleSurvey(obstreesurvey)
-            surveys.append(simple_survey)
+            surveys.append(obstreesurvey)
         return surveys
-
-    def load_workspace_p(self, fname):
-        """
-        Load previously-save (pickled) workspace. Need to recreate PyQt models from 'simple' data objects.
-        :param fname:
-        :return: (ObsTreeSurvey, delta_table, coords)
-        """
-        logging.info("Workspace loaded: " + fname)
-        delta_tables, obstreesurveys = [], []
-        coords, surveys = None, None
-        with open(fname, "rb") as f:
-            data = pickle.load(f)
-            if all(isinstance(x, data_objects.SimpleSurvey) for x in data):
-                surveys = data
-            elif len(data) > 1:
-                coords = data[1]
-                surveys = data[0]
-        for simplesurvey in surveys:
-            obstreesurvey = ObsTreeSurvey.from_simplesurvey(simplesurvey)
-            for loop in simplesurvey.loops:
-                obstreeloop = ObsTreeLoop.from_simpleloop_p(loop)
-
-                # Call plot_drift to populate loop delta_models
-                for station in loop.stations:
-                    if hasattr(station, 'station_name'):  # Sometimes blank stations are generated, not sure why?
-                        obstreestation = ObsTreeStation(station, station.station_name, station.station_count)
-                        if type(obstreestation.t[0]) == dt.datetime:
-                            obstreestation.t = [date2num(i) for i in obstreestation.t]
-                        obstreeloop.appendRow([obstreestation,
-                                               QtGui.QStandardItem('0'),
-                                               QtGui.QStandardItem('0')])
-                obstreesurvey.appendRow([obstreeloop,
-                                         QtGui.QStandardItem('0'),
-                                         QtGui.QStandardItem('0')])
-            obstreesurveys.append(obstreesurvey)
-            delta_tables.append(obstreesurvey.deltas)
-
-        return (obstreesurveys, delta_tables, coords)
 
     def load_workspace(self, fname):
         """
@@ -1458,14 +1466,14 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         coords, surveys = None, None
         with open(fname, "r") as f:
             data = jsons.load(json.load(f))
-            if all(isinstance(x, data_objects.SimpleSurvey) for x in data):
+            if all(isinstance(x, ObsTreeSurvey) for x in data):
                 surveys = data
             elif len(data) > 1:
                 coords = data[1]
                 surveys = data[0]
-        for simplesurvey in surveys:
-            obstreesurvey = ObsTreeSurvey.from_json(simplesurvey)
-            for loop in simplesurvey['loops']:
+        for survey in surveys:
+            obstreesurvey = ObsTreeSurvey.from_json(survey)
+            for loop in survey['loops']:
                 obstreeloop = ObsTreeLoop.from_simpleloop(loop)
 
                 # Call plot_drift to populate loop delta_models
@@ -1498,16 +1506,14 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def save_workspace(self, fname):
         # removes pyqt objects, which can't be pickled
-        try:
-            workspace_data = [self.obstree_export_data(), self.station_coords]
-            if fname[-4:] != '.gsa':
-                fname += '.gsa'
-            with open(fname, "w") as f:
-                json.dump(jsons.dump(workspace_data), f)
-                # pickle.dump(workspace_data, f)
-            logging.info('Pickling workspace to {}'.format(fname))
-        except Exception as e:
-            return False
+        workspace_data = [self.obstree_export_data(), self.station_coords]
+        if fname[-4:] != '.gsa':
+            fname += '.gsa'
+
+        with open(fname, "w") as f:
+            json.dump(jsons.dump(workspace_data), f)
+            # pickle.dump(workspace_data, f)
+        logging.info('Pickling workspace to {}'.format(fname))
         return fname
 
     def dict_to_obj(self, station):

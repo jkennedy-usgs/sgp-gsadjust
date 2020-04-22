@@ -19,7 +19,7 @@ Datum: Absolute-gravity observation or other reference for the relative-gravity 
  
 Delta: Relative-gravity difference calculated from two station occupations. May or may not include drift correction.
 
-SimpleSurvey | SimpleLoop | SimpleStation: This is a simplified representation of the main ObsTreeSurvey | ObsTreeLoop |
+SimpleLoop | SimpleStation: This is a simplified representation of the main ObsTreeSurvey | ObsTreeLoop |
   ObstreeStation PyQt datastore. The Simple... objects exist because PyQt objects can't be serialized, which is
   mandatory for saving the workspace using pickle (or json).
 
@@ -665,39 +665,6 @@ class Adjustment:
 ###############################################################################
 # Simple.... objects have no PyQT elements, so they can be pickled
 ###############################################################################
-class SimpleSurvey:
-    """
-    Qt objects can't be pickled. For the delta and datum tables, data are only stored in the respective tables,
-    so we need to rewrite them as python objects. For the loop_dic and station_dics, they duplicate the data
-    in the Qt models, so we can't just write the dics and ignore the Qt objects - they'll be recreated when the
-    file loads.
-
-    This also clears adjustment results, which we don't want to save.
-    """
-
-    def __init__(self, survey):
-        self.loops = []
-        self.deltas = []
-        self.datums = []
-        # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
-        # loop delta_models; those are recreated when the workspace is loaded.
-        for i in range(survey.delta_model.rowCount()):
-            ind = survey.delta_model.createIndex(i, 0)
-            delta = survey.delta_model.data(ind, QtCore.Qt.UserRole)
-            simpledelta = SimpleDelta(delta)
-            self.deltas.append(simpledelta)
-        for i in range(survey.datum_model.rowCount()):
-            ind = survey.datum_model.createIndex(i, 0)
-            self.datums.append(survey.datum_model.data(ind, QtCore.Qt.UserRole))
-        for i in range(survey.rowCount()):
-            obstreeloop = survey.child(i)
-            simpleloop = SimpleLoop(obstreeloop)
-            self.loops.append(simpleloop)
-        self.checked = survey.checkState()
-        self.name = survey.name
-        self.adjoptions = survey.adjustment.adjustmentoptions
-
-
 class SimpleDelta:
     """
     Here we remove the ObsTreeStation objects from the Delta object (because they can't be pickled). Store a reference

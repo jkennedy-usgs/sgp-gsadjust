@@ -1738,7 +1738,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                     datum = self.datums[index.row()]
                     column = index.column()
 
-                    attr, vartype = _attrs.get(column, (None, None))
+                    attr, vartype = self._attrs.get(column, (None, None))
                     if attr:
                         setattr(self, attr, vartype(value))
 

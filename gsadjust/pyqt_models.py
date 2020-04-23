@@ -2084,7 +2084,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_STATION1: delta.sta1,
                     DELTA_STATION2: delta.sta2,
                     LOOP: delta_station_loop(),
-                    DELTA_TIME:  dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
+                    DELTA_TIME:  dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S'),
                     DELTA_G: "%0.1f" % delta.dg,
                     DELTA_DRIFTCORR: "%0.1f" % delta.driftcorr,
                     DELTA_SD: "%0.1f" % delta.sd,

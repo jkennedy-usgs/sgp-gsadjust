@@ -1635,6 +1635,16 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         N_SETS: '# sets',
     }
 
+    _attrs = { # From column constants to object attributes, for setting.
+        DATUM_STATION: ('station', str),
+        DATUM_G: ('g', float),
+        DATUM_SD: ('sd', float),
+        DATUM_DATE: ('date', lambda x:x),  # pass through
+        # DATUM_TIME        
+        MEAS_HEIGHT: ('meas_height', float),
+        GRADIENT: ('gradient', float),
+    }
+
     signal_adjust_update_required = QtCore.pyqtSignal()
 
     def __init__(self):
@@ -1724,22 +1734,16 @@ class DatumTableModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.EditRole:
             if index.isValid() and 0 <= index.row():
-                if len(str(value)) > 0:
+                if value:
                     datum = self.datums[index.row()]
                     column = index.column()
-                    if column == DATUM_STATION:
-                        datum.station = str(value)
-                    elif column == DATUM_G:
-                        datum.g = float(value)
-                    elif column == DATUM_SD:
-                        datum.sd = float(value)
-                    elif column == DATUM_DATE:
-                        datum.date = value
-                    elif column == MEAS_HEIGHT:
-                        datum.meas_height = float(value)
-                    elif column == GRADIENT:
-                        datum.gradient = float(value)
+
+                    attr, vartype = _attrs.get(column, (None, None))
+                    if attr:
+                        setattr(self, attr, vartype(value))
+
                     self.dataChanged.emit(index, index)
+                    
             return True
 
         if role == QtCore.Qt.UserRole:
@@ -1927,12 +1931,12 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
             sta = self.adjusted_stations[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                if column == ADJSTA_STATION:
-                    return sta.station
-                elif column == ADJSTA_G:
-                    return '%8.1f' % sta.g
-                elif column == ADJSTA_SD:
-                    return '%1.1f' % sta.sd
+                return {
+                    ADJSTA_STATION: sta.station,
+                    ADJSTA_G: '%8.1f' % sta.g,
+                    ADJSTA_SD: '%1.1f' % sta.sd
+                }.get(column, column + 1)
+
             if role == QtCore.Qt.UserRole:
                 return sta
 
@@ -2067,11 +2071,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                         brush = QtGui.QBrush(QtCore.Qt.red)
                 return brush
             if role == QtCore.Qt.DisplayRole:
-                if column == DELTA_STATION1:
-                    return delta.sta1
-                elif column == DELTA_STATION2:
-                    return delta.sta2
-                elif column == LOOP:
+                def delta_station_loop():
                     if delta.loop is None:
                         if type(delta.station2) == list:
                             return delta.station2[0].loop
@@ -2079,18 +2079,18 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             return "NA"
                     else:
                         return delta.loop
-                elif column == DELTA_TIME:
-                    return dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
-                elif column == DELTA_G:
-                    return QVariant("%0.1f" % delta.dg)
-                elif column == DELTA_DRIFTCORR:
-                    return QVariant("%0.1f" % delta.driftcorr)
-                elif column == DELTA_SD:
-                    return QVariant("%0.1f" % delta.sd)
-                elif column == DELTA_ADJ_SD:
-                    return QVariant("%0.1f" % delta.sd_for_adjustment)
-                elif column == DELTA_RESIDUAL:
-                    return QVariant("%0.1f" % delta.residual)
+
+                return {
+                    DELTA_STATION1: delta.sta1,
+                    DELTA_STATION2: delta.sta2,
+                    LOOP: delta_station_loop(),
+                    DELTA_TIME:  dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
+                    DELTA_G: "%0.1f" % delta.dg,
+                    DELTA_DRIFTCORR: "%0.1f" % delta.driftcorr,
+                    DELTA_SD: "%0.1f" % delta.sd,
+                    DELTA_ADJ_SD: "%0.1f" % delta.sd_for_adjustment,
+                    DELTA_RESIDUAL: "%0.1f" % delta.residual,
+                }.get(column, column + 1)
 
             elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
@@ -2245,18 +2245,14 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             # view definition
             row = index.row()
             column = index.column()
-            if column == SCINTREX_DATE:
-                strdata = num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S')
-            elif column == SCINTREX_REJ:
-                strdata = "%2.0f" % float(self.arraydata[row][column])
-            elif column == SCINTREX_DUR:
-                strdata = "%3.0f" % float(self.arraydata[row][column])
-            elif column in (SCINTREX_G, SCINTREX_SD):
-                strdata = "%8.1f" % float(self.arraydata[row][column])
-            else:
-                strdata = str(self.arraydata[row][column])
-            return strdata
 
+            return {
+                SCINTREX_DATE: num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S'),
+                SCINTREX_REJ: "%2.0f" % float(self.arraydata[row][column]),
+                SCINTREX_DUR: "%3.0f" % float(self.arraydata[row][column]),
+                SCINTREX_G: "%8.1f" % float(self.arraydata[row][column]),
+                SCINTREX_SD: "%8.1f" % float(self.arraydata[row][column]),
+            }.get(column, str(self.arraydata[row][column]))
 
         if role == QtCore.Qt.CheckStateRole:
             # check status definition

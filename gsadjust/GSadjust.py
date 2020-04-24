@@ -120,24 +120,35 @@ from matplotlib.dates import num2date
 from data_correction import time_correction
 from data_export import export_metadata, export_summary, export_data
 # GSadjust modules
-from data_import import read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, import_abs_g_complete, \
-    import_abs_g_simple
+from data_import import (
+    read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, 
+    import_abs_g_complete, import_abs_g_simple
+)
 from data_objects import Datum, Tare, ChannelList, Delta, SimpleDelta
 from gsa_plots import plot_loop_animation
 from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
-from gui_objects import AddDatumFromList, CoordinatesTable
-from gui_objects import FigureDatumComparisonTimeSeries
-from gui_objects import GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection
-from gui_objects import VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite
-from menus import Menus, MENU_STATE
-from pyqt_models import BurrisTableModel, ScintrexTableModel
-from pyqt_models import ObsTreeModel, TareTableModel
-from pyqt_models import ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
+from gui_objects import (
+    AddDatumFromList, CoordinatesTable, 
+    FigureDatumComparisonTimeSeries,
+    GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection,
+    VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite,
+    show_message, SelectAbsg, AdjustOptions, LoopOptions
+)
+from menus import Menus
+from pyqt_models import (
+    BurrisTableModel, ScintrexTableModel, ObsTreeModel, TareTableModel,
+    ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
+)
 from tab_data import TabData
 from tab_drift import TabDrift
 from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
 from utils import *
+
+
+DOWN = 1
+UP = -1
+DIRECTIONS = (UP, DOWN)
 
 
 class MainProg(QtWidgets.QMainWindow):
@@ -169,8 +180,6 @@ class MainProg(QtWidgets.QMainWindow):
     station_model = None
     workspace_savename = None
 
-    DOWN = 1
-    UP = -1
 
     def __init__(self, splash=None):
         super(MainProg, self).__init__()
@@ -197,7 +206,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview = QtWidgets.QTreeView()
 
         self.qtaction_move_station_up = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/up.png'), 'Move survey up', self)
-        self.qtaction_move_station_up.triggered.connect(slot=lambda: self.move_survey(self.UP))
+        self.qtaction_move_station_up.triggered.connect(slot=lambda: self.move_survey(UP))
         self.qtaction_move_station_down = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/down.png'), 'Move survey down',
                                                             self)
         self.qtaction_move_station_down.triggered.connect(slot=lambda: self.move_survey(self.DOWN))
@@ -289,17 +298,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.resizeColumnToContents(2)
 
         # Highlight first tree-view item
-        obstreesurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-        obstreeloop = obstreesurvey.child(0)
-        station = obstreeloop.child(0)
-
-        # Set current keys
-        self.index_current_survey = obstreesurvey.index()
-        self.index_current_loop = obstreeloop.index()
-        self.index_current_loop_survey = obstreesurvey.index()
-        self.index_current_station_loop = obstreeloop.index()
-        self.index_current_station_survey = obstreesurvey.index()
-        self.index_current_station = station.index()
+        self.select_first_treeview_item()
 
         # Activate first tree view item
         self.activate_survey_or_loop(self.index_current_loop)
@@ -345,6 +344,21 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_deltas_update_required.set = False
         self.label_deltas_update_required.setPixmap(self.update_not_needed_icon)
         self.label_deltas_update_required.setToolTip('Delta table is up to date')
+
+    def select_first_treeview_item(self):
+        """
+        Selects the first item in the treeview
+        """
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+        obstreeloop = obstreesurvey.child(0)
+        station = obstreeloop.child(0)
+
+        self.index_current_survey = obstreesurvey.index()
+        self.index_current_loop = obstreeloop.index()
+        self.index_current_loop_survey = obstreesurvey.index()
+        self.index_current_station_loop = obstreeloop.index()
+        self.index_current_station_survey = obstreesurvey.index()
+        self.index_current_station = station.index()        
 
     def tab_changed(self, new_idx):
         """
@@ -571,17 +585,18 @@ class MainProg(QtWidgets.QMainWindow):
         """
         if self.label_deltas_update_required.set is True:
             self.msg = show_message(
-                'Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
-                'Adjustment tab is not up to date.', 'Workspace save error')
-            return False
+                'Workspace cannot be saved while the Relative-gravity differences table on the Network '
+                'Adjustment tab is not up to date.', 'Workspace save error'
+            )
+            return
         fname = self.obsTreeModel.save_workspace(self.workspace_savename)
-        if fname:
-            self.msg = show_message('Workspace saved', '')
-            self.set_window_title(fname)
-            return True
-        else:
+        if not fname:
             self.msg = show_message("Workspace save error", "Error")
-            return False
+            return
+
+        self.msg = show_message('Workspace saved', '')
+        self.set_window_title(fname)
+        return True
 
     def workspace_save_as(self):
         """
@@ -589,25 +604,29 @@ class MainProg(QtWidgets.QMainWindow):
         """
         if self.label_deltas_update_required.set is True:
             self.msg = show_message(
-                'Workspace cannot be saved while the Relative-gravity differences table on the Network ' +
-                'Adjustment tab is not up to date.', 'Workspace save error')
-        else:
-            try:
-                fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.path_data)
-                if fname:
-                    save_name = self.obsTreeModel.save_workspace(fname)
-                    if save_name:
-                        self.set_window_title(fname)
-                        self.msg = show_message('Workspace saved', '')
-                        self.workspace_savename = fname
-                        self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE)
-                    else:
-                        self.msg = show_message("Workspace save error", "Error")
+                'Workspace cannot be saved while the Relative-gravity differences table on the Network '
+                'Adjustment tab is not up to date.', 'Workspace save error'
+            )
+            return
 
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save workspace as', self.path_data)
+        if fname:
+            try:
+                save_name = self.obsTreeModel.save_workspace(fname)
             except Exception as e:
                 self.msg = show_message("Workspace save error", "Error")
                 logging.exception(e, exc_info=True)
-                self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE)
+                self.menus.mnFileSaveWorkspace.setEnabled(False)
+                return
+
+            if not save_name:
+                self.msg = show_message("Workspace save error", "Error")
+                return
+
+            self.set_window_title(fname)
+            self.msg = show_message('Workspace saved', '')
+            self.workspace_savename = fname
+            self.update_menus()
 
     def workspace_open_getfile(self):
         """
@@ -615,22 +634,23 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.path_data)
-        if fname:
-            if fname[-2:] != '.p':
-                self.msg = show_message('Saved workspaces should have a .p or .gsa extension. ' +
-                                        'Please use "Open workspace..." to load a .gsa file, or ' +
-                                        '"Open raw...data" to load a data file.', 'File load error')
-                return
+        if not fname or fname[-2:] != '.p':
+            self.msg = show_message(
+                'Saved workspaces should have a .p or .gsa extension. '
+                'Please use "Open workspace..." to load a .gsa file, or '
+                '"Open raw...data" to load a data file.', 'File load error'
+            )
+            return
 
-            if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
-                overwrite_tree_dialog = Overwrite()
-                if overwrite_tree_dialog.exec_():
-                    self.workspace_clear()
-                    self.workspace_open(fname)
-                else:
-                    return
-            else:
+        if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
+            overwrite_tree_dialog = Overwrite()
+            if overwrite_tree_dialog.exec_():
+                self.workspace_clear()
                 self.workspace_open(fname)
+            else:
+                return
+        else:
+            self.workspace_open(fname)
 
         self.path_data = os.path.dirname(str(fname))
 
@@ -640,23 +660,24 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.path_data)
-        if fname:
-            if fname[-4:] != '.gsa':
-                self.msg = show_message('Saved workspaces should have a .gsa extension. ' +
-                                        'Please use "Open raw...data" to load a data file' +
-                                        ' or "Open workspace (.p format)" to open a workspace' +
-                                        ' with .p extension.', 'File load error')
-                return
+        if not fname or fname[-4:] != '.gsa':
+            self.msg = show_message(
+                'Saved workspaces should have a .gsa extension. '
+                'Please use "Open raw...data" to load a data file'
+                ' or "Open workspace (.p format)" to open a workspace'
+                ' with .p extension.', 'File load error'
+            )
+            return
 
-            if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
-                overwrite_tree_dialog = Overwrite()
-                if overwrite_tree_dialog.exec_():
-                    self.workspace_clear()
-                    self.workspace_open_json(fname)
-                else:
-                    return
-            else:
+        if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
+            overwrite_tree_dialog = Overwrite()
+            if overwrite_tree_dialog.exec_():
+                self.workspace_clear()
                 self.workspace_open_json(fname)
+            else:
+                return
+        else:
+            self.workspace_open_json(fname)
         self.path_data = os.path.dirname(str(fname))
 
     def workspace_open_json(self, fname):
@@ -1290,12 +1311,10 @@ class MainProg(QtWidgets.QMainWindow):
         # Clear survey delta table, it causes problems otherwise
         self.clear_delta_model()
 
-        # Store the original current loop index so it can be restored.
-        original_loop_index = self.index_current_loop
 
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
-        indexes = []
+
         if obstreeloop.rowCount() > 1:
             self.msg = show_message("Loop must have a single station to divide by height.", "GSadjust error")
             return
@@ -1318,7 +1337,7 @@ class MainProg(QtWidgets.QMainWindow):
                             setattr(new_station, k, v[height_idx:idx])
                         else:
                             setattr(new_station, k, v)
-                    except Exception as e:
+                    except Exception:
                         continue
 
                 # new_station = 0
@@ -1338,7 +1357,6 @@ class MainProg(QtWidgets.QMainWindow):
 
         obstreeloop.removeRow(0)
         self.index_current_station = obstreeloop.child(0).index()
-        # self.index_current_loop = original_loop_index
         self.update_drift_tables_and_plots()
         self.deltas_update_required()
         self.obsTreeModel.layoutChanged.emit()
@@ -1414,10 +1432,10 @@ class MainProg(QtWidgets.QMainWindow):
     def move_survey(self, direction=UP):
         """
         Used to move survey up or down in the tree view
-        :param direction: self.UP or self.DOWN (macros for 1 and -1)
+        :param direction: UP or DOWN (macros for 1 and -1)
         :return:
         """
-        if direction not in (self.DOWN, self.UP):
+        if direction not in DIRECTIONS:
             return
 
         model = self.obsTreeModel
@@ -1945,6 +1963,9 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     # GSadjust starts in different directories on Mac and Windows
+    # FIXME: Shouldn't need to change path here, you can
+    # find the location of the current folder (see __file__ elsewhere) and
+    # use relative paths from there for your project.
     if sys.platform == 'darwin':
         os.chdir('../')
     else:
@@ -1957,7 +1978,7 @@ def main():
         logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO)
     except PermissionError:
         show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
-    sys.excepthook = handle_exception
+    # sys.excepthook = handle_exception
 
     splash_pix = QtGui.QPixmap('./gsadjust/resources/Splash.png')
     splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
@@ -1975,9 +1996,6 @@ def main():
         app.exec_()
     else:
         ex.close()
-
-# Import here to avoid circular import error
-from gui_objects import show_message, SelectAbsg, AdjustOptions, LoopOptions
 
 if __name__ == '__main__':
     main()

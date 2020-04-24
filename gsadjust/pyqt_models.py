@@ -31,9 +31,20 @@ from matplotlib.dates import num2date, date2num
 import data_objects
 
 # Constants for column headers
+STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
+LOOP_NAME = 0
+SURVEY_NAME = 0
+
 DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, DATUM_TIME, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(9)
-DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(9)
+DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(
+    9)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
+SCINTREX_STATION, SCINTREX_DATE, SCINTREX_G, SCINTREX_SD, SCINTREX_X_TILT, SCINTREX_Y_TILT, SCINTREX_TEMP, SCINTREX_DUR, SCINTREX_REJ = range(
+    9)
+BURRIS_STATION, BURRIS_OPER, BURRIS_METER, BURRIS_DATE, BURRIS_G, BURRIS_DIAL, BURRIS_FEEDBACK, BURRIS_TIDE, BURRIS_ELEVATION, BURRIS_LAT, BURRIS_LONG = range(
+    11)
+TARE_DATE, TARE_TIME, TARE_TARE = range(3)
+ROMAN_FROM, ROMAN_TO, ROMAN_DELTA = range(3)
 
 
 class ObsTreeItem(QtGui.QStandardItem):
@@ -41,6 +52,7 @@ class ObsTreeItem(QtGui.QStandardItem):
     Basic tree-view item used to populate data tree, used for Surveys, Loops, and Stations.
     Not used directly but inherited by ObsTreeStation, ...Loop, and ...Survey
     """
+
     def __init__(self):
         super(ObsTreeItem, self).__init__()
         self.setFlags(self.flags() |
@@ -57,6 +69,7 @@ class ObsTreeStation(ObsTreeItem):
     """
     PyQt model for stations. Station data is stored as a Station object in .station
     """
+
     def __init__(self, k, station_name, station_count):
         """
         Create a new station from ChannelList object. The fields (lists) of the ChannelList are copies to the
@@ -70,7 +83,7 @@ class ObsTreeStation(ObsTreeItem):
         self.station_name = station_name
         self.station_count = station_count
         if not hasattr(k, 'asd'):
-            asd = None# Records the number of times the station is occupied in a loop
+            asd = None  # Records the number of times the station is occupied in a loop
         if hasattr(k, 'checked'):
             self.setCheckState(k.checked)
         # For legacy .p files
@@ -132,6 +145,26 @@ class ObsTreeStation(ObsTreeItem):
         return self.station_name + ' (' + self.station_count + ')'
 
     @property
+    def display_datetime_or_tmean(self):
+        return num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S') if self.tmean != -999 else self.tmean
+
+    @property
+    def display_mean_stddev(self):
+        return '{:.1f} ± {:.1f}'.format(self.gmean, self.stdev)
+
+    @property
+    def display_column_map(self):
+        return {
+            STATION_NAME: self.display_name,
+            STATION_DATETIME: self.display_datetime_or_tmean,
+            STATION_MEAN: self.display_mean_stddev
+        }
+
+    @property
+    def tooltip(self):
+        return None
+
+    @property
     def gmean(self):
         """
         The try-except block handles errors when all keepdata == 0.
@@ -165,7 +198,8 @@ class ObsTreeStation(ObsTreeItem):
                 num = np.zeros(len(ttmp))
                 for i in range(len(ttmp)):
                     num[i] = self._weights_()[i] * (ttmp[i] - np.mean(ttmp)) ** 2
-                sd = np.sqrt(np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
+                sd = np.sqrt(
+                    np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
                 # self._weights_()))
                 return sd
         except:
@@ -205,8 +239,9 @@ class ObsTreeStation(ObsTreeItem):
                 gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 num = np.zeros(len(sdtmp))
                 for i in range(len(sdtmp)):
-                    num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp))**2
-                sd = np.sqrt(np.sum(num)/((len(self._weights_())-1) * np.sum(self._weights_())))# np.sqrt(1. / sum(
+                    num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
+                sd = np.sqrt(
+                    np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
                 # self._weights_()))
                 return sd
         except:
@@ -219,17 +254,15 @@ class ObsTreeStation(ObsTreeItem):
         else:
             tm = num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S')
         summary_str = '{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n'.format(self.display_name,
-                                                        tm,
-                                                        self.oper[0],
-                                                        self.meter_type,
-                                                        self.lat[0],
-                                                        self.long[0],
-                                                        self.elev[0],
-                                                        self.gmean,
-                                                        self.stdev)
+                                                                      tm,
+                                                                      self.oper[0],
+                                                                      self.meter_type,
+                                                                      self.lat[0],
+                                                                      self.long[0],
+                                                                      self.elev[0],
+                                                                      self.gmean,
+                                                                      self.stdev)
         return summary_str
-
-
 
     def iter_samples(self):
         """
@@ -239,17 +272,17 @@ class ObsTreeStation(ObsTreeItem):
         for i in range(len(self.raw_grav)):
             if self.meter_type == 'Burris':
                 return_str = '{} {} {:0.2f} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
-                                                           self.station[i],
-                                                           self.raw_grav[i],
-                                                           self.grav[i],
-                                                           self.sd[i],
-                                                           self.etc[i])
+                                                                              self.station[i],
+                                                                              self.raw_grav[i],
+                                                                              self.grav[i],
+                                                                              self.sd[i],
+                                                                              self.etc[i])
             else:
                 return_str = '{} {} {:0.2f} {} {}\n'.format(self.keepdata[i],
-                                                           self.station[i],
-                                                           self.raw_grav[i],
-                                                           self.sd[i],
-                                                           self.etc[i])
+                                                            self.station[i],
+                                                            self.raw_grav[i],
+                                                            self.sd[i],
+                                                            self.etc[i])
             yield return_str
 
 
@@ -257,6 +290,7 @@ class ObsTreeLoop(ObsTreeItem):
     """
     PyQt model for Loops, parent item for stations. Loop attributes stored in .loop
     """
+
     def __init__(self, name):
         super(ObsTreeLoop, self).__init__()
         self.delta_model = DeltaTableModel()
@@ -286,27 +320,25 @@ class ObsTreeLoop(ObsTreeItem):
     @property
     # To accomodate legacy files, which might have meter and oper set to None:
     def tooltip(self):
-        if not hasattr(self, 'drift_method'):
-            dm = ''
-        else:
-            dm = self.drift_method
-        if not hasattr(self, 'meter'):
-            m = ''
-        else:
-            m = self.meter
-        if not hasattr(self, 'oper'):
-            o = ''
-        else:
-            o = self.oper
-        if not hasattr(self, 'comment'):
-            c = ''
-        else:
-            c = self.comment
         return 'Loop: {}\n' \
                'Drift method: {}\n' \
                'Meter: {}\n' \
                'Operator: {}\n' \
-               'Comment: {}'.format(self.name, dm, m, o, c)
+               'Comment: {}'.format(
+            self.name,
+            self.__dict__.get('drift_method', ''),
+            self.__dict__.get('meter', ''),
+            self.__dict__.get('oper', ''),
+            self.__dict__.get('comment', ''),
+        )
+
+    @property
+    def display_column_map(self):
+        return {
+            # Column name map
+            # index: name
+            LOOP_NAME: self.name
+        }
 
     @property
     def meter_type(self):
@@ -338,6 +370,14 @@ class ObsTreeLoop(ObsTreeItem):
         if hasattr(simple_loop, 'checked'):
             temp.setCheckState(simple_loop.checked)
         return temp
+
+    def rename(self, from_name, to_name):
+        for i in range(self.rowCount()):
+            item = self.child(i, 0)
+            if item.station_name == from_name:
+                item.station_name = to_name
+                for iiii in range(len(item.station)):
+                    item.station[iiii] = to_name
 
     def populate(self, data):
         """
@@ -481,6 +521,14 @@ class ObsTreeSurvey(ObsTreeItem):
     def __str__(self):
         return self.name
 
+    @property
+    def display_column_map(self):
+        return {
+            # Column name map
+            # index: name
+            SURVEY_NAME: self.name
+        }
+
     @classmethod
     def from_json(cls, simple_survey):
         """
@@ -534,7 +582,7 @@ class ObsTreeSurvey(ObsTreeItem):
         for datum in simple_survey.datums:
             temp.datum_model.insertRows(datum, 0)
         temp.adjustment.adjustmentoptions = simple_survey.adjoptions
-        if hasattr(simple_survey,'checked'):
+        if hasattr(simple_survey, 'checked'):
             temp.setCheckState(simple_survey.checked)
         return temp
 
@@ -543,8 +591,8 @@ class ObsTreeSurvey(ObsTreeItem):
         return 'Survey: {}\n' \
                'Meters: {}\n' \
                'Number of loops: {}'.format(self.name,
-                                    self.unique_meters,
-                                    self.loop_count)
+                                            self.unique_meters,
+                                            self.loop_count)
 
     @property
     def unique_meters(self):
@@ -568,6 +616,11 @@ class ObsTreeSurvey(ObsTreeItem):
             loop = self.child(i)
             loops.append(loop.name)
         return loops
+
+    def rename(self, from_name, to_name):
+        for i in range(self.rowCount()):
+            loop = self.child(i, 0)
+            loop.rename(from_name, to_name)
 
     def populate(self, survey_data, name='0'):
         """
@@ -682,8 +735,9 @@ class ObsTreeSurvey(ObsTreeItem):
                     self.gravnet_inversion()
             except Exception:
                 logging.exception("Inversion error")
-                self.msg = self.msg = show_message("Error during inversion. Are there standard deviations that are zero or very small?",
-                             "Inversion error")
+                self.msg = self.msg = show_message(
+                    "Error during inversion. Are there standard deviations that are zero or very small?",
+                    "Inversion error")
 
     def gravnet_inversion(self):
         """
@@ -718,11 +772,12 @@ class ObsTreeSurvey(ObsTreeItem):
                 ls_degree.append(delta.ls_drift[1])
         unique_ls = list(set(ls_degree))
         if len(unique_ls) > 1:
-            self.msg = show_message('It appears that more than one polynomial degree was specified for different loops for the '
-                         'network, or that some loops are not using the ' +
-                         'adjustment drift option. When using Gravnet, all loops must have the same degree drift ' +
-                         'model. Aborting.',
-                         'Inversion error')
+            self.msg = show_message(
+                'It appears that more than one polynomial degree was specified for different loops for the '
+                'network, or that some loops are not using the ' +
+                'adjustment drift option. When using Gravnet, all loops must have the same degree drift ' +
+                'model. Aborting.',
+                'Inversion error')
             return
         if len(unique_ls) == 1:
             if unique_ls[0] is not None:
@@ -745,10 +800,11 @@ class ObsTreeSurvey(ObsTreeItem):
             if len(delta.sta1) > 6 or len(delta.sta2) > 6:
                 truncate_warning = True
         if truncate_warning:
-            self.msg = show_message('One or more station names is longer than 6 characters. Names will be truncated to 6 '
-                         'characters in the Gravnet input file. Please verify that names will still be unique '
-                         'after truncating.',
-                         'Inversion warning')
+            self.msg = show_message(
+                'One or more station names is longer than 6 characters. Names will be truncated to 6 '
+                'characters in the Gravnet input file. Please verify that names will still be unique '
+                'after truncating.',
+                'Inversion warning')
         # Write delta-g observation file
         dg_file = self.name + '_dg.obs'
         with open(dg_file, 'w') as fid:
@@ -775,12 +831,13 @@ class ObsTreeSurvey(ObsTreeItem):
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.unique_meters) > 1:
                 self.msg = show_message("It appears more than one meter was used on the survey. Gravnet calculates a " +
-                             "calibration coefficient for a single meter only. Use Numpy inversion " +
-                             "to calculate meter-specific calibration coefficients",
-                             "Inversion warning")
+                                        "calibration coefficient for a single meter only. Use Numpy inversion " +
+                                        "to calculate meter-specific calibration coefficients",
+                                        "Inversion warning")
             if len(self.adjustment.datums) == 1:
-                self.msg = show_message("Two or more datum observations are required to calculate a calibration coefficient." +
-                             " Aborting.", "Inversion warning")
+                self.msg = show_message(
+                    "Two or more datum observations are required to calculate a calibration coefficient." +
+                    " Aborting.", "Inversion warning")
                 return
             # Run gravnet with calibration coefficient
             os.system('gravnet -D' + dg_file + ' -N' + self.name + ' -M2 -C1 ' + drift_term + ' -F' + fix_file)
@@ -830,7 +887,7 @@ class ObsTreeSurvey(ObsTreeItem):
             self.adjustment.adjustmentresults.avg_stdev = np.mean(all_sd)
 
         # Match up residuals with input data
-        self.adjustment.g_dic=g_dic
+        self.adjustment.g_dic = g_dic
         self.adjustment.sd_dic = sd_dic
         self.match_inversion_results(inversion_type='gravnet', cal_dic=cal_dic)
 
@@ -880,8 +937,9 @@ class ObsTreeSurvey(ObsTreeItem):
 
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.adjustment.datums) == 1:
-                self.msg = show_message("Two or more datum observations are required to calculate a calibration coefficient." +
-                             " Aborting.", "Inversion warning")
+                self.msg = show_message(
+                    "Two or more datum observations are required to calculate a calibration coefficient." +
+                    " Aborting.", "Inversion warning")
                 return
             n_meters = len(self.unique_meters)
             self.adjustment.meter_dic = dict(zip(self.unique_meters, range(n_meters + 1)))
@@ -948,7 +1006,7 @@ class ObsTreeSurvey(ObsTreeItem):
         S = np.zeros((nb_x, 1))
 
         row = 0
-        deltakeys =[]
+        deltakeys = []
 
         # Populate least squares matrices
         for delta in self.adjustment.deltas:
@@ -963,8 +1021,9 @@ class ObsTreeSurvey(ObsTreeItem):
                 meter = delta.meter
                 try:
                     A[row, self.adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
-                except:
-                    self.msg = show_message('Key error. Do Datum station names match delta observations?', 'Inversion error')
+                except KeyError:
+                    self.msg = show_message('Key error. Do Datum station names match delta observations?',
+                                            'Inversion error')
                     return
 
             # Populate column(s) for drift, if included in network adjustment
@@ -1062,8 +1121,8 @@ class ObsTreeSurvey(ObsTreeItem):
                 text_out.append("Loop " + loop[0] + ": ")
                 for i in range(loop[1][1]):  # degree of polynomial
                     text_out.append("Drift coefficient, degree {}: {:.3f}".
-                                format(i + 1,
-                                       self.adjustment.X[
+                                    format(i + 1,
+                                           self.adjustment.X[
                                                len(sta_dic_ls) +
                                                n_meters +
                                                loop[1][0] +
@@ -1175,7 +1234,7 @@ class ObsTreeSurvey(ObsTreeItem):
         :return: ObsTreeStation
         """
         for station in self.iter_stations():
-            if (station.station_name) == station_id[0]:
+            if station.station_name == station_id[0]:
                 if abs(station.tmean - station_id[1]) < 0.0001:
                     return station
         return None
@@ -1202,7 +1261,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     try:
                         for ii in range(loop.delta_model.rowCount()):
                             if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
-                                delta = loop.delta_model.data(loop.delta_model.index(ii,0),role=QtCore.Qt.UserRole)
+                                delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
                                 # Need to create a new delta here instead of just putting the original one, from the
                                 # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
                                 # overrides repopulating the delta table.
@@ -1220,9 +1279,10 @@ class ObsTreeSurvey(ObsTreeItem):
                         # Sometimes the delta table isn't created when a workspace is loaded
                         from gui_objects import show_message
                         self.msg = show_message("Error populating delta table. Please check the drift correction " +
-                                     "for survey " + self.name + ", loop " + loop.name,
-                                     "GSadjust error")
+                                                "for survey " + self.name + ", loop " + loop.name,
+                                                "GSadjust error")
         return True
+
 
 class ObsTreeModel(QtGui.QStandardItemModel):
     """
@@ -1250,8 +1310,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         if not QModelIndex.isValid():
             return QtCore.Qt.NoItemFlags
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | \
-                QtCore.Qt.ItemIsEditable | \
-                QtCore.Qt.ItemIsUserCheckable
+               QtCore.Qt.ItemIsEditable | \
+               QtCore.Qt.ItemIsUserCheckable
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.model() is not None:
@@ -1260,115 +1320,80 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-                if type(m) is ObsTreeStation:
-                    if index.column() == 0:
-                        return m.display_name
-                    if index.column() == 1:
-                        if m.tmean != -999:
-                            return num2date(m.tmean).strftime('%Y-%m-%d %H:%M:%S')
-                        else:
-                            return m.tmean
-                    if index.column() == 2:
-                        return '{:.1f} ± {:.1f}'.format(m.gmean, m.stdev)
-                elif type(m) is ObsTreeLoop:
-                    if index.column() == 0:
-                        return m.name
-                    if index.column() == 1:
-                        return ''
-                    if index.column() == 2:
-                        return ''
-                elif type(m) is ObsTreeSurvey:
-                    if index.column() == 0:
-                        return m.name
-                    if index.column() == 1:
-                        return ''
-                    if index.column() == 2:
-                        return ''
+
+                return m.display_column_map.get(index.column(), '')
+
             elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
                     m = index.model().itemFromIndex(index)
                     return m.checkState()
             elif role == QtCore.Qt.ToolTipRole:
-                if index.column() > 0:
-                    m = index.model().itemFromIndex(index.sibling(index.row(), 0))
-                else:
-                    m = index.model().itemFromIndex(index)
-                if type(m) is ObsTreeLoop or type(m) is ObsTreeSurvey:
-                    try:
-                        return m.tooltip
-                    except Exception as e:
-                        return ''
+                m = index.model().itemFromIndex(index)
+                return m.tooltip
 
     def setData(self, index, value, role):
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
             m = index.model().itemFromIndex(index)
-            if value == QtCore.Qt.Checked:
-                m.setCheckState(QtCore.Qt.Checked)
-                if type(m) is ObsTreeLoop:
-                    self.signal_delta_update_required.emit()
-            else:
-                m.setCheckState(QtCore.Qt.Unchecked)
-                if type(m) is ObsTreeLoop:
-                    self.signal_delta_update_required.emit()
+            m.setCheckState(value)
+            if type(m) is ObsTreeLoop:
+                self.signal_delta_update_required.emit()
+
             self.dataChanged.emit(index, index)
             # self.layoutChanged.emit()
             self.signal_refresh_view.emit()
             return True
 
         if role == QtCore.Qt.EditRole:
-            if index.isValid() and 0 == index.column():
-                from gui_objects import rename_dialog
-                m = index.model().itemFromIndex(index)
-                if type(m) is ObsTreeStation:
-                    old_name = m.station_name
-                    new_name = str(value)
-                    if new_name is not m.station_name:
-                        rename_type = rename_dialog(old_name, new_name)
-                        if rename_type == 'Loop':
-                            loop = m.parent()
-                            for i in range(loop.rowCount()):
-                                item = loop.child(i, 0)
-                                if item.station_name == old_name:
-                                    item.station_name = new_name
-                                    for iiii in range(len(item.station)):
-                                        item.station[iiii] = new_name
-                        if rename_type == 'Survey':
-                            loop = m.parent()
-                            survey = loop.parent()
-                            for i in range(survey.rowCount()):
-                                loop = survey.child(i, 0)
-                                for ii in range(loop.rowCount()):
-                                    item = loop.child(ii, 0)
-                                    if item.station_name == old_name:
-                                        item.station_name = new_name
-                                        for iiii in range(len(item.station)):
-                                            item.station[iiii] = new_name
-                        if rename_type == 'Campaign':
-                            campaign = index.model().invisibleRootItem()
-                            for i in range(campaign.rowCount()):
-                                survey = campaign.child(i, 0)
-                                for ii in range(survey.rowCount()):
-                                    loop = survey.child(ii, 0)
-                                    for iii in range(loop.rowCount()):
-                                        item = loop.child(iii, 0)
-                                        if item.station_name == old_name:
-                                            item.station_name = new_name
-                                            for iiii in range(len(item.station)):
-                                                item.station[iiii] = new_name
-                        if rename_type == 'Station':
-                            m.station_name = new_name
-                            for iiii in range(len(m.station)):
-                                m.station[iiii] = new_name
-                        logging.info('Stations renamed from {} to {} in {}'.format(old_name, new_name,
-                                                                                    rename_type))
-                        self.signal_name_changed.emit()
+            if index.isValid() and index.column() == 0:
+                item = index.model().itemFromIndex(index)
+                return {
+                    ObsTreeStation: self._handler_edit_ObsTreeStation,
+                    ObsTreeLoop: self._handler_edit_ObsTreeLoop
+                }[type(item)](item, value)
 
-                elif type(m) is ObsTreeLoop:
-                    new_name = str(value)
-                    old_name = m.name
-                    logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
-                    m.name = new_name
-            return True
+    def _handler_edit_ObsTreeStation(self, item, value):
+        """
+        Handle editing of ObsTreeStation objects (renaming).
+        """
+        from gui_objects import rename_dialog
+        old_name = item.station_name
+        new_name = str(value)
+        if new_name is not item.station_name:
+            rename_type = rename_dialog(old_name, new_name)
+            if rename_type == 'Loop':
+                loop = item.parent()
+                loop.rename(old_name, new_name)
+
+            if rename_type == 'Survey':
+                loop = item.parent()
+                survey = loop.parent()
+                survey.rename(old_name, new_name)
+
+            if rename_type == 'Campaign':
+                campaign = item.model().invisibleRootItem()
+                for i in range(campaign.rowCount()):
+                    survey = campaign.child(i, 0)
+                    survey.rename(old_name, new_name)
+
+            if rename_type == 'Station':
+                item.station_name = new_name
+                for i in range(len(item.station)):
+                    item.station[i] = new_name
+
+            logging.info('Stations renamed from {} to {} in {}'.format(old_name, new_name,
+                                                                       rename_type))
+            self.signal_name_changed.emit()
+        return True
+
+    def _handler_edit_ObsTreeLoop(self, item, value):
+        """
+        Handle editing of ObsTreeLoop objects (renaming).
+        """
+        new_name = str(value)
+        old_name = item.name
+        logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
+        item.name = new_name
+        return True
 
     def checkState(self, index):
         if index.column > 0:
@@ -1376,7 +1401,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         else:
             m = index.model().itemFromIndex(index)
         return m.checkState()
-
 
     def insertRows(self, station, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(index, position, position + rows - 1)
@@ -1445,7 +1469,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurveys.append(obstreesurvey)
             delta_tables.append(obstreesurvey.deltas)
 
-        return (obstreesurveys, delta_tables, coords)
+        return obstreesurveys, delta_tables, coords
 
     def load_workspace(self, fname):
         """
@@ -1472,7 +1496,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 for station in loop['stations']:
                     if 'station_name' in station:  # Sometimes blank stations are generated, not sure why?
                         temp_station = tempStation(station)
-                        obstreestation = ObsTreeStation(temp_station, temp_station.station_name, temp_station.station_count)
+                        obstreestation = ObsTreeStation(temp_station, temp_station.station_name,
+                                                        temp_station.station_count)
                         if type(obstreestation.t[0]) == dt.datetime:
                             obstreestation.t = [date2num(i) for i in obstreestation.t]
                         obstreeloop.appendRow([obstreestation,
@@ -1506,7 +1531,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 json.dump(jsons.dump(workspace_data), f)
                 # pickle.dump(workspace_data, f)
             logging.info('Pickling workspace to {}'.format(fname))
-        except Exception as e:
+        except Exception:
             return False
         return fname
 
@@ -1517,9 +1542,11 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         dobj = namedtuple('Struct', station.keys())(*station.values())
         return dobj
 
+
 class tempStation():
     def __init__(self, station):
         self.__dict__ = station
+
 
 class RomanTableModel(QtCore.QAbstractTableModel):
     """
@@ -1527,6 +1554,11 @@ class RomanTableModel(QtCore.QAbstractTableModel):
 
     Shown on the drift tab.
     """
+    _headers = {
+        ROMAN_FROM: 'From',
+        ROMAN_TO: 'To',
+        ROMAN_DELTA: 'Delta g'
+    }
 
     def __init__(self):
         super(RomanTableModel, self).__init__()
@@ -1537,16 +1569,9 @@ class RomanTableModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return QVariant(int(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter))
             return QVariant(int(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter))
-        if role != QtCore.Qt.DisplayRole:
-            return QVariant()
-        if orientation == QtCore.Qt.Horizontal:
-            if section == 0:
-                return QVariant("From")
-            elif section == 1:
-                return QVariant("To")
-            elif section == 2:
-                return QVariant("Delta g")
-        return QVariant(int(section + 1))
+
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
     def insertRows(self, delta, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
@@ -1564,12 +1589,12 @@ class RomanTableModel(QtCore.QAbstractTableModel):
             delta = self.dgs[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                if column == 0:
-                    return QVariant(delta.sta1)
-                if column == 1:
-                    return QVariant(delta.sta2)
-                if column == 2:
-                    return QVariant("%0.1f" % delta.dg)
+                return {
+                    ROMAN_FROM: delta.sta1,
+                    ROMAN_TO: delta.sta2,
+                    ROMAN_DELTA: "%0.1f" % delta.dg
+                }.get(column)
+
             elif role == QtCore.Qt.UserRole:
                 # check status definition
                 return delta
@@ -1582,26 +1607,24 @@ class RomanTableModel(QtCore.QAbstractTableModel):
         """
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
             datum = self.datums[index.row()]
-            if value == QtCore.Qt.Checked:
-                datum.checked = 2
-            elif value == QtCore.Qt.Unchecked:
-                datum.checked = 0
+            datum.checked = value
             return True
 
         if role == QtCore.Qt.EditRole:
-            if index.isValid() and 0 <= index.row():
-                if len(str(value)) > 0:
-                    datum = self.datums[index.row()]
-                    column = index.column()
-                    if column == DATUM_STATION:
-                        datum.station = value
-                    elif column == DATUM_G:
-                        datum.g = float(value)
-                    elif column == DATUM_SD:
-                        datum.sd = float(value)
-                    elif column == DATUM_DATE:
-                        datum.date = value
-                    self.dataChanged.emit(index, index)
+            if index.isValid() and index.row() >= 0 and value:
+                datum = self.datums[index.row()]
+                column = index.column()
+
+                if column == DATUM_STATION:
+                    datum.station = value
+                elif column == DATUM_G:
+                    datum.g = float(value)
+                elif column == DATUM_SD:
+                    datum.sd = float(value)
+                elif column == DATUM_DATE:
+                    datum.date = value
+                self.dataChanged.emit(index, index)
+
             return True
 
     def flags(self, index):
@@ -1616,39 +1639,42 @@ class DatumTableModel(QtCore.QAbstractTableModel):
     Model to store Datums, shown on the adjust tab.
     """
 
+    _headers = {  # As map, so do not need to be kept in order with the above.
+        DATUM_STATION: 'Station',
+        DATUM_G: 'g',
+        DATUM_SD: 'Std. dev.',
+        DATUM_DATE: 'Date',
+        DATUM_TIME: 'Time (UTC)',
+        MEAS_HEIGHT: 'Meas. height',
+        GRADIENT: 'Gradient',
+        DATUM_RESIDUAL: 'Residual',
+        N_SETS: '# sets',
+    }
+
+    _attrs = {  # From column constants to object attributes, for setting.
+        DATUM_STATION: ('station', str),
+        DATUM_G: ('g', float),
+        DATUM_SD: ('sd', float),
+        DATUM_DATE: ('date', lambda x: x),  # pass through
+        # DATUM_TIME        
+        MEAS_HEIGHT: ('meas_height', float),
+        GRADIENT: ('gradient', float),
+    }
+
+    signal_adjust_update_required = QtCore.pyqtSignal()
+
     def __init__(self):
         super(DatumTableModel, self).__init__()
         self.datums = []
-
-    signal_adjust_update_required = QtCore.pyqtSignal()
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.TextAlignmentRole:
             if orientation == QtCore.Qt.Horizontal:
                 return QVariant(int(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter))
             return QVariant(int(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter))
-        if role != QtCore.Qt.DisplayRole:
-            return QVariant()
-        if orientation == QtCore.Qt.Horizontal:
-            if section == DATUM_STATION:
-                return QVariant("Station")
-            elif section == DATUM_G:
-                return QVariant("g")
-            elif section == DATUM_SD:
-                return QVariant("Std. dev.")
-            elif section == DATUM_DATE:
-                return QVariant("Date")
-            elif section == DATUM_TIME:
-                return QVariant("Time (UTC)")
-            elif section == MEAS_HEIGHT:
-                return QVariant("Meas. height")
-            elif section == GRADIENT:
-                return QVariant("Gradient")
-            elif section == DATUM_RESIDUAL:
-                return QVariant("Residual")
-            elif section == N_SETS:
-                return QVariant("# sets")
-        return QVariant(int(section + 1))
+
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
     def insertRows(self, datum, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
@@ -1674,24 +1700,18 @@ class DatumTableModel(QtCore.QAbstractTableModel):
             datum = self.datums[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                if column == DATUM_SD:
-                    return '%0.2f' % datum.sd
-                if column == DATUM_G:
-                    return '%8.1f' % datum.g
-                if column == DATUM_STATION:
-                    return datum.station
-                if column == DATUM_DATE:
-                    return QtCore.QDate.fromString(datum.date, 'yyyy-MM-dd')
-                if column == DATUM_TIME:
-                    return datum.time
-                if column == MEAS_HEIGHT:
-                    return '%0.2f' % datum.meas_height
-                if column == GRADIENT:
-                    return '%0.2f' % datum.gradient
-                if column == DATUM_RESIDUAL:
-                    return '%0.1f' % datum.residual
-                if column == N_SETS:
-                    return datum.n_sets
+                return {
+                    DATUM_SD: '%0.2f' % datum.sd,
+                    DATUM_G: '%8.1f' % datum.g,
+                    DATUM_STATION: datum.station,
+                    DATUM_DATE: QtCore.QDate.fromString(datum.date, 'yyyy-MM-dd'),
+                    DATUM_TIME: datum.time,
+                    MEAS_HEIGHT: '%0.2f' % datum.meas_height,
+                    GRADIENT: '%0.2f' % datum.gradient,
+                    DATUM_RESIDUAL: '%0.1f' % datum.residual,
+                    N_SETS: datum.n_sets
+                }.get(column)
+
             elif role == QtCore.Qt.CheckStateRole:
                 # check status definition
                 if index.column() == 0:
@@ -1730,22 +1750,14 @@ class DatumTableModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.EditRole:
             if index.isValid() and 0 <= index.row():
-                if len(str(value)) > 0:
+                if value:
                     datum = self.datums[index.row()]
                     column = index.column()
-                    if column == DATUM_STATION:
-                        datum.station = str(value)
-                    elif column == DATUM_G:
-                        datum.g = float(value)
-                    elif column == DATUM_SD:
-                        datum.sd = float(value)
-                    elif column == DATUM_DATE:
-                        datum.date = value
-                    elif column == MEAS_HEIGHT:
-                        datum.meas_height = float(value)
-                    elif column == GRADIENT:
-                        datum.gradient = float(value)
+                    attr, vartype = self._attrs.get(column, (None, None))
+                    if attr:
+                        setattr(datum, attr, vartype(value))
                     self.dataChanged.emit(index, index)
+
             return True
 
         if role == QtCore.Qt.UserRole:
@@ -1779,6 +1791,12 @@ class TareTableModel(QtCore.QAbstractTableModel):
     Model to store tares (offsets)
     """
 
+    _headers = {
+        TARE_DATE: 'Date',
+        TARE_TIME: 'Time',
+        TARE_TARE: 'Tare (\u00b5Gal)'
+    }
+
     def __init__(self):
         super(TareTableModel, self).__init__()
         self.tares = []
@@ -1788,16 +1806,9 @@ class TareTableModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return QVariant(int(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter))
             return QVariant(int(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter))
-        if role != QtCore.Qt.DisplayRole:
-            return QVariant()
-        if orientation == QtCore.Qt.Horizontal:
-            if section == 0:
-                return QVariant("Date")
-            elif section == 1:
-                return QVariant("Time")
-            elif section == 2:
-                return QVariant("Tare (\u00b5Gal)")
-        return QVariant(int(section + 1))
+
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
     def insertRows(self, tare, position=0, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
@@ -1824,12 +1835,11 @@ class TareTableModel(QtCore.QAbstractTableModel):
             column = index.column()
             # print 'c'+str(column)
             if role == QtCore.Qt.DisplayRole:
-                if column == 0:
-                    return tare.date
-                elif column == 1:
-                    return tare.time
-                elif column == 2:
-                    return QVariant("%0.1f" % tare.tare)
+                return {
+                    TARE_DATE: tare.date,
+                    TARE_TIME: tare.time,
+                    TARE_TARE: "%0.1f" % tare.tare
+                }.get(column)
 
             elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
@@ -1900,6 +1910,12 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
     There is one ResultsTableModel per survey.
     """
 
+    _headers = {
+        ADJSTA_STATION: 'Station',
+        ADJSTA_G: 'g',
+        ADJSTA_SD: 'Std. dev'
+    }
+
     def __init__(self):
         super(ResultsTableModel, self).__init__()
         self.adjusted_stations = []
@@ -1909,16 +1925,9 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return QVariant(int(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter))
             return QVariant(int(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter))
-        if role != QtCore.Qt.DisplayRole:
-            return QVariant()
-        if orientation == QtCore.Qt.Horizontal:
-            if section == ADJSTA_STATION:
-                return QVariant("Station")
-            elif section == ADJSTA_G:
-                return QVariant("g")
-            elif section == ADJSTA_SD:
-                return QVariant("Std. dev")
-        return QVariant(int(section + 1))
+
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
     def insertRows(self, adjusted_station, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
@@ -1936,12 +1945,12 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
             sta = self.adjusted_stations[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                if column == ADJSTA_STATION:
-                    return sta.station
-                elif column == ADJSTA_G:
-                    return '%8.1f' % sta.g
-                elif column == ADJSTA_SD:
-                    return '%1.1f' % sta.sd
+                return {
+                    ADJSTA_STATION: sta.station,
+                    ADJSTA_G: '%8.1f' % sta.g,
+                    ADJSTA_SD: '%1.1f' % sta.sd
+                }.get(column, column + 1)
+
             if role == QtCore.Qt.UserRole:
                 return sta
 
@@ -1997,6 +2006,18 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
     if the Roman method is used, the delta-g's are the average of the individual delta-g's in the RomanTableModel.
     """
 
+    _headers = {
+        DELTA_STATION1: 'From',
+        DELTA_STATION2: 'To',
+        LOOP: 'Loop',
+        DELTA_TIME: 'Time',
+        DELTA_G: 'Delta-g',
+        DELTA_DRIFTCORR: 'Drift correction',
+        DELTA_SD: 'Std. dev.',
+        DELTA_ADJ_SD: 'SD for adj.',
+        DELTA_RESIDUAL: 'Residual',
+    }
+
     def __init__(self):
         super(DeltaTableModel, self).__init__(parent=None)
         self._deltas = []
@@ -2008,28 +2029,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return QVariant(int(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter))
             return QVariant(int(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter))
-        if role != QtCore.Qt.DisplayRole:
-            return QVariant()
-        if orientation == QtCore.Qt.Horizontal:
-            if section == DELTA_STATION1:
-                return QVariant("From")
-            elif section == DELTA_STATION2:
-                return QVariant("To")
-            elif section== LOOP:
-                return QVariant("Loop")
-            elif section == DELTA_TIME:
-                return QVariant("Time")
-            elif section == DELTA_G:
-                return QVariant("Delta-g")
-            elif section == DELTA_DRIFTCORR:
-                return QVariant("Drift correction")
-            elif section == DELTA_SD:
-                return QVariant("Std dev")
-            elif section == DELTA_ADJ_SD:
-                return QVariant("SD for adj.")
-            elif section == DELTA_RESIDUAL:
-                return QVariant("Residual")
-        return QVariant(int(section + 1))
+
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
     def insertRows(self, delta, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
@@ -2077,17 +2079,13 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             else:
                                 brush = QtGui.QBrush(QtCore.Qt.lightGray)
                     except:
-                        catch=1
+                        catch = 1
                 elif delta.type == 'assigned':
                     if column == DELTA_G:
                         brush = QtGui.QBrush(QtCore.Qt.red)
                 return brush
             if role == QtCore.Qt.DisplayRole:
-                if column == DELTA_STATION1:
-                    return delta.sta1
-                elif column == DELTA_STATION2:
-                    return delta.sta2
-                elif column == LOOP:
+                def delta_station_loop():
                     if delta.loop is None:
                         if type(delta.station2) == list:
                             return delta.station2[0].loop
@@ -2095,18 +2093,19 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             return "NA"
                     else:
                         return delta.loop
-                elif column == DELTA_TIME:
-                    return dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
-                elif column == DELTA_G:
-                    return QVariant("%0.1f" % delta.dg)
-                elif column == DELTA_DRIFTCORR:
-                    return QVariant("%0.1f" % delta.driftcorr)
-                elif column == DELTA_SD:
-                    return QVariant("%0.1f" % delta.sd)
-                elif column == DELTA_ADJ_SD:
-                    return QVariant("%0.1f" % delta.sd_for_adjustment)
-                elif column == DELTA_RESIDUAL:
-                    return QVariant("%0.1f" % delta.residual)
+
+                return {
+                    DELTA_STATION1: delta.sta1,
+                    DELTA_STATION2: delta.sta2,
+                    LOOP: delta_station_loop(),
+                    DELTA_TIME: dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime(
+                        '%Y-%m-%d %H:%M:%S'),
+                    DELTA_G: "%0.1f" % delta.dg,
+                    DELTA_DRIFTCORR: "%0.1f" % delta.driftcorr,
+                    DELTA_SD: "%0.1f" % delta.sd,
+                    DELTA_ADJ_SD: "%0.1f" % delta.sd_for_adjustment,
+                    DELTA_RESIDUAL: "%0.1f" % delta.residual,
+                }.get(column, column + 1)
 
             elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
@@ -2192,7 +2191,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
     is set to 0
 
     properties:
-    __headers:            table header
+    _headers:             table header
     unchecked:            a dictionnary of unchecked items. Keys are item
                           indexes, entries are states
     ChannelList_obj:      an object of ChannelList-type: used to store the
@@ -2207,19 +2206,27 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                           hierarchy
     """
 
-
-    def __init__(self, ChannelList_obj, parent=None):
-        QtCore.QAbstractTableModel.__init__(self, parent)
-        self.__headers = ["Station", "Date", u"g (\u00b5gal)", u"sd (\u00b5gal)",
-                          "X Tilt", "Y Tilt", "Temp (K)", "dur (s)", "rej"]
-        self.unchecked = {}
-        self.createArrayData(ChannelList_obj)
+    _headers = {
+        SCINTREX_STATION: "Station",
+        SCINTREX_DATE: "Date",
+        SCINTREX_G: "g (\u00b5gal)",
+        SCINTREX_SD: "sd (\u00b5gal)",
+        SCINTREX_X_TILT: "X Tilt",
+        SCINTREX_Y_TILT: "Y Tilt",
+        SCINTREX_TEMP: "Temp (K)",
+        SCINTREX_DUR: "dur (s)",
+        SCINTREX_REJ: "rej"
+    }
 
     signal_update_coordinates = QtCore.pyqtSignal()
     signal_adjust_update_required = QtCore.pyqtSignal()
     signal_uncheck_station = QtCore.pyqtSignal()
     signal_check_station = QtCore.pyqtSignal()
 
+    def __init__(self, ChannelList_obj, parent=None):
+        QtCore.QAbstractTableModel.__init__(self, parent)
+        self.unchecked = {}
+        self.createArrayData(ChannelList_obj)
 
     def createArrayData(self, ChannelList_obj):
         """
@@ -2238,7 +2245,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
         return len(self.ChannelList_obj.t)
 
     def columnCount(self, parent):
-        return len(self.__headers)
+        return len(self._headers)
 
     def flags(self, index):
         return QtCore.Qt.ItemIsUserCheckable | \
@@ -2252,18 +2259,14 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             # view definition
             row = index.row()
             column = index.column()
-            if self.__headers[column] == 'Date':
-                strdata = num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S')
-            elif self.__headers[column] == "rej":
-                strdata = "%2.0f" % float(self.arraydata[row][column])
-            elif self.__headers[column] == "dur (s)":
-                strdata = "%3.0f" % float(self.arraydata[row][column])
-            elif self.__headers[column] == u"g (\u00b5gal)" or \
-                    self.__headers[column] == u"sd (\u00b5gal)":
-                strdata = "%8.1f" % float(self.arraydata[row][column])
-            else:
-                strdata = str(self.arraydata[row][column])
-            return strdata
+
+            return {
+                SCINTREX_DATE: num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S'),
+                SCINTREX_REJ: "%2.0f" % float(self.arraydata[row][column]),
+                SCINTREX_DUR: "%3.0f" % float(self.arraydata[row][column]),
+                SCINTREX_G: "%8.1f" % float(self.arraydata[row][column]),
+                SCINTREX_SD: "%8.1f" % float(self.arraydata[row][column]),
+            }.get(column, str(self.arraydata[row][column]))
 
         if role == QtCore.Qt.CheckStateRole:
             # check status definition
@@ -2300,12 +2303,8 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             return True
 
     def headerData(self, section, orientation, role):
-        if role == QtCore.Qt.DisplayRole:
-            if orientation == QtCore.Qt.Horizontal:
-                if section < len(self.__headers):
-                    return self.__headers[section]
-                else:
-                    return "not implemented"
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
 
 # noinspection PyUnresolvedReferences
@@ -2324,7 +2323,7 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
     is set to 0
 
     properties:
-    __headers:            table header
+    _headers:             table header
     unchecked:            a dictionary of unchecked items. Keys are item
                           indexes, entries are states
     ChannelList_obj:      an object of ChannelList-type: used to store the
@@ -2339,19 +2338,31 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                           hierarchy
     """
 
-    def __init__(self, ChannelList_obj, parent=None):
-        self.__headers = ["Station", "Oper", "Meter", "Date", u"g (\u00b5gal)", "Dial setting", "Feedback",
-                          "Tide corr.", "Elev.", "Lat", "Long"]
-        QtCore.QAbstractTableModel.__init__(self, parent)
-        self.unchecked = {}
-        self.ChannelList_obj = None
-        self.createArrayData(ChannelList_obj)
-        self.arraydata = None
+    _headers = {
+        BURRIS_STATION: "Station",
+        BURRIS_OPER: "Oper",
+        BURRIS_METER: "Meter",
+        BURRIS_DATE: "Date",
+        BURRIS_G: "g (\u00b5gal)",
+        BURRIS_DIAL: "Dial setting",
+        BURRIS_FEEDBACK: "Feedback",
+        BURRIS_TIDE: "Tide corr.",
+        BURRIS_ELEVATION: "Elev.",
+        BURRIS_LAT: "Lat",
+        BURRIS_LONG: "Long"
+    }
 
     signal_update_coordinates = QtCore.pyqtSignal()
     signal_adjust_update_required = QtCore.pyqtSignal()
     signal_uncheck_station = QtCore.pyqtSignal()
     signal_check_station = QtCore.pyqtSignal()
+
+    def __init__(self, ChannelList_obj, parent=None):
+        QtCore.QAbstractTableModel.__init__(self, parent)
+        self.unchecked = {}
+        self.ChannelList_obj = None
+        self.createArrayData(ChannelList_obj)
+        self.arraydata = None
 
     def createArrayData(self, ChannelList_obj):
         """
@@ -2380,7 +2391,7 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
         return len(self.ChannelList_obj.t)
 
     def columnCount(self, parent=None):
-        return len(self.__headers)
+        return len(self._headers)
 
     def flags(self, index):
         return QtCore.Qt.ItemIsUserCheckable | \
@@ -2396,9 +2407,9 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                 row = index.row()
                 column = index.column()
                 strdata = str(self.arraydata[row][column])
-                if self.__headers[column] == "Date":
+                if column == BURRIS_DATE:
                     strdata = num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S')
-                if self.__headers[column] == u"Tide corr.":
+                if column == BURRIS_TIDE:
                     strdata = "%0.1f" % float(self.arraydata[row][column])
                 return strdata
 
@@ -2460,12 +2471,8 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                         return True
 
     def headerData(self, section, orientation, role):
-        if role == QtCore.Qt.DisplayRole:
-            if orientation == QtCore.Qt.Horizontal:
-                if section < len(self.__headers):
-                    return self.__headers[section]
-                else:
-                    return "not implemented"
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
 
 
 class GravityChangeModel(QtCore.QAbstractTableModel):
@@ -2476,9 +2483,8 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
     """
 
     def __init__(self, header, table, table_type='simple', parent=None):
-        self.__headers = header
         QtCore.QAbstractTableModel.__init__(self, parent)
-        self.unchecked = {}
+        self._headers = {n: col for n, col in enumerate(header)}
         self.createArrayData(table, table_type)
 
     def createArrayData(self, table, table_type):
@@ -2496,7 +2502,7 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
         return self.array_data.shape[0]
 
     def columnCount(self, parent=None):
-        return len(self.__headers)
+        return len(self._headers)
 
     def flags(self, index):
         return QtCore.Qt.ItemIsEnabled | \
@@ -2515,18 +2521,16 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
                 return string_data
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if role == QtCore.Qt.DisplayRole:
-            if orientation == QtCore.Qt.Horizontal:
-                if section < len(self.__headers):
-                    return self.__headers[section]
-                else:
-                    return "not implemented"
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self._headers.get(section, section + 1)
+
 
 class CustomSortingModel(QtCore.QSortFilterProxyModel):
     """
     Used to sort by date in importAbsG dialog
     """
-    def lessThan(self,left,right):
+
+    def lessThan(self, left, right):
         col = left.column()
         dataleft = left.data()
         dataright = right.data()
@@ -2539,6 +2543,7 @@ class CustomSortingModel(QtCore.QSortFilterProxyModel):
             dataright = float(dataright)
 
         return dataleft < dataright
+
 
 class MeterCalibrationModel(QtGui.QStandardItemModel):
     def __init__(self):

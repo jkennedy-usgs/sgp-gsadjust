@@ -22,6 +22,7 @@ import csv
 
 from data_analysis import compute_gravity_change
 
+
 def export_metadata(obsTreeModel, data_path):
     """
     Write metadata text to file. Useful for USGS data releases.

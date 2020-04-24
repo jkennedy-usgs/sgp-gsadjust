@@ -3,7 +3,7 @@ dependencies:
   - matplotlib=2.2.3
   - numpy
   - pyqt=5
-  - python=3.5
+  - python=3.6
   - scipy=0.19
   - networkx
   - gitpython

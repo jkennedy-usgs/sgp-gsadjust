@@ -253,7 +253,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         # self.resize(600,800)
         self.path_install = os.getcwd()
-        # QtWidgets.QMessageBox.information(self, "xxx", self.install_dir)
+        self.menus.set_state(MENU_STATE.UNINIT)
 
     def init_gui(self):
         """
@@ -318,6 +318,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_adjust_update_required.setPixmap(self.update_adjust_icon)
         self.label_adjust_update_required.setToolTip('Update network adjustment')
         self.set_window_title_asterisk()
+        self.update_menus()
 
     def adjust_update_not_required(self):
         """
@@ -335,6 +336,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_deltas_update_required.setPixmap(self.update_deltas_icon)
         self.label_deltas_update_required.setToolTip('Update delta table')
         self.set_window_title_asterisk()
+        self.update_menus()
 
     def deltas_update_not_required(self):
         """
@@ -560,7 +562,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.update()
         self.tab_adjust.textAdjResults.clear()
 
-        self.menus.set_state(MENU_STATE.CLEAR)
+        self.update_menus()
         self.setWindowTitle('GSadjust')
 
     def workspace_save(self):
@@ -669,9 +671,11 @@ class MainProg(QtWidgets.QMainWindow):
         if obstreesurveys:
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
+            self.adjust_update_required()
             self.set_window_title(fname)
         if coords:
             self.obsTreeModel.station_coords = coords
+        self.update_menus()
 
     def workspace_open(self, fname):
         """
@@ -689,8 +693,20 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_window_title(fname)
         if coords:
             self.obsTreeModel.station_coords = coords
+        self.update_menus()
 
     def populate_obstreemodel(self, obstreesurveys, delta_models):
+        """
+        Only called for loading workspace, not when loading raw data.
+        Parameters
+        ----------
+        obstreesurveys
+        delta_models
+
+        Returns
+        -------
+
+        """
         pbar = ProgressBar(total=6, textmess='Loading workspace')
         pbar.show()
         pbar.progressbar.setValue(1)
@@ -725,8 +741,6 @@ class MainProg(QtWidgets.QMainWindow):
             except Exception as e:
                 # sometimes coordinates aren't valid
                 pass
-
-            self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE, MENU_STATE.OBS_TREE_MODEL)
 
             self.workspace_loaded = True
             self.update_all_drift_plots()
@@ -923,6 +937,26 @@ class MainProg(QtWidgets.QMainWindow):
         if last_char != '*':
             title += '*'
         self.setWindowTitle(title)
+
+    def update_menus(self):
+        if self.obsTreeModel.rowCount() >= 1:
+            self.menus.set_state(MENU_STATE.AT_LEAST_ONE_SURVEY)
+            if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
+                self.menus.set_state(MENU_STATE.MORE_THAN_ONE_SURVEY)
+                if not self.label_adjust_update_required.set:
+                    self.menus.set_state(MENU_STATE.CALCULATE_CHANGE)
+            current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+            if current_survey.delta_model.rowCount() > 0:
+                self.menus.set_state(MENU_STATE.SURVEY_HAS_DELTAS)
+            else:
+                self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
+            if current_survey.results_model.rowCount() > 0 and not self.label_adjust_update_required.set:
+                self.menus.set_state(MENU_STATE.SURVEY_HAS_RESULTS)
+            else:
+                self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_RESULTS)
+        else:
+            self.menus.set_state(MENU_STATE.UNINIT)
+
 
     def update_all_drift_plots(self):
         """
@@ -1163,6 +1197,7 @@ class MainProg(QtWidgets.QMainWindow):
         if self.obsTreeModel.invisibleRootItem().rowCount() == 0:
             self.workspace_clear()
         self.set_window_title_asterisk()
+        self.update_menus()
 
     def rename_station(self):
         """
@@ -1206,6 +1241,7 @@ class MainProg(QtWidgets.QMainWindow):
                                                       first_index.parent())
         self.selection_model.select(new_selection_index, QtCore.QItemSelectionModel.SelectCurrent)
         self.plot_samples()
+        self.update_menus()
 
     def delete_tare(self):
         """
@@ -1233,7 +1269,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.datum_view.update()
         self.set_window_title_asterisk()
 
-    def get_loop_threshold(self):
+    def divide_by_time(self):
         # Prompt user to select time threshold
         loopdialog = LoopTimeThresholdDialog()
         if loopdialog.exec_():
@@ -1507,16 +1543,12 @@ class MainProg(QtWidgets.QMainWindow):
         elif how_many == 'current':
             obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
             obstreesurvey.run_inversion(adj_type)
-        # Tools available if there is more than one survey
-        if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
-            self.menus.set_state(MENU_STATE.MORE_THAN_ONE_SURVEY)
 
-        self.menus.set_state(MENU_STATE.COMPARE_DATUM)
         self.statusBar().showMessage("Network adjustment complete")
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
-
         self.adjust_update_not_required()
+        self.update_menus()
 
     def show_gravity_change_table(self):
         GravityChangeTable(self, table_type='simple')
@@ -1587,7 +1619,6 @@ class MainProg(QtWidgets.QMainWindow):
             logging.info('Datum imported: {}'.format(datum.__str__()))
         self.set_window_title_asterisk()
 
-
     def menu_import_abs_g_complete(self):
         """
         Slot for mnAdjImportAbsFull
@@ -1595,12 +1626,15 @@ class MainProg(QtWidgets.QMainWindow):
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open A10_parse.py output file',
                                                          self.path_data)
-        logging.info('Importing absolute gravity data from {}'.format(fname))
-        datums = import_abs_g_complete(fname)
-        for datum in datums:
-            self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
-            logging.info('Datum imported: {}'.format(datum.__str__()))
-        self.set_window_title_asterisk()
+        if fname:
+            logging.info('Importing absolute gravity data from {}'.format(fname))
+            datums = import_abs_g_complete(fname)
+            for datum in datums:
+                self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(datum, 0)
+                logging.info('Datum imported: {}'.format(datum.__str__()))
+            self.set_window_title_asterisk()
+        else:
+            return
 
     def dialog_import_abs_g_direct(self):
         """

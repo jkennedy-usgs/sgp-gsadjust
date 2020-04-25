@@ -35,7 +35,7 @@ STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
 LOOP_NAME = 0
 SURVEY_NAME = 0
 
-DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, DATUM_TIME, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(9)
+DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(8)
 DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(
     9)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
@@ -1325,7 +1325,10 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     return m.checkState()
             elif role == QtCore.Qt.ToolTipRole:
                 m = index.model().itemFromIndex(index)
-                return m.tooltip
+                try:
+                    return m.tooltip
+                except AttributeError:
+                    return ''
 
     def setData(self, index, value, role):
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
@@ -1640,7 +1643,6 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         DATUM_G: 'g',
         DATUM_SD: 'Std. dev.',
         DATUM_DATE: 'Date',
-        DATUM_TIME: 'Time (UTC)',
         MEAS_HEIGHT: 'Meas. height',
         GRADIENT: 'Gradient',
         DATUM_RESIDUAL: 'Residual',
@@ -1652,7 +1654,6 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         DATUM_G: ('g', float),
         DATUM_SD: ('sd', float),
         DATUM_DATE: ('date', lambda x: x),  # pass through
-        # DATUM_TIME        
         MEAS_HEIGHT: ('meas_height', float),
         GRADIENT: ('gradient', float),
     }
@@ -1701,7 +1702,6 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                     DATUM_G: '%8.1f' % datum.g,
                     DATUM_STATION: datum.station,
                     DATUM_DATE: QtCore.QDate.fromString(datum.date, 'yyyy-MM-dd'),
-                    DATUM_TIME: datum.time,
                     MEAS_HEIGHT: '%0.2f' % datum.meas_height,
                     GRADIENT: '%0.2f' % datum.gradient,
                     DATUM_RESIDUAL: '%0.1f' % datum.residual,

@@ -134,7 +134,7 @@ from gui_objects import (
     VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite,
     show_message, SelectAbsg, AdjustOptions, LoopOptions
 )
-from menus import Menus
+from menus import Menus, MENU_STATE
 from pyqt_models import (
     BurrisTableModel, ScintrexTableModel, ObsTreeModel, TareTableModel,
     ObsTreeStation, ObsTreeLoop, ObsTreeSurvey
@@ -594,7 +594,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.msg = show_message("Workspace save error", "Error")
             return
 
-        self.msg = show_message('Workspace saved', '')
+        self.msg = show_message('Workspace saved', 'GSAdjust')
         self.set_window_title(fname)
         return True
 
@@ -624,7 +624,7 @@ class MainProg(QtWidgets.QMainWindow):
                 return
 
             self.set_window_title(fname)
-            self.msg = show_message('Workspace saved', '')
+            self.msg = show_message('Workspace saved', 'GSAdjust')
             self.workspace_savename = fname
             self.update_menus()
 
@@ -966,15 +966,19 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.set_state(MENU_STATE.MORE_THAN_ONE_SURVEY)
                 if not self.label_adjust_update_required.set:
                     self.menus.set_state(MENU_STATE.CALCULATE_CHANGE)
-            current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-            if current_survey.delta_model.rowCount() > 0:
-                self.menus.set_state(MENU_STATE.SURVEY_HAS_DELTAS)
-            else:
-                self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
-            if current_survey.results_model.rowCount() > 0 and not self.label_adjust_update_required.set:
-                self.menus.set_state(MENU_STATE.SURVEY_HAS_RESULTS)
-            else:
-                self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_RESULTS)
+            try:
+                current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+                if current_survey.delta_model.rowCount() > 0:
+                    self.menus.set_state(MENU_STATE.SURVEY_HAS_DELTAS)
+                else:
+                    self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
+                if current_survey.results_model.rowCount() > 0 and not self.label_adjust_update_required.set:
+                    self.menus.set_state(MENU_STATE.SURVEY_HAS_RESULTS)
+                else:
+                    self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_RESULTS)
+            except TypeError:
+                # catches during PyTest
+                return
         else:
             self.menus.set_state(MENU_STATE.UNINIT)
 

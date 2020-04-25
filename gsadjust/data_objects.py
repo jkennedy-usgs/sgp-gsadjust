@@ -377,6 +377,7 @@ class Datum:
         self.meas_height = meas_height
         self.residual = -999
         self.checked = checked
+        self.n_sets = None
 
     def __str__(self):
         """

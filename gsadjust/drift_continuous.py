@@ -8,7 +8,8 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
                      weight_obs, min_time, max_time, loop_name):
     # Interpolate drift model: polynomial, spline, etc. at xp number of points. xp needs to remain
     # relatively low to maintain performance.
-    xp = np.linspace(min(drift_x), max(drift_x), 500)  # constant
+    N_PTS_IN_INTERPOLATION = 500
+    xp = np.linspace(min(drift_x), max(drift_x), N_PTS_IN_INTERPOLATION)  # constant
     drift_stats = None
     # method_key = self.drift_polydegree_combobox.currentIndex()
     if method_key == 0:  # constant drift correction
@@ -58,7 +59,7 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
         if method_key == 1:  # spline
             try:
                 s = UnivariateSpline(x0, drift_rate, k=3, s=tension_slider_value)
-                xs = np.linspace(x0[0], x0[-1], 50)
+                xs = np.linspace(x0[0], x0[-1], N_PTS_IN_INTERPOLATION)
                 yp = s(xs)
                 logging.info('Spline drift correction, tension={}'.format(tension_slider_value))
             except Exception as e:
@@ -129,7 +130,7 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
 
     xp = xp.tolist()
     yp = ypsum  # yp = yp.tolist()
-    first = True
+    prev_station = data.pop(0)
     for station in data:
         if drift_stats:
             station.asd = np.sqrt(station.original_sd**2 +
@@ -137,10 +138,6 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
                                   np.sqrt(station.t_stdev**2 + data[0].t_stdev**2) * drift_stats['mean_drift']**2)
         else:
             station.asd = None
-        if first:
-            first = False
-            prev_station = station
-            continue
         drift1_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean))
         drift1 = yp[drift1_idx]
         drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean))

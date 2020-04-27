@@ -1430,34 +1430,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         self.appendRow(station)
         self.endInsertRows()
 
-    def obstree_export_data(self):
-        """
-        Removes PyQt objects from main data store, because they can't be pickled.
-
-        PyQt tables to remove:
-          From ObsTreeSurvey:
-            delta_model = DeltaTableModel()
-            datum_model = DatumTableModel()
-            results_model = ResultsTableModel()
-          From ObsTreeLoop:
-            delta_model = DeltaTableModel()
-            tare_model = TareTableModel()
-          From ObsTreeStation:
-            None (station table is generated on the fly)
-
-        :return:
-        List of lists
-        """
-        # For each survey
-        surveys = []
-        for i in range(self.rowCount()):
-            obstreesurvey = self.itemFromIndex(self.index(i, 0))
-            surveys.append(obstreesurvey)
-        return surveys
-
     def load_workspace(self, fname):
         """
-        Load previously-save (pickled) workspace. Need to recreate PyQt models from 'simple' data objects.
+        Load previously-save workspace. Need to recreate PyQt models.
         :param fname:
         :return: (ObsTreeSurvey, delta_table, coords)
         """
@@ -1471,12 +1446,11 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             elif len(data) > 1:
                 coords = data[1]
                 surveys = data[0]
+        # Populate PyQt objects
         for survey in surveys:
             obstreesurvey = ObsTreeSurvey.from_json(survey)
             for loop in survey['loops']:
                 obstreeloop = ObsTreeLoop.from_simpleloop(loop)
-
-                # Call plot_drift to populate loop delta_models
                 for station in loop['stations']:
                     if 'station_name' in station:  # Sometimes blank stations are generated, not sure why?
                         temp_station = tempStation(station)
@@ -1505,8 +1479,11 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         return list(set(datum_list))
 
     def save_workspace(self, fname):
-        # removes pyqt objects, which can't be pickled
-        workspace_data = [self.obstree_export_data(), self.station_coords]
+        surveys = []
+        for i in range(self.rowCount()):
+            obstreesurvey = self.itemFromIndex(self.index(i, 0))
+            surveys.append(obstreesurvey)
+        workspace_data = [surveys, self.station_coords]
         if fname[-4:] != '.gsa':
             fname += '.gsa'
 
@@ -1516,16 +1493,11 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         logging.info('Pickling workspace to {}'.format(fname))
         return fname
 
-    def dict_to_obj(self, station):
-        from collections import namedtuple
-        # to deal with the way obstree stations are created from channellist objects
-        station['__dict__'] = copy.deepcopy(station)
-        dobj = namedtuple('Struct', station.keys())(*station.values())
-        return dobj
 
 class tempStation():
     def __init__(self, station):
         self.__dict__ = station
+
 
 class RomanTableModel(QtCore.QAbstractTableModel):
     """

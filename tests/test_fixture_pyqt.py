@@ -27,10 +27,10 @@ def list_of_deltas():
     :return:
     """
     delta_list = []
-    fname = './tests/test_workspace1.p'
+    fname = './tests/test_workspace1.gsa'
     # app = GSadjust.MainProg()
     # app.workspace_open(fname)
-    ots, dms, _ = GSadjust.MainProg.obsTreeModel.load_workspace_p(fname)
+    ots, dms, _ = GSadjust.MainProg.obsTreeModel.load_workspace(fname)
     survey = ots[0]
     # survey = app.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0,0)
@@ -103,7 +103,7 @@ def obstreemodel(obstreesurvey):
 
 @pytest.fixture
 def mainprog():
-    fname = './tests/test_workspace1.p'
+    fname = './tests/test_workspace1.gsa'
     app = GSadjust.MainProg()
-    app.workspace_open(fname)
+    app.workspace_open_json(fname)
     return app

@@ -712,6 +712,17 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.station_coords = coords
 
     def populate_obstreemodel(self, obstreesurveys, delta_models):
+        """
+
+        Parameters
+        ----------
+        obstreesurveys
+        delta_models
+
+        Returns
+        -------
+
+        """
         pbar = ProgressBar(total=6, textmess='Loading workspace')
         pbar.show()
         pbar.progressbar.setValue(1)
@@ -783,6 +794,8 @@ class MainProg(QtWidgets.QMainWindow):
                     simpledelta.loop = None
                 i = 0
                 try:
+                    if not simpledelta.checked:
+                        jeff = 1
                     if simpledelta.type == 'normal':
                         if type(simpledelta) == SimpleDelta:
                             station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
@@ -816,6 +829,11 @@ class MainProg(QtWidgets.QMainWindow):
                                             loop=simpledelta.loop)
                                 list_of_deltas.append(tpd)
                             d = Delta.from_list(list_of_deltas)
+                            # for sg, the 'list'-type delta returns the mean of all dg's, the user can't check/uncheck
+                            # individual dg's. Therefore setting the check state when creating the three-point delta
+                            # ("tpd", above) is meaningless. What we want to do is set the check state of the list
+                            # delta.
+                            d.checked = simpledelta.checked
                         # This section is necessary to load older .p versions. It's much slower than the above section.
                         else:
                             try:

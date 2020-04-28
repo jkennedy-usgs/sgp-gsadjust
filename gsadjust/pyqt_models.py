@@ -21,7 +21,6 @@ import copy
 import datetime as dt
 import logging
 import os
-import pickle
 import json, jsons
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
@@ -70,7 +69,7 @@ class ObsTreeStation(ObsTreeItem):
         self.station_name = station_name
         self.station_count = station_count
         if not hasattr(k, 'asd'):
-            asd = None# Records the number of times the station is occupied in a loop
+            asd = None  # Records the number of times the station is occupied in a loop
         if hasattr(k, 'checked'):
             self.setCheckState(k.checked)
         # For legacy .p files
@@ -252,6 +251,11 @@ class ObsTreeStation(ObsTreeItem):
                                                            self.etc[i])
             yield return_str
 
+    def to_json(self):
+        jsonalizable_dict = self.__dict__
+        jsonalizable_dict['checked'] = self.checkState()
+        return self.__dict__
+
 
 class ObsTreeLoop(ObsTreeItem):
     """
@@ -314,29 +318,17 @@ class ObsTreeLoop(ObsTreeItem):
         return station.meter_type
 
     @classmethod
-    def from_simpleloop(cls, simple_loop):
-        temp = cls(simple_loop['name'])
-        temp.__dict__ = simple_loop
+    def from_json(cls, data):
+        temp = cls(data['name'])
+        temp.__dict__ = data
         temp.delta_model = DeltaTableModel()
         temp.tare_model = TareTableModel()
-        for tare_dict in simple_loop['tares']:
+        for tare_dict in data['tares']:
             tare_object = data_objects.Tare(tare_dict['datetime'].date(), tare_dict['datetime'].time(),
                                             tare_dict['tare'])
             temp.tare_model.insertRows(tare_object, 0)
-        if 'checked' in simple_loop:
-            temp.setCheckState(simple_loop['checked'])
-        return temp
-
-    @classmethod
-    def from_simpleloop_p(cls, simple_loop):
-        temp = cls(simple_loop.name)
-        temp.__dict__ = simple_loop.__dict__
-        temp.delta_model = DeltaTableModel()
-        temp.tare_model = TareTableModel()
-        for tare in simple_loop.tares:
-            temp.tare_model.insertRows(tare, 0)
-        if hasattr(simple_loop, 'checked'):
-            temp.setCheckState(simple_loop.checked)
+        if 'checked' in data:
+            temp.setCheckState(data['checked'])
         return temp
 
     def populate(self, data):
@@ -461,6 +453,35 @@ class ObsTreeLoop(ObsTreeItem):
                 delta.adj_sd = max(self.parent().adjustment.adjustmentoptions.sigma_min, delta.sd)
         return deltas
 
+    def to_json(self):
+        # Copy tares and stations from PyQt models to lists
+        stations, tares = [], []
+        if self.tare_model is not None:
+            for i in range(self.tare_model.rowCount()):
+                ind = self.tare_model.createIndex(i, 0)
+                tares.append(self.tare_model.data(ind, QtCore.Qt.UserRole))
+        for i in range(self.rowCount()):
+            station = self.child(i).to_json()
+            stations.append(station)
+
+        self.delta_model = None
+        self.tare_model = None
+        return {
+            'checked': self.checkState(),
+            'delta_model': None,
+            'tare_model': None,
+            'stations': stations,
+            'tares': tares,
+            'name': self.name,
+            'drift_method': self.drift_method,
+            'drift_cont_method': self.drift_cont_method,  # If continuous model, also need to keep track of which type of model
+            'drift_cont_startend': self.drift_cont_startend,  # behavior at start/end. 0: extrapolate, 1: constant
+            'drift_netadj_method': self.drift_netadj_method,  # If netadj method, keep track of polynomial degree
+            'meter': self.meter,  # Meter S/N, for the case where multiple meters are calibrated
+            'comment': self.comment,
+            'oper': self.oper
+        }
+
 
 class ObsTreeSurvey(ObsTreeItem):
     """
@@ -490,6 +511,9 @@ class ObsTreeSurvey(ObsTreeItem):
 
         deltas = []
         for delta in data['deltas']:
+            # Converting list of dicts to list of SimpleNamespace is to accommodate the loading routine,
+            # which expects a delta-like object, not a dict. Could probably keep change it to "temp.deltas = data[
+            # 'deltas'] if not for that.
             from types import SimpleNamespace
             sd = SimpleNamespace()
             sd.adj_sd = delta['adj_sd']
@@ -502,14 +526,13 @@ class ObsTreeSurvey(ObsTreeItem):
                 sd.assigned_dg = delta['assigned_dg']
             except:
                 pass
-            d = data_objects.SimpleDelta(sd)
             try:
-                d.sta1 = delta['sta1']
-                d.sta2 = delta['sta2']
+                sd.sta1 = delta['sta1']
+                sd.sta2 = delta['sta2']
             except KeyError as e:
                 # Raised if delta type is 'assigned'
                 pass
-            deltas.append(d)
+            deltas.append(sd)
 
         temp.deltas = deltas
        
@@ -527,27 +550,17 @@ class ObsTreeSurvey(ObsTreeItem):
         return temp
 
     def to_json(self):
-        loops = []
-        deltas = []
-        datums = []
+        loops, datums = [], []
         # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
-        # loop delta_models; those are recreated when the workspace is loaded.
-        for i in range(self.delta_model.rowCount()):
-            ind = self.delta_model.createIndex(i, 0)
-            delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
-            simpledelta = data_objects.SimpleDelta(delta)
-            deltas.append(simpledelta)
+        # loop delta_models; those are ignored and not save (they're recreated when the workspace is loaded).
         for i in range(self.datum_model.rowCount()):
             ind = self.datum_model.createIndex(i, 0)
             datums.append(self.datum_model.data(ind, QtCore.Qt.UserRole))
         for i in range(self.rowCount()):
-            obstreeloop = self.child(i)
-            simpleloop = data_objects.SimpleLoop(obstreeloop)
-            loops.append(simpleloop)
-
+            loops.append(self.child(i).to_json())
         return {
-            'loops': jsons.dump(loops),
-            'deltas': jsons.dump(deltas),
+            'loops': loops,
+            'deltas': jsons.dump(self.delta_model),
             'datums': jsons.dump(datums),
             'checked': self.checkState(),
             'name': self.name,
@@ -1262,15 +1275,6 @@ class ObsTreeSurvey(ObsTreeItem):
         return True
 
 
-def survey_serializer(obj, cls, **kwargs):
-    """
-    Handle serialization of ObsTreeSurvey via .to_json() method.
-    """
-    return obj.to_json()
-
-jsons.set_serializer(survey_serializer, ObsTreeSurvey)    
-
-
 class ObsTreeModel(QtGui.QStandardItemModel):
     """
     Tree model that shows station name, date, and average g value.
@@ -1433,6 +1437,18 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def load_workspace(self, fname):
         """
         Load previously-save workspace. Need to recreate PyQt models.
+
+        Importantly, there are two types of deltas: those on the Drift tab and those on the network adjustment tab.
+        deltas are COPIED from one to another by discrete menu commands, it's not automatic.
+
+        The workflow:
+        1) Crete obstreesurvey object so we have somewhere to store loop and station objects.
+        2) deltas on the drift tab are created strictly from the station objects and specified options (drift
+        correction method, etc.). We don't store a corresponding delta object in the saved workspace/json.
+        3) deltas on the network adjustment tab have additional information that must be stored in the saved
+        workspace/json (checked state, std. dev. for adj., etc.). When loading a workspace, this delta is INDEPENDENT of
+        the delta stored in the delta table on the Drift tab. The Net Adj. tab delta table is re-created later,
+        not here, because Roman-method deltas depend on the drift-tab deltas.
         :param fname:
         :return: (ObsTreeSurvey, delta_table, coords)
         """
@@ -1446,11 +1462,11 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             elif len(data) > 1:
                 coords = data[1]
                 surveys = data[0]
-        # Populate PyQt objects
+        # Populate PyQt objects. First, create obstreesurvey
         for survey in surveys:
             obstreesurvey = ObsTreeSurvey.from_json(survey)
             for loop in survey['loops']:
-                obstreeloop = ObsTreeLoop.from_simpleloop(loop)
+                obstreeloop = ObsTreeLoop.from_json(loop)
                 for station in loop['stations']:
                     if 'station_name' in station:  # Sometimes blank stations are generated, not sure why?
                         temp_station = tempStation(station)
@@ -1489,8 +1505,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
-            # pickle.dump(workspace_data, f)
-        logging.info('Pickling workspace to {}'.format(fname))
+        logging.info('Saving JSON workspace to {}'.format(fname))
         return fname
 
 
@@ -2154,6 +2169,90 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             return QtCore.Qt.Checked
 
 
+    @classmethod
+    def from_json(cls, data):
+        """
+        When loading a workspace, repopulate PyQt models
+        """
+        temp = cls(data['name'])
+
+        deltas = []
+        for delta in data['deltas']:
+            from types import SimpleNamespace
+            sd = SimpleNamespace()
+            sd.adj_sd = delta['adj_sd']
+            sd.checked = delta['checked']
+            sd.driftcorr = delta['driftcorr']
+            sd.loop = delta['loop']
+            sd.ls_drift = delta['ls_drift']
+            sd.type = delta['type']
+            try:
+                sd.assigned_dg = delta['assigned_dg']
+            except:
+                pass
+            # d = data_objects.SimpleDelta(sd)
+            try:
+                sd.sta1 = delta['sta1']
+                sd.sta2 = delta['sta2']
+            except KeyError as e:
+                # Raised if delta type is 'assigned'
+                pass
+            deltas.append(sd)
+
+        temp.deltas = deltas
+
+        for datum in data['datums']:
+            d = data_objects.Datum(datum['station'])
+            d.__dict__ = datum
+            temp.datum_model.insertRows(d, 0)
+
+        ao = data_objects.AdjustmentOptions()
+        ao.__dict__ = data['adjoptions']
+        temp.adjustment.adjustmentoptions = ao
+
+        if 'checked' in data:
+            temp.setCheckState(data['checked'])
+        return temp
+
+
+    def to_json(self):
+        # Normal delta
+        json_deltas = []
+        for delta in self._deltas:
+            if delta.type == 'normal' or delta.type == 'assigned':
+                sta1 = delta.station1.key
+                sta2 = delta.station2.key
+            elif delta.type == 'list':
+                sta1 = None
+                sta2 = []
+                for threepoint in delta.station2:
+                    stations = [threepoint.station1.key, threepoint.station2[0].key, threepoint.station2[1].key]
+                    sta2.append(stations)
+            adj_sd = delta.adj_sd
+            delta_type = delta.type
+            ls_drift = delta.ls_drift
+            if delta.loop is None:
+                if isinstance(delta.station2, list):
+                    loop = delta.station2[0].loop
+                else:
+                    loop = "NA"
+            else:
+                loop = delta.loop
+            driftcorr = delta.driftcorr
+            checked = delta.checked
+            temp_delta = {
+                'sta1': sta1,
+                'sta2': sta2,
+                'adj_sd': adj_sd,
+                'ls_drift': ls_drift,
+                'driftcorr': driftcorr,
+                'checked': checked,
+                'loop': loop,
+                'type': delta_type
+            }
+            json_deltas.append(temp_delta)
+        return json_deltas
+
 class ScintrexTableModel(QtCore.QAbstractTableModel):
     """
     Model to store Scintrex data.
@@ -2523,3 +2622,13 @@ class MeterCalibrationModel(QtGui.QStandardItemModel):
         super(MeterCalibrationModel, self).__init__()
         self.setColumnCount(2)
         self.setHorizontalHeaderLabels(['Meter', 'Calibration factor'])
+
+
+def survey_serializer(obj, cls, **kwargs):
+    """
+    Handle serialization of ObsTreeSurvey via .to_json() method.
+    """
+    return obj.to_json()
+
+jsons.set_serializer(survey_serializer, ObsTreeSurvey)
+jsons.set_serializer(survey_serializer, DeltaTableModel)

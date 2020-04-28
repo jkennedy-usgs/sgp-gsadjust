@@ -669,6 +669,13 @@ class ObsTreeSurvey(ObsTreeItem):
             loops.append(loop.name)
         return loops
 
+    def get_loop_by_name(self, name):
+        for i in range(self.rowCount()):
+            loop = self.child(i, 0)
+            if loop.name == name:
+                return loop
+        raise KeyError
+
     def rename(self, from_name, to_name):
         for i in range(self.rowCount()):
             loop = self.child(i, 0)
@@ -1026,14 +1033,15 @@ class ObsTreeSurvey(ObsTreeItem):
         if not all(v is None for v in ls_drift_list):
             ls_drift_list = [x for x in ls_drift_list if x is not None]
             ls_drift_dict = dict(set(ls_drift_list))
-            for i in range(self.rowCount()):
-                obstreeloop = self.child(i)
-                if obstreeloop.data(role=QtCore.Qt.CheckStateRole) == 2:
-                    loop_ls_dict[obstreeloop.name] = obstreeloop.drift_method
-                    if obstreeloop.drift_method == 'netadj':
-                        ls_degree = ls_drift_dict[obstreeloop.name]
-                        netadj_loop_keys[obstreeloop.name] = (ndrift, ls_degree)
-                        ndrift += ls_degree
+            active_loops = set([x[0] for x in ls_drift_list])
+            for lp in active_loops:
+                obstreeloop = self.get_loop_by_name(lp)
+                loop_ls_dict[obstreeloop.name] = obstreeloop.drift_method
+                if obstreeloop.drift_method == 'netadj':
+                    ls_degree = ls_drift_dict[obstreeloop.name]
+                    netadj_loop_keys[obstreeloop.name] = (ndrift, ls_degree)
+                    ndrift += ls_degree
+        self.adjustment.loop_ls_dict = loop_ls_dict
         self.adjustment.ndrift = ndrift
         self.adjustment.netadj_loop_keys = netadj_loop_keys
         cal_dic = numpy_inversion(self.adjustment, self.results_model, output_root_dir, write_out_files='n')
@@ -1537,6 +1545,12 @@ class DatumTableModel(QtCore.QAbstractTableModel):
             datum = self.datums[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
+                # To accommodate old save files
+                def get_nsets():
+                    try:
+                        return datum.n_sets
+                    except:
+                        return 'NA'
                 return {
                     DATUM_SD: '%0.2f' % datum.sd,
                     DATUM_G: '%8.1f' % datum.g,
@@ -1545,7 +1559,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                     MEAS_HEIGHT: '%0.2f' % datum.meas_height,
                     GRADIENT: '%0.2f' % datum.gradient,
                     DATUM_RESIDUAL: '%0.1f' % datum.residual,
-                    N_SETS: datum.n_sets
+                    N_SETS: get_nsets()
                 }.get(column)
 
             elif role == QtCore.Qt.CheckStateRole:

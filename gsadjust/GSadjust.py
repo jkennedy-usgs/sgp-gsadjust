@@ -556,6 +556,14 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Clears all models and refreshes view.
         """
+        if self.windowTitle()[-1] == '*':
+            quit_msg = "The workspace isn't saved. Are you sure you want to clear all daata?"
+            reply = QtWidgets.QMessageBox.question(self, 'Message',
+                                               quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if reply == QtWidgets.QMessageBox.No:
+                return
+
         logging.info("Workspace cleared")
         self.obsTreeModel = ObsTreeModel()
         self.gui_data_treeview.setModel(None)
@@ -660,7 +668,9 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open File', self.path_data)
-        if not fname or fname[-4:] != '.gsa':
+        if not fname:
+            return
+        elif fname[-4:] != '.gsa':
             self.msg = show_message(
                 'Saved workspaces should have a .gsa extension. '
                 'Please use "Open raw...data" to load a data file'

@@ -19,6 +19,7 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
 
     # sta_dic_LS is a dictionary, key: station name, value: column for A matrix
     sta_dic_ls = adjustment.sta_dic_ls
+    loop_ls_dict = adjustment.loop_ls_dict
     nloops = adjustment.nloops
     # get number of relative observations:
     n_rel_obs = len(adjustment.deltas)
@@ -46,12 +47,6 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
     # dict of tuples, used to identify column of drift observation in A matrix:
     # (loop.name, (column relative to end of A matrix, drift degree)
     netadj_loop_keys = dict()
-
-    # dict of unique delta.ls_drift values, used to cross-reference loop name with poly. degree
-    # (the loop object only knows if the drift method is netadj, or not. The delta object stores
-    # the degree of the drift polynomial, but doesn't know if the drift correction is netadj (a
-    # delta could have a non (0,0) ls_drift value, but use some other drift corretion method.
-    loop_ls_dict = dict()
 
     ndrift = adjustment.ndrift
     netadj_loop_keys = adjustment.netadj_loop_keys

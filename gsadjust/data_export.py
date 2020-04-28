@@ -53,15 +53,25 @@ def export_metadata(obsTreeModel, data_path):
                     ' (derived from the network adjustment) was {:0.1f} microGal. '.format(
                         survey.adjustment.adjustmentresults.avg_stdev))
                 # TODO: account for instance of 1 outlier ('1 was removed')
-                fid.write('{} out of {} possible gravity differences were used in the adjustment ({} were removed '
-                          .format(survey.adjustment.adjustmentresults.n_deltas -
-                                  survey.adjustment.adjustmentresults.n_deltas_notused,
+                datum_was_or_were, delta_was_or_were = 'were', 'were'
+                outlier_or_outliers = 'outliers'
+                if survey.adjustment.adjustmentresults.n_datums == 1:
+                    datum_was_or_were = 'was'
+                if survey.adjustment.adjustmentresults.n_deltas_notused == 1:
+                    delta_was_or_were = 'was'
+                    outlier_or_outliers = 'an outlier'
+                fid.write('{} out of {} possible gravity differences were used in the adjustment ({} {} removed '
+                          .format(survey.adjustment.adjustmentresults.n_deltas,
+                                  survey.adjustment.adjustmentresults.n_deltas_notused +
                                   survey.adjustment.adjustmentresults.n_deltas,
-                                  survey.adjustment.adjustmentresults.n_deltas_notused))
-                fid.write('as outliers). {} out of {} possible datum observations were used. '.format(
-                    survey.adjustment.adjustmentresults.n_datums -
-                    survey.adjustment.adjustmentresults.n_datums_notused,
-                    survey.adjustment.adjustmentresults.n_datums))
+                                  survey.adjustment.adjustmentresults.n_deltas_notused,
+                                  delta_was_or_were))
+                fid.write('as {}). {} out of {} possible datum observations {} used. '.format(
+                    outlier_or_outliers,
+                    survey.adjustment.adjustmentresults.n_datums,
+                    survey.adjustment.adjustmentresults.n_datums_notused +
+                    survey.adjustment.adjustmentresults.n_datums,
+                    datum_was_or_were))
         logging.info('Metadata text written to file')
 
     if not results_written:

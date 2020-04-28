@@ -639,14 +639,13 @@ class ObsTreeSurvey(ObsTreeItem):
     def loops(self):
         return [self.child(i) for i in range(self.rowCount())]
 
-    # @property
-    # def deltas(self):
-    #     deltas = []
-    #     for i in range(self.delta_model.rowCount()):
-    #         ind = self.delta_model.createIndex(i, 0)
-    #         delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
-    #         deltas.append(delta)
-    #     return deltas
+    def deltas(self):
+        deltas = []
+        for i in range(self.delta_model.rowCount()):
+            ind = self.delta_model.createIndex(i, 0)
+            delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
+            deltas.append(delta)
+        return deltas
 
     @property
     def datums(self):
@@ -655,6 +654,16 @@ class ObsTreeSurvey(ObsTreeItem):
             ind = self.datum_model.createIndex(i, 0)
             datums.append(self.datum_model.data(ind, QtCore.Qt.UserRole))
         return datums
+
+    def _handler_edit_ObsTreeSurvey(self, item, value):
+        """
+        Handle editing of ObsTreeLoop objects (renaming).
+        """
+        new_name = str(value)
+        old_name = item.name
+        logging.info('Survey renamed from {} to {}'.format(old_name, new_name))
+        item.name = new_name
+        return True
 
     @property
     def loop_count(self):
@@ -1131,8 +1140,8 @@ class ObsTreeSurvey(ObsTreeItem):
 
     def return_obstreestation(self, station_id):
         """
-        returns ObsTreeStation object corresponding to delta_id. Used when recreatiug deltas from a saved workspace.
-        :param station_id: tuple, (station_name, station_count)
+        returns ObsTreeStation object corresponding to delta_id. Used when recreating deltas from a saved workspace.
+        :param station_id: tuple, (station_name, time)
         :return: ObsTreeStation
         """
         for station in self.iter_stations():
@@ -1252,7 +1261,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 item = index.model().itemFromIndex(index)
                 return {
                     ObsTreeStation: self._handler_edit_ObsTreeStation,
-                    ObsTreeLoop: self._handler_edit_ObsTreeLoop
+                    ObsTreeLoop: self._handler_edit_ObsTreeLoop,
+                    ObsTreeSurvey: self._handler_edit_ObsTreeSurvey
                 }[type(item)](item, value)
 
     def _handler_edit_ObsTreeStation(self, item, value):
@@ -1371,6 +1381,16 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
                 datum_list.append(datum.station)
         return list(set(datum_list))
+
+    def deltas(self):
+        delta_list = []
+        for i in range(self.rowCount()):
+            obstreesurvey = self.itemFromIndex(self.index(i, 0))
+            for ii in range(obstreesurvey.datum_model.rowCount()):
+                idx = obstreesurvey.datum_model.index(ii, 0)
+                delta = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+                delta_list.append(delta.station)
+        return delta_list
 
     def save_workspace(self, fname):
         try:
@@ -1862,7 +1882,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         LOOP: 'Loop',
         DELTA_TIME: 'Time',
         DELTA_G: 'Delta-g',
-        DELTA_DRIFTCORR: 'Drift correction',
+        DELTA_DRIFTCORR: 'Drift corr.',
         DELTA_SD: 'Std. dev.',
         DELTA_ADJ_SD: 'SD for adj.',
         DELTA_RESIDUAL: 'Residual',

@@ -15,7 +15,7 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 
 
 ###########################################################################
@@ -92,6 +92,25 @@ class TabAdjust(QtWidgets.QWidget):
 
         layout_final.addWidget(main_layout)
         self.setLayout(layout_final)
+
+    def update_view(self):
+        delta_header = self.delta_view.horizontalHeader()
+        datum_header = self.datum_view.horizontalHeader()
+        # if self.parent.width() < 1900:
+        #     for i in range(self.delta_view.model().columnCount()):
+        #         header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
+        #         header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+        # else:
+        for i in range(self.delta_view.model().columnCount()):
+            self.delta_view.setColumnWidth(i,80)
+            delta_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+        for i in range(self.datum_view.model().columnCount()):
+            if self.datum_view.width() < 800:
+                self.datum_view.setColumnWidth(i, 80)
+                datum_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+            else:
+                datum_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Fixed)
+                self.datum_view.setColumnWidth(i, 100)
 
     def datum_context_menu(self, point):
         selected = self.datum_view.selectedIndexes()

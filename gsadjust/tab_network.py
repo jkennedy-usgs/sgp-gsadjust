@@ -45,7 +45,6 @@ class TabAdjust(QtWidgets.QWidget):
         self.datum_proxy_model = QtCore.QSortFilterProxyModel(self)
         self.datum_view.setModel(self.datum_proxy_model)
         self.datum_view.setSortingEnabled(True)
-        self.datum_view.setColumnHidden(8, True)
 
         self.datum_popup_menu = QtWidgets.QMenu("Datum Popup Menu", self)
         self.mnDeleteDatum = QtWidgets.QAction('Delete datum', self)

@@ -6,9 +6,11 @@ from data_objects import Delta
 
 def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_slider_value, extrapolation_type,
                      weight_obs, min_time, max_time, loop_name):
-    # Interpolate drift model: polynomial, spline, etc. at xp number of points. xp needs to remain
-    # relatively low to maintain performance.
-    N_PTS_IN_INTERPOLATION = 500
+    """
+    Interpolate drift model: polynomial, spline, etc. at xp number of points. xp needs to remain
+    relatively low to maintain performance.
+    """
+    N_PTS_IN_INTERPOLATION = 300
     xp = np.linspace(min(drift_x), max(drift_x), N_PTS_IN_INTERPOLATION)  # constant
     drift_stats = None
     # method_key = self.drift_polydegree_combobox.currentIndex()

@@ -21,8 +21,8 @@ unauthorized use of the software.
 import datetime as dt
 import os
 
-
 import matplotlib
+
 matplotlib.use('qt5agg')
 import matplotlib.pyplot as plt
 from PyQt5 import QtGui, QtCore, QtWidgets
@@ -37,6 +37,7 @@ import data_analysis
 from data_objects import Datum
 from pyqt_models import GravityChangeModel, DatumTableModel, MeterCalibrationModel
 from utils import *
+
 
 class ApplyTimeCorrection(QtWidgets.QDialog):
     def __init__(self):
@@ -519,10 +520,9 @@ class VerticalGradientDialog(QtWidgets.QInputDialog):
 
     def show_dialog(self, default_interval):
         text, ok = self.getDouble(None, "Vertical-gradient interval",
-                                                    "Interval, in cm:",
-                                                    default_interval,
-                                                    0, 200, 1)
-
+                                  "Interval, in cm:",
+                                  default_interval,
+                                  0, 200, 1)
 
 
 class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
@@ -695,7 +695,6 @@ class GravityChangeTable(QtWidgets.QDialog):
 
 
 class GravityChangeMap(QtWidgets.QDialog):
-
     station_label = None
     try:
         import cartopy.crs as ccrs
@@ -769,7 +768,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.sliderColorRange.setMinimum(1)
         self.sliderColorRange.setMaximum(15)
         self.sliderColorRange.setValue(100)
-        self.sliderColorRange.resize(100,20)
+        self.sliderColorRange.resize(100, 20)
         self.sliderColorRange.setTickInterval(10)
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.cbUnits)
@@ -938,7 +937,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
 
         self.show_background(self.sliderResolution.value())
-        self.ax.set_extent(self.axlim) #, crs=self.ccrs.Geodetic())
+        self.ax.set_extent(self.axlim)  # , crs=self.ccrs.Geodetic())
         self.ax.callbacks.connect('xlim_changed', self.on_xlims_change)
         self.slider_label.setText(self.get_name())
 
@@ -957,8 +956,8 @@ class GravityChangeMap(QtWidgets.QDialog):
     def show_background(self, zoom):
         if self.cbBasemap.isChecked():
             self.stamen_terrain = self.cimgt.GoogleTiles(url='https://server.arcgisonline.com/ArcGIS/rest/services/' +
-                                                        self.maps[self.drpBasemap.currentIndex()] +
-                                                        '/MapServer/tile/{z}/{y}/{x}.jpg')  # cimgt.Stamen('terrain-background')
+                                                             self.maps[self.drpBasemap.currentIndex()] +
+                                                             '/MapServer/tile/{z}/{y}/{x}.jpg')  # cimgt.Stamen('terrain-background')
             self.ax.add_image(self.stamen_terrain, zoom)
 
     def show_point_label(self, event):

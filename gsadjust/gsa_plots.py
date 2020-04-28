@@ -271,9 +271,9 @@ def plot_adjust_residual_histogram(survey):
         for i in range(nrows):
             idx = survey.delta_model.index(i, 8)
             results = survey.delta_model.data(idx, role=QtCore.Qt.DisplayRole)
-            d = float(results.value())
+            d = float(results)
             if d > -998:
-                rlist.append(float(results.value()))
+                rlist.append(float(results))
 
         plt.hist(rlist, 20, facecolor='green', alpha=0.75)
         plt.xlabel('Residual (microGal)')

@@ -28,13 +28,14 @@ from PyQt5.QtCore import QVariant
 from matplotlib.dates import num2date, date2num
 
 import data_objects
+from data_analysis import numpy_inversion
 
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
 LOOP_NAME = 0
 SURVEY_NAME = 0
 
-DATUM_STATION, DATUM_G, DATUM_SD, DATUM_DATE, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL, N_SETS = range(8)
+DATUM_STATION, DATUM_DATE, DATUM_G, DATUM_SD, N_SETS, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL = range(8)
 DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(
     9)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
@@ -514,7 +515,8 @@ class ObsTreeLoop(ObsTreeItem):
             'tares': tares,
             'name': self.name,
             'drift_method': self.drift_method,
-            'drift_cont_method': self.drift_cont_method,  # If continuous model, also need to keep track of which type of model
+            'drift_cont_method': self.drift_cont_method,
+            # If continuous model, also need to keep track of which type of model
             'drift_cont_startend': self.drift_cont_startend,  # behavior at start/end. 0: extrapolate, 1: constant
             'drift_netadj_method': self.drift_netadj_method,  # If netadj method, keep track of polynomial degree
             'meter': self.meter,  # Meter S/N, for the case where multiple meters are calibrated
@@ -583,7 +585,7 @@ class ObsTreeSurvey(ObsTreeItem):
             deltas.append(sd)
 
         temp.deltas = deltas
-       
+
         for datum in data['datums']:
             d = data_objects.Datum(datum['station'])
             d.__dict__ = datum
@@ -636,7 +638,7 @@ class ObsTreeSurvey(ObsTreeItem):
     @property
     def loops(self):
         return [self.child(i) for i in range(self.rowCount())]
-    
+
     # @property
     # def deltas(self):
     #     deltas = []
@@ -645,7 +647,7 @@ class ObsTreeSurvey(ObsTreeItem):
     #         delta = self.delta_model.data(ind, QtCore.Qt.UserRole)
     #         deltas.append(delta)
     #     return deltas
-       
+
     @property
     def datums(self):
         datums = []
@@ -779,15 +781,19 @@ class ObsTreeSurvey(ObsTreeItem):
                     return
                 if adj_type == 'PyLSQ':
                     logging.info('Numpy inversion, Survey: {}'.format(self.name))
-                    self.numpy_inversion(output_root_dir, write_out_files)
+                    self.start_inversion(output_root_dir, write_out_files)
                 elif adj_type == 'Gravnet':
                     logging.info('Gravnet inversion, Survey: {}'.format(self.name))
                     self.gravnet_inversion()
-            except Exception:
-                logging.exception("Inversion error")
-                self.msg = self.msg = show_message(
-                    "Error during inversion. Are there standard deviations that are zero or very small?",
-                    "Inversion error")
+            except ZeroDivisionError:
+                self.msg = show_message('Are there standard deviations that are zero or very small?',
+                                        'ZeroDivisionError')
+            except KeyError as e:
+                self.msg = show_message('Key error: {}'.format(e.args[0]),
+                                        'KeyError')
+            except Exception as e:
+                logging.exception(e, exc_info=True)
+                self.msg = show_message("Inversion error", "unknown error")
 
     def gravnet_inversion(self):
         """
@@ -959,7 +965,7 @@ class ObsTreeSurvey(ObsTreeItem):
         elif dir_changed2:
             os.chdir('..')
 
-    def numpy_inversion(self, output_root_dir, write_out_files='n'):
+    def start_inversion(self, output_root_dir, write_out_files='n'):
         """
         Least-squares network adjustment using numpy
 
@@ -973,13 +979,16 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.adjustmentresults.text = []
 
         # sta_dic_LS is a dictionary, key: station name, value: column for A matrix
-        sta_dic_ls = self.get_station_indices()
+        self.adjustment.sta_dic_ls = self.get_station_indices()
+        self.adjustment.nloops = self.loop_count
 
-        # get number of relative observations:
-        n_rel_obs = len(self.adjustment.deltas)
-
-        # number of absolute obs.
-        n_abs_obs = len(self.adjustment.datums)
+        # number of unknowns:
+        # TODO: temperature drift function
+        drift_time = 0  # self.adjustment.adjustmentoptions.drift_time
+        if self.adjustment.adjustmentoptions.use_model_temp:
+            self.adjustment.drift_temp = self.adjustment.adjustmentoptions.model_temp_degree
+        else:
+            self.adjustment.drift_temp = 0
 
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.adjustment.datums) == 1:
@@ -991,20 +1000,7 @@ class ObsTreeSurvey(ObsTreeItem):
             self.adjustment.meter_dic = dict(zip(self.unique_meters, range(n_meters + 1)))
         else:
             n_meters = 0
-
-        nloops = 0
-        for i in range(self.rowCount()):
-            loop = self.child(i)
-            if loop.data(role=QtCore.Qt.CheckStateRole) == 2:
-                nloops += 1
-
-        # number of unknowns:
-        # TODO: temperature drift function
-        drift_time = 0  # self.adjustment.adjustmentoptions.drift_time
-        if self.adjustment.adjustmentoptions.use_model_temp:
-            drift_temp = self.adjustment.adjustmentoptions.model_temp_degree
-        else:
-            drift_temp = 0
+        self.adjustment.n_meters = n_meters
 
         # Drift may be included in the network adjustment for any or all loops. This section of code
         # builds some dicts used later to assemble the A matrix.
@@ -1038,158 +1034,10 @@ class ObsTreeSurvey(ObsTreeItem):
                         ls_degree = ls_drift_dict[obstreeloop.name]
                         netadj_loop_keys[obstreeloop.name] = (ndrift, ls_degree)
                         ndrift += ls_degree
-
-        # Initialize least squares matrices
-        # number of unknowns                                                                   #
-        nb_x = len(sta_dic_ls) + ndrift + drift_temp * nloops + n_meters
-        # model matrix:
-        A = np.zeros((n_rel_obs + n_abs_obs, nb_x))
-        # weight matrix:
-        P = np.zeros((n_rel_obs + n_abs_obs, n_rel_obs + n_abs_obs))  # pas sur
-        # observation matrix:
-        Obs = np.zeros((n_rel_obs + n_abs_obs, 1))
-        # datum-free constraint vector:
-        S = np.zeros((nb_x, 1))
-
-        row = 0
-        deltakeys = []
-
-        # Populate least squares matrices
-        for delta in self.adjustment.deltas:
-            deltakeys.append(delta.__hash__())
-            Obs[row] = delta.dg * delta.cal_coeff
-            P[row, row] = 1. / (delta.sd_for_adjustment ** 2)
-            A[row, sta_dic_ls[delta.sta1]] = -1
-            A[row, sta_dic_ls[delta.sta2]] = 1
-
-            # Populate 1 column per gravimeter for calibration coefficient
-            if self.adjustment.adjustmentoptions.cal_coeff:
-                meter = delta.meter
-                try:
-                    A[row, self.adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
-                except KeyError:
-                    self.msg = show_message('Key error. Do Datum station names match delta observations?',
-                                            'Inversion error')
-                    return
-
-            # Populate column(s) for drift, if included in network adjustment
-            if delta.ls_drift is not None:
-                loop_name = delta.ls_drift[0]
-
-                # It's possible for ls_drift to have been set, but the loop method to be something other than netadj
-                if loop_name:
-                    if loop_ls_dict[loop_name] == 'netadj':
-                        for i in range(delta.ls_drift[1]):  # degree of polynomial
-                            A[row, len(sta_dic_ls) + n_meters + netadj_loop_keys[loop_name][0] + i] = \
-                                (delta.sta2_t - delta.sta1_t) ** (i + 1)
-
-            S[sta_dic_ls[delta.sta1]] = 1
-            S[sta_dic_ls[delta.sta2]] = 1
-            row += 1
-
-        # add datum observation (absolute station(s) or station(s) with fixed values)
-        i = 0
-        for datum in self.adjustment.datums:
-            try:
-                A[n_rel_obs + i, sta_dic_ls[datum.station]] = 1
-                P[n_rel_obs + i, n_rel_obs + i] = 1. / datum.sd ** 2
-                Obs[n_rel_obs + i] = datum.g
-                i += 1
-            except KeyError as e:
-                self.msg = show_message('Key error: {}'.format(e.args[0]), 'Inversion error')
-                return
-
-        # Do the inversion
-        self.adjustment.A = A
-        self.adjustment.P = P
-        self.adjustment.Obs = Obs
-        self.adjustment.S = S
-        self.adjustment.dof = n_rel_obs + n_abs_obs - nb_x
-        self.adjustment.g_dic = dict()
-        try:
-            self.adjustment.python_lsq_inversion()
-        except Exception as e:
-            logging.exception(e, exc_info=True)
-            self.msg = show_message("Singular matrix error", "Inversion error")
-            return
-        # Populate results table
-        for i in range(len(sta_dic_ls)):
-            for key, val in sta_dic_ls.items():
-                if val == i:
-                    try:
-                        t = AdjustedStation(key, float(self.adjustment.X[i]), float(np.sqrt(self.adjustment.var[i])))
-                        self.results_model.insertRows(t, 0)
-                        self.adjustment.g_dic[key] = float(self.adjustment.X[i])
-                        self.adjustment.sd_dic[key] = float()
-                    except:
-                        self.msg = show_message("Bad variance in results", "Inversion error")
-
-        # Retrieve calibration coefficient(s)
-        cal_dic = dict()
-        if self.adjustment.adjustmentoptions.cal_coeff:
-            for k, v in self.adjustment.meter_dic.items():
-                cal_dic[k] = (float(1 - self.adjustment.X[len(sta_dic_ls) + v]),
-                              float(np.sqrt(self.adjustment.var[len(sta_dic_ls) + v])))
-
+        self.adjustment.ndrift = ndrift
+        self.adjustment.netadj_loop_keys = netadj_loop_keys
+        cal_dic = numpy_inversion(self.adjustment, self.results_model, output_root_dir, write_out_files='n')
         self.match_inversion_results('numpy', cal_dic)
-
-        # calculate and display statistics:
-        self.adjustment.lsq_statistics()
-
-        # write output files
-        text_out = list()
-        text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
-        text_out.append("Number of loops:                    {:d}\n".format(nloops))
-        text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
-        text_out.append("Polynomial degree for temperature:  {:d}\n".format(drift_temp))
-        text_out.append("\n")
-        text_out.append("Number of unknowns:                 {:d}\n".format(nb_x))
-        text_out.append("Number of relative observations:    {:d}\n".format(n_rel_obs))
-        text_out.append("Number of absolute observations:    {:d}\n".format(n_abs_obs))
-        text_out.append("Degrees of freedom (nobs-nunknowns): {:d}\n".format(self.adjustment.dof))
-        text_out.append("\n")
-        text_out.append(
-            "SD a posteriori:                    {:f}\n".format(
-                float(np.sqrt(self.adjustment.VtPV / self.adjustment.dof))))
-        text_out.append("chi square value:                   {:6.2f}\n".format(float(self.adjustment.chi2)))
-        text_out.append("critical chi square value:          {:6.2f}\n".format(float(self.adjustment.chi2c)))
-        if float(self.adjustment.chi2) < float(self.adjustment.chi2c):
-            text_out.append("Chi-test accepted\n")
-        else:
-            text_out.append("Chi-test rejected\n")
-        if self.adjustment.adjustmentoptions.cal_coeff:
-            for k, v in cal_dic.items():
-                text_out.append("Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".
-                                format(k, v[0], v[1]))
-        if netadj_loop_keys:
-            text_out.append("Gravimeter drift coefficient(s):\n")
-            for loop in netadj_loop_keys.items():  # this dict only has loops with netadj option
-                text_out.append("Loop " + loop[0] + ": ")
-                for i in range(loop[1][1]):  # degree of polynomial
-                    text_out.append("Drift coefficient, degree {}: {:.3f}".
-                                    format(i + 1,
-                                           self.adjustment.X[
-                                               len(sta_dic_ls) +
-                                               n_meters +
-                                               loop[1][0] +
-                                               i][0]))
-
-        self.adjustment.adjustmentresults.text = text_out
-
-        # Write output to file
-        if write_out_files == 'y':
-            survdir = output_root_dir + os.sep + self.name
-            if not os.path.exists(survdir):
-                os.makedirs(survdir)
-            tday = dt.datetime.now()
-
-            with open(survdir + os.sep +
-                      "LSresults_{:4d}{:02d}{:02d}_{:02d}{:02d}.dat".format(tday.year, tday.month, tday.day,
-                                                                            tday.hour, tday.minute),
-                      'w') as fid:
-                for line in text_out:
-                    fid.write(line)
-            fid.close()
 
     def match_inversion_results(self, inversion_type, cal_dic=None):
         """
@@ -1276,7 +1124,7 @@ class ObsTreeSurvey(ObsTreeItem):
     def return_obstreestation(self, station_id):
         """
         returns ObsTreeStation object corresponding to delta_id. Used when recreatiug deltas from a saved workspace.
-        :param delta_id: tuple, (station_name, station_count)
+        :param station_id: tuple, (station_name, station_count)
         :return: ObsTreeStation
         """
         for station in self.iter_stations():
@@ -1328,7 +1176,6 @@ class ObsTreeSurvey(ObsTreeItem):
                                                 "for survey " + self.name + ", loop " + loop.name,
                                                 "GSadjust error")
         return True
-
 
 class ObsTreeModel(QtGui.QStandardItemModel):
     """
@@ -1535,7 +1382,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         return fname
 
 
-
 class tempStation():
     def __init__(self, station):
         self.__dict__ = station
@@ -1684,7 +1530,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
         return len(self.datums)
 
     def columnCount(self, parent=None):
-        return 9
+        return 8
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.isValid():
@@ -2164,7 +2010,6 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.Checked
 
-
     @classmethod
     def from_json(cls, data):
         """
@@ -2210,7 +2055,6 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             temp.setCheckState(data['checked'])
         return temp
 
-
     def to_json(self):
         # Normal delta
         json_deltas = []
@@ -2248,6 +2092,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             }
             json_deltas.append(temp_delta)
         return json_deltas
+
 
 class ScintrexTableModel(QtCore.QAbstractTableModel):
     """
@@ -2631,6 +2476,7 @@ def survey_serializer(obj, cls, **kwargs):
     Handle serialization of ObsTreeSurvey via .to_json() method.
     """
     return obj.to_json()
+
 
 jsons.set_serializer(survey_serializer, ObsTreeSurvey)
 jsons.set_serializer(survey_serializer, DeltaTableModel)

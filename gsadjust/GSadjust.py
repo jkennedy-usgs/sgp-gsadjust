@@ -729,14 +729,17 @@ class MainProg(QtWidgets.QMainWindow):
         -------
 
         """
-        pbar = ProgressBar(total=6, textmess='Loading workspace')
+        pbar = QtWidgets.QProgressDialog(labelText='Loading workspace', minimum=0, maximum=6)
+        pbar.setWindowTitle('GSAdjust')
+        pbar.setLabelText('Building Observation Tree')
+        pbar.setValue(1)
         pbar.show()
-        pbar.progressbar.setValue(1)
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow([survey,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
-        pbar.progressbar.setValue(2)
+        pbar.setValue(2)
+        pbar.setLabelText('Building Observation Tree')
         QtWidgets.QApplication.processEvents()
         if not delta_models:
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -750,7 +753,8 @@ class MainProg(QtWidgets.QMainWindow):
                 firstloop = firstsurvey.child(i)
                 firststation = firstloop.child(0)
                 i += 1
-            pbar.progressbar.setValue(3)
+            pbar.setValue(3)
+            pbar.setLabelText('Updating drift plots')
             QtWidgets.QApplication.processEvents()
             self.index_current_survey = firstsurvey.index()
             self.index_current_loop = firstloop.index()
@@ -766,7 +770,8 @@ class MainProg(QtWidgets.QMainWindow):
 
             self.workspace_loaded = True
             self.update_all_drift_plots()
-            pbar.progressbar.setValue(4)
+            pbar.setValue(4)
+            pbar.setLabelText('Populating delta tables')
             QtWidgets.QApplication.processEvents()
             # The deltas on the survey delta table (on the network adjustment tab) aren't saved. When loading a
             # workspace, the loop deltas first have to be created by update_all_drift_plots(), then the survey delta
@@ -775,12 +780,13 @@ class MainProg(QtWidgets.QMainWindow):
             # for survey in obstreesurveys:
             #     self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
             self.update_adjust_tables()
-            pbar.progressbar.setValue(5)
+            pbar.setValue(5)
+            pbar.setLabelText('Initializing GUI')
             QtWidgets.QApplication.processEvents()
             self.init_gui()
             self.deltas_update_not_required()
             QtWidgets.QApplication.restoreOverrideCursor()
-            pbar.progressbar.setValue(6)
+            pbar.setValue(6)
             pbar.close()
         # except Exception as e:
         #     self.msg = show_message("Workspace load error", "Error")
@@ -1020,8 +1026,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.setSortingEnabled(True)
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
         self.tab_adjust.datum_view.setModel(self.tab_adjust.datum_proxy_model)
-        self.tab_adjust.datum_view.setColumnHidden(4, True)
-        self.tab_adjust.datum_view.setColumnHidden(8, True)
         self.tab_adjust.textAdjResults.clear()
 
         try:

@@ -1,6 +1,213 @@
+import os
 import numpy as np
 import logging
 import datetime as dt
+
+
+def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files='n', survey_name='test'):
+    """
+    Least-squares network adjustment using numpy
+
+    Parameters
+    write_out_files:    (y/n): write output files for drift adjustment
+                        (similar to MCGravi output files)
+    output_root_dir     directory for writing output files
+    """
+    from gui_objects import show_message
+    from data_objects import AdjustedStation
+    adjustment.adjustmentresults.text = []
+
+    # sta_dic_LS is a dictionary, key: station name, value: column for A matrix
+    sta_dic_ls = adjustment.sta_dic_ls
+    nloops = adjustment.nloops
+    # get number of relative observations:
+    n_rel_obs = len(adjustment.deltas)
+
+    # number of absolute obs.
+    n_abs_obs = len(adjustment.datums)
+
+    n_meters = adjustment.n_meters
+
+    # number of unknowns:
+    # TODO: temperature drift function
+    drift_time = 0  # adjustment.adjustmentoptions.drift_time
+    if adjustment.adjustmentoptions.use_model_temp:
+        drift_temp = adjustment.adjustmentoptions.model_temp_degree
+    else:
+        drift_temp = 0
+
+    # Drift may be included in the network adjustment for any or all loops. This section of code
+    # builds some dicts used later to assemble the A matrix.
+    ndrift = 0
+
+    # Temporary var to compile all delta.ls_drift tuples: (loop.name, degree of drift model)
+    ls_drift_list = []
+
+    # dict of tuples, used to identify column of drift observation in A matrix:
+    # (loop.name, (column relative to end of A matrix, drift degree)
+    netadj_loop_keys = dict()
+
+    # dict of unique delta.ls_drift values, used to cross-reference loop name with poly. degree
+    # (the loop object only knows if the drift method is netadj, or not. The delta object stores
+    # the degree of the drift polynomial, but doesn't know if the drift correction is netadj (a
+    # delta could have a non (0,0) ls_drift value, but use some other drift corretion method.
+    loop_ls_dict = dict()
+
+    ndrift = adjustment.ndrift
+    netadj_loop_keys = adjustment.netadj_loop_keys
+
+    # Initialize least squares matrices
+    # number of unknowns                                                                   #
+    nb_x = len(sta_dic_ls) + ndrift + drift_temp * nloops + n_meters
+    # model matrix:
+    A = np.zeros((n_rel_obs + n_abs_obs, nb_x))
+    # weight matrix:
+    P = np.zeros((n_rel_obs + n_abs_obs, n_rel_obs + n_abs_obs))  # pas sur
+    # observation matrix:
+    Obs = np.zeros((n_rel_obs + n_abs_obs, 1))
+    # datum-free constraint vector:
+    S = np.zeros((nb_x, 1))
+
+    row = 0
+    deltakeys = []
+
+    # Populate least squares matrices
+    for delta in adjustment.deltas:
+        deltakeys.append(delta.__hash__())
+        Obs[row] = delta.dg * delta.cal_coeff
+        P[row, row] = 1. / (delta.sd_for_adjustment ** 2)
+        A[row, sta_dic_ls[delta.sta1]] = -1
+        A[row, sta_dic_ls[delta.sta2]] = 1
+
+        # Populate 1 column per gravimeter for calibration coefficient
+        if adjustment.adjustmentoptions.cal_coeff:
+            meter = delta.meter
+            A[row, adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
+
+        # Populate column(s) for drift, if included in network adjustment
+        if delta.ls_drift is not None:
+            loop_name = delta.ls_drift[0]
+
+            # It's possible for ls_drift to have been set, but the loop method to be something other than netadj
+            if loop_name:
+                if loop_ls_dict[loop_name] == 'netadj':
+                    for i in range(delta.ls_drift[1]):  # degree of polynomial
+                        A[row, len(sta_dic_ls) + n_meters + netadj_loop_keys[loop_name][0] + i] = \
+                            (delta.sta2_t - delta.sta1_t) ** (i + 1)
+
+        S[sta_dic_ls[delta.sta1]] = 1
+        S[sta_dic_ls[delta.sta2]] = 1
+        row += 1
+
+    # add datum observation (absolute station(s) or station(s) with fixed values)
+    # Key errors handled by calling routine
+    i = 0
+    for datum in adjustment.datums:
+        A[n_rel_obs + i, sta_dic_ls[datum.station]] = 1
+        P[n_rel_obs + i, n_rel_obs + i] = 1. / datum.sd ** 2
+        Obs[n_rel_obs + i] = datum.g
+        i += 1
+
+
+    # Do the inversion
+    adjustment.A = A
+    adjustment.P = P
+    adjustment.Obs = Obs
+    adjustment.S = S
+    adjustment.dof = n_rel_obs + n_abs_obs - nb_x
+    adjustment.g_dic = dict()
+    # zero-division errors are caught by caller
+    adjustment.python_lsq_inversion()
+
+    # Populate results table
+    for i in range(len(sta_dic_ls)):
+        for key, val in sta_dic_ls.items():
+            if val == i:
+                try:
+                    t = AdjustedStation(key, float(adjustment.X[i]), float(np.sqrt(adjustment.var[i])))
+                    results_model.insertRows(t, 0)
+                    adjustment.g_dic[key] = float(adjustment.X[i])
+                    adjustment.sd_dic[key] = float()
+                except:
+                    msg = show_message("Bad variance in results", "Inversion error")
+
+    # Retrieve calibration coefficient(s)
+    cal_dic = dict()
+    if adjustment.adjustmentoptions.cal_coeff:
+        for k, v in adjustment.meter_dic.items():
+            cal_dic[k] = (float(1 - adjustment.X[len(sta_dic_ls) + v]),
+                          float(np.sqrt(adjustment.var[len(sta_dic_ls) + v])))
+
+
+    # calculate and display statistics:
+    adjustment.lsq_statistics()
+
+    # write output files
+    text_out = list()
+    text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
+    text_out.append("Number of loops:                    {:d}\n".format(nloops))
+    text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
+    text_out.append("Polynomial degree for temperature:  {:d}\n".format(drift_temp))
+    text_out.append("\n")
+    text_out.append("Number of unknowns:                 {:d}\n".format(nb_x))
+    text_out.append("Number of relative observations:    {:d}\n".format(n_rel_obs))
+    text_out.append("Number of absolute observations:    {:d}\n".format(n_abs_obs))
+    text_out.append("Degrees of freedom (nobs-nunknowns): {:d}\n".format(adjustment.dof))
+    text_out.append("\n")
+    text_out.append(
+        "SD a posteriori:                    {:f}\n".format(
+            float(np.sqrt(adjustment.VtPV / adjustment.dof))))
+    text_out.append("chi square value:                   {:6.2f}\n".format(float(adjustment.chi2)))
+    text_out.append("critical chi square value:          {:6.2f}\n".format(float(adjustment.chi2c)))
+    if float(adjustment.chi2) < float(adjustment.chi2c):
+        text_out.append("Chi-test accepted\n")
+    else:
+        text_out.append("Chi-test rejected\n")
+    if adjustment.adjustmentoptions.cal_coeff:
+        for k, v in cal_dic.items():
+            text_out.append("Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".
+                            format(k, v[0], v[1]))
+    elif adjustment.adjustmentoptions.specify_cal_coeff:
+        for k, v in adjustment.adjustmentoptions.meter_cal_dict.items():
+            text_out.append("Specified calibration coefficient for meter {}: {:.6f}".
+                            format(k, v))
+
+    if netadj_loop_keys:
+        text_out.append("Gravimeter drift coefficient(s):\n")
+        for loop in netadj_loop_keys.items():  # this dict only has loops with netadj option
+            text_out.append("Loop " + loop[0] + ": ")
+            for i in range(loop[1][1]):  # degree of polynomial
+                text_out.append("Drift coefficient, degree {}: {:.3f}".
+                                format(i + 1,
+                                       adjustment.X[
+                                           len(sta_dic_ls) +
+                                           n_meters +
+                                           loop[1][0] +
+                                           i][0]))
+
+    adjustment.adjustmentresults.text = text_out
+
+    # Write output to file
+    if write_out_files == 'y':
+        survdir = output_root_dir + os.sep + survey_name
+        if not os.path.exists(survdir):
+            os.makedirs(survdir)
+        tday = dt.datetime.now()
+
+        with open(survdir + os.sep +
+                  "LSresults_{:4d}{:02d}{:02d}_{:02d}{:02d}.dat".format(tday.year, tday.month, tday.day,
+                                                                        tday.hour, tday.minute),
+                  'w') as fid:
+            for line in text_out:
+                fid.write(line)
+        fid.close()
+
+    return cal_dic
+
+
+class SingularMatrixError(Exception):
+    pass
+
 
 def compute_gravity_change(obstreemodel, table_type='simple'):
     """

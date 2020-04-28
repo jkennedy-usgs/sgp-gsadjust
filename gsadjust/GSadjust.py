@@ -124,7 +124,7 @@ from data_import import (
     read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex, 
     import_abs_g_complete, import_abs_g_simple
 )
-from data_objects import Datum, Tare, ChannelList, Delta, SimpleDelta
+from data_objects import Datum, Tare, ChannelList, Delta
 from gsa_plots import plot_loop_animation
 from gsa_plots import plot_network_graph, plot_compare_datum_to_adjusted, plot_adjust_residual_histogram
 from gui_objects import (
@@ -600,7 +600,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def workspace_save_as(self):
         """
-        Saves data object using pickle.dump()
+        Saves data object using json.dump()
         """
         if self.label_deltas_update_required.set is True:
             self.msg = show_message(
@@ -702,6 +702,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
         pickled and are removed in workspace_save).
+        DEPRECATED, WILL REMOVE EVENTUALLY (REPLACED WITH JSON)
         """
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
@@ -767,7 +768,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.update_all_drift_plots()
             pbar.progressbar.setValue(4)
             QtWidgets.QApplication.processEvents()
-            # The deltas on the survey delta table (on the network adjustment tab) aren't pickled. When loading a
+            # The deltas on the survey delta table (on the network adjustment tab) aren't saved. When loading a
             # workspace, the loop deltas first have to be created by update_all_drift_plots(), then the survey delta
             # table can be updated.
             self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
@@ -792,23 +793,26 @@ class MainProg(QtWidgets.QMainWindow):
                     simpledelta.loop = None
                 i = 0
                 try:
+                    if not simpledelta.checked:
+                        jeff = 1
                     if simpledelta.type == 'normal':
-                        if type(simpledelta) == SimpleDelta:
-                            station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
-                            station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
-                            if station1 is not None and station2 is not None:
-                                d = Delta(station1, station2,
-                                          adj_sd=simpledelta.adj_sd,
-                                          driftcorr=simpledelta.driftcorr,
-                                          ls_drift=simpledelta.ls_drift,
-                                          delta_type=simpledelta.type,
-                                          checked=simpledelta.checked,
-                                          loop=simpledelta.loop)
-                            else:
-                                logging.error('Delta recreation error')
-                        # For dealing with old-style .p workspaces
-                        elif type(simpledelta) == Delta:
-                            d = simpledelta
+                        try:
+                            if not type(simpledelta) == Delta:
+                                station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
+                                station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
+                                if station1 is not None and station2 is not None:
+                                    d = Delta(station1, station2,
+                                              adj_sd=simpledelta.adj_sd,
+                                              driftcorr=simpledelta.driftcorr,
+                                              ls_drift=simpledelta.ls_drift,
+                                              delta_type=simpledelta.type,
+                                              checked=simpledelta.checked,
+                                              loop=simpledelta.loop)
+                            # For dealing with old-style .p workspaces
+                            elif type(simpledelta) == Delta:
+                                d = simpledelta
+                        except NameError:
+                            logging.error('Delta recreation error')
                     elif simpledelta.type == 'list':
                         if not hasattr(simpledelta, 'key'):
                             list_of_deltas = []
@@ -825,6 +829,11 @@ class MainProg(QtWidgets.QMainWindow):
                                             loop=simpledelta.loop)
                                 list_of_deltas.append(tpd)
                             d = Delta.from_list(list_of_deltas)
+                            # for sg, the 'list'-type delta returns the mean of all dg's, the user can't check/uncheck
+                            # individual dg's. Therefore setting the check state when creating the three-point delta
+                            # ("tpd", above) is meaningless. What we want to do is set the check state of the list
+                            # delta.
+                            d.checked = simpledelta.checked
                         # This section is necessary to load older .p versions. It's much slower than the above section.
                         else:
                             try:

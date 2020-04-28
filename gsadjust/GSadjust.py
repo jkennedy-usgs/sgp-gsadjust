@@ -552,17 +552,17 @@ class MainProg(QtWidgets.QMainWindow):
         QtWidgets.QApplication.restoreOverrideCursor()
         self.set_window_title_asterisk()
 
-    def workspace_clear(self):
+    def workspace_clear(self, confirm=True):
         """
         Clears all models and refreshes view.
         """
-        if self.windowTitle()[-1] == '*':
-            quit_msg = "The workspace isn't saved. Are you sure you want to clear all daata?"
-            reply = QtWidgets.QMessageBox.question(self, 'Message',
-                                               quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-
-            if reply == QtWidgets.QMessageBox.No:
-                return
+        if confirm:
+            if self.windowTitle()[-1] == '*':
+                quit_msg = "The workspace isn't saved. Are you sure you want to clear all data?"
+                reply = QtWidgets.QMessageBox.question(self, 'Message',
+                                                   quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                if reply == QtWidgets.QMessageBox.No:
+                    return
 
         logging.info("Workspace cleared")
         self.obsTreeModel = ObsTreeModel()

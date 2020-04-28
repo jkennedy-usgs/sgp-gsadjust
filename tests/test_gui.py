@@ -65,7 +65,8 @@ def test_gui(qtbot, monkeypatch):
     success = window.obsTreeModel.save_workspace(test_workspace)
     assert success == 'test1.gsa'
 
-    window.workspace_clear()
+    window.workspace_clear(confirm=False)
+
     assert window.obsTreeModel.rowCount() == 0
 
     window.workspace_open_json(test_workspace)
@@ -104,7 +105,10 @@ def test_gui(qtbot, monkeypatch):
     success = window.workspace_save()
     assert success == True
 
-    window.workspace_clear()
+    qtbot.wait(2000)
+    window.workspace_clear(confirm=False)
+
+
     assert window.obsTreeModel.rowCount() == 0
 
     window.workspace_open_json(test_workspace)

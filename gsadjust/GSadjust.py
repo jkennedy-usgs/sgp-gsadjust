@@ -461,7 +461,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.path_data = os.path.dirname(str(fname))
 
             # populate a Campaign object
-            err = None
+            e = None
             try:
                 self.all_survey_data = self.read_raw_data_file(fname, meter_type)
                 if append_loop:
@@ -472,16 +472,18 @@ class MainProg(QtWidgets.QMainWindow):
                     obstreesurvey = ObsTreeSurvey(str(num2date(self.all_survey_data.t[0]).date()))
                     obstreesurvey.populate(self.all_survey_data)
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
-            except IOError as e:
+            except IOError as err:
                 self.msg = show_message('No file : {}'.format(fname), 'File error')
-            except ValueError as e:
+            except ValueError as err:
                 self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.
-                                        format(e.i), 'File error')
-            except IndexError as e:
+                                        format(err.i), 'File error')
+            except IndexError as err:
                 self.msg = show_message('Index error at line {:d}. Check raw data file: possible missing value?'.
-                                        format(e.i), 'File error')
-            if err:
-                logging.exception(err, exc_info=True)
+                                        format(err.i), 'File error')
+                e = err
+            if e:
+                logging.exception(e, exc_info=True)
+                return False
 
             if open_type not in 'choose':
                 self.init_gui()
@@ -493,6 +495,7 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
             self.set_window_title_asterisk()
             QtWidgets.QApplication.processEvents()
+            self.update_menus()
         else:
             return False
 

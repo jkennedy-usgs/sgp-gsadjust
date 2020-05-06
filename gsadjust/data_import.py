@@ -136,10 +136,14 @@ def read_burris(fh):
         line = line.strip()
         if line.find(',') != -1:
             vals_temp = line.split(',')
-            if vals_temp[0] == 'Station ID':
+            if vals_temp[0] == 'Station ID' or vals_temp[0] == 'Station':
                 continue
+        elif line.find('\t') != -1:
+            vals_temp = line.split('\t')
         else:
             vals_temp = line.split()
+        if vals_temp[0] == 'Station ID' or vals_temp[0] == 'Station':
+            continue
         # Numbers are columns in the imported file
         c_station, c_oper, c_meter, c_date, c_time = 0, 1, 2, 3, 4
         c_grav, c_dial, c_feedback, c_tide, c_tilt = 5, 6, 7, 8, 9
@@ -160,10 +164,16 @@ def read_burris(fh):
             all_survey_data.oper.append('None')
         else:
             all_survey_data.oper.append(vals_temp[c_oper])
-
-        date_temp = vals_temp[c_date].split('/')
+        if line.find('/') != -1:
+            date_temp = vals_temp[c_date].split('/')
+        elif line.find('-') != -1:
+            date_temp = vals_temp[c_date].split('-')
         if int(date_temp[2]) > 999:
             date_temp = [date_temp[2], date_temp[0], date_temp[1]]
+        elif int(date_temp[0]) > 999:
+            date_temp = [date_temp[0], date_temp[1], date_temp[2]]
+        # Else raise date error
+
         time_temp = vals_temp[c_time].split(':')
 
         # fill object properties:

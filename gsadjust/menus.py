@@ -23,6 +23,7 @@ class MENU_STATE:
     INIT = -1
     CLEAR = 0
     ACTIVE_WORKSPACE = 1
+    NO_ACTIVE_WORKSPACE = 12
     AT_LEAST_ONE_SURVEY = 2
     CALCULATE_CHANGE = 3
     MORE_THAN_ONE_SURVEY = 4
@@ -105,6 +106,9 @@ _ENABLED_MENUS = {
     ],
     MENU_STATE.ACTIVE_WORKSPACE: [
         ('mnFileSaveWorkspace', True),
+    ],
+    MENU_STATE.NO_ACTIVE_WORKSPACE: [
+        ('mnFileSaveWorkspace', False),
     ],
     MENU_STATE.SURVEY_HAS_DELTAS: [
         ('mnToolsNGCircular', True),
@@ -225,7 +229,7 @@ class Menus:
                                                         slot=self.mainProg.workspace_append,
                                                         enabled=False)
         self.mnFileClearWorkspace = self.create_action("Clear workspace",
-                                                       slot=self.mainProg.workspace_clear,
+                                                       slot=lambda clear=True: mainProg.workspace_clear(confirm=True),
                                                        enabled=True)
         self.mnFileSaveWorkspace = self.create_action("Save workspace",
                                                       shortcut="Ctrl+s",

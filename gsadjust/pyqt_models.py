@@ -1055,6 +1055,7 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.netadj_loop_keys = netadj_loop_keys
         cal_dic = numpy_inversion(self.adjustment, self.results_model, output_root_dir, write_out_files='n')
         self.match_inversion_results('numpy', cal_dic)
+        # self.results_model.
 
     def match_inversion_results(self, inversion_type, cal_dic=None):
         """
@@ -1304,6 +1305,17 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         Handle editing of ObsTreeLoop objects (renaming).
         """
         new_name = str(value)
+        old_name = item.name
+        logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
+        item.name = new_name
+        return True
+
+    def _handler_edit_ObsTreeSurvey(self, item, value):
+        new_name = str(value)
+        try:
+            item.name = dt.datetime.strptime(new_name, 'yyyy-MM-dd')
+        except Exception as e:
+            pass
         old_name = item.name
         logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
         item.name = new_name

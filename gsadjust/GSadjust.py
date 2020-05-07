@@ -205,7 +205,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.qtaction_move_station_down = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/down.png'),
                                                             'Move survey down',
                                                             self)
-        self.qtaction_move_station_down.triggered.connect(slot=lambda: self.move_survey(self.DOWN))
+        self.qtaction_move_station_down.triggered.connect(slot=lambda: self.move_survey(DOWN))
         self.gui_toolbar = QtWidgets.QToolBar()
         self.gui_toolbar.addAction(self.qtaction_move_station_up)
         self.gui_toolbar.addAction(self.qtaction_move_station_down)
@@ -592,9 +592,9 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.setModel(None)
         self.tab_adjust.results_view.update()
         self.tab_adjust.textAdjResults.clear()
-
-        self.update_menus()
         self.setWindowTitle('GSadjust')
+        self.update_menus()
+
 
     def workspace_save(self):
         """
@@ -748,16 +748,14 @@ class MainProg(QtWidgets.QMainWindow):
         -------
 
         """
-        pbar = QtWidgets.QProgressDialog(labelText='Loading workspace', minimum=0, maximum=6)
+        pbar = QtWidgets.QProgressDialog(labelText='Loading workspace', minimum=0, maximum=4)
         pbar.setWindowTitle('GSAdjust')
         pbar.setLabelText('Building Observation Tree')
-        pbar.setValue(1)
         pbar.show()
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow([survey,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
-        pbar.setValue(2)
         pbar.setLabelText('Building Observation Tree')
         QtWidgets.QApplication.processEvents()
         if not delta_models:
@@ -772,7 +770,7 @@ class MainProg(QtWidgets.QMainWindow):
                 firstloop = firstsurvey.child(i)
                 firststation = firstloop.child(0)
                 i += 1
-            pbar.setValue(3)
+            pbar.setValue(1)
             pbar.setLabelText('Updating drift plots')
             QtWidgets.QApplication.processEvents()
             self.index_current_survey = firstsurvey.index()
@@ -789,7 +787,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             self.workspace_loaded = True
             self.update_all_drift_plots()
-            pbar.setValue(4)
+            pbar.setValue(2)
             pbar.setLabelText('Populating delta tables')
             QtWidgets.QApplication.processEvents()
             # The deltas on the survey delta table (on the network adjustment tab) aren't saved. When loading a
@@ -798,14 +796,15 @@ class MainProg(QtWidgets.QMainWindow):
             self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
             # for survey in obstreesurveys:
             #     self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
+
             self.update_adjust_tables()
-            pbar.setValue(5)
+            pbar.setValue(3)
             pbar.setLabelText('Initializing GUI')
             QtWidgets.QApplication.processEvents()
             self.init_gui()
             self.deltas_update_not_required()
             QtWidgets.QApplication.restoreOverrideCursor()
-            pbar.setValue(6)
+            pbar.setValue(4)
             pbar.close()
 
     def populate_survey_deltatable_from_simpledeltas(self, delta_models, surveys):
@@ -1009,6 +1008,10 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Set enabled/disabled states for menus.
         """
+        if self.workspace_savename and self.windowTitle()[-1] == '*':
+            self.menus.set_state(MENU_STATE.ACTIVE_WORKSPACE)
+        else:
+            self.menus.set_state(MENU_STATE.NO_ACTIVE_WORKSPACE)
         if self.obsTreeModel.rowCount() >= 1:
             self.menus.set_state(MENU_STATE.AT_LEAST_ONE_SURVEY)
             if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
@@ -1031,6 +1034,8 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             self.menus.set_state(MENU_STATE.UNINIT)
 
+        QtWidgets.QApplication.restoreOverrideCursor()
+
     def update_all_drift_plots(self):
         """
         Updates drift_tab plots and delta_models, even if not in view.
@@ -1052,7 +1057,7 @@ class MainProg(QtWidgets.QMainWindow):
             survey.datum_model.signal_adjust_update_required.connect(self.adjust_update_required)
             self.tab_adjust.delta_proxy_model.setSourceModel(survey.delta_model)
             self.tab_adjust.datum_proxy_model.setSourceModel(survey.datum_model)
-            self.tab_adjust.datum_proxy_model.headerData()
+            # self.tab_adjust.datum_proxy_model.headerData()
             self.tab_adjust.results_proxy_model.setSourceModel(survey.results_model)
         except:
             pass
@@ -1104,6 +1109,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.tab_adjust.delta_view.update()
                 self.tab_adjust.delta_view.repaint()
             self.set_window_title_asterisk()
+        self.update_menus()
 
     def on_obs_tree_change(self, selected):
         """

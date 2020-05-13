@@ -2224,14 +2224,25 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             # view definition
             row = index.row()
             column = index.column()
+            try:
+                value = float(self.arraydata[row][column])
+            except ValueError:
+                value = self.arraydata[row][column]
 
-            return {
-                SCINTREX_DATE: num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S'),
-                SCINTREX_REJ: "%2.0f" % float(self.arraydata[row][column]),
-                SCINTREX_DUR: "%3.0f" % float(self.arraydata[row][column]),
-                SCINTREX_G: "%8.1f" % float(self.arraydata[row][column]),
-                SCINTREX_SD: "%8.1f" % float(self.arraydata[row][column]),
-            }.get(column, str(self.arraydata[row][column]))
+            def format_datetime(dt):
+                return num2date(float(dt)).strftime('%Y-%m-%d %H:%M:%S')
+
+
+
+            fn, *args = {
+                SCINTREX_DATE: (format_datetime, value),
+                SCINTREX_REJ: (format, value, "2.0f"),
+                SCINTREX_DUR: (format, value, "3.0f"),
+                SCINTREX_G: (format, value, "8.1f"),
+                SCINTREX_SD: (format, value, "8.1f")
+            }.get(column, (str, value))
+
+            return fn(*args)
 
         if role == QtCore.Qt.CheckStateRole:
             # check status definition

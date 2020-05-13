@@ -865,6 +865,8 @@ class MainProg(QtWidgets.QMainWindow):
                                             loop=simpledelta.loop)
                                 list_of_deltas.append(tpd)
                             d = Delta.from_list(list_of_deltas)
+                            if simpledelta.adj_sd < 998:
+                                d.adj_sd = simpledelta.adj_sd
                             # for sg, the 'list'-type delta returns the mean of all dg's, the user can't check/uncheck
                             # individual dg's. Therefore setting the check state when creating the three-point delta
                             # ("tpd", above) is meaningless. What we want to do is set the check state of the list

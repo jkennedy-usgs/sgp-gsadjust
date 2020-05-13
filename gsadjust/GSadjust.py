@@ -128,7 +128,7 @@ from gui_objects import (
     FigureDatumComparisonTimeSeries,
     GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, ApplyTimeCorrection,
     VerticalGradientDialog, AddTareDialog, MeterType, LoopTimeThresholdDialog, Overwrite,
-    show_message, SelectAbsg, AdjustOptions, LoopOptions
+    show_message, SelectAbsg, AdjustOptions, LoopOptions, AboutDialog
 )
 from menus import Menus, MENU_STATE
 from pyqt_models import (
@@ -243,8 +243,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.update_adjust_text)
         self.statusBar().addPermanentWidget(self.label_adjust_update_required)
 
-        self.adjust_update_required()
-        self.deltas_update_required()
+        # self.adjust_update_required()
+        # self.deltas_update_required()
 
         # Right-click tree view context menu
         self.menus.mnDeleteSurvey = self.menus.create_action('Delete survey', slot=self.delete_selected)
@@ -257,6 +257,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnLoopAnimate = self.menus.create_action('Animate loop', slot=self.animate_loop)
 
         # self.resize(600,800)
+        self.update_menus()
         self.path_install = os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
 
@@ -1886,6 +1887,9 @@ class MainProg(QtWidgets.QMainWindow):
         """
         webbrowser.open('file://' + os.path.realpath('./docs/index.htm'))
 
+    def dialog_about(self):
+        AboutDialog(self.commit)
+
     def check_for_updates(self, show_uptodate_msg, parent=None):
         """
         Check if the usgs_root repo is at the same commit as this installation
@@ -1912,7 +1916,7 @@ class MainProg(QtWidgets.QMainWindow):
             master = [f for f in fetch if f.name == 'origin/master'][0]
             for f in fetch:
                 logging.info('Git fetched: {}'.format(f))
-
+            self.commit = str(repo.head.commit)[:5]
             if repo.head.commit != master.commit:
                 msg = "An update is available for GSadjust.\n"
                 msg += "Would you like to install now?"

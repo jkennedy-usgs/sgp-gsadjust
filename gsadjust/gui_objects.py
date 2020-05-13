@@ -502,11 +502,12 @@ def copy_cells_to_clipboard(table):
 
 
 class AboutDialog(QtWidgets.QDialog):
-    def __init__(self, obsTreeModel):
+    def __init__(self, version):
         super(AboutDialog, self).__init__()
 
         msg1 = '<html>GSadjust, a product of the USGS Southwest Gravity Program<br>' + \
                '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>' + \
+               '<br><br>Commit ' + version + \
                '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">' + \
                'https://github.com/jkennedy-usgs/sgp-gsadjust</a>' + \
                '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'

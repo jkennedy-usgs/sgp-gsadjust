@@ -510,7 +510,7 @@ class AboutDialog(QtWidgets.QDialog):
                '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">' + \
                'https://github.com/jkennedy-usgs/sgp-gsadjust</a>' + \
                '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
-        _, ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
+        ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
 
 
 class VerticalGradientDialog(QtWidgets.QInputDialog):

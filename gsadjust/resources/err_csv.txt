@@ -1,0 +1,11 @@
+You chose to open a comma-delimited file. The parser couldn't understand line {}:
+
+{}
+The file should have one header line with the fields (specific labels don't matter):
+
+Name, Latitude, Longitude, Altitude, Gravity, Standard Deviation, Tilt (X), Tilt (Y), Temp, Tide, Duration, Rejected, Time, Decimal time+date, Terrain, Date
+
+For example,
+5040,46.3695488,-122.581871,250.8,5044.445,0.014,5.7,-2.6,-0.85,0.067,60,2,14:40:04,40376.61018,0,8/18/2010
+
+Fields are delimited by commas.

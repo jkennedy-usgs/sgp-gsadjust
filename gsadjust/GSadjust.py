@@ -117,7 +117,7 @@ from data_correction import time_correction
 from data_export import export_metadata, export_summary, export_data
 # GSadjust modules
 from data_import import (
-    read_csv, read_burris, read_cg6, read_cg6tsoft, read_scintrex,
+    read_csv, read_burris, read_cg6, read_cg6tsoft, read_cg5,
     import_abs_g_complete, import_abs_g_simple
 )
 from data_objects import Datum, Tare, ChannelList, Delta
@@ -300,7 +300,7 @@ class MainProg(QtWidgets.QMainWindow):
         # Activate first tree view item
         self.activate_survey_or_loop(self.index_current_loop)
         self.activate_survey_or_loop(self.index_current_survey)
-
+        self.label_adjust_update_required_set = False
         # Set data plot
         self.plot_samples()
         # self.selmodel.select(station.index(), QtCore.QItemSelectionModel.SelectCurrent)
@@ -310,7 +310,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Updates status bar icon
         """
-        self.label_adjust_update_required.set = True
+        self.label_adjust_update_required_set = True
         self.label_adjust_update_required.setPixmap(self.update_adjust_icon)
         self.label_adjust_update_required.setToolTip('Update network adjustment')
         self.set_window_title_asterisk()
@@ -320,7 +320,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Updates status bar icon
         """
-        self.label_adjust_update_required.set = False
+        self.label_adjust_update_required_set = False
         self.label_adjust_update_required.setPixmap(self.update_not_needed_icon)
         self.label_adjust_update_required.setToolTip('Network adjustment is up to date')
 
@@ -362,10 +362,11 @@ class MainProg(QtWidgets.QMainWindow):
         Updates tab plots/tables as needed. These typically aren't updated unless they're visible.
         :param new_idx: Index of newly-selected tab.
         """
-        if new_idx == 0:
-            self.plot_samples()
-        if new_idx == 1:
-            self.update_drift_tables_and_plots()
+        if self.obsTreeModel.rowCount() > 0:
+            if new_idx == 0:
+                self.plot_samples()
+            if new_idx == 1:
+                self.update_drift_tables_and_plots()
 
     def plot_samples(self):
         """
@@ -375,7 +376,7 @@ class MainProg(QtWidgets.QMainWindow):
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreeloop = obstreestation.parent()
         station = obstreestation
-        if obstreeloop.meter_type == 'Scintrex' \
+        if obstreeloop.meter_type == 'CG5' \
                 or obstreeloop.meter_type == 'CG6' \
                 or obstreeloop.meter_type == 'csv' \
                 or obstreeloop.meter_type == 'CG6Tsoft':
@@ -427,7 +428,7 @@ class MainProg(QtWidgets.QMainWindow):
         :param open_type: 'choose' - Choose meter-style data format
                           'loop' - if appending loop to survey, otherwise assume appending survey to campaign
                           (can be both choose and loop, e.g. 'chooseloop')
-                          'CG6', 'Burris', or 'Scintrex' - reading a raw data file, no appending
+                          'CG-6', 'Burris', or 'CG-5' - reading a raw data file, no appending
         """
         # open file
         append_loop = False
@@ -475,28 +476,40 @@ class MainProg(QtWidgets.QMainWindow):
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
             except IOError as err:
                 self.msg = show_message('No file : {}'.format(fname), 'File error')
-            except ValueError as err:
-                self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.
-                                        format(err.i), 'File error')
-            except IndexError as err:
-                self.msg = show_message('Index error at line {:d}. Check raw data file: possible missing value?'.
-                                        format(err.i), 'File error')
+            # except ValueError as err:
+            #     help_message = 'You chose to open ' + meter_type + ' data. The expected format is...n'
+            #     self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.
+            #                             format(err.i), 'File error', helptext=help_message)
+            except (IndexError, ValueError) as err:
+                stream = QtCore.QFile(":/text/err_{}.txt".format(meter_type))
+                stream.open(QtCore.QIODevice.ReadOnly)
+                text = QtCore.QTextStream(stream).readAll()
+                stream.close()
+                if hasattr(err, 'i') and hasattr(err, 'line'):
+                    help_message = text.format(err.i, err.line)
+                    self.msg = show_message('Error reading file at line {:d}'.
+                                            format(err.i), 'File error', helptext=help_message)
+                else:
+                    help_message = text.format("NA", "NA")
+                    self.msg = show_message('Error reading file',
+                                            'File error', helptext=help_message)
                 e = err
             if e:
                 logging.exception(e, exc_info=True)
                 return False
 
-            if open_type not in 'choose':
+            if open_type not in 'choose' and self.obsTreeModel.rowCount() > 0:
                 self.init_gui()
-            self.plot_samples()
-            # if open_type == 'Burris' or open_type == 'CG6' or open_type == 'csv':
-            if open_type is not 'Scintrex':
-                self.populate_station_coords()
-            self.workspace_loaded = True
-            QtWidgets.QApplication.restoreOverrideCursor()
-            self.set_window_title_asterisk()
-            QtWidgets.QApplication.processEvents()
-            self.update_menus()
+                self.plot_samples()
+                if open_type is not 'CG5':
+                    self.populate_station_coords()
+                self.workspace_loaded = True
+                QtWidgets.QApplication.restoreOverrideCursor()
+                self.set_window_title_asterisk()
+                QtWidgets.QApplication.processEvents()
+                self.update_menus()
+            else:
+                self.msg = show_message('Unknown import error', 'File error')
         else:
             return False
 
@@ -506,10 +519,9 @@ class MainProg(QtWidgets.QMainWindow):
         Read raw relative-gravity text file in the format exported from meter (Scintrex or Burris). Data are returned to
         the calling function.
         :param filename: Full path to import file
-        :param meter_type: 'Burris' or 'Scintrex'
+        :param meter_type: 'Burris', 'CG-5', 'CG-6'
         :return all_survey_data: ChannelList object with all survey data
         """
-        i = 0
         try:
             all_survey_data = ChannelList()
             with open(filename, 'r') as fh:
@@ -519,8 +531,8 @@ class MainProg(QtWidgets.QMainWindow):
                 if meter_type == 'csv':
                     _ = fh.readline()
                     all_survey_data = read_csv(fh)
-                elif meter_type == 'Scintrex':
-                    all_survey_data = read_scintrex(fh)
+                elif meter_type == 'CG5':
+                    all_survey_data = read_cg5(fh)
                 elif meter_type == 'Burris':
                     all_survey_data = read_burris(fh)
                 elif meter_type == 'CG6':
@@ -534,10 +546,8 @@ class MainProg(QtWidgets.QMainWindow):
         except IOError:
             raise
         except ValueError as e:
-            e.i = i
             raise e
         except IndexError as e:
-            e.i = i
             raise e
 
     def workspace_append(self):
@@ -1019,7 +1029,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.menus.set_state(MENU_STATE.AT_LEAST_ONE_SURVEY)
             if self.obsTreeModel.invisibleRootItem().rowCount() > 1:
                 self.menus.set_state(MENU_STATE.MORE_THAN_ONE_SURVEY)
-                if not self.label_adjust_update_required.set:
+                if not self.label_adjust_update_required_set:
                     self.menus.set_state(MENU_STATE.CALCULATE_CHANGE)
             try:
                 current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
@@ -1027,7 +1037,7 @@ class MainProg(QtWidgets.QMainWindow):
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_DELTAS)
                 else:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
-                if current_survey.results_model.rowCount() > 0 and not self.label_adjust_update_required.set:
+                if current_survey.results_model.rowCount() > 0 and not self.label_adjust_update_required_set:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_RESULTS)
                 else:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_RESULTS)
@@ -1083,6 +1093,7 @@ class MainProg(QtWidgets.QMainWindow):
         First updates the drift_method combobox, then calls set_drift_method to update plots.
         :param update: Plots are only updated if True. Saves time when loading a workspace.
         """
+
         drift_method = self.obsTreeModel.itemFromIndex(self.index_current_loop).drift_method
         self.tab_drift.driftmethod_comboboxbox.setCurrentIndex(self.drift_lookup[drift_method])
         self.tab_drift.set_drift_method(update)
@@ -2053,7 +2064,7 @@ def main():
     splash.finish(ex)
 
     if ex.check_for_updates(False, parent=splash):
-        app.setWindowIcon(QtGui.QIcon('./gsadjust/resources/g.png'))
+        app.setWindowIcon(QtGui.QIcon(':/icons/app.ico'))
         ex.showMaximized()
         app.processEvents()
 

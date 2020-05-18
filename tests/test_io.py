@@ -38,7 +38,7 @@ def test_read_Burris():
 
 def test_read_ScintrexCG6():
     filename = './tests/test_ScintrexCG5Data.txt'
-    meter_type = 'Scintrex'
+    meter_type = 'CG5'
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     first_station = '1'
     assert len(data.dial) == 0

@@ -192,8 +192,8 @@ class Menus:
         # for file opening
         self.mnFileOpenScintrexFile = self.create_action("&Load raw CG-3/CG-5 data...",
                                                          shortcut="Ctrl+o",
-                                                         slot=lambda meter='Scintrex':
-                                                         self.mainProg.open_file_dialog('Scintrex'),
+                                                         slot=lambda meter='CG5':
+                                                         self.mainProg.open_file_dialog('CG5'),
                                                          tip="Open data file",
                                                          enabled=True)
         self.mnFileOpenBurrisFile = self.create_action("Load raw &Burris data...",

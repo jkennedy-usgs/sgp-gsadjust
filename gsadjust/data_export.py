@@ -21,7 +21,7 @@ from PyQt5 import QtCore
 import csv
 
 from data_analysis import compute_gravity_change
-
+import resources
 
 def export_metadata(obsTreeModel, data_path):
     """
@@ -113,7 +113,7 @@ def export_summary(obsTreeModel, data_path):
                 loop = survey.child(ii)
                 fid.write('Survey {}, Loop {}\n'.format(survey.name, loop.name))
                 fid.write(str(loop))
-                for delta in loop.delta_model.deltas:
+                for delta in loop.deltas():
                     fid.write('{}\n'.format(delta))
         fid.write('# Adjustment data\n')
         for i in range(obsTreeModel.rowCount()):

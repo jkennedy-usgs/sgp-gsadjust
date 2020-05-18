@@ -161,7 +161,7 @@ class TabData(QtWidgets.QWidget):
         # gravity channel (convert to microgals for display)
         series = np.array(station.grav)
         series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
-        if meter_type == 'Scintrex' or meter_type == 'CG6' or meter_type == 'csv':
+        if meter_type == 'CG5' or meter_type == 'CG6' or meter_type == 'csv':
             self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'Gravity', '$\mu$gal', '1')
             # tiltx channel
             series = np.array(station.tiltx)
@@ -386,7 +386,7 @@ class TabData(QtWidgets.QWidget):
                 self.parent.station_model.setData(indx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
                 continue
             if selec_tilts:
-                if obstreestation.meter_type == 'Scintrex' \
+                if obstreestation.meter_type == 'CG5' \
                         or obstreestation.meter_type == 'CG6' \
                         or obstreestation.meter_type == 'CG6Tsoft':
                     if abs(obstreestation.tiltx[iiii]) > tilt_threshold and \
@@ -441,7 +441,7 @@ class TabData(QtWidgets.QWidget):
                             self.parent.station_model.setData(indx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
                             continue
                         if selec_tilts:
-                            if obstreestation.meter_type == 'Scintrex':
+                            if obstreestation.meter_type == 'CG-5':
                                 if abs(obstreestation.tiltx[iiii]) > tilt_threshold and \
                                         abs(obstreestation.tilty[iiii]) > tilt_threshold:
                                     obstreestation.keepdata[iiii] = 0

@@ -1,0 +1,21 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="icons">
+        <file alias="app.ico">resources/g.ico</file>
+    </qresource>
+    <qresource prefix="text">
+        <file alias="err_Burris.txt">resources/err_Burris.txt</file>
+    </qresource>
+    <qresource prefix="text">
+        <file alias="err_CG5.txt">resources/err_CG-5.txt</file>
+    </qresource>    
+    <qresource prefix="text">
+        <file alias="err_CG6.txt">resources/err_CG-6.txt</file>
+    </qresource>        
+    <qresource prefix="text">
+        <file alias="err_CG6Tsoft.txt">resources/err_CG-6Tsoft.txt</file>
+    </qresource>     
+    <qresource prefix="text">
+        <file alias="err_csv.txt">resources/err_csv.txt</file>
+    </qresource>         
+</RCC>

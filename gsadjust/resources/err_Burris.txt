@@ -1,0 +1,14 @@
+You chose to open a ZLS Burris file. The parser couldn't understand line {}:
+
+{}
+One or zero header lines are allowed. The expected format can be either old-style (space-delimited) or new-style (comma-delimited).
+
+[Old style (Palm PDA)]
+name operator sn date time g dial n n n n n n n 
+For example, 
+rg37 abc B44 2017/12/05 15:56:20 2769.695 2800 0.482 -0.103 0.005 -0.033 -0.002 0 1600 35.142072 -106.669613)
+
+[New style (Android PDA)]
+Station ID,Observer ID,Serial Number,Date,Time,ObsG,Dial,Feedback Correction,Earthtide Correction,Level Correction,Temperature Correction,Beam Error,Height,Elevation,Latitude,Longitude,Elapsed Time,Standard Deviation,Temperature Frequency,Note
+For example. 
+LMES,ML,B-44,2020/02/19,17:58:33,-0.364,2975.000,-0.353,-0.011,0.000,0.000,-0.0019,0.000,500.000,33.763179,-111.965306,96,0.0032,120,No notes.

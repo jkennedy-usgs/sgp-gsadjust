@@ -200,7 +200,7 @@ class MeterType(QtWidgets.QMessageBox):
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):
-        meter = {' CG-3, CG-5 ': 'Scintrex',
+        meter = {' CG-3, CG-5 ': 'CG5',
                  ' CG-6 ': 'CG6',
                  ' CG-6 Tsoft ': 'CG6Tsoft',
                  ' Burris ': 'Burris',
@@ -1023,7 +1023,7 @@ def show_simple_table(index, MainProg):
     return
 
 
-def show_message(message, title, icon=QtWidgets.QMessageBox.Warning):
+def show_message(message, title, icon=QtWidgets.QMessageBox.Warning, helptext=None):
     """
     Generic dialog to show a message, with a single 'OK' button.
     :param message: string shown in dialog
@@ -1035,8 +1035,31 @@ def show_message(message, title, icon=QtWidgets.QMessageBox.Warning):
     msg.setIcon(icon)
     msg.setText(message)
     msg.setWindowTitle(title)
+    if helptext:
+        a = helpButton(QtGui.QPixmap('./gsadjust/resources/icons8-help-30.png'))
+        a.blockSignals(True)
+        a.setToolTip(helptext)
+        msg.addButton(a, QtWidgets.QMessageBox.AcceptRole)
+    msg.addButton(QtWidgets.QPushButton("OK"), QtWidgets.QMessageBox.RejectRole)
     msg.show()
     return msg
+
+
+class helpButton(QtWidgets.QAbstractButton):
+    def __init__(self, pixmap, parent=None):
+        super(helpButton, self).__init__(parent)
+        self.pixmap = pixmap
+        # self.clicked.connect(self.doNothing)
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.drawPixmap(event.rect(), self.pixmap)
+
+    def sizeHint(self):
+        return self.pixmap.size()
+
+    def doNothing(self):
+        return
 
 
 def rename_dialog(old_name, new_name):

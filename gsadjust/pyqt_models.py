@@ -46,6 +46,12 @@ BURRIS_STATION, BURRIS_OPER, BURRIS_METER, BURRIS_DATE, BURRIS_G, BURRIS_DIAL, B
 TARE_DATE, TARE_TIME, TARE_TARE = range(3)
 ROMAN_FROM, ROMAN_TO, ROMAN_DELTA = range(3)
 
+def format_numeric_column(column):
+    """
+    Format fn for simple numeric columns.
+    """
+    return column + 1
+
 
 class ObsTreeItem(QtGui.QStandardItem):
     """
@@ -136,28 +142,21 @@ class ObsTreeStation(ObsTreeItem):
         data = np.array(self.raw_grav) - np.array(self.tare) + np.array(self.etc)
         return data.tolist()
 
-    @property
-    def name(self):
-        return self.station_name
-
-    @property
     def display_name(self):
         return self.station_name + ' (' + self.station_count + ')'
 
-    @property
     def display_datetime_or_tmean(self):
         return num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S') if self.tmean != -999 else self.tmean
 
-    @property
     def display_mean_stddev(self):
         return '{:.1f} ± {:.1f}'.format(self.gmean, self.stdev)
 
     @property
     def display_column_map(self):
         return {
-            STATION_NAME: self.display_name,
-            STATION_DATETIME: self.display_datetime_or_tmean,
-            STATION_MEAN: self.display_mean_stddev
+            STATION_NAME: (self.display_name, ),
+            STATION_DATETIME: (self.display_datetime_or_tmean, ),
+            STATION_MEAN: (self.display_mean_stddev, )
         }
 
     @property
@@ -253,7 +252,7 @@ class ObsTreeStation(ObsTreeItem):
             tm = self.tmean
         else:
             tm = num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S')
-        summary_str = '{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n'.format(self.display_name,
+        summary_str = '{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n'.format(self.display_name(),
                                                                       tm,
                                                                       self.oper[0],
                                                                       self.meter_type,
@@ -342,7 +341,9 @@ class ObsTreeLoop(ObsTreeItem):
         return {
             # Column name map
             # index: name
-            LOOP_NAME: self.name
+            LOOP_NAME: (str, self.name),
+            1: (str,''),
+            2: (str,'')
         }
 
     @property
@@ -549,7 +550,9 @@ class ObsTreeSurvey(ObsTreeItem):
         return {
             # Column name map
             # index: name
-            SURVEY_NAME: self.name
+            SURVEY_NAME: (str, self.name),
+            1: (str, ''),
+            2: (str, '')
         }
 
     @classmethod
@@ -1226,16 +1229,19 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.model() is not None:
+            column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                if index.column() > 0:
+                
+                if column > 0:
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
 
-                return m.display_column_map.get(index.column(), '')
+                fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
+                return fn(*args)
 
             elif role == QtCore.Qt.CheckStateRole:
-                if index.column() == 0:
+                if column == 0:
                     m = index.model().itemFromIndex(index)
                     return m.checkState()
             elif role == QtCore.Qt.ToolTipRole:
@@ -1468,11 +1474,12 @@ class RomanTableModel(QtCore.QAbstractTableModel):
             delta = self.dgs[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                return {
-                    ROMAN_FROM: delta.sta1,
-                    ROMAN_TO: delta.sta2,
-                    ROMAN_DELTA: "%0.1f" % delta.dg
+                fn, *args = {
+                    ROMAN_FROM: (str, delta.sta1),
+                    ROMAN_TO: (str, delta.sta2),
+                    ROMAN_DELTA: (format, delta.dg, "0.1f")
                 }.get(column)
+                return fn(*args)
 
             elif role == QtCore.Qt.UserRole:
                 # check status definition
@@ -1583,16 +1590,18 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                         return datum.n_sets
                     except:
                         return 'NA'
-                return {
-                    DATUM_SD: '%0.2f' % datum.sd,
-                    DATUM_G: '%8.1f' % datum.g,
-                    DATUM_STATION: datum.station,
-                    DATUM_DATE: QtCore.QDate.fromString(datum.date, 'yyyy-MM-dd'),
-                    MEAS_HEIGHT: '%0.2f' % datum.meas_height,
-                    GRADIENT: '%0.2f' % datum.gradient,
-                    DATUM_RESIDUAL: '%0.1f' % datum.residual,
-                    N_SETS: get_nsets()
-                }.get(column)
+                fn, *args = {
+                    DATUM_SD: (format, datum.sd, '0.2f'),
+                    DATUM_G: (format, datum.g, '8.1f'),
+                    DATUM_STATION: (str, datum.station),
+                    DATUM_DATE: (QtCore.QDate.fromString, datum.date, 'yyyy-MM-dd'),
+                    MEAS_HEIGHT: (format, datum.meas_height, '0.2f'),
+                    GRADIENT: (format, datum.gradient, '0.2f'),
+                    DATUM_RESIDUAL: (format, datum.residual, '0.1f'),
+                    N_SETS: (get_nsets,)
+                }.get(column, (format_numeric_column, column))
+
+                return fn(*args)
 
             elif role == QtCore.Qt.CheckStateRole:
                 # check status definition
@@ -1717,11 +1726,12 @@ class TareTableModel(QtCore.QAbstractTableModel):
             column = index.column()
             # print 'c'+str(column)
             if role == QtCore.Qt.DisplayRole:
-                return {
-                    TARE_DATE: tare.date,
-                    TARE_TIME: tare.time,
-                    TARE_TARE: "%0.1f" % tare.tare
+                fn, *args = {
+                    TARE_DATE: (str, tare.date),
+                    TARE_TIME: (str, tare.time),
+                    TARE_TARE: (format, tare.tare, "0.1f")
                 }.get(column)
+                return fn(*args)
 
             elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
@@ -1827,11 +1837,12 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
             sta = self.adjusted_stations[index.row()]
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                return {
-                    ADJSTA_STATION: sta.station,
-                    ADJSTA_G: '%8.1f' % sta.g,
-                    ADJSTA_SD: '%1.1f' % sta.sd
-                }.get(column, column + 1)
+                fn, *args ={
+                    ADJSTA_STATION: (str, sta.station),
+                    ADJSTA_G: (format, sta.g, '8.1f'),
+                    ADJSTA_SD: (format, sta.sd, '1.1f')
+                }.get(column, (format_numeric_column, column))
+                return fn(*args)
 
             if role == QtCore.Qt.UserRole:
                 return sta
@@ -1976,18 +1987,22 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     else:
                         return delta.loop
 
-                return {
-                    DELTA_STATION1: delta.sta1,
-                    DELTA_STATION2: delta.sta2,
-                    LOOP: delta_station_loop(),
-                    DELTA_TIME: dt.datetime.utcfromtimestamp((delta.time() - 719163) * 86400.).strftime(
-                        '%Y-%m-%d %H:%M:%S'),
-                    DELTA_G: "%0.1f" % delta.dg,
-                    DELTA_DRIFTCORR: "%0.1f" % delta.driftcorr,
-                    DELTA_SD: "%0.1f" % delta.sd,
-                    DELTA_ADJ_SD: "%0.1f" % delta.sd_for_adjustment,
-                    DELTA_RESIDUAL: "%0.1f" % delta.residual,
-                }.get(column, column + 1)
+                def format_datetime(date):
+                    return dt.datetime.utcfromtimestamp((date - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
+
+                fn, *args = {
+                    DELTA_STATION1: (str, delta.sta1),
+                    DELTA_STATION2: (str, delta.sta2),
+                    LOOP: (str, delta_station_loop()),
+                    DELTA_TIME: (format_datetime, delta.time()),
+                    DELTA_G: (format, delta.dg, "0.1f"),
+                    DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
+                    DELTA_SD: (format, delta.sd, "0.1f"),
+                    DELTA_ADJ_SD: (format, delta.sd_for_adjustment, "0.1f"),
+                    DELTA_RESIDUAL: (format, delta.residual, "0.1f")
+                }.get(column, (str, "NA"))
+
+                return fn(*args)
 
             elif role == QtCore.Qt.CheckStateRole:
                 if index.column() == 0:
@@ -2232,8 +2247,6 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             def format_datetime(dt):
                 return num2date(float(dt)).strftime('%Y-%m-%d %H:%M:%S')
 
-
-
             fn, *args = {
                 SCINTREX_DATE: (format_datetime, value),
                 SCINTREX_REJ: (format, value, "2.0f"),
@@ -2379,15 +2392,22 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return None
         if role == QtCore.Qt.DisplayRole:
-            if self.arraydata is not None:
-                row = index.row()
-                column = index.column()
-                strdata = str(self.arraydata[row][column])
-                if column == BURRIS_DATE:
-                    strdata = num2date(float(self.arraydata[row][column])).strftime('%Y-%m-%d %H:%M:%S')
-                if column == BURRIS_TIDE:
-                    strdata = "%0.1f" % float(self.arraydata[row][column])
-                return strdata
+            row = index.row()
+            column = index.column()
+            try:
+                value = float(self.arraydata[row][column])
+            except ValueError:
+                value = self.arraydata[row][column]
+
+            def format_datetime(dt):
+                return num2date(float(dt)).strftime('%Y-%m-%d %H:%M:%S')
+
+            fn, *args = {
+                BURRIS_DATE: (format_datetime, value),
+                BURRIS_TIDE: (format, value, "0.1f"),
+            }.get(column, (str, value))
+
+            return fn(*args)
 
         if role == QtCore.Qt.CheckStateRole:
             # check status definition
@@ -2472,10 +2492,10 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
             array = np.array(table).transpose()
         elif table_type == 'full':
             array = np.array(table)
-        self.array_data = array
+        self.arraydata = array
 
     def rowCount(self, parent=None):
-        return self.array_data.shape[0]
+        return self.arraydata.shape[0]
 
     def columnCount(self, parent=None):
         return len(self._headers)
@@ -2490,11 +2510,7 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole:
             row = index.row()
             column = index.column()
-            string_data = str(self.array_data[row][column])
-            try:
-                return '{:.1f}'.format(float(string_data))
-            except ValueError:
-                return string_data
+            return str(self.arraydata[row][column])
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:

@@ -1558,7 +1558,7 @@ class MainProg(QtWidgets.QMainWindow):
                                                         obstreestation.station_name,
                                                         obstreestation.station_count)
                     logging.info('Station added to new loop: {}'.format(
-                        obstreestation.name))
+                        obstreestation.station_name))
                     new_obstreeloop.appendRow([new_obstreestation,
                                                QtGui.QStandardItem('a'),
                                                QtGui.QStandardItem('a')])

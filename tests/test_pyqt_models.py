@@ -15,7 +15,7 @@ def test_ObsTreeSurvey(obstreesurvey):
 
 def test_create_ObsTreeStation(channellist):
     a = pyqt_models.ObsTreeStation(channellist, 'teststa', '1')
-    assert a.name == 'teststa'
+    assert a.station_name == 'teststa'
 
 def test_obstreemodel(qtmodeltester, channellist):
     model = pyqt_models.ObsTreeModel()

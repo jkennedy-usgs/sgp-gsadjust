@@ -18,7 +18,7 @@ def time_correction(obstreemodel, correction_type, t_offset, survey_index, loop_
                     obstreestation = obstreeloop.child(iii)
                     obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
                     logging.info("{} minute offset added to station {}".format(t_offset,
-                                                                               obstreestation.display_name))
+                                                                               obstreestation.display_name()))
     elif correction_type == 'survey':
         obstreesurvey = obstreemodel.itemFromIndex(survey_index)
         for ii in range(obstreesurvey.rowCount()):
@@ -27,14 +27,14 @@ def time_correction(obstreemodel, correction_type, t_offset, survey_index, loop_
                 obstreestation = obstreeloop.child(iii)
                 obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
                 logging.info(
-                    "{} minute offset added to station {}".format(t_offset, obstreestation.display_name))
+                    "{} minute offset added to station {}".format(t_offset, obstreestation.display_name()))
     elif correction_type == 'loop':
         obstreeloop = obstreemodel.itemFromIndex(loop_index)
         for iii in range(obstreeloop.rowCount()):
             obstreestation = obstreeloop.child(iii)
             obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
             logging.info(
-                "{} minute offset added to station {}".format(t_offset, obstreestation.display_name))
+                "{} minute offset added to station {}".format(t_offset, obstreestation.display_name()))
     elif correction_type == 'station':
         # Because each tree item has three columns, len(indexes) equals the number of items selected * 3.
         # The next line takes every 3rd index.
@@ -43,4 +43,4 @@ def time_correction(obstreemodel, correction_type, t_offset, survey_index, loop_
             obstreestation = obstreemodel.itemFromIndex(index)
             obstreestation.t = [t + dt.timedelta(t_offset / 1440, 0, 0) for t in obstreestation.t]
             logging.info("{} minute offset added to station {}".format(t_offset,
-                                                                       obstreestation.display_name))
+                                                                       obstreestation.display_name()))

@@ -36,13 +36,13 @@ LOOP_NAME = 0
 SURVEY_NAME = 0
 
 DATUM_STATION, DATUM_DATE, DATUM_G, DATUM_SD, N_SETS, MEAS_HEIGHT, GRADIENT, DATUM_RESIDUAL = range(8)
-DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = range(
-    9)
+DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELTA_SD, DELTA_ADJ_SD, DELTA_RESIDUAL = \
+    range(9)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
-SCINTREX_STATION, SCINTREX_DATE, SCINTREX_G, SCINTREX_SD, SCINTREX_X_TILT, SCINTREX_Y_TILT, SCINTREX_TEMP, SCINTREX_DUR, SCINTREX_REJ = range(
-    9)
-BURRIS_STATION, BURRIS_OPER, BURRIS_METER, BURRIS_DATE, BURRIS_G, BURRIS_DIAL, BURRIS_FEEDBACK, BURRIS_TIDE, BURRIS_ELEVATION, BURRIS_LAT, BURRIS_LONG = range(
-    11)
+SCINTREX_STATION, SCINTREX_DATE, SCINTREX_G, SCINTREX_SD, SCINTREX_X_TILT, SCINTREX_Y_TILT, SCINTREX_TEMP, \
+    SCINTREX_DUR, SCINTREX_REJ = range(9)
+BURRIS_STATION, BURRIS_OPER, BURRIS_METER, BURRIS_DATE, BURRIS_G, BURRIS_DIAL, BURRIS_FEEDBACK, BURRIS_TIDE, \
+    BURRIS_ELEVATION, BURRIS_LAT, BURRIS_LONG = range(11)
 TARE_DATE, TARE_TIME, TARE_TARE = range(3)
 ROMAN_FROM, ROMAN_TO, ROMAN_DELTA = range(3)
 
@@ -307,6 +307,7 @@ class ObsTreeLoop(ObsTreeItem):
         self.meter = ''  # Meter S/N, for the case where multiple meters are calibrated
         self.comment = ''
         self.oper = ''
+        self.source = ''
 
     def __str__(self):
         return 'Loop: {}, ' \
@@ -328,12 +329,15 @@ class ObsTreeLoop(ObsTreeItem):
                'Drift method: {}\n' \
                'Meter: {}\n' \
                'Operator: {}\n' \
-               'Comment: {}'.format(
-            self.name,
-            self.__dict__.get('drift_method', ''),
-            self.__dict__.get('meter', ''),
-            self.__dict__.get('oper', ''),
-            self.__dict__.get('comment', ''),
+               'Comment: {}\n' \
+               'Source: {}' \
+               .format(
+                    self.name,
+                    self.__dict__.get('drift_method', ''),
+                    self.__dict__.get('meter', ''),
+                    self.__dict__.get('oper', ''),
+                    self.__dict__.get('comment', ''),
+                    self.__dict__.get('source', ''),
         )
 
     @property
@@ -693,7 +697,7 @@ class ObsTreeSurvey(ObsTreeItem):
             loop = self.child(i, 0)
             loop.rename(from_name, to_name)
 
-    def populate(self, survey_data, name='0'):
+    def populate(self, survey_data, name='0', source='NA'):
         """
         Called from open_raw_data. Loads all survey_data into a single loop.
         :param survey_data: data returned from read_raw_data_file
@@ -702,6 +706,7 @@ class ObsTreeSurvey(ObsTreeItem):
         """
         obstreeloop = ObsTreeLoop(name)
         obstreeloop.populate(survey_data)
+        obstreeloop.source = source
         self.appendRow([obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
         logging.info('Survey added')
 
@@ -1472,8 +1477,9 @@ class RomanTableModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.isValid():
             delta = self.dgs[index.row()]
-            column = index.column()
+
             if role == QtCore.Qt.DisplayRole:
+                column = index.column()
                 fn, *args = {
                     ROMAN_FROM: (str, delta.sta1),
                     ROMAN_TO: (str, delta.sta2),
@@ -1590,6 +1596,7 @@ class DatumTableModel(QtCore.QAbstractTableModel):
                         return datum.n_sets
                     except:
                         return 'NA'
+
                 fn, *args = {
                     DATUM_SD: (format, datum.sd, '0.2f'),
                     DATUM_G: (format, datum.g, '8.1f'),
@@ -1723,9 +1730,9 @@ class TareTableModel(QtCore.QAbstractTableModel):
     def data(self, index, role):
         if index.isValid():
             tare = self.tares[index.row()]
-            column = index.column()
-            # print 'c'+str(column)
+
             if role == QtCore.Qt.DisplayRole:
+                column = index.column()
                 fn, *args = {
                     TARE_DATE: (str, tare.date),
                     TARE_TIME: (str, tare.time),
@@ -1835,8 +1842,9 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
     def data(self, index, role):
         if index.isValid():
             sta = self.adjusted_stations[index.row()]
-            column = index.column()
+
             if role == QtCore.Qt.DisplayRole:
+                column = index.column()
                 fn, *args ={
                     ADJSTA_STATION: (str, sta.station),
                     ADJSTA_G: (format, sta.g, '8.1f'),
@@ -1863,7 +1871,7 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
 
     def copyToClipboard(self):
         """
-        Copies results tble to clipboard. Table needs to be selected first by clicking in the upper left corner.
+        Copies results table to clipboard. Table needs to be selected first by clicking in the upper left corner.
         """
         clipboard = ""
 
@@ -1880,7 +1888,6 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
         sys_clip.setText(clipboard)
 
     def clearResults(self):
-
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
         self.adjusted_stations = []
         self.endRemoveRows()

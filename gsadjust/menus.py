@@ -219,11 +219,11 @@ class Menus:
                                                     enabled=True)
         self.mnFileAppendSurvey = self.create_action("Append survey to campaign...",
                                                      slot=lambda meter='choose': self.mainProg.open_file_dialog(
-                                                         'choose'),
+                                                         'survey'),
                                                      enabled=False)
         self.mnFileAppendLoop = self.create_action("Append loop to current survey...",
                                                    slot=lambda meter='choose':
-                                                   self.mainProg.open_file_dialog('chooseloop'),
+                                                   self.mainProg.open_file_dialog('loop'),
                                                    enabled=False)
         self.mnFileAppendWorkspace = self.create_action("Append workspace...",
                                                         slot=self.mainProg.workspace_append,

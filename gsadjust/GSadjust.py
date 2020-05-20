@@ -431,30 +431,25 @@ class MainProg(QtWidgets.QMainWindow):
                           'CG-6', 'Burris', or 'CG-5' - reading a raw data file, no appending
         """
         # open file
-        append_loop = False
-        if 'loop' in open_type:
-            append_loop = True
+        append_loop = True if open_type == 'loop' else False
 
-        # The case when "append survey' or 'append loop' is called: accommodate the rare instance of combining meter
-        # types on a single survey
-        if 'choose' in open_type:
-            meter_type_dialog = MeterType()
-            test = meter_type_dialog.exec_()
-            if test < 5:  # 5 = cancel  (accept/reject not working?)
-                meter_type = meter_type_dialog.meter_type
-            else:
-                return
-
-        # Otherwise, 'Load raw....' was called. We know the meter type, but need to ask about appending or overwriting
-        # the existing data (only if there is existing data).
-        elif self.obsTreeModel.invisibleRootItem().rowCount() > 0:
+        if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
             overwrite_tree_dialog = Overwrite()
             if overwrite_tree_dialog.exec_():
                 self.workspace_clear(confirm=False)
             else:
                 return
 
-        if 'choose' not in open_type:
+        # When "append survey' or 'append loop' is called: accommodate the rare instance of combining meter
+        # types on a single survey
+        if open_type == 'loop' or open_type == 'survey':
+            meter_type_dialog = MeterType()
+            test = meter_type_dialog.exec_()
+            if test < 5:  # 5 = cancel  (accept/reject not working?)
+                meter_type = meter_type_dialog.meter_type
+            else:
+                return
+        else:
             meter_type = open_type
 
         if fname:
@@ -469,17 +464,15 @@ class MainProg(QtWidgets.QMainWindow):
                 if append_loop:
                     obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
                     # Loads all survey data into a single loop.
-                    obstreesurvey.populate(self.all_survey_data, name=str(obstreesurvey.loop_count))
+                    obstreesurvey.populate(self.all_survey_data, name=str(obstreesurvey.loop_count),
+                                           source=os.path.basename(fname))
                 else:
                     obstreesurvey = ObsTreeSurvey(str(num2date(self.all_survey_data.t[0]).date()))
-                    obstreesurvey.populate(self.all_survey_data)
+                    obstreesurvey.populate(self.all_survey_data, source=os.path.basename())
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
             except IOError as err:
+                e = err
                 self.msg = show_message('No file : {}'.format(fname), 'File error')
-            # except ValueError as err:
-            #     help_message = 'You chose to open ' + meter_type + ' data. The expected format is...n'
-            #     self.msg = show_message('Value error at line {:d}. Check raw data file: possible bad value?'.
-            #                             format(err.i), 'File error', helptext=help_message)
             except (IndexError, ValueError) as err:
                 stream = QtCore.QFile(":/text/err_{}.txt".format(meter_type))
                 stream.open(QtCore.QIODevice.ReadOnly)
@@ -498,7 +491,7 @@ class MainProg(QtWidgets.QMainWindow):
                 logging.exception(e, exc_info=True)
                 return False
 
-            if open_type not in 'choose' and self.obsTreeModel.rowCount() > 0:
+            if self.obsTreeModel.rowCount() > 0:
                 self.init_gui()
                 self.plot_samples()
                 if open_type is not 'CG5':
@@ -527,7 +520,6 @@ class MainProg(QtWidgets.QMainWindow):
             with open(filename, 'r') as fh:
                 logging.info("number of lines: {:d}".format(len([1 for line in open(filename, 'r')])))
                 all_survey_data.meter_type = meter_type
-                # TODO: make meter-specific code separate methods. This is clunky, but maintains flexibility
                 if meter_type == 'csv':
                     _ = fh.readline()
                     all_survey_data = read_csv(fh)
@@ -622,7 +614,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.msg = show_message("Workspace save error", "Error")
             return
 
-        self.msg = show_message('Workspace saved', 'GSAdjust')
+        self.msg = show_message('Workspace saved', 'GSadjust')
         self.set_window_title(fname)
         return True
 
@@ -652,7 +644,7 @@ class MainProg(QtWidgets.QMainWindow):
                 return
 
             self.set_window_title(fname)
-            self.msg = show_message('Workspace saved', 'GSAdjust')
+            self.msg = show_message('Workspace saved', 'GSadjust')
             self.workspace_savename = fname
             self.update_menus()
 
@@ -760,7 +752,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         """
         pbar = QtWidgets.QProgressDialog(labelText='Loading workspace', minimum=0, maximum=4)
-        pbar.setWindowTitle('GSAdjust')
+        pbar.setWindowTitle('GSadjust')
         pbar.setLabelText('Building Observation Tree')
         pbar.show()
         for survey in obstreesurveys:

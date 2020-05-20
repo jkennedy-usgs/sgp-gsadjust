@@ -215,6 +215,15 @@ class TabData(QtWidgets.QWidget):
         self.axes_data_UR.clear()
         self.data_canvas.draw()
 
+    def update_view(self):
+        # jeff = 1
+        data_header = self.data_view.horizontalHeader()
+        for i in range(self.data_view.model().columnCount()):
+            data_header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
+            width = self.data_view.columnWidth(i)
+            data_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Interactive)
+            self.data_view.setColumnWidth(i, width)
+
     def set_plot(self, axe, seriex, seriey, seriex_selec, seriey_selec, serie_type, serie_unit, plot_location):
         """
         plot data samples from relative-gravity meter at a single station (gravity, tilt, temp., etc.).

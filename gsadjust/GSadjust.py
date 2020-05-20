@@ -389,8 +389,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.station_model.signal_uncheck_station.connect(self.uncheck_station)
         self.station_model.signal_check_station.connect(self.check_station)
         self.tab_data.data_view.setModel(self.station_model)
+
         self.obsTreeModel.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
+        self.tab_data.update_view()
 
     def uncheck_station(self):
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
@@ -468,7 +470,7 @@ class MainProg(QtWidgets.QMainWindow):
                                            source=os.path.basename(fname))
                 else:
                     obstreesurvey = ObsTreeSurvey(str(num2date(self.all_survey_data.t[0]).date()))
-                    obstreesurvey.populate(self.all_survey_data, source=os.path.basename())
+                    obstreesurvey.populate(self.all_survey_data, source=os.path.basename(fname))
                     self.obsTreeModel.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
             except IOError as err:
                 e = err

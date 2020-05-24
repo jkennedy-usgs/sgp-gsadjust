@@ -170,7 +170,7 @@ class Delta:
         :return: str
         """
         if self.type == 'list':
-            return self.type + self.sta1 + self.sta2 + str(self.dg)
+            return self.type + self.sta1 + self.sta2 + str(self.dg())
         elif self.type == 'normal':
             return self.type + \
                    self.station1.station_name + \
@@ -203,7 +203,7 @@ class Delta:
         try:
             if self.type == 'list':
                 if len(self.station2) > 1:
-                    s = [np.abs(delta.dg) for delta in self.station2]
+                    s = [np.abs(delta.dg()) for delta in self.station2]
                     return np.std(s)
                 else:
                     return 3.0
@@ -212,9 +212,9 @@ class Delta:
                     if self.station1.asd:
                         s = np.sqrt(self.station2.asd ** 2 + self.station1.asd ** 2)
                     else:
-                        s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
+                        s = np.sqrt(self.station2.stdev() ** 2 + self.station1.stdev() ** 2)
                 else:
-                    s = np.sqrt(self.station2.stdev ** 2 + self.station1.stdev ** 2)
+                    s = np.sqrt(self.station2.stdev() ** 2 + self.station1.stdev() ** 2)
                 return s
             elif self.type == 'three_point':
                 return 3.0
@@ -224,7 +224,7 @@ class Delta:
     @property
     def sta1(self):
         if self.type == 'list':
-            if self.station2[0].dg > 0:
+            if self.station2[0].dg() > 0:
                 return self.station2[0].station1.station_name
             else:
                 return self.station2[0].station2[1].station_name
@@ -236,7 +236,7 @@ class Delta:
     @property
     def sta2(self):
         if self.type == 'list':
-            if self.station2[0].dg > 0:
+            if self.station2[0].dg() > 0:
                 return self.station2[0].station2[1].station_name
             else:
                 return self.station2[0].station1.station_name
@@ -245,53 +245,57 @@ class Delta:
         else:
             return self.station2.station_name
 
-    @property
+    # @property
     def dg(self):
         # Roman correction: dg requires three station-observations
+
         if self.type == 'three_point':
-            sta2_dg = self.station2[1].gmean - self.station2[0].gmean
-            time_prorate = (self.station1.tmean - self.station2[0].tmean) / (self.station2[1].tmean -
-                                                                             self.station2[0].tmean)
-            dg = (self.station2[0].gmean + sta2_dg * time_prorate) - self.station1.gmean
+            gm1, gm2a, gm2b, = self.station1.gmean(), self.station2[1].gmean(), self.station2[0].gmean()
+            tm1, tm2a, tm2b = self.station1.tmean(), self.station2[0].tmean(), self.station2[1].tmean()
+
+            sta2_dg = gm2a - gm2b
+            time_prorate = (tm1 - tm2a) / (tm2b - tm2a)
+            dg = (gm2b + sta2_dg * time_prorate) - gm1
         # Roman correction: return average of individual deltas
         elif self.type == 'list':
-            dg_all = [np.abs(delta.dg) for delta in self.station2]
+            dg_all = [np.abs(delta.dg()) for delta in self.station2]
             dg = np.mean(dg_all)
         # Normal delta
         elif self.type == 'normal':
-            dg = self.station2.gmean - self.station1.gmean - self.driftcorr
+            gm1, gm2, = self.station1.gmean(), self.station2.gmean()
+            dg = gm2 - gm1 - self.driftcorr
         elif self.type == 'assigned':
             dg = self.assigned_dg
 
         return dg
 
-    @property
+    # @property
     def sta1_t(self):
         if self.type == 'three_point':
-            return self.station1.tmean
+            return self.station1.tmean()
         elif self.type == 'list':
-            return self.station2[0].station1.tmean
+            return self.station2[0].station1.tmean()
         else:
-            return self.station1.tmean
+            return self.station1.tmean()
 
-    @property
+    # @property
     def sta2_t(self):
         if self.type == 'three_point':
-            return self.station2[0].tmean
+            return self.station2[0].tmean()
         elif self.type == 'list':
-            return self.station2[0].station1.tmean
+            return self.station2[0].station1.tmean()
         else:
-            return self.station2.tmean
+            return self.station2.tmean()
 
     @property
     def duration(self):
         if type(self.station2) is tuple:
-            return self.station2[1].tmean - self.station2[0].tmean
+            return self.station2[1].tmean() - self.station2[0].tmean()
         elif type(self.station2) is list:
-            dgs = [delta.dg for delta in self.station2]
+            dgs = [delta.dg() for delta in self.station2]
             return np.mean(dgs)
         else:
-            return self.sta2_t - self.sta1_t
+            return self.sta2_t() - self.sta1_t()
 
     def __str__(self):
         if self.checked == 2:
@@ -299,26 +303,26 @@ class Delta:
         else:
             in_use = '0'
         # Rarely a station time will be -999 (if all samples are unchecked)
-        if self.sta1_t != -999:
-            delta_time = num2date(self.sta1_t).strftime('%Y-%m-%d %H:%M:%S')
+        if self.sta1_t() != -999:
+            delta_time = num2date(self.sta1_t()).strftime('%Y-%m-%d %H:%M:%S')
         else:
             delta_time = '-999'
         return_str = '{} {} {} {} {:0.3f} {:0.3f} {:0.3f}'.format(in_use,
                                                                   self.sta1,
                                                                   self.sta2,
                                                                   delta_time,
-                                                                  self.dg,
+                                                                  self.dg(),
                                                                   self.sd,
                                                                   self.sd_for_adjustment)
         return return_str
 
     def time(self):
         if type(self.station2) is pyqt_models.ObsTreeStation:
-            return (self.sta1_t + self.sta2_t) / 2
+            return (self.sta1_t() + self.sta2_t()) / 2
         elif type(self.station2) is tuple:
-            return self.sta1_t
+            return self.sta1_t()
         elif type(self.station2) is list:
-            t = [delta.sta1_t for delta in self.station2]
+            t = [delta.sta1_t() for delta in self.station2]
             return np.mean(t)
 
 

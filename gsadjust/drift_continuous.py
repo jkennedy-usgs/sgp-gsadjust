@@ -13,11 +13,15 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
     N_PTS_IN_INTERPOLATION = 300
     xp = np.linspace(min(drift_x), max(drift_x), N_PTS_IN_INTERPOLATION)  # constant
     drift_stats = None
+    z_main = []
     # method_key = self.drift_polydegree_combobox.currentIndex()
     if method_key == 0:  # constant drift correction
         if weight_obs == 0:
             mean_drift = sum(drift_rate) / len(drift_rate)
+            sigma = np.std(drift_rate) / np.sqrt(len(drift_rate))
             yp = np.zeros(xp.size) + mean_drift
+            z_main = [(mean_drift, sigma)]
+        # Weight observations according to NGA method
         else:
             drifts, drift_w = [], []
             for station_data in plot_data:
@@ -46,6 +50,7 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
             drift_stats['sigma_d'] = sigma_d
             drift_stats['mean_drift'] = mean_drift
             yp = np.zeros(xp.size) + mean_drift
+            z_main = [(mean_drift, sigma_d)]
     else:
         x0 = [f - np.min(drift_x) for f in drift_x]
         xp0 = [f - np.min(xp) for f in xp]
@@ -70,11 +75,10 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
             # Polynomial interpolation. Degree is one less than the method key, e.g.,
             #     method_key == 2 is 1st orderpolynomial, etc.
             try:
-                z = np.polyfit(x0, drift_rate, method_key - 1)
-                p = np.poly1d(z)
+                z_main = np.polyfit(x0, drift_rate, method_key - 1)
+                p = np.poly1d(z_main)
                 yp = p(xp0)
                 logging.info('Polynomial drift correction degree {}'.format(method_key - 1))
-                # obstreeloop.drift_cont_method = 0
             except np.linalg.LinAlgError as e:
                 return np.linalg.LinAlgError
 
@@ -107,7 +111,7 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
         yp_temp = np.append(yp1, yp)
         yp = np.append(yp_temp, yp2)
     delta_list = calc_cont_dg(xp, yp, data, loop_name, drift_stats)
-    return delta_list, xp, yp
+    return delta_list, xp, yp, z_main
 
 def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
     """
@@ -136,13 +140,13 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
     for station in data:
         if drift_stats:
             station.asd = np.sqrt(station.original_sd**2 +
-                                  ((station.tmean - drift_stats['t0'])*24)**2*drift_stats['sigma_d']**2 +
+                                  ((station.tmean() - drift_stats['t0'])*24)**2*drift_stats['sigma_d']**2 +
                                   np.sqrt(station.t_stdev**2 + data[0].t_stdev**2) * drift_stats['mean_drift']**2)
         else:
             station.asd = None
-        drift1_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean))
+        drift1_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean()))
         drift1 = yp[drift1_idx]
-        drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean))
+        drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean()))
         drift2 = yp[drift2_idx]
         delta = Delta(prev_station,
                       station,

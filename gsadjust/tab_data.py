@@ -159,7 +159,7 @@ class TabData(QtWidgets.QWidget):
         keepdata = station.keepdata
         t_selec = [t[i] for i in range(len(t)) if keepdata[i] == 1]
         # gravity channel (convert to microgals for display)
-        series = np.array(station.grav)
+        series = np.array(station.grav())
         series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
         if meter_type == 'CG5' or meter_type == 'CG6' or meter_type == 'csv':
             self.set_plot(self.axes_data_UL, t, series, t_selec, series_selec, 'Gravity', '$\mu$gal', '1')
@@ -215,14 +215,6 @@ class TabData(QtWidgets.QWidget):
         self.axes_data_UR.clear()
         self.data_canvas.draw()
 
-    def update_view(self):
-        # jeff = 1
-        data_header = self.data_view.horizontalHeader()
-        for i in range(self.data_view.model().columnCount()):
-            data_header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
-            width = self.data_view.columnWidth(i)
-            data_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Interactive)
-            self.data_view.setColumnWidth(i, width)
 
     def set_plot(self, axe, seriex, seriey, seriex_selec, seriey_selec, serie_type, serie_unit, plot_location):
         """
@@ -345,8 +337,8 @@ class TabData(QtWidgets.QWidget):
             g_column = 2
         g_threshold = float(autoselec.val.text())
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        g = obstreestation.grav
-        stabilized_value = obstreestation.gmean
+        g = obstreestation.grav()
+        stabilized_value = obstreestation.gmean()
         for i in range(self.parent.station_model.rowCount()):
             indx = self.parent.station_model.index(i, g_column)
             data = float(self.parent.station_model.data(indx, role=QtCore.Qt.DisplayRole))
@@ -378,8 +370,8 @@ class TabData(QtWidgets.QWidget):
             selec_dur = True
 
         obstreestation = self.parent.obsTreeModel.itemFromIndex(self.parent.currentStationIndex)
-        g = obstreestation.grav
-        stabilized_value = obstreestation.gmean
+        g = obstreestation.grav()
+        stabilized_value = obstreestation.gmean()
         for iiii in range(len(obstreestation.keepdata)):
             indx = self.parent.station_model.index(iiii, 0)
             if selec_grav and abs(g[iiii] - stabilized_value) > g_threshold:
@@ -433,8 +425,8 @@ class TabData(QtWidgets.QWidget):
                 obstreeloop = obstreesurvey.child(ii)
                 for iii in range(obstreeloop.rowCount()):
                     obstreestation = obstreeloop.child(iii)
-                    g = obstreestation.grav
-                    stabilized_value = obstreestation.gmean
+                    g = obstreestation.grav()
+                    stabilized_value = obstreestation.gmean()
                     for iiii in range(len(obstreestation.keepdata)):
                         indx = self.parent.station_model.index(iiii, 0)
                         if selec_grav and abs(g[iiii] - stabilized_value) > g_threshold:

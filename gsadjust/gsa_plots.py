@@ -256,7 +256,7 @@ def plot_loop_animation(obstreeloop):
         station = obstreeloop.child(i)
         lat.append(station.lat[0])
         lon.append(station.long[0])
-        dates.append(station.tmean)
+        dates.append(station.tmean())
 
     myGUI = CustomMainWindow([lat, lon, dates])
 

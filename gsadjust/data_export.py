@@ -73,6 +73,7 @@ def export_metadata(obsTreeModel, data_path):
                     survey.adjustment.adjustmentresults.n_datums,
                     datum_was_or_were))
         logging.info('Metadata text written to file')
+    return fn
 
     if not results_written:
         from gui_objects import show_message
@@ -132,6 +133,7 @@ def export_summary(obsTreeModel, data_path):
             for ii in range(survey.results_model.rowCount()):
                 adj_sta = survey.results_model.data(survey.results_model.index(ii, 0), role=QtCore.Qt.UserRole)
                 fid.write('{}\n'.format(str(adj_sta)))
+    return fn
 
 def export_data(obstreemodel, data_path):
     """
@@ -145,3 +147,5 @@ def export_data(obstreemodel, data_path):
         wr.writerow(table[0])
         for row in table[1]:
             wr.writerow(row)
+
+    return fn

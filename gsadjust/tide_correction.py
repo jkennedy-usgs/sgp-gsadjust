@@ -145,7 +145,8 @@ def launch_predict(self, cwin, option):
     if option == 2:
         # Ask the user to provide tide files
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Load tidal parameters file',
-                                                         self.data_path)
+                                                         self.settings.value('tide_path'))
+
         tides = open(fname, 'r')
         for line in tides:
             # Clean line
@@ -284,11 +285,12 @@ def ocean_correction_agnew(self, amp, phases, lon):
     lon:     site longitude
     """
 
-    if any(self.t):
-        # get tides and round to µgal level
-        tides = np.round(np.array([ocean_loading(t, amp, phases, lon) for t in self.t]) * 1000) / 1000.
-        self.corr_g = [self.grav[i] + tides[i] for i in range(len(self.t))]
-        self.grav = self.corr_g
+    # if any(self.t):
+    #     # get tides and round to µgal level
+    #     tides = np.round(np.array([ocean_loading(t, amp, phases, lon) for t in self.t]) * 1000) / 1000.
+    #     g = self.grav()
+    #     self.corr_g = [g[i] + tides[i] for i in range(len(self.t))]
+        # self.grav = self.corr_g
     i = 1
     for keysurv, surv in self.survey_dic.items():
         i += 1

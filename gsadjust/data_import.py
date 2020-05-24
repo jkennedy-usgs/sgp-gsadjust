@@ -244,7 +244,7 @@ def read_cg6(fh):
         try:
             i += 1
             line = orig_line.strip()
-            vals_temp = line.split()
+            vals_temp = line.split('\t')
             if line[0] == '/':
                 vals_temp = line.split()
                 if len(vals_temp) > 1:
@@ -304,7 +304,7 @@ def read_cg6(fh):
             e.i = i
             e.line = orig_line
             raise e
-    all_survey_data.meter_type = 'CG6Tsoft'
+    all_survey_data.meter_type = 'CG6'
     return all_survey_data
 
 

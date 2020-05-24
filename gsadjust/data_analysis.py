@@ -69,7 +69,7 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
     # Populate least squares matrices
     for delta in adjustment.deltas:
         deltakeys.append(delta.__hash__())
-        Obs[row] = delta.dg * delta.cal_coeff
+        Obs[row] = delta.dg() * delta.cal_coeff
         P[row, row] = 1. / (delta.sd_for_adjustment ** 2)
         A[row, sta_dic_ls[delta.sta1]] = -1
         A[row, sta_dic_ls[delta.sta2]] = 1
@@ -77,7 +77,7 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
         # Populate 1 column per gravimeter for calibration coefficient
         if adjustment.adjustmentoptions.cal_coeff:
             meter = delta.meter
-            A[row, adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
+            A[row, adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg()
 
         # Populate column(s) for drift, if included in network adjustment
         if delta.ls_drift is not None:
@@ -88,7 +88,7 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
                 if loop_ls_dict[loop_name] == 'netadj':
                     for i in range(delta.ls_drift[1]):  # degree of polynomial
                         A[row, len(sta_dic_ls) + n_meters + netadj_loop_keys[loop_name][0] + i] = \
-                            (delta.sta2_t - delta.sta1_t) ** (i + 1)
+                            (delta.sta2_t() - delta.sta1_t()) ** (i + 1)
 
         S[sta_dic_ls[delta.sta1]] = 1
         S[sta_dic_ls[delta.sta2]] = 1
@@ -114,17 +114,23 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
     # zero-division errors are caught by caller
     adjustment.python_lsq_inversion()
 
-    # Populate results table
+    # Populate results table_all
+    sd_all = list()
     for i in range(len(sta_dic_ls)):
         for key, val in sta_dic_ls.items():
             if val == i:
                 try:
-                    t = AdjustedStation(key, float(adjustment.X[i]), float(np.sqrt(adjustment.var[i])))
+                    g = float(adjustment.X[i])
+                    sd = float(np.sqrt(adjustment.var[i]))
+                    t = AdjustedStation(key, g, sd)
                     results_model.insertRows(t, 0)
-                    adjustment.g_dic[key] = float(adjustment.X[i])
-                    adjustment.sd_dic[key] = float()
+                    adjustment.g_dic[key] = g
+                    adjustment.sd_dic[key] = sd
+                    sd_all.append(sd)
                 except:
                     msg = show_message("Bad variance in results", "Inversion error")
+    adjustment.adjustmentresults.avg_stdev = np.mean(sd_all)
+
 
     # Retrieve calibration coefficient(s)
     cal_dic = dict()

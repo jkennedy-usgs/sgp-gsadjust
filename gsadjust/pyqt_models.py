@@ -113,7 +113,7 @@ class ObsTreeStation(ObsTreeItem):
             return [1 for i in self.keepdata if i == 1]
         else:
             sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]
-            w = np.array([1. / (sdtmp[i] * sdtmp[i]) for i in range(len(self.t)) if self.keepdata[i] == 1])
+            w = [1. / (sdtmp[i] * sdtmp[i]) for i in range(len(self.t)) if self.keepdata[i] == 1]
             return w
 
     @classmethod
@@ -129,9 +129,9 @@ class ObsTreeStation(ObsTreeItem):
 
     @property
     def key(self):
-        return (self.station_name, self.tmean)
+        return (self.station_name, self.tmean())
 
-    @property
+    # @property
     def grav(self):
         """
         Applies tares and earth tide correction to raw_grav
@@ -139,17 +139,18 @@ class ObsTreeStation(ObsTreeItem):
         """
         # if len(self.corr_g) == 0:
         #     self.corr_g = self.raw_grav
-        data = np.array(self.raw_grav) - np.array(self.tare) + np.array(self.etc)
-        return data.tolist()
+        # data = np.array(self.raw_grav) - np.array(self.tare) + np.array(self.etc)
+        data = [a - b + c for (a, b, c) in zip(self.raw_grav, self.tare, self.etc)]
+        return data
 
     def display_name(self):
         return self.station_name + ' (' + self.station_count + ')'
 
     def display_datetime_or_tmean(self):
-        return num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S') if self.tmean != -999 else self.tmean
+        return num2date(self.tmean()).strftime('%Y-%m-%d %H:%M:%S') if self.tmean() != -999 else self.tmean()
 
     def display_mean_stddev(self):
-        return '{:.1f} ± {:.1f}'.format(self.gmean, self.stdev)
+        return '{:.1f} ± {:.1f}'.format(self.gmean(), self.stdev())
 
     @property
     def display_column_map(self):
@@ -163,26 +164,33 @@ class ObsTreeStation(ObsTreeItem):
     def tooltip(self):
         return None
 
-    @property
+    # @property
     def gmean(self):
         """
         The try-except block handles errors when all keepdata == 0.
         """
+        g = self.grav()
         try:
-            gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-            gmean = sum(gtmp * self._weights_()) / sum(self._weights_())
+            gtmp = [g[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
+            d = sum(self._weights_())
+            w = self._weights_()
+            wg = [g * w for (g,w) in zip(gtmp, w)]
+            gmean = sum(wg) / d
             return gmean
         except:
             return -999
 
-    @property
+    # @property
     def tmean(self):
         """
         The try-except block handles errors when all keepdata == 0.
         """
         try:
-            ttmp = np.array([self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-            tmean = sum(ttmp * self._weights_()) / sum(self._weights_())
+            ttmp = [self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
+            d = sum(self._weights_())
+            w = self._weights_()
+            wt = [g * w for (g,w) in zip(ttmp, w)]
+            tmean = sum(wt) / d
             return tmean
         except:
             return -999
@@ -206,15 +214,16 @@ class ObsTreeStation(ObsTreeItem):
 
     @property
     def original_sd(self):
+        g = self.grav()
         sdtmp = np.array([self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-        gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+        gtmp = np.array([g[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
         num = np.zeros(len(sdtmp))
         for i in range(len(sdtmp)):
             num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
         sd = np.sqrt(np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))
         return sd
 
-    @property
+    # @property
     def stdev(self):
         """
         The try-except block handles errors when all keepdata == 0.
@@ -223,11 +232,12 @@ class ObsTreeStation(ObsTreeItem):
         it shows S.D. on the display but does not record it).
         """
         try:
+            g = self.grav()
             if hasattr(self, 'asd'):
                 if self.asd:
                     return self.asd
             if self.sd[0] == -999:  # Burris meter: return the S.D. calculated from all the samples at a station
-                gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+                gtmp = np.array([g[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 if len(gtmp) == 1:  # Can't take S.D. if there's only one sample
                     return 3.0
                 else:
@@ -235,7 +245,7 @@ class ObsTreeStation(ObsTreeItem):
             else:  # Scintrex: return the average SD of the samples
                 sdtmp = np.array([self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 sd = np.mean(sdtmp)  #
-                gtmp = np.array([self.grav[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+                gtmp = np.array([g[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 num = np.zeros(len(sdtmp))
                 for i in range(len(sdtmp)):
                     num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
@@ -248,10 +258,10 @@ class ObsTreeStation(ObsTreeItem):
 
     @property
     def summary_str(self):
-        if self.tmean == -999:
-            tm = self.tmean
+        if self.tmean() == -999:
+            tm = self.tmean()
         else:
-            tm = num2date(self.tmean).strftime('%Y-%m-%d %H:%M:%S')
+            tm = num2date(self.tmean()).strftime('%Y-%m-%d %H:%M:%S')
         summary_str = '{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n'.format(self.display_name(),
                                                                       tm,
                                                                       self.oper[0],
@@ -259,8 +269,8 @@ class ObsTreeStation(ObsTreeItem):
                                                                       self.lat[0],
                                                                       self.long[0],
                                                                       self.elev[0],
-                                                                      self.gmean,
-                                                                      self.stdev)
+                                                                      self.gmean(),
+                                                                      self.stdev())
         return summary_str
 
     def iter_samples(self):
@@ -268,12 +278,13 @@ class ObsTreeStation(ObsTreeItem):
         Iterator that returns print statements for each sample, used when writing adjustment summary
         :return: All of the stations in a campaign
         """
+        g = self.grav()
         for i in range(len(self.raw_grav)):
             if self.meter_type == 'Burris':
                 return_str = '{} {} {:0.2f} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
                                                                               self.station[i],
                                                                               self.raw_grav[i],
-                                                                              self.grav[i],
+                                                                              g[i],
                                                                               self.sd[i],
                                                                               self.etc[i])
             else:
@@ -450,8 +461,8 @@ class ObsTreeLoop(ObsTreeItem):
                 station = self.child(i)
                 if self.child(i).data(role=QtCore.Qt.CheckStateRole) == 2:
                     if station.station_name == unique_station:
-                        x.append(station.tmean)
-                        y.append(station.gmean)
+                        x.append(station.tmean())
+                        y.append(station.gmean())
                         y_sd.append(station.original_sd)
                         t_sd.append(station.t_stdev)
             new_x, new_y, new_y_sd, new_t_sd = [], [], [], []
@@ -891,8 +902,8 @@ class ObsTreeSurvey(ObsTreeItem):
                 fid.write('{} {} {:0.6f} {} {} {:0.6f} {} {:0.6f}\n'.format(delta.sta1[:6],
                                                                             delta.sta2[:6],
                                                                             delta.dg / 1000. * delta.cal_coeff,
-                                                                            delta.sta1_t,
-                                                                            delta.sta2_t,
+                                                                            delta.sta1_t(),
+                                                                            delta.sta2_t(),
                                                                             delta.dg / 1000, '0',
                                                                             delta.sd_for_adjustment / 1000.))
         # Write absolute-g (aka datum, aka fix) file
@@ -1096,9 +1107,9 @@ class ObsTreeSurvey(ObsTreeItem):
                         station1_name = tempdelta.sta1
                         station2_name = tempdelta.sta2
                     if tempdelta.meter in cal_dic:
-                        cal_adj_dg = tempdelta.dg * cal_dic[tempdelta.meter][0] * tempdelta.cal_coeff
+                        cal_adj_dg = tempdelta.dg() * cal_dic[tempdelta.meter][0] * tempdelta.cal_coeff
                     else:
-                        cal_adj_dg = tempdelta.dg * tempdelta.cal_coeff
+                        cal_adj_dg = tempdelta.dg() * tempdelta.cal_coeff
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1
@@ -1155,7 +1166,7 @@ class ObsTreeSurvey(ObsTreeItem):
         """
         for station in self.iter_stations():
             if station.station_name == station_id[0]:
-                if abs(station.tmean - station_id[1]) < 0.0001:
+                if abs(station.tmean() - station_id[1]) < 0.0001:
                     return station
         return None
 
@@ -1217,8 +1228,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
         self.station_coords = None
-
-    signal_refresh_view = QtCore.pyqtSignal()
+    #
+    # signal_refresh_view = QtCore.pyqtSignal()
     signal_name_changed = QtCore.pyqtSignal()
     signal_delta_update_required = QtCore.pyqtSignal()
 
@@ -1264,8 +1275,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 self.signal_delta_update_required.emit()
 
             self.dataChanged.emit(index, index)
-            # self.layoutChanged.emit()
-            self.signal_refresh_view.emit()
+            # # self.layoutChanged.emit()
+            # self.signal_refresh_view.emit()
             return True
 
         if role == QtCore.Qt.EditRole:
@@ -1324,13 +1335,15 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def _handler_edit_ObsTreeSurvey(self, item, value):
         new_name = str(value)
         try:
-            item.name = dt.datetime.strptime(new_name, 'yyyy-MM-dd')
+            name_as_date = dt.datetime.strptime(new_name, 'yyyy-MM-dd')
+            old_name = name_as_date
+            logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
+            item.name = new_name
+            return True
         except Exception as e:
             pass
-        old_name = item.name
-        logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
-        item.name = new_name
-        return True
+
+
 
     def checkState(self, index):
         if index.column > 0:
@@ -1483,7 +1496,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
                 fn, *args = {
                     ROMAN_FROM: (str, delta.sta1),
                     ROMAN_TO: (str, delta.sta2),
-                    ROMAN_DELTA: (format, delta.dg, "0.1f")
+                    ROMAN_DELTA: (format, delta.dg(), "0.1f")
                 }.get(column)
                 return fn(*args)
 
@@ -1734,8 +1747,8 @@ class TareTableModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.DisplayRole:
                 column = index.column()
                 fn, *args = {
-                    TARE_DATE: (str, tare.date),
-                    TARE_TIME: (str, tare.time),
+                    TARE_DATE: (str, tare.date.toString('yyyy-MM-dd')),
+                    TARE_TIME: (str, tare.time.toString()),
                     TARE_TARE: (format, tare.tare, "0.1f")
                 }.get(column)
                 return fn(*args)
@@ -2002,7 +2015,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_STATION2: (str, delta.sta2),
                     LOOP: (str, delta_station_loop()),
                     DELTA_TIME: (format_datetime, delta.time()),
-                    DELTA_G: (format, delta.dg, "0.1f"),
+                    DELTA_G: (format, delta.dg(), "0.1f"),
                     DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
                     DELTA_SD: (format, delta.sd, "0.1f"),
                     DELTA_ADJ_SD: (format, delta.sd_for_adjustment, "0.1f"),
@@ -2023,6 +2036,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         If a row is unchecked, update the keepdata value to 0 setData launched when role is acting value is
         QtCore.Qt.Checked or QtCore.Qt.Unchecked
         """
+        # self.layoutAboutToBeChanged.emit()
         if role == QtCore.Qt.CheckStateRole and index.column() == 0:
             delta = self._deltas[index.row()]
             if value == QtCore.Qt.Checked:
@@ -2046,6 +2060,8 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 return True
         if role == QtCore.Qt.UserRole:
             self._deltas[index.row()] = value
+
+        # self.layoutChanged.emit()
 
     def clearDeltas(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
@@ -2223,7 +2239,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
         self.ChannelList_obj = ChannelList_obj
         self.arraydata = np.concatenate((ChannelList_obj.station,
                                          np.array(ChannelList_obj.t),
-                                         np.array(ChannelList_obj.grav),
+                                         np.array(ChannelList_obj.grav()),
                                          np.array(ChannelList_obj.sd), ChannelList_obj.tiltx,
                                          ChannelList_obj.tilty, ChannelList_obj.temp, ChannelList_obj.dur,
                                          ChannelList_obj.rej)).reshape(len(ChannelList_obj.t), 9, order='F')
@@ -2372,7 +2388,7 @@ class BurrisTableModel(QtCore.QAbstractTableModel):
                                              ChannelList_obj.oper,
                                              ChannelList_obj.meter,
                                              ChannelList_obj.t,
-                                             np.array(ChannelList_obj.grav),
+                                             np.array(ChannelList_obj.grav()),
                                              np.array(ChannelList_obj.dial),
                                              np.array(ChannelList_obj.feedback),
                                              np.array(ChannelList_obj.etc),

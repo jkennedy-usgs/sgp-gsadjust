@@ -320,8 +320,9 @@ class TabDrift(QtWidgets.QWidget):
         Callback for weight drift observations
         """
         model = self.plot_drift()
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
-        self.update_delta_model(obstreeloop.drift_method, model)
+        if model:
+            obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
+            self.update_delta_model(obstreeloop.drift_method, model)
 
     def update_tension(self):
         """
@@ -466,6 +467,7 @@ class TabDrift(QtWidgets.QWidget):
         # TODO: plotting and calculating delta-gs is entertwined. To be efficient when loading many loops,
         # I use update to indicate lines that are run only if the plots are visible. If the plotting and
         # delta-g code were better separated, update wouldn't be needed.
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         offset = 0
         if type(obstreeloop) is not ObsTreeLoop:
             obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
@@ -524,6 +526,7 @@ class TabDrift(QtWidgets.QWidget):
                 delta_model = self.calc_none_dg(data, obstreeloop.name)
             elif drift_type == 'netadj':
                 delta_model = self.calc_netadj_dg(data, obstreeloop.name)
+            QtWidgets.QApplication.restoreOverrideCursor()
             return delta_model
 
         if drift_type == 'continuous':
@@ -582,8 +585,10 @@ class TabDrift(QtWidgets.QWidget):
                                                               (event, self.axes_drift_cont_upper))
                     self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
                     self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
+
                 try:
-                    deltas, xp, yp = drift_continuous(data, plot_data, drift_x,
+                    z = []
+                    deltas, xp, yp, z = drift_continuous(data, plot_data, drift_x,
                                                       drift_rate,
                                                       self.drift_polydegree_combobox.currentIndex(),
                                                       self.tension_slider.value(),
@@ -595,7 +600,53 @@ class TabDrift(QtWidgets.QWidget):
                     if update:
                         self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                         self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
-                        self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                        ln = self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                        if any(z):
+                            textcolor = 'k'
+                            if len(z) == 1:
+                                if type(z[0]) is tuple:
+                                    mean_drift, sigma = z[0][0], z[0][1]
+                                    tstat = mean_drift / sigma
+                                    if np.abs(tstat) > 4.303:  # Critical value for 95% CI, 2 DOF, 2-tailed t-test
+                                        textcolor = 'r'
+                                    z = [mean_drift]
+                                annot_text = "{:.2f} µGal/hr".format(*z)
+                            elif len(z) == 2:
+                                annot_text = "{:.2f} µGal/hr per day".format(*z)
+                            elif len(z) == 3:
+                                annot_text = "{:.2f}*t^2 {:+.2f}*t {:+.2f}".format(*z)
+                            elif len(z) == 4:
+                                annot_text = "{:.2f}*t^3 {:+.2f}*t^2 {:+.2f}*t {:+.2f}".format(*z)
+                            else:
+                                annot_text = "JEFF"
+                            annot = self.axes_drift_cont_lower.annotate(annot_text, xy=(737287,45),
+                                                                        # xycoords='axes fraction',
+                                                                        xytext=(-20, 20),
+                                                                        textcoords="offset points",
+                                                                        bbox=dict(boxstyle="round", fc="w"),
+                                                                        color=textcolor)
+                                                                        # arrowprops=dict(arrowstyle="->"))
+                            annot.set_visible(False)
+
+                            def update_annot(ind):
+                                x, y = ln[0].get_data()
+                                annot.xy = (x[ind["ind"][0]], y[ind["ind"][0]])
+
+                            def hover(event):
+                                vis = annot.get_visible()
+                                if event.inaxes == self.axes_drift_cont_lower:
+                                    cont, ind = ln[0].contains(event)
+                                    if cont:
+                                        update_annot(ind)
+                                        annot.set_visible(True)
+                                        # fig.canvas.draw_idle()
+                                    else:
+                                        if vis:
+                                            annot.set_visible(False)
+                                    self.drift_cont_figbot.canvas.draw_idle()
+                                            # fig.canvas.draw_idle()
+
+                            self.drift_cont_figbot.canvas.mpl_connect('motion_notify_event', hover)
                         # if (max(yp) - min(yp)) < 0.0001:
                         #     self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) - 10, np.round(yp[0], 0) + 10)
                         # else:
@@ -605,9 +656,12 @@ class TabDrift(QtWidgets.QWidget):
                             'Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                         self.drift_cont_canvasbot.draw()
                         self.drift_cont_canvastop.draw()
+                    QtWidgets.QApplication.restoreOverrideCursor()
                     return delta_model
                 except IndexError as e:
-                    self.msg = show_message('Insufficient drift observations for spline method', 'Error')
+                    if self.drift_polydegree_combobox.currentIndex() == 1:
+                        self.msg = show_message('Insufficient drift observations for spline method', 'Error')
+                    self.msg = show_message('Unknown error')
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)
@@ -615,8 +669,6 @@ class TabDrift(QtWidgets.QWidget):
                                             'polynomial method', 'Error')
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                     obstreeloop.drift_cont_method = 0
-
-                # return drift_continuous()
             else:
                 self.msg = show_message('No data available for plotting', 'Plot error')
 
@@ -648,7 +700,9 @@ class TabDrift(QtWidgets.QWidget):
                                                   lambda event: self.show_line_label(event, self.axes_drift_single))
                 self.axes_drift_single.set_title('Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name)
                 self.drift_single_canvas.draw()
+            QtWidgets.QApplication.restoreOverrideCursor()
             return models
+        QtWidgets.QApplication.restoreOverrideCursor()
 
     @staticmethod
     def show_all_columns(delta_view):
@@ -694,6 +748,8 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
                 self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
                 self.drift_continuous()
+            else:
+                self.disable_weighted_checkbox()
         model = self.plot_drift(update=update)
 
         if method != orig_method or self.parent.workspace_loaded:
@@ -867,9 +923,12 @@ class TabDrift(QtWidgets.QWidget):
         self.tension_slider.setEnabled(True)
         self.offset_slider.setEnabled(True)
         self.drift_plot_hz_extent.setEnabled(True)
-        self.drift_plot_weighted.setEnabled(True)
         self.drift_cont_startendcombobox.setEnabled(True)
         self.drift_polydegree_combobox.setEnabled(True)
+        if self.drift_polydegree_combobox.currentIndex() == 0:
+            self.enable_weighted_checkbox()
+        else:
+            self.disable_weighted_checkbox()
 
     def drift_none(self):
         """
@@ -890,6 +949,15 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_plot_weighted.setEnabled(False)
         self.dg_samples_view.hide()
 
+    def disable_weighted_checkbox(self):
+        self.drift_plot_weighted.setEnabled(False)
+        self.drift_plot_weighted.setToolTip('Weighted observations is only enabled when Continuous '
+                                            'model drift correction method and Constant drift model type are selected.')
+
+    def enable_weighted_checkbox(self):
+        self.drift_plot_weighted.setEnabled(True)
+        self.drift_plot_weighted.setToolTip('')
+
     def drift_combobox_updated(self):
         """
         Called when either the drift method or extrapolate/constant combobox is changed.
@@ -908,8 +976,14 @@ class TabDrift(QtWidgets.QWidget):
                 self.tension_slider.setEnabled(True)
             else:
                 self.tension_slider.setEnabled(False)
+            if method_key == 0:
+                self.enable_weighted_checkbox()
+            else:
+                self.disable_weighted_checkbox()
+
         elif drift_method == 'netadj':
             obstreeloop.drift_netadj_method = method_key
 
         model = self.plot_drift()
         self.update_delta_model(drift_method, model)
+

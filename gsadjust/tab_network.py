@@ -90,24 +90,44 @@ class TabAdjust(QtWidgets.QWidget):
         layout_right.addWidget(self.textAdjResults)
         main_layout.addWidget(layout_right)
 
+        self.delta_view.horizontalHeader().sectionResized.connect(self.save_delta_column_widths_to_settings)
+        self.datum_view.horizontalHeader().sectionResized.connect(self.save_datum_column_widths_to_settings)
+        self.results_view.horizontalHeader().sectionResized.connect(self.save_results_column_widths_to_settings)
+
         layout_final.addWidget(main_layout)
         self.setLayout(layout_final)
 
-    def update_view(self):
-        delta_header = self.delta_view.horizontalHeader()
-        datum_header = self.datum_view.horizontalHeader()
-
+    def save_delta_column_widths_to_settings(self):
+        col_widths = []
         for i in range(self.delta_view.model().columnCount()):
-            delta_header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
-            width = self.delta_view.columnWidth(i)
-            delta_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Interactive)
-            self.delta_view.setColumnWidth(i, width)
+            col_widths.append(int(self.delta_view.columnWidth(i)))
+        self.parent.settings.setValue('delta_table_column_widths', col_widths)
 
+    def save_datum_column_widths_to_settings(self):
+        col_widths = []
         for i in range(self.datum_view.model().columnCount()):
-            datum_header.setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeToContents)
-            width = self.datum_view.columnWidth(i)
-            datum_header.setSectionResizeMode(i, QtWidgets.QHeaderView.Interactive)
-            self.datum_view.setColumnWidth(i, width)
+            col_widths.append(int(self.datum_view.columnWidth(i)))
+        self.parent.settings.setValue('datum_table_column_widths', col_widths)
+
+    def save_results_column_widths_to_settings(self):
+        col_widths = []
+        for i in range(self.results_view.model().columnCount()):
+            col_widths.append(int(self.results_view.columnWidth(i)))
+        self.parent.settings.setValue('results_table_column_widths', col_widths)
+
+    def update_view(self):
+        cw = self.parent.settings.value('delta_table_column_widths')
+        if cw:
+            for i, w in enumerate(cw):
+                self.delta_view.setColumnWidth(i, int(w))
+        cw = self.parent.settings.value('datum_table_column_widths')
+        if cw:
+            for i, w in enumerate(cw):
+                self.datum_view.setColumnWidth(i, int(w))
+        cw = self.parent.settings.value('results_table_column_widths')
+        if cw:
+            for i, w in enumerate(cw):
+                self.results_view.setColumnWidth(i, int(w))
 
     def datum_context_menu(self, point):
         selected = self.datum_view.selectedIndexes()

@@ -33,7 +33,7 @@ def test_delta_normal(test_twostations_fixture, true_delta_g, true_sd):
     d1 = Delta(sta1, sta2, driftcorr=0., ls_drift=None, delta_type='normal', checked=2,adj_sd=999)
     d2 = Delta(sta1, sta2)
     assert d1.__dict__ == d2.__dict__
-    assert abs(d1.dg - true_delta_g) < 0.001
+    assert abs(d1.dg() - true_delta_g) < 0.001
     assert abs(d1.sd - true_sd) < 0.001
 
 
@@ -46,6 +46,6 @@ def test_delta_threepoint(test_threestations_fixture, true_delta_g, true_sd, tru
     sta2 = test_threestations_fixture[1]
     sta1b = test_threestations_fixture[2]
     d1 = Delta(sta2, [sta1a, sta1b], driftcorr=0., ls_drift=None, delta_type='three_point', checked=2, adj_sd=999)
-    assert abs(d1.dg - true_delta_g) < 0.001
+    assert abs(d1.dg() - true_delta_g) < 0.001
     assert abs(d1.sd - true_sd) < 0.001
-    assert abs(d1.sta1_t - true_sta1_t) < 0.001
+    assert abs(d1.sta1_t() - true_sta1_t) < 0.001

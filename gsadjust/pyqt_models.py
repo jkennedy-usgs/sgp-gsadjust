@@ -1074,7 +1074,6 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.netadj_loop_keys = netadj_loop_keys
         cal_dic = numpy_inversion(self.adjustment, self.results_model, output_root_dir, write_out_files='n')
         self.match_inversion_results('numpy', cal_dic)
-        # self.results_model.
 
     def match_inversion_results(self, inversion_type, cal_dic=None):
         """

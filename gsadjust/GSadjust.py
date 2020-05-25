@@ -141,6 +141,7 @@ from tab_drift import TabDrift
 from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
 from utils import *
+import resources
 
 DOWN = 1
 UP = -1
@@ -203,10 +204,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_treeview_box = QtWidgets.QVBoxLayout()
         self.gui_data_treeview = QtWidgets.QTreeView()
 
-        self.qtaction_move_station_up = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/up.png'), 'Move survey up',
+        self.qtaction_move_station_up = QtWidgets.QAction(QtGui.QIcon(':/icons/up.png'), 'Move survey up',
                                                           self)
         self.qtaction_move_station_up.triggered.connect(slot=lambda: self.move_survey(UP))
-        self.qtaction_move_station_down = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/down.png'),
+        self.qtaction_move_station_down = QtWidgets.QAction(QtGui.QIcon(':/icons/down.png'),
                                                             'Move survey down',
                                                             self)
         self.qtaction_move_station_down.triggered.connect(slot=lambda: self.move_survey(DOWN))
@@ -214,15 +215,16 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_toolbar.addAction(self.qtaction_move_station_up)
         self.gui_toolbar.addAction(self.qtaction_move_station_down)
 
-        self.qtaction_collapse_all = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/ca.png'), 'Collapse all', self)
+        self.qtaction_collapse_all = QtWidgets.QAction(QtGui.QIcon(':/icons/ca.png'), 'Collapse all', self)
         self.qtaction_collapse_all.triggered.connect(slot=self.gui_data_treeview.collapseAll)
-        self.qtaction_expand_all = QtWidgets.QAction(QtGui.QIcon('./gsadjust/resources/ea.png'), 'Expand all', self)
+        self.qtaction_expand_all = QtWidgets.QAction(QtGui.QIcon(':/icons/ea.png'), 'Expand all', self)
         self.qtaction_expand_all.triggered.connect(slot=self.gui_data_treeview.expandAll)
 
         self.gui_toolbar.addAction(self.qtaction_collapse_all)
         self.gui_toolbar.addAction(self.qtaction_expand_all)
         self.gui_toolbar.addAction(self.menus.mnAdjAdjustCurrent)
         self.gui_toolbar.addAction(self.menus.mnAdjAdjust)
+        self.gui_toolbar.addAction(self.menus.mnAdjUpdateSD)
 
         self.gui_treeview_box.addWidget(self.gui_toolbar)
         self.gui_treeview_box.addWidget(self.gui_data_treeview)
@@ -236,9 +238,9 @@ class MainProg(QtWidgets.QMainWindow):
         # Setup statusbar icons
         self.update_deltas_text = QtWidgets.QLabel("Update delta table:", self)
         self.update_adjust_text = QtWidgets.QLabel("    Update adjustment:", self)
-        self.update_not_needed_icon = QtGui.QPixmap('./gsadjust/resources/ico3.png')
-        self.update_adjust_icon = QtGui.QPixmap('./gsadjust/resources/ico2.png')
-        self.update_deltas_icon = QtGui.QPixmap('./gsadjust/resources/ico1.png')
+        self.update_not_needed_icon = QtGui.QPixmap(':/icons/ico3.png')
+        self.update_adjust_icon = QtGui.QPixmap(':/icons/ico2.png')
+        self.update_deltas_icon = QtGui.QPixmap(':/icons/ico1.png')
         self.label_adjust_update_required = QtWidgets.QLabel()
         self.label_deltas_update_required = QtWidgets.QLabel()
 
@@ -247,6 +249,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.update_adjust_text)
         self.statusBar().addPermanentWidget(self.label_adjust_update_required)
 
+        # Enabling these will show status indicators on startup. Leaving them out to avoid confusion; they will be
+        # set appropriately later
         # self.adjust_update_required()
         # self.deltas_update_required()
 
@@ -1068,19 +1072,22 @@ class MainProg(QtWidgets.QMainWindow):
         """
 
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-        # if survey.delta_model.rowCount() == 0:
-        #     refresh_needed = True
-        # else:
-        #     refresh_needed = False
+
+        survey.delta_model.layoutAboutToBeChanged.emit()
+        survey.datum_model.layoutAboutToBeChanged.emit()
+        survey.results_model.layoutAboutToBeChanged.emit()
+
         try:
             survey.delta_model.signal_adjust_update_required.connect(self.adjust_update_required)
             survey.datum_model.signal_adjust_update_required.connect(self.adjust_update_required)
             self.tab_adjust.delta_proxy_model.setSourceModel(survey.delta_model)
             self.tab_adjust.datum_proxy_model.setSourceModel(survey.datum_model)
-            # self.tab_adjust.datum_proxy_model.headerData()
             self.tab_adjust.results_proxy_model.setSourceModel(survey.results_model)
         except:
             pass
+        self.tab_adjust.delta_proxy_model.invalidate()
+        self.tab_adjust.datum_proxy_model.invalidate()
+        self.tab_adjust.results_proxy_model.invalidate()
         self.tab_adjust.results_view.setModel(self.tab_adjust.results_proxy_model)
         self.tab_adjust.results_view.setSortingEnabled(True)
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
@@ -1093,8 +1100,11 @@ class MainProg(QtWidgets.QMainWindow):
         except:
             pass
         # if refresh_needed:
-        self.tab_adjust.update_view()
-        self.refresh_tables()
+        self.tab_adjust.update_col_widths()
+
+        # survey.delta_model.layoutChanged.emit()
+        # survey.datum_model.layoutChanged.emit()
+        # survey.results_model.layoutChanged.emit()
 
     def update_drift_tables_and_plots(self, update=True):
         """
@@ -1106,17 +1116,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.driftmethod_comboboxbox.setCurrentIndex(self.drift_lookup[drift_method])
         self.tab_drift.set_drift_method(update)
 
-    def refresh_tables(self):
-        """
-        Connected to self.obsTreeModel.refreshView
-        """
-        # self.tab_adjust.delta_proxy_model.beginResetModel()
-        # self.tab_adjust.delta_proxy_model.endResetModel()
-        # self.tab_adjust.datum_proxy_model.beginResetModel()
-        # self.tab_adjust.datum_proxy_model.endResetModel()
-        # self.tab_adjust.results_proxy_model.beginResetModel()
-        # self.tab_adjust.results_proxy_model.endResetModel()
-        return
 
     def on_obs_checked_change(self, selected):
         """
@@ -1637,9 +1636,9 @@ class MainProg(QtWidgets.QMainWindow):
                 return
 
         obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-        obstreesurvey.delta_model.layoutChanged.emit()
-        obstreesurvey.datum_model.layoutChanged.emit()
-        obstreesurvey.results_model.layoutChanged.emit()
+        # obstreesurvey.delta_model.layoutChanged.emit()
+        # obstreesurvey.datum_model.layoutChanged.emit()
+        # obstreesurvey.results_model.layoutChanged.emit()
 
         if how_many == 'all':
             for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
@@ -1650,13 +1649,30 @@ class MainProg(QtWidgets.QMainWindow):
             obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
             obstreesurvey.run_inversion(adj_type)
 
-        obstreesurvey.delta_model.layoutAboutToBeChanged.emit()
-        obstreesurvey.datum_model.layoutAboutToBeChanged.emit()
-        obstreesurvey.results_model.layoutAboutToBeChanged.emit()
-
         self.statusBar().showMessage("Network adjustment complete")
+        # self.update_adjust_tables()
+
+        # obstreesurvey.delta_model.layoutChanged.emit()
+        # obstreesurvey.datum_model.layoutChanged.emit()
+        # obstreesurvey.results_model.layoutChanged.emit()
+        # self.tab_adjust.delta_proxy_model.invalidate()
+        # self.tab_adjust.datum_proxy_model.invalidate()
+        # self.tab_adjust.results_proxy_model.invalidate()
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
+        self.adjust_update_not_required()
+        self.update_menus()
+
+
+    def update_SD(self):
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        ao = copy.deepcopy(obstreesurvey.adjustment.adjustmentoptions)
+        ao.use_sigma_factor = True
+        ao.sigma_factor = ao.sigma_factor * float(obstreesurvey.adjustment.SDaposteriori[0])
+        obstreesurvey.adjustment.adjustmentoptions = ao
+        self.set_adj_sd(obstreesurvey, ao)
+        obstreesurvey.run_inversion()
+        # self.update_adjust_tables()
         self.adjust_update_not_required()
         self.update_menus()
 
@@ -2080,7 +2096,9 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     error = "{}: {}".format(exc_type.__name__, exc_value)
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
+
 DEBUG = True
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
@@ -2100,30 +2118,29 @@ def main():
         logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO)
     except PermissionError:
         show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
-    # sys.excepthook = handle_exception
+    sys.excepthook = handle_exception
 
-    splash_pix = QtGui.QPixmap('./gsadjust/resources/Splash.png')
+    splash_pix = QtGui.QPixmap(':/icons/Splash.png')
     splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
     splash.show()
     ex = MainProg(splash=splash)
     app.processEvents()
     splash.finish(ex)
-
+    app.setWindowIcon(QtGui.QIcon(':/icons/app.ico'))
     if not DEBUG:
         if ex.check_for_updates(False, parent=splash):
-            app.setWindowIcon(QtGui.QIcon(':/icons/app.ico'))
+
             ex.showMaximized()
             app.processEvents()
-
             app.exec_()
         else:
             ex.close()
     else:
-        app.setWindowIcon(QtGui.QIcon(':/icons/app.ico'))
         ex.showMaximized()
         app.processEvents()
         app.exec_()
+
 
 if __name__ == '__main__':
     main()

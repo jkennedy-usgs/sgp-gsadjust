@@ -21,7 +21,7 @@ from PyQt5 import QtCore
 import csv
 
 from data_analysis import compute_gravity_change
-import resources
+
 
 def export_metadata(obsTreeModel, data_path):
     """

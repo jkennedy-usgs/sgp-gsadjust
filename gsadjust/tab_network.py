@@ -115,7 +115,7 @@ class TabAdjust(QtWidgets.QWidget):
             col_widths.append(int(self.results_view.columnWidth(i)))
         self.parent.settings.setValue('results_table_column_widths', col_widths)
 
-    def update_view(self):
+    def update_col_widths(self):
         cw = self.parent.settings.value('delta_table_column_widths')
         if cw:
             for i, w in enumerate(cw):

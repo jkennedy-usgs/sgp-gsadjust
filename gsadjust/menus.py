@@ -15,7 +15,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages re
 unauthorized use of the software.
 """
 from PyQt5 import QtWidgets, QtGui
-from gui_objects import AboutDialog
+import resources
 
 
 class MENU_STATE:
@@ -29,7 +29,7 @@ class MENU_STATE:
     MORE_THAN_ONE_SURVEY = 4
     SURVEY_HAS_DELTAS = 5
     SURVEY_HAS_NO_DELTAS = 6
-    SURVEY_HAS_RESULTS= 7
+    SURVEY_HAS_RESULTS = 7
     SURVEY_HAS_NO_RESULTS = 8
     # Context Menus
     OBS_TREE_STATION = 9
@@ -125,7 +125,8 @@ _ENABLED_MENUS = {
         ('mnToolsWriteSummary', True),
         ('mnToolsWriteTabularOutput', True),
         ('mnToolsWriteMetadataText', True),
-        ('mnAdjPlotObservedAdjustedAbs', True)
+        ('mnAdjPlotObservedAdjustedAbs', True),
+        ('mnAdjUpdateSD', True)
     ],
     MENU_STATE.SURVEY_HAS_NO_RESULTS: [
         ('mnAdjPlotHist', False),
@@ -134,7 +135,8 @@ _ENABLED_MENUS = {
         ('mnToolsWriteSummary', False),
         ('mnToolsWriteTabularOutput', False),
         ('mnToolsWriteMetadataText', False),
-        ('mnAdjPlotObservedAdjustedAbs', False)
+        ('mnAdjPlotObservedAdjustedAbs', False),
+        ('mnAdjUpdateSD', False)
     ],
     MENU_STATE.CALCULATE_CHANGE: [
         ('mnToolsComputeGravityChangeAction', True),
@@ -268,7 +270,7 @@ class Menus:
                                        self.mnFileExitAction))
 
         #######################################################################
-        # Process Menu:
+        # Edit Menu:
         #######################################################################
         self.mnEdit = self.mainProg.menuBar().addMenu("&Edit")
         self.mnEditTideCorrection = self.create_action("&Tide correction...",
@@ -343,11 +345,11 @@ class Menus:
                                                      shortcut="Ctrl+2",
                                                      slot=lambda: self.mainProg.adjust_network('current'),
                                                      tip="Adjust current survey", enabled=False,
-                                                     icon=QtGui.QIcon('./gsadjust/resources/ac.png'))
+                                                     icon=QtGui.QIcon(':/icons/ac.png'))
         self.mnAdjAdjust = self.create_action("&Adjust all surveys",
                                               shortcut="Ctrl+1", slot=lambda: self.mainProg.adjust_network('all'),
                                               tip="Adjust all surveys", enabled=False,
-                                              icon=QtGui.QIcon('./gsadjust/resources/aa.png'))
+                                              icon=QtGui.QIcon(':/icons/aa.png'))
         self.mnAdjUpdateDeltas = self.create_action("&Populate delta table - all surveys",
                                                     shortcut="Ctrl+A",
                                                     slot=lambda: self.mainProg.populate_deltamodel('all'),
@@ -389,6 +391,10 @@ class Menus:
         self.mnAdjPlotObservedAdjustedAbs = self.create_action("Plot adjusted datum vs. measured (time series)",
                                                                slot=self.mainProg.plot_datum_comparison_timeseries,
                                                                enabled=False)
+        self.mnAdjUpdateSD = self.create_action("Scale std. dev. from results",
+                                                slot=self.mainProg.update_SD,
+                                                enabled=False,
+                                                icon=QtGui.QIcon(':/icons/ua.png'))
         # self.mnAdjCompareAllDatum = self.create_action("Plot absolute vs. relative offset",
         #                  slot=self.mainProg.plot_compare_datum_all,
         #                  enabled=True)
@@ -396,6 +402,7 @@ class Menus:
         self.add_actions(self.mnAdj, (self.mnAdjOptions,
                                       self.mnAdjAdjustCurrent,
                                       self.mnAdjAdjust,
+                                      self.mnAdjUpdateSD,
                                       None,
                                       self.mnAdjUpdateDeltas,
                                       self.mnAdjUpdateDeltasCurrentSurvey,

@@ -30,6 +30,46 @@ import threading
 import datetime as dt
 
 
+class PlotGravityChange(QtWidgets.QDialog):
+
+    def __init__(self, dates, table, parent=None):
+        super(PlotGravityChange, self).__init__(parent)
+        self.setWindowTitle('GSadjust results')
+        self.figure = matplotlib.figure.Figure()
+        self.canvas = FigureCanvas(self.figure)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+        # iterate through each station
+
+        self.plot(dates, table)
+
+    def plot(self, dates, table):
+        ncols = len(dates)
+        nstations = len(table[0])
+        stations = table[0]
+        ax = self.figure.add_subplot(111)
+        for i in range(nstations):
+            xdata, ydata = [], []
+            for idx, col in enumerate(table[1:ncols]):
+                if not col[i] == '-999':
+                    if not ydata:
+                        ydata.append(0)
+                        ydata.append(float(col[i]))
+                        xdata.append(dates[idx])
+                        xdata.append(dates[idx + 1])
+                    else:
+                        ydata.append(float(col[i]) + ydata[-1])
+                        xdata.append(dates[idx + 1])
+            cmap = matplotlib.cm.get_cmap('gist_ncar')
+            ax.plot(xdata, ydata, '-o', color=cmap(i / nstations), label=stations[i])
+        ax.set_ylabel('Gravity change, in µGal')
+        ax.legend()
+        # ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+        self.canvas.draw()
+
+
 class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
     def __init__(self, obsTreeModel, parent=None):
         super(PlotDatumComparisonTimeSeries, self).__init__(parent)

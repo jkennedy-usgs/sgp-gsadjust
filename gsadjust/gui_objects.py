@@ -22,6 +22,7 @@ import datetime as dt
 import os
 
 import matplotlib
+
 matplotlib.use('qt5agg')
 # import matplotlib.pyplot as plt
 from PyQt5 import QtGui, QtCore, QtWidgets
@@ -526,8 +527,6 @@ class VerticalGradientDialog(QtWidgets.QInputDialog):
                                   0, 200, 1)
 
 
-
-
 class GravityChangeTable(QtWidgets.QDialog):
     """
     Floating window to show gravity-change results
@@ -567,18 +566,14 @@ class GravityChangeTable(QtWidgets.QDialog):
         self.gravity_change_window.type_comboBox.activated.connect(self.table_changed)
         self.gravity_change_window.type_comboBox.addItem('list')
         self.gravity_change_window.type_comboBox.activated.connect(self.table_changed)
-        self.gravity_change_window.btn00 = QtWidgets.QPushButton('Map')
-        self.gravity_change_window.btn00.clicked.connect(self.map_change_window)
-        self.gravity_change_window.btn0 = QtWidgets.QPushButton('Plot')
-        self.gravity_change_window.btn0.clicked.connect(lambda: self.plot_change_window())
+        self.gravity_change_window.btnMap = QtWidgets.QPushButton('Map')
+        self.gravity_change_window.btnMap.clicked.connect(self.map_change_window)
+        self.gravity_change_window.btnPlot = QtWidgets.QPushButton('Plot')
+        temp = (self.dates, self.table)
+        self.gravity_change_window.btnPlot.clicked.connect(lambda state, x=temp: MainProg.plot_gravity_change(temp[0],
+                                                                                                              temp[1]))
         self.gravity_change_window.btn1 = QtWidgets.QPushButton('Copy to clipboard')
         self.gravity_change_window.btn1.clicked.connect(lambda: copy_cells_to_clipboard(MainProg.popup.table))
-        # if not full_table:
-        #     self.gravity_change_window.btn2 = QtWidgets.QPushButton('Show full table')
-        #     self.gravity_change_window.btn2.clicked.connect(lambda: show_full_table(MainProg))
-        # else:
-        #     self.gravity_change_window.btn2 = QtWidgets.QPushButton('Show simple table')
-        #     self.gravity_change_window.btn2.clicked.connect(lambda: show_simple_table(MainProg))
 
         # Locations
         vbox = QtWidgets.QVBoxLayout()
@@ -589,8 +584,8 @@ class GravityChangeTable(QtWidgets.QDialog):
         hbox.addWidget(QtWidgets.QLabel('Table type:'))
         hbox.addWidget(self.gravity_change_window.type_comboBox)
         if self.dates:
-            hbox.addWidget(self.gravity_change_window.btn0)
-            hbox.addWidget(self.gravity_change_window.btn00)
+            hbox.addWidget(self.gravity_change_window.btnPlot)
+            hbox.addWidget(self.gravity_change_window.btnMap)
         hbox.addWidget(self.gravity_change_window.btn1)
         # hbox.addWidget(self.gravity_change_window.btn2)
         vbox.addLayout(hbox)
@@ -624,38 +619,6 @@ class GravityChangeTable(QtWidgets.QDialog):
             self.msg = show_message('Map view plots on Mac or Linux platforms requires installation of the Geos' +
                                     ' and Proj libraries. ' +
                                     'Please install with homebrew ("brew install geos proj").', 'Import error')
-
-
-class FigureGravityChange(QtWidgets.QDialog):
-    def __init__(self):
-        super(FigureGravityChange, self).__init__()
-        self.figure = Figure(figsize=(10, 8))
-        self.canvas = FigureCanvas(self.figure)
-        # plt.figure(figsize=(12, 8))
-        cmap = plt.cm.get_cmap('gist_ncar')
-        ncols = len(self.dates)
-        nstations = len(self.table[0])
-        stations = self.table[0]
-        # iterate through each station
-        for i in range(nstations):
-            xdata, ydata = [], []
-            for idx, col in enumerate(self.table[1:ncols]):
-                if not col[i] == '-999':
-                    if not ydata:
-                        ydata.append(0)
-                        ydata.append(float(col[i]))
-                        xdata.append(self.dates[idx])
-                        xdata.append(self.dates[idx + 1])
-                    else:
-                        ydata.append(float(col[i]) + ydata[-1])
-                        xdata.append(self.dates[idx + 1])
-
-            plt.plot(xdata, ydata, '-o', color=cmap(i / (nstations)), label=stations[i])
-            # plt.hold
-        plt.ylabel('Gravity change, in µGal')
-
-        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
-        plt.show()
 
 
 class GravityChangeMap(QtWidgets.QDialog):
@@ -1257,7 +1220,7 @@ class SelectAbsg(QtWidgets.QDialog):
         if datum_table_model is not None:
             self.table_model = datum_table_model
             for i in range(self.table_model.rowCount()):
-                idx = self.table_model.index(i,0)
+                idx = self.table_model.index(i, 0)
                 self.table_model.setData(idx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
             self.ProxyModel.setSourceModel(self.table_model)
             QtWidgets.QApplication.processEvents()
@@ -1291,7 +1254,8 @@ class SelectAbsg(QtWidgets.QDialog):
 
         # Buttons and checkbox
         self.load_unpublished_cb = QtWidgets.QCheckBox('Ignore unpublished')
-        self.load_unpublished_cb.setToolTip('Files inside a directory named "unpublished" (anywhere on the path) will be ignored')
+        self.load_unpublished_cb.setToolTip(
+            'Files inside a directory named "unpublished" (anywhere on the path) will be ignored')
         self.load_unpublished_cb.setChecked(True)
         self.load_button = QtWidgets.QPushButton("Load")
         self.load_button.clicked.connect(self.load_a10_data)

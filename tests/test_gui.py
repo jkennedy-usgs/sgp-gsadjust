@@ -98,10 +98,6 @@ def test_gui(qtbot, monkeypatch):
     # Adjustment results should be different with some observations disabled
     assert abs(sd0 - sd1) > 0.01
 
-    # fig = window.plot_histogram()
-    # assert type(fig) == matplotlib.figure.Figure
-    # matplotlib.pyplot.close(fig)
-
     success = window.workspace_save()
     assert success == True
 
@@ -121,9 +117,12 @@ def test_gui(qtbot, monkeypatch):
     assert abs(sd1 - sd2) < 0.000001
     os.remove(test_workspace)
 
-    # FOr whatever reason,
     window.workspace_clear(confirm=False)
     window.workspace_open_json('./tests/test_workspace1.gsa')
+
+    # window.workspace_append()
+    # qtbot.keyPress(window, QtCore.Qt.Key_Tab, QtCore.Qt.ControlModifier)
+    # qtbot.mouseClick(options_dialog.ok_button, QtCore.Qt.LeftButton, delay=1000)
 
     window.close()
     os.chdir(pwd)

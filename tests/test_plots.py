@@ -3,7 +3,10 @@ import pytestqt
 import numpy as np
 from PyQt5 import QtCore
 from test_fixture_pyqt import mainprog, obstreesurvey_with_results, obstreesurvey
-from gsa_plots import PlotDatumCompare, PlotDgResidualHistogram, PlotNetworkGraph, PlotLoopAnimation
+from gsa_plots import (
+    PlotGravityChange,
+    PlotDatumCompare, PlotDgResidualHistogram, PlotNetworkGraph, PlotLoopAnimation
+)
 
 
 def test_PlotLoopAnimation(mainprog):

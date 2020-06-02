@@ -121,8 +121,10 @@ from data_import import (
     import_abs_g_complete, import_abs_g_simple
 )
 from data_objects import Datum, Tare, ChannelList, Delta
-from gsa_plots import PlotLoopAnimation, PlotDatumComparisonTimeSeries
-from gsa_plots import PlotNetworkGraph, PlotDatumCompare, PlotDgResidualHistogram
+from gsa_plots import (
+    PlotLoopAnimation, PlotDatumComparisonTimeSeries, PlotGravityChange,
+    PlotNetworkGraph, PlotDatumCompare, PlotDgResidualHistogram
+)
 from gui_objects import (
     AddDatumFromList, CoordinatesTable, ProgressBar,
     GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, DialogApplyTimeCorrection,
@@ -1799,6 +1801,9 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotDgResidualHistogram(survey, self)
         plt.show()
 
+    def plot_gravity_change(self, dates, table):
+        plt = PlotGravityChange(dates, table, self)
+        plt.show()
 
     def set_adj_sd(self, survey, ao):
         """

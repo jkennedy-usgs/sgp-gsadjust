@@ -198,7 +198,7 @@ def launch_agnew(cwin, MainProg):
                           MainProg.campaigndata.tide_lat,
                           MainProg.campaigndata.tide_lon,
                           MainProg.campaigndata.tide_alt)
-    MainProg.plot_samples()
+    MainProg.update_data_tab()
 
 
 def tide_correction_ts(campaigndata, tide_in):

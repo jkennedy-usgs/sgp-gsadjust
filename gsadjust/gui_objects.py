@@ -526,48 +526,6 @@ class VerticalGradientDialog(QtWidgets.QInputDialog):
                                   0, 200, 1)
 
 
-class FigureDatumComparisonTimeSeries(QtWidgets.QDialog):
-    def __init__(self, obsTreeModel):
-        super(FigureDatumComparisonTimeSeries, self).__init__()
-        datum_names = []
-        for i in range(obsTreeModel.rowCount()):
-            survey = obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.datum_model.rowCount()):
-                datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                datum_names.append(datum.station)
-
-        unique_datum_names = list(set(datum_names))
-
-        xdata_all, ydata_obs_all, ydata_adj_all = [], [], []
-        for name in unique_datum_names:
-            xdata, ydata_obs, ydata_adj = [], [], []
-            for i in range(obsTreeModel.rowCount()):
-                survey = obsTreeModel.invisibleRootItem().child(i)
-                for ii in range(survey.datum_model.rowCount()):
-                    datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                    if datum.station == name and datum.residual > -998 and datum.checked == 2:
-                        xdata.append(date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d')))
-                        ydata_obs.append(datum.g)
-                        ydata_adj.append(datum.g + datum.residual)
-            ydata_obs = [i - ydata_obs[0] for i in ydata_obs]
-            ydata_adj = [i - ydata_adj[0] for i in ydata_adj]
-            xdata_all.append(xdata)
-            ydata_obs_all.append(ydata_obs)
-            ydata_adj_all.append(ydata_adj)
-        self.plot_datum_window(xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names)
-
-    def plot_datum_window(self, xdata_all, ydata_obs_all, ydata_adj_all, names):
-        fig = plt.figure(figsize=(13, 8))
-        i = 0
-        for xdata, ydata_obs, ydata_adj in zip(xdata_all, ydata_obs_all, ydata_adj_all):
-            a = plt.plot(xdata, ydata_obs, '-o', label=names[i] + '_obs')
-            line_color = a[0].get_color()
-            b = plt.plot(xdata, ydata_adj, '--o', c=line_color, label=names[i] + '_adj')
-            i += 1
-        plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
-        plt.ylabel('Relative gravity, in \u00b5Gal')
-        plt.axes().xaxis_date()
-        fig.show()
 
 
 class GravityChangeTable(QtWidgets.QDialog):
@@ -667,8 +625,13 @@ class GravityChangeTable(QtWidgets.QDialog):
                                     ' and Proj libraries. ' +
                                     'Please install with homebrew ("brew install geos proj").', 'Import error')
 
-    def plot_change_window(self):
-        plt.figure(figsize=(12, 8))
+
+class FigureGravityChange(QtWidgets.QDialog):
+    def __init__(self):
+        super(FigureGravityChange, self).__init__()
+        self.figure = Figure(figsize=(10, 8))
+        self.canvas = FigureCanvas(self.figure)
+        # plt.figure(figsize=(12, 8))
         cmap = plt.cm.get_cmap('gist_ncar')
         ncols = len(self.dates)
         nstations = len(self.table[0])

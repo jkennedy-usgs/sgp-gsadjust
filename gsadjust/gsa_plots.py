@@ -1,11 +1,25 @@
+"""
+gsa_plots.py
+===============
+
+GSadjust plotting module.
+--------------------------------------------------------------------------------------------------------------------
+
+This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
+timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related
+material nor shall the fact of release constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
+unauthorized use of the software.
+"""
 import matplotlib
+
 matplotlib.use('qt5agg')
-# import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 from PyQt5 import QtCore, QtWidgets
 from gui_objects import show_message
-from matplotlib.dates import num2date
+from matplotlib.dates import num2date, date2num
 from matplotlib.figure import Figure
 from matplotlib.animation import TimedAnimation
 from matplotlib.lines import Line2D
@@ -13,12 +27,69 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
 import time
 import threading
+import datetime as dt
+
+
+class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
+    def __init__(self, obsTreeModel, parent=None):
+        super(PlotDatumComparisonTimeSeries, self).__init__(parent)
+        self.setWindowTitle('GSadjust results')
+        self.figure = matplotlib.figure.Figure()
+        self.canvas = FigureCanvas(self.figure)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+        xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names = self.get_data(obsTreeModel)
+        self.plot(xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names)
+
+    def get_data(self, obsTreeModel):
+        datum_names = []
+        for i in range(obsTreeModel.rowCount()):
+            survey = obsTreeModel.invisibleRootItem().child(i)
+            for ii in range(survey.datum_model.rowCount()):
+                datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                datum_names.append(datum.station)
+
+        unique_datum_names = list(set(datum_names))
+
+        xdata_all, ydata_obs_all, ydata_adj_all = [], [], []
+        for name in unique_datum_names:
+            xdata, ydata_obs, ydata_adj = [], [], []
+            for i in range(obsTreeModel.rowCount()):
+                survey = obsTreeModel.invisibleRootItem().child(i)
+                for ii in range(survey.datum_model.rowCount()):
+                    datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                    if datum.station == name and datum.residual > -998 and datum.checked == 2:
+                        xdata.append(date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d')))
+                        ydata_obs.append(datum.g)
+                        ydata_adj.append(datum.g + datum.residual)
+            ydata_obs = [i - ydata_obs[0] for i in ydata_obs]
+            ydata_adj = [i - ydata_adj[0] for i in ydata_adj]
+            xdata_all.append(xdata)
+            ydata_obs_all.append(ydata_obs)
+            ydata_adj_all.append(ydata_adj)
+        return xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names
+
+    def plot(self, xdata_all, ydata_obs_all, ydata_adj_all, names):
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        i = 0
+        for xdata, ydata_obs, ydata_adj in zip(xdata_all, ydata_obs_all, ydata_adj_all):
+            a = ax.plot(xdata, ydata_obs, '-o', label=names[i] + '_obs')
+            line_color = a[0].get_color()
+            b = ax.plot(xdata, ydata_adj, '--o', c=line_color, label=names[i] + '_adj')
+            i += 1
+        ax.legend()
+        ax.set_ylabel('Relative gravity, in \u00b5Gal')
+        ax.xaxis_date()
+        self.canvas.draw()
 
 
 class PlotDatumCompare(QtWidgets.QDialog):
     """
     Bar plot of difference between specified datum (in datum table) and adjustment result.
     """
+
     def __init__(self, survey, parent=None):
         super(PlotDatumCompare, self).__init__(parent)
         self.setWindowTitle('GSadjust results')
@@ -57,6 +128,7 @@ class PlotDatumCompare(QtWidgets.QDialog):
         ax.set_xticklabels(lbl)
         self.canvas.draw()
 
+
 ############################################################################
 # Loop animation
 # - called from right-click context menu on tree view
@@ -83,7 +155,7 @@ def dataSendLoop(addData_callbackFunc, data):
     dates = data[2]
     i = 0
 
-    while(True):
+    while (True):
         if i > len(data[0]) - 1:
             time.sleep(2)
             mySrc.data_signal.emit(float(y[0]), n[0], dates[0])  # <- Here you emit a signal!
@@ -120,7 +192,6 @@ class PlotLoopAnimation(QtWidgets.QMainWindow):
                                       args=(self.addData_callbackFunc, data))
         myDataLoop.start()
 
-
     def addData_callbackFunc(self, x, value, date):
         # print("Add data: " + str(value))
         if x > -900:
@@ -128,6 +199,7 @@ class PlotLoopAnimation(QtWidgets.QMainWindow):
         else:
             time.sleep(1)
             self.figure.__init__(self.figure.xlim, self.figure.ylim, len(self.figure.n))
+
 
 class CustomFigCanvas(FigureCanvas, TimedAnimation):
     def __init__(self, xlim, ylim, n):
@@ -148,11 +220,11 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         self.points_blue = Line2D([], [], marker='o', linewidth=0, color='0.5')
         self.ax1.add_line(self.points_blue)
         self.lines_red = []
-        a = list(np.logspace(1,0,5)/10)
+        a = list(np.logspace(1, 0, 5) / 10)
         a += [0, 0, 0, 0, 0]
         a.reverse()
         for i in range(n_head):
-            self.lines_red.append(Line2D([], [], color='red', linewidth=4, alpha = a[i]))
+            self.lines_red.append(Line2D([], [], color='red', linewidth=4, alpha=a[i]))
         self.lines_gray = Line2D([], [], color='0.5', linewidth=1)
         self.points_red = Line2D([], [], color='red', marker='o', markeredgecolor='r', linewidth=0)
 
@@ -164,7 +236,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         self.ax1.set_xlim(xlim[0], xlim[1])
         self.ax1.set_ylim(ylim[0], ylim[1])
         self.title = self.ax1.text(0.15, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
-                        transform=self.ax1.transAxes, ha="center")
+                                   transform=self.ax1.transAxes, ha="center")
         ratio = 1.0
         xleft, xright = self.ax1.get_xlim()
         ybottom, ytop = self.ax1.get_ylim()
@@ -176,7 +248,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         return iter(range(self.n.size))
 
     def _init_draw(self):
-        lines = [self.points_blue, self.points_red, self.lines_gray]  #, self.line1_tail]  #, self.line1_head]
+        lines = [self.points_blue, self.points_red, self.lines_gray]  # , self.line1_tail]  #, self.line1_head]
         for l in lines:
             l.set_data([], [])
         for l in self.lines_red:
@@ -211,7 +283,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             # cm = plt.get_cmap(MAP)
 
             for idx, line in enumerate(self.lines_red):
-                line.set_data(xHiRes[idx:idx+2], yHiRes[idx:idx+2])
+                line.set_data(xHiRes[idx:idx + 2], yHiRes[idx:idx + 2])
             #
             # self.ax1.set_color_cycle([cm(1. * i / (npointsHiRes - 1))
             #                      for i in range(npointsHiRes - 1)])
@@ -228,7 +300,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self._drawn_artists.append(p)
 
 
-def highResPoints(x,y,factor=10):
+def highResPoints(x, y, factor=10):
     '''
     Take points listed in two vectors and return them at a higher
     resultion. Create at least factor*len(x) new points that include the
@@ -240,10 +312,10 @@ def highResPoints(x,y,factor=10):
     RESFACT = 5
     # r is the distance spanned between pairs of points
     r = [0]
-    for i in range(1,len(x)):
-        dx = x[i]-x[i-1]
-        dy = y[i]-y[i-1]
-        r.append(np.sqrt(dx*dx+dy*dy))
+    for i in range(1, len(x)):
+        dx = x[i] - x[i - 1]
+        dy = y[i] - y[i - 1]
+        r.append(np.sqrt(dx * dx + dy * dy))
     r = np.array(r)
 
     # rtot is a cumulative sum of r, it's used to save time
@@ -252,33 +324,34 @@ def highResPoints(x,y,factor=10):
         rtot.append(r[0:i].sum())
     rtot.append(r.sum())
 
-    dr = rtot[-1]/(NPOINTS*RESFACT-1)
-    xmod=[x[0]]
-    ymod=[y[0]]
-    rPos = 0 # current point on walk along data
+    dr = rtot[-1] / (NPOINTS * RESFACT - 1)
+    xmod = [x[0]]
+    ymod = [y[0]]
+    rPos = 0  # current point on walk along data
     rcount = 1
     while rPos < r.sum():
-        x1,x2 = x[rcount-1],x[rcount]
-        y1,y2 = y[rcount-1],y[rcount]
-        dpos = rPos-rtot[rcount]
-        theta = np.arctan2((x2-x1),(y2-y1))
-        rx = np.sin(theta)*dpos+x1
-        ry = np.cos(theta)*dpos+y1
+        x1, x2 = x[rcount - 1], x[rcount]
+        y1, y2 = y[rcount - 1], y[rcount]
+        dpos = rPos - rtot[rcount]
+        theta = np.arctan2((x2 - x1), (y2 - y1))
+        rx = np.sin(theta) * dpos + x1
+        ry = np.cos(theta) * dpos + y1
         xmod.append(rx)
         ymod.append(ry)
-        rPos+=dr
-        while rPos > rtot[rcount+1]:
-            rPos = rtot[rcount+1]
-            rcount+=1
-            if rcount>rtot[-1]:
+        rPos += dr
+        while rPos > rtot[rcount + 1]:
+            rPos = rtot[rcount + 1]
+            rcount += 1
+            if rcount > rtot[-1]:
                 break
-    return xmod,ymod
+    return xmod, ymod
 
 
 class PlotDgResidualHistogram(QtWidgets.QDialog):
     """
     Matplotlib histogram of delta-g residuals
     """
+
     # the histogram of the data
     def __init__(self, survey, parent=None):
         super(PlotDgResidualHistogram, self).__init__(parent)
@@ -347,6 +420,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
     Networkx plot of network. If shape == 'map', accurate coordinates must be present in the input file.
     :param shape: 'circular' or 'map'
     """
+
     def __init__(self, survey, coords, shape='circular', parent=None):
         super(PlotNetworkGraph, self).__init__(parent)
         self.setWindowTitle('Network graph, Survey ' + survey.name)
@@ -403,8 +477,8 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             self.figure.tight_layout()
             xrange = np.abs(self.xmax - self.xmin)
             yrange = np.abs(self.ymax - self.ymin)
-            ax.set_xlim(self.xmin - xrange*border, self.xmax + xrange*border)
-            ax.set_ylim(self.ymin - yrange*border, self.ymax + yrange*border)
+            ax.set_xlim(self.xmin - xrange * border, self.xmax + xrange * border)
+            ax.set_ylim(self.ymin - yrange * border, self.ymax + yrange * border)
             ax.ticklabel_format(useOffset=False)
             ax.set_xlabel('(Coordinates are not projected)')
 
@@ -449,7 +523,8 @@ class PlotNetworkGraph(QtWidgets.QDialog):
 
             nx.draw_networkx_edges(H, pos, ax=ax, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
             nx.draw_networkx_edges(disabled_edges, pos, ax=ax, width=1, alpha=0.4, node_size=0, edge_color='r')
-            nx.draw_networkx_nodes(H, pos, ax=ax, node_size=120, nodelist=datum_nodelist, node_color="k", node_shape='^',
+            nx.draw_networkx_nodes(H, pos, ax=ax, node_size=120, nodelist=datum_nodelist, node_color="k",
+                                   node_shape='^',
                                    with_labels=True, alpha=0.8)
             nx.draw_networkx_nodes(H, pos, ax=ax, node_size=120, nodelist=nondatum_nodelist, node_color="k",
                                    node_shape='o',

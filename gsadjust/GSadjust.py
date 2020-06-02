@@ -107,7 +107,6 @@ import time
 import traceback
 import webbrowser
 
-# For network graphs
 # Modules that must be installed
 import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
@@ -122,11 +121,10 @@ from data_import import (
     import_abs_g_complete, import_abs_g_simple
 )
 from data_objects import Datum, Tare, ChannelList, Delta
-from gsa_plots import PlotLoopAnimation
+from gsa_plots import PlotLoopAnimation, PlotDatumComparisonTimeSeries
 from gsa_plots import PlotNetworkGraph, PlotDatumCompare, PlotDgResidualHistogram
 from gui_objects import (
-    AddDatumFromList, CoordinatesTable,
-    FigureDatumComparisonTimeSeries, ProgressBar,
+    AddDatumFromList, CoordinatesTable, ProgressBar,
     GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, DialogApplyTimeCorrection,
     VerticalGradientDialog, AddTareDialog, DialogMeterType, LoopTimeThresholdDialog, DialogOverwrite,
     show_message, SelectAbsg, AdjustOptions, DialogLoopProperties, AboutDialog
@@ -313,7 +311,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.activate_survey_or_loop(self.index_current_survey)
         self.label_adjust_update_required_set = False
         # Set data plot
-        self.plot_samples()
+        self.update_data_tab()
         # self.selmodel.select(station.index(), QtCore.QItemSelectionModel.SelectCurrent)
         self.gui_data_treeview.setFocus()
 
@@ -376,12 +374,12 @@ class MainProg(QtWidgets.QMainWindow):
         if self.obsTreeModel.rowCount() > 0:
             if new_idx == 0:
                 if self.index_current_station is not None:
-                    self.plot_samples()
+                    self.update_data_tab()
             if new_idx == 1:
                 if self.index_current_loop is not None:
                     self.update_drift_tables_and_plots()
 
-    def plot_samples(self):
+    def update_data_tab(self):
         """
         Get station to plot, update station table model if necessary.
         """
@@ -396,13 +394,14 @@ class MainProg(QtWidgets.QMainWindow):
             self.station_model = ScintrexTableModel(station)
         elif obstreeloop.meter_type == 'Burris':
             self.station_model = BurrisTableModel(station)
-        self.station_model.dataChanged.connect(self.plot_samples)
+        self.station_model.dataChanged.connect(self.update_data_tab)
         self.station_model.signal_update_coordinates.connect(self.populate_station_coords)
         self.station_model.signal_adjust_update_required.connect(self.adjust_update_required)
         self.station_model.signal_uncheck_station.connect(self.uncheck_station)
         self.station_model.signal_check_station.connect(self.check_station)
         self.tab_data.data_view.setModel(self.station_model)
-
+        self.index_current_station_loop = obstreeloop.index()
+        self.index_current_station_survey = obstreeloop.parent().index()
         self.obsTreeModel.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
 
@@ -1155,7 +1154,7 @@ class MainProg(QtWidgets.QMainWindow):
                 if type(item) is ObsTreeStation:
                     self.index_current_station = indexes[0]
                     if self.tab_widget.currentIndex() == 0:
-                        self.plot_samples()
+                        self.update_data_tab()
                     if self.tab_widget.currentIndex() == 1:
                         self.update_drift_tables_and_plots()
 
@@ -1308,7 +1307,7 @@ class MainProg(QtWidgets.QMainWindow):
                     obstreestation.meter = [loop.meter] * len(obstreestation.meter)
                     obstreestation.oper = [loop.oper] * len(obstreestation.oper)
             self.set_window_title_asterisk()
-        self.plot_samples()
+        self.update_data_tab()
 
     def delete_survey(self):
         """
@@ -1316,11 +1315,17 @@ class MainProg(QtWidgets.QMainWindow):
         """
         # A little clunky. Setting self.index_current_survey earlier caused unhandled crashes
         index = self.gui_data_treeview.selectedIndexes()
+
+        if index[0] == self.index_current_station_survey:
+            update_selected_station = True
+        else:
+            update_selected_station = False
+
         if index[0] == self.index_current_survey:
-            update_selected = True
+            update_selected_survey = True
             old_row = index[0].row()
         else:
-            update_selected = False
+            update_selected_survey = False
 
         if len(self.obsTreeModel.surveys()) == 1:
             self.workspace_clear(confirm=False)
@@ -1331,16 +1336,20 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.removeRows(index[0].row(), 1, index[0].parent())
         self.obsTreeModel.endRemoveRows()
 
-        if update_selected:
+        if update_selected_survey:
             if old_row == 0:
                 self.index_current_survey = self.obsTreeModel.index(0, 0)
             else:
                 self.index_current_survey = self.obsTreeModel.index(old_row - 1, 0)
-
+            if update_selected_station:
+                obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+                first_loop = obstreesurvey.child(0)
+                first_station = first_loop.child(0)
+                self.index_current_station = first_station.index()
+                self.update_data_tab()
         self.activate_survey_or_loop(self.index_current_survey)
         self.set_window_title_asterisk()
         self.update_menus()
-
 
     def delete_loop(self):
         """
@@ -1349,13 +1358,16 @@ class MainProg(QtWidgets.QMainWindow):
         index = self.gui_data_treeview.selectedIndexes()
         obstreesurvey = self.obsTreeModel.itemFromIndex(index[0]).parent()
 
-        selected_station =
+        if index[0] == self.index_current_station_loop:
+            update_selected_station = True
+        else:
+            update_selected_station = False
 
         if index[0] == self.index_current_loop:
-            update_selected = True
+            update_selected_loop = True
             old_row = index[0].row()
         else:
-            update_selected = False
+            update_selected_loop = False
 
         self.obsTreeModel.beginRemoveRows(index[0].parent(), index[0].row(), index[0].row() + 1)
         self.obsTreeModel.removeRows(index[0].row(), 1, index[0].parent())
@@ -1365,11 +1377,17 @@ class MainProg(QtWidgets.QMainWindow):
             self.index_current_loop = None
             self.tab_drift.reset()
         else:
-            if update_selected:
+            if update_selected_loop:
                 if old_row == 0:
-                    self.index_current_loop = obstreesurvey.child(0).index()
+                    loop = obstreesurvey.child(0)
+                    self.index_current_loop = loop.index()
                 else:
-                    self.index_current_loop = obstreesurvey.child(old_row - 1).index()
+                    loop = obstreesurvey.child(old_row - 1)
+                    self.index_current_loop = loop.index()
+                if update_selected_station:
+                    first_station = loop.child(0)
+                    self.index_current_station = first_station.index()
+                    self.update_data_tab()
                 self.activate_survey_or_loop(self.index_current_loop)
         self.set_window_title_asterisk()
         self.update_menus()
@@ -1415,7 +1433,7 @@ class MainProg(QtWidgets.QMainWindow):
                                                       0,
                                                       first_index.parent())
         self.selection_model.select(new_selection_index, QtCore.QItemSelectionModel.SelectCurrent)
-        self.plot_samples()
+        self.update_data_tab()
         self.update_menus()
 
     def delete_tare(self):
@@ -1612,7 +1630,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.new_loop_from_indexes(indexes)
         self.activate_survey_or_loop(self.index_current_loop)
         self.update_drift_tables_and_plots(update=True)
-        self.plot_samples()
+        self.update_data_tab()
         self.set_window_title_asterisk()
 
     def new_loop_from_indexes(self, indexes):
@@ -1773,7 +1791,8 @@ class MainProg(QtWidgets.QMainWindow):
         plt.show()
 
     def plot_datum_comparison_timeseries(self):
-        FigureDatumComparisonTimeSeries(self.obsTreeModel)
+        plt = PlotDatumComparisonTimeSeries(self.obsTreeModel, self)
+        plt.show()
 
     def plot_histogram(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
@@ -1980,7 +1999,7 @@ class MainProg(QtWidgets.QMainWindow):
                                       float(tc.elev.text()))
             self.deltas_update_required()
             self.adjust_update_required()
-        self.plot_samples()
+        self.update_data_tab()
 
     def dialog_station_coordinates(self):
         """

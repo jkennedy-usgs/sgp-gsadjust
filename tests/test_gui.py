@@ -120,5 +120,10 @@ def test_gui(qtbot, monkeypatch):
 
     assert abs(sd1 - sd2) < 0.000001
     os.remove(test_workspace)
+
+    # FOr whatever reason,
+    window.workspace_clear(confirm=False)
+    window.workspace_open_json('./tests/test_workspace1.gsa')
+
     window.close()
     os.chdir(pwd)

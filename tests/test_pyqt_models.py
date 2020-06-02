@@ -8,10 +8,10 @@ from utils import *
 
 def test_ObsTreeSurvey(obstreesurvey):
     assert obstreesurvey.rowCount() == 1
-    assert obstreesurvey.name == 'test'
+    assert obstreesurvey.name == '2020-05-11'
     assert type(obstreesurvey.child(0)) == pyqt_models.ObsTreeLoop
     assert obstreesurvey.child(0).rowCount() == 46
-    assert obstreesurvey.populate_delta_model() == True
+    assert obstreesurvey.populate_delta_model() is True
 
 def test_create_ObsTreeStation(channellist):
     a = pyqt_models.ObsTreeStation(channellist, 'teststa', '1')

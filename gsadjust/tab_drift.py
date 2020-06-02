@@ -27,7 +27,7 @@ from matplotlib.figure import Figure
 
 from data_objects import Delta
 from gui_objects import IncrMinuteTimeEdit, show_message
-from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop
+from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop, TareTableModel
 from drift_roman import drift_roman
 from drift_continuous import drift_continuous
 
@@ -224,6 +224,19 @@ class TabDrift(QtWidgets.QWidget):
 
         layout_main.addWidget(main_vsplitter_window)
         self.setLayout(layout_main)
+
+    def reset(self):
+        self.driftmethod_comboboxbox.setCurrentIndex(0)
+        self.drift_polydegree_combobox.setCurrentIndex(0)
+        self.axes_drift_single.cla()
+        self.axes_drift_cont_lower.clear()
+        self.axes_drift_cont_upper.clear()
+        self.axes_drift_cont_upper.figure.canvas.draw()
+        self.axes_drift_cont_lower.figure.canvas.draw()
+        self.axes_drift_single.figure.canvas.draw()
+        self.delta_view.setModel(DeltaTableModel())
+        self.dg_samples_view.setModel(DeltaTableModel())
+        self.tare_view.setModel(TareTableModel())
 
     def time_extent_changed(self):
         self.parent.deltas_update_required()

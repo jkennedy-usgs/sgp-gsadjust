@@ -28,15 +28,12 @@ def export_metadata(obsTreeModel, data_path):
     Write metadata text to file. Useful for USGS data releases.
     """
     fn = os.path.join(data_path, 'GSadjust_MetadataText_' + time.strftime("%Y%m%d-%H%M") + '.txt')
-    results_written, first = False, False
-    fmt = '%Y-%m-%d'
+    results_written = False
     with open(fn, 'w') as fid:
+        fid.write('Attribute accuracy is evaluated from the least-squares network adjustment results. ')
         for i in range(obsTreeModel.rowCount()):
             survey = obsTreeModel.invisibleRootItem().child(i)
             if survey.adjustment.adjustmentresults.text:  # check that there are results
-                if first:
-                    fid.write('Attribute accuracy is evaluated from the least-squares network adjustment results. ')
-                    first = False
                 results_written = True
                 fid.write('For the {} survey, the minimum and maximum gravity-difference residuals were {:0.1f} '
                           'and {:0.1f} '.format(survey.name,
@@ -72,12 +69,15 @@ def export_metadata(obsTreeModel, data_path):
                     survey.adjustment.adjustmentresults.n_datums_notused +
                     survey.adjustment.adjustmentresults.n_datums,
                     datum_was_or_were))
-        logging.info('Metadata text written to file')
-    return fn
+                logging.info('Metadata text written to file')
 
     if not results_written:
         from gui_objects import show_message
         msg = show_message('No network adjustment results', 'Write error')
+        os.remove(fn)
+        return False
+    else:
+        return fn
 
 
 def export_summary(obsTreeModel, data_path):
@@ -134,6 +134,7 @@ def export_summary(obsTreeModel, data_path):
                 adj_sta = survey.results_model.data(survey.results_model.index(ii, 0), role=QtCore.Qt.UserRole)
                 fid.write('{}\n'.format(str(adj_sta)))
     return fn
+
 
 def export_data(obstreemodel, data_path):
     """

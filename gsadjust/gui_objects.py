@@ -22,9 +22,8 @@ import datetime as dt
 import os
 
 import matplotlib
-
 matplotlib.use('qt5agg')
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from PyQt5 import QtGui, QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -39,11 +38,12 @@ from pyqt_models import GravityChangeModel, DatumTableModel, MeterCalibrationMod
 from utils import *
 
 
-class ApplyTimeCorrection(QtWidgets.QDialog):
+class DialogApplyTimeCorrection(QtWidgets.QDialog):
     def __init__(self):
-        super(ApplyTimeCorrection, self).__init__()
+        super(DialogApplyTimeCorrection, self).__init__()
         self.time_correction_type = False
         self.msg = QtWidgets.QMessageBox()
+        self.msg.setWindowTitle('GSadjust')
         self.msg.setText("Apply time correction to:")
         self.msg.addButton(QtWidgets.QPushButton('Current station(s)'), QtWidgets.QMessageBox.YesRole)
         self.msg.addButton(QtWidgets.QPushButton('Current loop'), QtWidgets.QMessageBox.YesRole)
@@ -65,11 +65,10 @@ class ApplyTimeCorrection(QtWidgets.QDialog):
             self.accept()
 
 
-class Overwrite(QtWidgets.QMessageBox):
+class DialogOverwrite(QtWidgets.QMessageBox):
     def __init__(self):
-        super(Overwrite, self).__init__()
+        super(DialogOverwrite, self).__init__()
         self.overwrite = False
-        # self.msg = QtWidgets.QMessageBox()
         self.setText("Overwrite existing data?")
         ow_button = QtWidgets.QPushButton('Overwrite')
         ow_button.clicked.connect(self.onClicked)
@@ -186,9 +185,9 @@ class CoordinatesTable(QtWidgets.QDialog):
         return c
 
 
-class MeterType(QtWidgets.QMessageBox):
+class DialogMeterType(QtWidgets.QMessageBox):
     def __init__(self):
-        super(MeterType, self).__init__()
+        super(DialogMeterType, self).__init__()
         self.setText("Choose meter file to import")
         self.addButton(QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole)
         self.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
@@ -213,23 +212,24 @@ class MeterType(QtWidgets.QMessageBox):
             self.accept()
 
 
-class LoopOptions(QtWidgets.QDialog):
+class DialogLoopProperties(QtWidgets.QDialog):
     def __init__(self, loops, parent=None):
-        super(LoopOptions, self).__init__(parent)
+        super(DialogLoopProperties, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
         self.loops = loops
+        self.setWindowTitle('Loop properties')
         self.init_ui()
 
     def init_ui(self):
         # create buttons and actions
-        cancel_button = QtWidgets.QPushButton('Cancel')
-        cancel_button.clicked.connect(self.close)
-        ok_button = QtWidgets.QPushButton('OK')
-        ok_button.clicked.connect(self.set_loop_options)
+        self.cancel_button = QtWidgets.QPushButton('Cancel')
+        self.cancel_button.clicked.connect(self.close)
+        self.ok_button = QtWidgets.QPushButton('OK')
+        self.ok_button.clicked.connect(self.set_loop_options)
 
         buttonBox = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
-        buttonBox.addButton(cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
-        buttonBox.addButton(ok_button, QtWidgets.QDialogButtonBox.ActionRole)
+        buttonBox.addButton(self.cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
+        buttonBox.addButton(self.ok_button, QtWidgets.QDialogButtonBox.ActionRole)
         # Sometimes these are undefined:
         try:
             self.operator_edit = QtWidgets.QLineEdit(self.loops[0].oper)
@@ -976,19 +976,6 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.canvas.draw()
 
     def get_color_lims(self, table):
-        # margin = 0.1
-        # row_minmax = []
-        # first = True
-        # for row in table:
-        #     if first:
-        #         first = False
-        #         continue
-        #     valid_data = [float(d) for d in row if float(d) > -998]
-        #     row_minmax.append(abs(min(valid_data)))
-        #     row_minmax.append(abs(max(valid_data)))
-        #
-        # cmax = max(row_minmax)
-        # clim = (cmax * -1 - cmax * margin, cmax + cmax * margin)
         slider_val = self.sliderColorRange.value() * 10
         clim = (slider_val * -1, slider_val)
         if self.cbUnits.isChecked():
@@ -1008,7 +995,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         xmax = max(x) + xrange * margin
         ymin = min(y) - yrange * margin
         ymax = max(y) + yrange * margin
-        return (xmin, xmax, ymin, ymax)
+        return xmin, xmax, ymin, ymax
 
 
 def show_full_table(index, MainProg):
@@ -1283,7 +1270,7 @@ class SelectAbsg(QtWidgets.QDialog):
     can select the files to import as Datums.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, datum_table_model=None):
         super(SelectAbsg, self).__init__()
         self.title = 'Select directory with Abs. g files (.project.txt)'
         self.left = 100
@@ -1304,6 +1291,13 @@ class SelectAbsg(QtWidgets.QDialog):
         self.table.setModel(self.ProxyModel)
         self.table.setSortingEnabled(True)
         self.init_ui()
+        if datum_table_model is not None:
+            self.table_model = datum_table_model
+            for i in range(self.table_model.rowCount()):
+                idx = self.table_model.index(i,0)
+                self.table_model.setData(idx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
+            self.ProxyModel.setSourceModel(self.table_model)
+            QtWidgets.QApplication.processEvents()
 
     def export_and_close(self):
         for i in range(self.ProxyModel.rowCount()):
@@ -1314,8 +1308,8 @@ class SelectAbsg(QtWidgets.QDialog):
                 self.new_datums.append(nd)
         self.accept()
 
-    def closeEvent(self, QCloseEvent):
-        return self.close()
+    # def closeEvent(self, QCloseEvent):
+    #     return self.close()
 
     def init_ui(self):
         self.setWindowTitle(self.title)
@@ -1334,6 +1328,7 @@ class SelectAbsg(QtWidgets.QDialog):
 
         # Buttons and checkbox
         self.load_unpublished_cb = QtWidgets.QCheckBox('Ignore unpublished')
+        self.load_unpublished_cb.setToolTip('Files inside a directory named "unpublished" (anywhere on the path) will be ignored')
         self.load_unpublished_cb.setChecked(True)
         self.load_button = QtWidgets.QPushButton("Load")
         self.load_button.clicked.connect(self.load_a10_data)
@@ -1406,12 +1401,22 @@ class SelectAbsg(QtWidgets.QDialog):
 
     def append_datums(self, path):
         files_found = False
+        n_files = 100
+        pbar = ProgressBar(total=n_files, textmess='Scanning directory...')
+        ctr = 1
+        pbar.show()
         for dirname, _, fileList in os.walk(path):
             if self.load_unpublished_cb.isChecked() and dirname.find('unpublished') != -1:
                 continue
             else:
                 for name in fileList:
+                    pbar.progressbar.setValue(ctr)
+                    QtWidgets.QApplication.processEvents()
+
                     if '.project.txt' in name:
+                        ctr += 1
+                        if ctr > 100:
+                            ctr = 1
                         files_found = True
                         d = a10.A10(os.path.join(dirname, name))
                         datum = Datum(d.stationname,

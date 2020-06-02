@@ -19,7 +19,7 @@ def read_csv(fh):
             if (not line) or (line[0] == '%'):
                 continue
 
-            # parse string line first with respect to '/' caracters (used in the date format),
+            # parse string line first with respect to '/' characters (used in the date format),
             # then with ':' (used for the time display), eventually with the classic ' '
             vals_temp1 = line.split('/')
             vals_temp2 = vals_temp1[0].split(':')
@@ -312,13 +312,13 @@ def read_cg6tsoft(fh):
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
-
+    station_name = None
     for orig_line in fh:
         try:
             i += 1
             line = orig_line.strip()
             vals_temp = line.split()
-            station_name = None
+
             if line[0] == '/':
                 vals_temp = line.split()
                 if len(vals_temp) > 1:
@@ -377,9 +377,11 @@ def read_cg6tsoft(fh):
             e.i = i
             e.line = orig_line
             raise e
-    all_survey_data.meter_type = 'CG6Tsoft'
-
-    return all_survey_data
+    if len(all_survey_data.raw_grav) == 0:
+        raise ValueError
+    else:
+        all_survey_data.meter_type = 'CG6Tsoft'
+        return all_survey_data
 
 
 def import_abs_g_complete(fname):

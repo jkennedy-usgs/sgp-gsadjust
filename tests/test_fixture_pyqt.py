@@ -8,8 +8,7 @@ import pyqt_models
 import GSadjust
 import pickle
 from PyQt5 import QtGui, QtCore
-
-
+from tab_drift import TabDrift
 
 @pytest.fixture
 def test_channellist_fixture(request):
@@ -88,10 +87,24 @@ def obstreestation():
 def obstreesurvey():
     filename = './tests/test_BurrisData.txt'
     meter_type = 'Burris'
-    survey = pyqt_models.ObsTreeSurvey('test')
+    survey = pyqt_models.ObsTreeSurvey('2020-05-11')
     assert type(survey) is pyqt_models.ObsTreeSurvey
     data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     survey.populate(data)
+    return survey
+
+@pytest.fixture
+def obstreesurvey_with_results(obstreesurvey):
+    from data_objects import Datum
+    obstreeloop = obstreesurvey.child(0)
+    data = obstreeloop.checked_stations()
+    model = TabDrift.calc_none_dg(data, 'test')
+    obstreeloop.delta_model = model
+    survey = obstreesurvey
+    survey.populate_delta_model()
+    d = Datum('rg37')
+    survey.datum_model.insertRows(d, 0)
+    survey.run_inversion()
     return survey
 
 @pytest.fixture
@@ -102,8 +115,16 @@ def obstreemodel(obstreesurvey):
     return model
 
 @pytest.fixture
+def obstreemodel_with_results(obstreesurvey_with_results):
+    model = pyqt_models.ObsTreeModel()
+    model.appendRow([obstreesurvey_with_results, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
+    assert type(model) is pyqt_models.ObsTreeModel
+    return model
+
+@pytest.fixture
 def mainprog():
     fname = './tests/test_workspace1.gsa'
     app = GSadjust.MainProg()
+    app.workspace_clear(confirm=False)
     app.workspace_open_json(fname)
     return app

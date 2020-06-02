@@ -607,7 +607,9 @@ class ObsTreeSurvey(ObsTreeItem):
         for datum in data['datums']:
             d = data_objects.Datum(datum['station'])
             d.__dict__ = datum
+            d.residual = -999
             temp.datum_model.insertRows(d, 0)
+
 
         ao = data_objects.AdjustmentOptions()
         ao.__dict__ = data['adjoptions']
@@ -1172,7 +1174,8 @@ class ObsTreeSurvey(ObsTreeItem):
     def populate_delta_model(self, loop=None, clear=True):
         """
         Copy deltas from the delta_model shown on the drift tab to the model shown on the adjustment tab.
-        :param loop:
+        :param loop: if ObsTreeLoop, only populate deltas from the selected loop; otherwise use all loops
+        :param clear: if True, clear delta table first; if not, append deltas
         :return:
         """
         if clear:
@@ -1251,7 +1254,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-
                 fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
                 return fn(*args)
 
@@ -1416,6 +1418,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 datum = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
                 datum_list.append(datum.station)
         return list(set(datum_list))
+
+    def surveys(self):
+        survey_list = []
+        for i in range(self.rowCount()):
+            obstreesurvey = self.itemFromIndex(self.index(i, 0))
+            survey_list.append(obstreesurvey)
+        return survey_list
 
     def deltas(self):
         delta_list = []

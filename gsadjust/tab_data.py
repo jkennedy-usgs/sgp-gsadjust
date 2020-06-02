@@ -14,7 +14,7 @@ material nor shall the fact of release constitute any such warranty. The softwar
 neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software.
 """
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -245,7 +245,8 @@ class TabData(QtWidgets.QWidget):
             label.set_size('x-small')
         xfmt = DateFormatter('%H:%M')
         axe.xaxis.set_major_formatter(xfmt)
-        plt.setp(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
+        axe.set_xticklabels(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
+        # plt.setp(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
         # Scale y axis to mean +/- 10. If a larger range is needed, color the axis red as a warning.
         if serie_type == 'Gravity':
             g_range_pos = max(seriey) - mean_g

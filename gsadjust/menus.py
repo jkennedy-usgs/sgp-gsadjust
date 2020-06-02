@@ -33,7 +33,8 @@ class MENU_STATE:
     SURVEY_HAS_NO_RESULTS = 8
     # Context Menus
     OBS_TREE_STATION = 9
-    OBS_TREE_LOOP_OR_SURVEY = 10
+    OBS_TREE_LOOP = 10
+    OBS_TREE_SURVEY = 13
     DELTA_MODEL = 11
 
 
@@ -159,18 +160,32 @@ _ENABLED_MENUS = {
     MENU_STATE.OBS_TREE_STATION: [
         ('mnDeleteSurvey', False),
         ('mnDeleteLoop', False),
+        ('mnLoopProperties', False),
         ('mnStationDelete', True),
         ('mnStationDuplicate', True),
         ('mnStationRename', True),
         ('mnDataNewLoop', True),
+        ('mnLoopAnimate', False)
     ],
-    MENU_STATE.OBS_TREE_LOOP_OR_SURVEY: [
-        ('mnDeleteSurvey', True),
+    MENU_STATE.OBS_TREE_LOOP: [
+        ('mnDeleteSurvey', False),
         ('mnDeleteLoop', True),
+        ('mnLoopProperties', True),
         ('mnStationDelete', False),
         ('mnStationDuplicate', False),
         ('mnStationRename', False),
         ('mnDataNewLoop', False),
+        ('mnLoopAnimate', True)
+    ],
+    MENU_STATE.OBS_TREE_SURVEY: [
+        ('mnDeleteSurvey', True),
+        ('mnDeleteLoop', False),
+        ('mnLoopProperties', False),
+        ('mnStationDelete', False),
+        ('mnStationDuplicate', False),
+        ('mnStationRename', False),
+        ('mnDataNewLoop', False),
+        ('mnLoopAnimate', False)
     ],
     MENU_STATE.DELTA_MODEL: [
         ('mnAdjClearDeltaTable', True),

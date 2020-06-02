@@ -3,7 +3,81 @@ import pytestqt
 from PyQt5 import QtCore
 from test_fixture_pyqt import mainprog
 
-from gui_objects import CoordinatesTable, AdjustOptions, SelectAbsg
+from gui_objects import (
+    CoordinatesTable, AdjustOptions, SelectAbsg, DialogApplyTimeCorrection, DialogOverwrite,
+    DialogMeterType, DialogLoopProperties
+)
+
+
+def test_ApplyTimeCorrection(qtbot):
+    time_correction_dialog = DialogApplyTimeCorrection()
+    def on_timeout():
+        qtbot.keyClick(time_correction_dialog.msg, QtCore.Qt.Key_Enter)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    time_correction_dialog.msg.exec_()
+    correction_type = time_correction_dialog.time_correction_type
+    assert correction_type == 'station'
+
+    time_correction_dialog = DialogApplyTimeCorrection()
+    def on_timeout():
+        qtbot.keyClick(time_correction_dialog.msg, QtCore.Qt.Key_Tab, delay=50)
+        qtbot.keyClick(time_correction_dialog.msg, QtCore.Qt.Key_Tab, delay=50)
+        qtbot.keyClick(time_correction_dialog.msg, QtCore.Qt.Key_Enter, delay=50)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    time_correction_dialog.msg.exec_()
+    correction_type = time_correction_dialog.time_correction_type
+    assert correction_type == 'survey'
+
+def test_Overwrite(qtbot):
+    overwrite_dialog = DialogOverwrite()
+    def on_timeout():
+        qtbot.keyClick(overwrite_dialog, QtCore.Qt.Key_Enter)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    result = overwrite_dialog.exec_()
+    assert result == 0
+    overwrite_dialog = DialogOverwrite()
+    def on_timeout():
+        qtbot.keyClick(overwrite_dialog, QtCore.Qt.Key_Tab, delay=50)
+        qtbot.keyClick(overwrite_dialog, QtCore.Qt.Key_Enter, delay=50)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    result = overwrite_dialog.exec_()
+    assert result == 1
+
+def test_meter_type(qtbot, mainprog):
+    meter_dialog = DialogMeterType()
+    def on_timeout():
+        qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    meter_dialog.exec_()
+    assert meter_dialog.meter_type == 'CG5'
+    meter_dialog = DialogMeterType()
+    def on_timeout():
+        qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Tab, delay=50)
+        qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Tab, delay=50)
+        qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter, delay=50)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    meter_dialog.exec_()
+    assert meter_dialog.meter_type == 'CG6Tsoft'
+
+def test_loop_options(qtbot, mainprog):
+    loops = [mainprog.obsTreeModel.invisibleRootItem().child(0).child(0)]
+    options_dialog = DialogLoopProperties(loops)
+    def on_timeout():
+        qtbot.keyClick(options_dialog, QtCore.Qt.Key_Tab, delay=100)
+        qtbot.keyClick(options_dialog, QtCore.Qt.Key_Tab, delay=100)
+        qtbot.keyClicks(options_dialog.comment_edit, "USGS", delay=100)
+        qtbot.mouseClick(options_dialog.ok_button, QtCore.Qt.LeftButton, delay=1000)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    options_dialog.exec_()
+
+    for loop in loops:
+        loop.oper = options_dialog.operator_edit.text()
+        loop.meter = options_dialog.meter_edit.text()
+        loop.comment = options_dialog.comment_edit.toPlainText()
+
+    assert loop.oper == 'USGS'
+    assert loop.comment == 'USGS'
+    assert loop.meter == 'B44'
 
 def test_coordinates_dialog(qtbot):
     coords = dict()

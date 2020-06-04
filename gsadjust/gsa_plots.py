@@ -35,21 +35,26 @@ class PlotGravityChange(QtWidgets.QDialog):
     def __init__(self, dates, table, parent=None):
         super(PlotGravityChange, self).__init__(parent)
         self.setWindowTitle('GSadjust results')
-        self.figure = matplotlib.figure.Figure()
+        self.setWhatsThis("Click on a line in the legend to toggle visibility. Right-click anywhere to " +
+                          "hide all lines. Middle-click to show all lines.")
+        self.figure = matplotlib.figure.Figure(figsize=(10, 6), dpi=100)
         self.canvas = FigureCanvas(self.figure)
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
+        ax = self.plot(dates, table)
 
-        # iterate through each station
-
-        self.plot(dates, table)
+        self.leg = self.interactive_legend(ax)
+        self.canvas.draw()
 
     def plot(self, dates, table):
         ncols = len(dates)
         nstations = len(table[0])
         stations = table[0]
+        ncol = int(np.ceil(nstations / 24))
         ax = self.figure.add_subplot(111)
+        right_margin = (1-ncol/8)
+        self.figure.subplots_adjust(right=right_margin)
         for i in range(nstations):
             xdata, ydata = [], []
             for idx, col in enumerate(table[1:ncols]):
@@ -65,9 +70,84 @@ class PlotGravityChange(QtWidgets.QDialog):
             cmap = matplotlib.cm.get_cmap('gist_ncar')
             ax.plot(xdata, ydata, '-o', color=cmap(i / nstations), label=stations[i])
         ax.set_ylabel('Gravity change, in µGal')
-        ax.legend()
-        # ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-        self.canvas.draw()
+        ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=ncol)
+        self.figure.autofmt_xdate()
+        return ax
+
+    def interactive_legend(self, ax=None):
+        if ax is None:
+            return
+            # ax = plt.gca()
+        if ax.legend_ is None:
+            ax.legend()
+        return InteractiveLegend(ax.get_legend())
+
+
+class InteractiveLegend(object):
+    def __init__(self, legend):
+        self.legend = legend
+        self.fig = legend.axes.figure
+
+        self.lookup_artist, self.lookup_handle = self._build_lookups(legend)
+        self._setup_connections()
+
+        self.update()
+
+    def _setup_connections(self):
+        for artist in self.legend.texts + self.legend.legendHandles:
+            artist.set_picker(10) # 10 points tolerance
+
+        self.fig.canvas.mpl_connect('pick_event', self.on_pick)
+        self.fig.canvas.mpl_connect('button_press_event', self.on_click)
+
+    def _build_lookups(self, legend):
+        labels = [t.get_text() for t in legend.texts]
+        handles = legend.legendHandles
+        label2handle = dict(zip(labels, handles))
+        handle2text = dict(zip(handles, legend.texts))
+
+        lookup_artist = {}
+        lookup_handle = {}
+        for artist in legend.axes.get_children():
+            if artist.get_label() in labels:
+                handle = label2handle[artist.get_label()]
+                lookup_handle[artist] = handle
+                lookup_artist[handle] = artist
+                lookup_artist[handle2text[handle]] = artist
+
+        lookup_handle.update(zip(handles, handles))
+        lookup_handle.update(zip(legend.texts, handles))
+
+        return lookup_artist, lookup_handle
+
+    def on_pick(self, event):
+        handle = event.artist
+        if handle in self.lookup_artist:
+
+            artist = self.lookup_artist[handle]
+            artist.set_visible(not artist.get_visible())
+            self.update()
+
+    def on_click(self, event):
+        if event.button == 3:
+            visible = False
+        elif event.button == 2:
+            visible = True
+        else:
+            return
+
+        for artist in self.lookup_artist.values():
+            artist.set_visible(visible)
+        self.update()
+
+    def update(self):
+        for artist in self.lookup_artist.values():
+            handle = self.lookup_handle[artist]
+            if artist.get_visible():
+                handle.set_visible(True)
+            else:
+                handle.set_visible(False)
+        self.fig.canvas.draw()
 
 
 class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):

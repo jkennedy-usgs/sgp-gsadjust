@@ -370,6 +370,7 @@ class ObsTreeLoop(ObsTreeItem):
     def from_json(cls, data):
         temp = cls(data['name'])
         temp.__dict__ = data
+        potential_missing_fields = ['comment', 'oper']
         temp.delta_model = DeltaTableModel()
         temp.tare_model = TareTableModel()
         for tare_dict in data['tares']:
@@ -378,6 +379,9 @@ class ObsTreeLoop(ObsTreeItem):
             temp.tare_model.insertRows(tare_object, 0)
         if 'checked' in data:
             temp.setCheckState(data['checked'])
+        for field in potential_missing_fields:
+            if not hasattr(temp, field):
+                setattr(temp, field, '')
         return temp
 
     def rename(self, from_name, to_name):
@@ -619,6 +623,7 @@ class ObsTreeSurvey(ObsTreeItem):
             temp.setCheckState(data['checked'])
         return temp
 
+
     def to_json(self):
         loops, datums = [], []
         # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
@@ -659,7 +664,7 @@ class ObsTreeSurvey(ObsTreeItem):
     def loops(self):
         return [self.child(i) for i in range(self.rowCount())]
 
-    def deltas(self):
+    def delta_list(self):
         deltas = []
         for i in range(self.delta_model.rowCount()):
             ind = self.delta_model.createIndex(i, 0)
@@ -826,7 +831,7 @@ class ObsTreeSurvey(ObsTreeItem):
                 self.msg = show_message('Are there standard deviations that are zero or very small?',
                                         'ZeroDivisionError')
             except KeyError as e:
-                self.msg = show_message('Key error: {}'.format(e.args[0]),
+                self.msg = show_message('Station error\nSurvey: {}\nStation: {}'.format(self.name, e.args[0]),
                                         'KeyError')
             except Exception as e:
                 logging.exception(e, exc_info=True)
@@ -1182,10 +1187,15 @@ class ObsTreeSurvey(ObsTreeItem):
             self.delta_model.clearDeltas()
         # If just a single loop
         if type(loop) is ObsTreeLoop:
-            for ii in range(loop.delta_model.rowCount()):
-                if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
-                    delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                    self.delta_model.insertRows(delta, 0)
+            try:
+                for ii in range(loop.delta_model.rowCount()):
+                    if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
+                        delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                        self.delta_model.insertRows(delta, 0)
+            except Exception as e:
+                self.msg = show_message("Error populating delta table. Please check the drift correction " +
+                                        "for survey " + self.name + ", loop " + loop.name,
+                                        "GSadjust error")
         # Populate all loops
         elif loop is None:
             for i in range(self.rowCount()):
@@ -1249,7 +1259,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         if index.model() is not None:
             column = index.column()
             if role == QtCore.Qt.DisplayRole:
-                
+
                 if column > 0:
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
@@ -1344,7 +1354,16 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         except Exception as e:
             pass
 
-
+    def checked_surveys(self):
+        """
+        Retrieves checked data from loop; used for calculating delta-gs in the "None" and "Continuous" drift options.
+        :return: list of checked stations
+        """
+        data = []
+        for i in range(self.invisibleRootItem().rowCount()):
+            if self.invisibleRootItem().child(i).checkState() == 2:
+                data.append(self.invisibleRootItem().child(i))
+        return data
 
     def checkState(self, index):
         if index.column > 0:
@@ -1437,20 +1456,21 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         return delta_list
 
     def save_workspace(self, fname):
-        try:
-            surveys = []
-            for i in range(self.rowCount()):
-                obstreesurvey = self.itemFromIndex(self.index(i, 0))
-                surveys.append(obstreesurvey)
-            workspace_data = [surveys, self.station_coords]
-            if fname[-4:] != '.gsa':
-                fname += '.gsa'
+        # try:
+        surveys = []
+        for i in range(self.rowCount()):
+            obstreesurvey = self.itemFromIndex(self.index(i, 0))
+            surveys.append(obstreesurvey)
+        workspace_data = [surveys, self.station_coords]
+        if fname[-4:] != '.gsa':
+            fname += '.gsa'
 
-            with open(fname, "w") as f:
-                json.dump(jsons.dump(workspace_data), f)
-            logging.info('Saving JSON workspace to {}'.format(fname))
-        except Exception:
-            return False
+        with open(fname, "w") as f:
+            json.dump(jsons.dump(workspace_data), f)
+        logging.info('Saving JSON workspace to {}'.format(fname))
+        # except Exception as e:
+        #     logging.error(e)
+        #     return False
         return fname
 
 
@@ -2541,7 +2561,11 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole:
             row = index.row()
             column = index.column()
-            return str(self.arraydata[row][column])
+            try:
+                value = float(self.arraydata[row][column])
+                return format(value, "0.1f")
+            except ValueError:
+                return str(self.arraydata[row][column])
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:

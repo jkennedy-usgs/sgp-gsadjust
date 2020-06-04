@@ -5,6 +5,7 @@ from PyQt5 import QtCore
 import numpy as np
 from test_fixture_pyqt import mainprog
 
+from data_analysis import compute_gravity_change
 from gui_objects import (
     CoordinatesTable, AdjustOptions, SelectAbsg, DialogApplyTimeCorrection, DialogOverwrite,
     DialogMeterType, DialogLoopProperties, GravityChangeTable
@@ -20,7 +21,8 @@ def test_PlotGravityChange(qtbot, mainprog):
     mainprog.workspace_clear()
     mainprog.workspace_open_json(os.path.join('test_data', 'field', 'Burris', 'complete_example2.gsa'))
     mainprog.adjust_network()
-    change_table = GravityChangeTable(mainprog)
+    data = compute_gravity_change(mainprog.obsTreeModel)
+    change_table = GravityChangeTable(mainprog, data=data)
     change_plot = PlotGravityChange(change_table.dates, change_table.table)
     jeff = 1
     assert change_plot.figure is not None

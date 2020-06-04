@@ -239,9 +239,10 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
     first = True
     unique_station_names = set()
     unique_stations = list()
-    for i in range(obstreemodel.invisibleRootItem().rowCount()):
-        survey = obstreemodel.invisibleRootItem().child(i)
+    for survey in obstreemodel.checked_surveys():
+        # survey = obstreemodel.invisibleRootItem().child(i)
         for ii in range(survey.rowCount()):
+            # if survey.isChecked()
             loop = survey.child(ii)
             for iii in range(loop.rowCount()):
                 station = loop.child(iii)
@@ -254,8 +255,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
     dates, header = [], []
     if table_type == 'list':
         date_col, station_col, sd_col = [], [], []
-        for i in range(obstreemodel.invisibleRootItem().rowCount()):
-            survey = obstreemodel.invisibleRootItem().child(i)
+        for survey in obstreemodel.checked_surveys():
             dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
             header = ['Station', 'Date', 'g','Std. dev.']
             for ii in range(survey.results_model.rowCount()):
@@ -282,8 +282,8 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                 lat.append(-999)
                 lon.append(-999)
                 elev.append(-999)
-            for i in range(obstreemodel.invisibleRootItem().rowCount()):
-                survey = obstreemodel.invisibleRootItem().child(i)
+            for survey in obstreemodel.checked_surveys():
+                # survey = obstreemodel.invisibleRootItem().child(i)
                 g_header.append(survey.name)
                 g_header.append(survey.name + '_sd')
                 for ii in range(survey.results_model.rowCount()):
@@ -298,8 +298,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                     station_g.append('-999')
             all_g.append(station_g)
 
-    for i in range(obstreemodel.invisibleRootItem().rowCount()):
-        survey = obstreemodel.invisibleRootItem().child(i)
+    for survey in obstreemodel.checked_surveys():
         dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
         diff_cumulative = []
         diff_iteration = []
@@ -394,17 +393,27 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
     out_table = [list(unique_station_names)] + out_table_iteration + out_table_cumulative
 
     if table_type == 'simple':
-        header = ['station'] + header1 + header2
-        table = out_table
+        # deal with 2-survey case
+        if header1 == header2:
+            header = ['station'] + header1
+            table = out_table[:-1]
+        else:
+            header = ['station'] + header1 + header2
+            table = out_table
         return header, table, dates
     elif table_type == 'full':
-        header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1 + header2
         # transpose table
         g = [list(i) for i in zip(*all_g)]
         table = [unique_station_names, lat, lon, elev]
         table += g
-        table += out_table_iteration
-        table += out_table_cumulative
+        # deal with 2-survey case
+        if header1 == header2:
+            header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1
+            table += out_table_iteration
+        else:
+            header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1 + header2
+            table += out_table_iteration
+            table += out_table_cumulative
         # transpose back
         table = [list(i) for i in zip(*table)]
         # table = [header] + table

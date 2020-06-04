@@ -268,7 +268,7 @@ def tide_correction_agnew(MainProg, lat, lon, alt):
                 tides = np.round(np.array([earth_tide(lat, lon, t)
                                            for t in station.t]) * 10000) / 10000.
                 tides *= 1000  # convert milligal to microgal
-                station.etc = tides
+                station.etc = tides.tolist()
 
 
 def ocean_correction_agnew(self, amp, phases, lon):

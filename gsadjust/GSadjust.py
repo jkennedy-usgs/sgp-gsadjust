@@ -112,7 +112,7 @@ import numpy as np
 from PyQt5 import QtGui, QtCore, QtWidgets
 from PyQt5.QtCore import QSettings
 from matplotlib.dates import num2date
-
+from data_analysis import compute_gravity_change
 from data_correction import time_correction
 from data_export import export_metadata, export_summary, export_data
 # GSadjust modules
@@ -582,6 +582,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.populate_survey_deltatable_from_simpledeltas(delta_models, obstreesurveys)
             QtWidgets.QApplication.restoreOverrideCursor()
             self.set_window_title_asterisk()
+            self.update_menus()
 
     def workspace_clear(self, confirm=True):
         """
@@ -633,7 +634,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.msg = show_message("Workspace save error", "Error")
             return
 
-        self.msg = show_message('Workspace saved', 'GSadjust')
+        self.msg = show_message('Workspace saved', 'GSadjust', icon=QtWidgets.QMessageBox.Information)
         self.set_window_title(fname)
         return True
 
@@ -664,7 +665,7 @@ class MainProg(QtWidgets.QMainWindow):
                 return
 
             self.set_window_title(fname)
-            self.msg = show_message('Workspace saved', 'GSadjust')
+            self.msg = show_message('Workspace saved', 'GSadjust', icon=QtWidgets.QMessageBox.Information)
             self.workspace_savename = fname
             self.update_menus()
 
@@ -941,7 +942,9 @@ class MainProg(QtWidgets.QMainWindow):
         :param populate_type: 'all', 'selectedLoop', or 'selectedSurvey'
         """
         table_updated = False
+
         if populate_type == 'all':
+            self.update_all_drift_plots()
             for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
                 survey = self.obsTreeModel.invisibleRootItem().child(i)
                 table_updated = survey.populate_delta_model(clear=True)
@@ -950,6 +953,7 @@ class MainProg(QtWidgets.QMainWindow):
             # item = self.obsTreeModel.invisibleRootItem()
         elif populate_type == 'selectedsurvey':
             survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+            self.update_survey_drift_plots(survey)
             table_updated = survey.populate_delta_model(clear=True)
             self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
@@ -967,6 +971,7 @@ class MainProg(QtWidgets.QMainWindow):
                 loops = [item for item in selected_items if type(item) == ObsTreeLoop]
                 first = True
                 for loop in loops:
+                    self.update_loop_drift_plots(loop)
                     survey = loop.parent()
                     if first:
                         table_updated = survey.populate_delta_model(loop, clear=True)
@@ -1072,10 +1077,16 @@ class MainProg(QtWidgets.QMainWindow):
         """
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.rowCount()):
-                loop = survey.child(ii)
-                self.index_current_loop = loop.index()
-                self.update_drift_tables_and_plots(update=False)
+            self.update_survey_drift_plots(survey)
+
+    def update_survey_drift_plots(self, survey):
+        for ii in range(survey.rowCount()):
+            loop = survey.child(ii)
+            self.update_loop_drift_plots(loop)
+
+    def update_loop_drift_plots(self, loop):
+        self.index_current_loop = loop.index()
+        self.update_drift_tables_and_plots(update=False)
 
     def update_adjust_tables(self):
         """
@@ -1664,10 +1675,12 @@ class MainProg(QtWidgets.QMainWindow):
                     new_obstreeloop.appendRow([new_obstreestation,
                                                QtGui.QStandardItem('a'),
                                                QtGui.QStandardItem('a')])
-
-            new_obstreeloop.meter = obstreeloop.meter
-            new_obstreeloop.oper = obstreeloop.oper
-            new_obstreeloop.source = obstreeloop.source
+            copy_fields = ['meter', 'oper', 'source']
+            for field in copy_fields:
+                try:
+                    setattr(new_obstreeloop, field, getattr(obstreeloop, field))
+                except:
+                    setattr(new_obstreeloop, field, '')
 
             for idx in reversed(indexes):
                 if idx.column() == 0:
@@ -1773,7 +1786,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_menus()
 
     def show_gravity_change_table(self):
-        GravityChangeTable(self, table_type='simple')
+        data = compute_gravity_change(self.obsTreeModel)
+        if data:
+            win = GravityChangeTable(self, data, table_type='simple')
+            win.show()
 
     def plot_network_graph_circular(self):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
@@ -1801,8 +1817,8 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotDgResidualHistogram(survey, self)
         plt.show()
 
-    def plot_gravity_change(self, dates, table):
-        plt = PlotGravityChange(dates, table, self)
+    def plot_gravity_change(self, dates, table, parent):
+        plt = PlotGravityChange(dates, table, parent)
         plt.show()
 
     def set_adj_sd(self, survey, ao):
@@ -1888,10 +1904,12 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue('abs_g_path', selectabsg.path)
             if nds:
                 for nd in nds:
-                    self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(nd, 0)
+                    new_delta = copy.deepcopy(nd)
+                    self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.insertRows(new_delta, 0)
                 self.set_window_title_asterisk()
         else:
             self.abs_import_table_model = selectabsg.table_model
+        self.update_menus()
 
     def write_metadata_text(self):
         """
@@ -1924,7 +1942,7 @@ class MainProg(QtWidgets.QMainWindow):
         stations = []
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
             obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
-            for d in obstreesurvey.deltas():
+            for d in obstreesurvey.delta_list():
                 stations.append(d.sta1)
                 stations.append(d.sta2)
         station_list = list(set(stations))
@@ -2224,7 +2242,7 @@ def main():
     app.setWindowIcon(QtGui.QIcon(':/icons/app.ico'))
     if not DEBUG:
         if ex.check_for_updates(False, parent=splash):
-            sys.excepthook = handle_exception
+            # sys.excepthook = handle_exception
             ex.showMaximized()
             app.processEvents()
             app.exec_()

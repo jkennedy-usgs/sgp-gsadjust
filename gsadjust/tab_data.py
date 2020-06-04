@@ -481,30 +481,21 @@ class TabData(QtWidgets.QWidget):
         """
         check all selected items (select the station column)
         """
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        qmodelindex = self.data_view.selectedIndexes()
-        indx2 = None
-        for indx in list(qmodelindex)[:-1]:
-            # because the setData function currently only works for column 0,
-            # then pass the index of the element with same row as selected (if
-            # the user does not select element from first column) and column=0
-            indx2 = indx.sibling(indx.row(), 0)
-            self.parent.station_model.setData(indx2, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole, silent=True)
-        
-        if indx2:
-            self.parent.station_model.setData(indx2, QtCore.Qt.Checked, QtCore.Qt.CheckStateRole)
-            QtWidgets.QApplication.restoreOverrideCursor()
+        self.check_or_uncheck_selected(QtCore.Qt.Checked)
 
     def uncheckselected(self):
         """
         check all selected items (select the station column)
         """
+        self.check_or_uncheck_selected(QtCore.Qt.Unchecked)
+
+    def check_or_uncheck_selected(self, check_type):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         qmodelindex = self.data_view.selectedIndexes()
-        for indx in list(qmodelindex):
-            # because the setData function currently only works for column 0,
-            # then pass the index of the element with same row as selected (if
-            # the user does not select element from first column) and column=0
-            indx2 = indx.sibling(indx.row(), 0)
-            self.parent.station_model.setData(indx2, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole)
+        col0_indexes = [x for x in list(qmodelindex) if x.column() == 0]
+        for indx in col0_indexes[:-1]:
+            # only update on the last one ("silent=False"). Saves a lot of time
+            self.parent.station_model.setData(indx, check_type, QtCore.Qt.CheckStateRole, silent=True)
+        indx = col0_indexes[-1]
+        self.parent.station_model.setData(indx, check_type, QtCore.Qt.CheckStateRole)
         QtWidgets.QApplication.restoreOverrideCursor()

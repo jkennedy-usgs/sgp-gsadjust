@@ -535,73 +535,60 @@ class GravityChangeTable(QtWidgets.QDialog):
     :param header:
     """
 
-    def __init__(self, MainProg, table_type='simple'):
-        super(GravityChangeTable, self).__init__()
-        self.MainProg = MainProg
-        result = data_analysis.compute_gravity_change(MainProg.obsTreeModel)
-        if not result:
-            self.msg = show_message('Some gravity values are less than 0. Increase the survey datum(s) ' \
-                                    'so that all gravity values are greater than 0 before calculating ' \
-                                    'gravity change.', 'Calculation error')
-            return
-        else:
-            self.header, self.table, self.dates = result[0], result[1], result[2]
+    def __init__(self, MainProg, data, table_type='simple'):
+        super(GravityChangeTable, self).__init__(MainProg)
+        result = data
+        self.header, self.table, self.dates = result[0], result[1], result[2]
         self.full_header, self.full_table, _ = data_analysis.compute_gravity_change(MainProg.obsTreeModel,
                                                                                     table_type='full')
         self.list_header, self.list_table, _ = data_analysis.compute_gravity_change(MainProg.obsTreeModel,
                                                                                     table_type='list')
         self.coords = MainProg.obsTreeModel.station_coords
-        self.gravity_change_window = QtWidgets.QWidget()
-        self.gravity_change_window.simple_model = GravityChangeModel(self.header, self.table, table_type='simple')
-        self.gravity_change_window.full_model = GravityChangeModel(self.full_header, self.full_table, table_type='full')
-        self.gravity_change_window.list_model = GravityChangeModel(self.list_header, self.list_table, table_type='list')
-        self.gravity_change_window.table = QtWidgets.QTableView()
-        self.gravity_change_window.table.setModel(self.gravity_change_window.simple_model)
+        layout = QtWidgets.QVBoxLayout()
+        self.simple_model = GravityChangeModel(self.header, self.table, table_type='simple')
+        self.full_model = GravityChangeModel(self.full_header, self.full_table, table_type='full')
+        self.list_model = GravityChangeModel(self.list_header, self.list_table, table_type='list')
+        self.table_view = QtWidgets.QTableView()
+        self.table_view.setModel(self.simple_model)
 
         # Create buttons and actions
-        self.gravity_change_window.type_comboBox = QtWidgets.QComboBox(self)
-        self.gravity_change_window.type_comboBox.addItem('simple dg')
-        self.gravity_change_window.type_comboBox.activated.connect(self.table_changed)
-        self.gravity_change_window.type_comboBox.addItem('full dg')
-        self.gravity_change_window.type_comboBox.activated.connect(self.table_changed)
-        self.gravity_change_window.type_comboBox.addItem('list')
-        self.gravity_change_window.type_comboBox.activated.connect(self.table_changed)
-        self.gravity_change_window.btnMap = QtWidgets.QPushButton('Map')
-        self.gravity_change_window.btnMap.clicked.connect(self.map_change_window)
-        self.gravity_change_window.btnPlot = QtWidgets.QPushButton('Plot')
-        temp = (self.dates, self.table)
-        self.gravity_change_window.btnPlot.clicked.connect(lambda state, x=temp: MainProg.plot_gravity_change(temp[0],
-                                                                                                              temp[1]))
-        self.gravity_change_window.btn1 = QtWidgets.QPushButton('Copy to clipboard')
-        self.gravity_change_window.btn1.clicked.connect(lambda: copy_cells_to_clipboard(MainProg.popup.table))
+        self.type_comboBox = QtWidgets.QComboBox(self)
+        self.type_comboBox.addItem('simple dg')
+        self.type_comboBox.addItem('full dg')
+        self.type_comboBox.addItem('list')
+        self.type_comboBox.activated.connect(self.table_changed)
+        btnMap = QtWidgets.QPushButton('Map')
+        btnMap.clicked.connect(self.map_change_window)
+        btnPlot = QtWidgets.QPushButton('Plot')
+        btnPlot.clicked.connect(lambda state, x=(self.dates, self.table):
+                                                           MainProg.plot_gravity_change(x[0], x[1], self))
+        btn1 = QtWidgets.QPushButton('Copy to clipboard')
+        btn1.clicked.connect(lambda: copy_cells_to_clipboard(self.table_view))
 
         # Locations
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.gravity_change_window.table)
-        hbox = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.table_view)
+        hbox, hbox_widget = QtWidgets.QHBoxLayout(), QtWidgets.QWidget()
         hbox.addStretch(0)
         # Only show plot button on simple table
         hbox.addWidget(QtWidgets.QLabel('Table type:'))
-        hbox.addWidget(self.gravity_change_window.type_comboBox)
+        hbox.addWidget(self.type_comboBox)
         if self.dates:
-            hbox.addWidget(self.gravity_change_window.btnPlot)
-            hbox.addWidget(self.gravity_change_window.btnMap)
-        hbox.addWidget(self.gravity_change_window.btn1)
-        # hbox.addWidget(self.gravity_change_window.btn2)
-        vbox.addLayout(hbox)
-        self.gravity_change_window.setLayout(vbox)
-        self.gravity_change_window.setWindowTitle('Gravity Change')
-        self.gravity_change_window.setGeometry(200, 200, 600, 800)
-        MainProg.popup = self.gravity_change_window
-        MainProg.popup.show()
+            hbox.addWidget(btnPlot)
+            hbox.addWidget(btnMap)
+        hbox.addWidget(btn1)
+        hbox_widget.setLayout(hbox)
+        layout.addWidget(hbox_widget)
+        self.setLayout(layout)
+        self.setWindowTitle('Gravity Change')
+        self.setGeometry(200, 200, 600, 800)
 
     def table_changed(self, index):
-        if self.gravity_change_window.type_comboBox.itemText(index) == 'simple dg':
-            self.gravity_change_window.table.setModel(self.gravity_change_window.simple_model)
-        if self.gravity_change_window.type_comboBox.itemText(index) == 'full dg':
-            self.gravity_change_window.table.setModel(self.gravity_change_window.full_model)
-        if self.gravity_change_window.type_comboBox.itemText(index) == 'list':
-            self.gravity_change_window.table.setModel(self.gravity_change_window.list_model)
+        if self.type_comboBox.itemText(index) == 'simple dg':
+            self.table_view.setModel(self.simple_model)
+        if self.type_comboBox.itemText(index) == 'full dg':
+            self.table_view.setModel(self.full_model)
+        if self.type_comboBox.itemText(index) == 'list':
+            self.table_view.setModel(self.list_model)
 
     def map_change_window(self):
         try:

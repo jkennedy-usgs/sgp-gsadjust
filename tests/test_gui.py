@@ -2,8 +2,10 @@ import pytest
 import pytestqt
 import GSadjust
 import os
+import numpy as np
 import gui_objects
 from PyQt5 import QtCore, Qt
+from tide_correction import tide_correction_agnew
 
 @pytest.mark.skipif("TRAVIS" in os.environ, reason="Doesn't work on Travis")
 def test_gui(qtbot, monkeypatch):
@@ -18,6 +20,15 @@ def test_gui(qtbot, monkeypatch):
     # Open data
     window.open_raw_data(r'.\tests\test_BurrisData2.txt', 'Burris')
     assert window.obsTreeModel.rowCount() == 1
+
+    # Update tide correction
+    # Not checking that the correction is correct, just that it's been updated.
+    # Burris meters only report correction to nearest microGal, this test will fail if the correction wasn't updated.
+    tide_correction_agnew(window, 35., -110., 1000.)
+    assert np.abs(window.obsTreeModel.invisibleRootItem().child(0).child(0).child(0).etc[0] + 20.6) < 0.01
+    test_workspace = 'test1.gsa'
+    success = window.obsTreeModel.save_workspace(test_workspace)
+    assert success == 'test1.gsa'
 
     # Divide into loops
     window.divide_survey(8/24)

@@ -85,9 +85,8 @@ class TabAdjust(QtWidgets.QWidget):
         lbl = QtWidgets.QLabel("Least-squares statistics")
         lbl.setFixedHeight(30)
         layout_right.addWidget(lbl)
-        self.textAdjResults = QtWidgets.QTextEdit()
-        self.textAdjResults.setReadOnly(True)
-        layout_right.addWidget(self.textAdjResults)
+        self.stats_view = QtWidgets.QTableView()
+        layout_right.addWidget(self.stats_view)
         main_layout.addWidget(layout_right)
 
         self.delta_view.horizontalHeader().sectionResized.connect(self.save_delta_column_widths_to_settings)

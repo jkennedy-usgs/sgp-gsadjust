@@ -407,7 +407,7 @@ class Menus:
                                                                slot=self.mainProg.plot_datum_comparison_timeseries,
                                                                enabled=False)
         self.mnAdjUpdateSD = self.create_action("Scale std. dev. from results",
-                                                slot=self.mainProg.update_SD,
+                                                slot=self.mainProg.update_SD_and_run_adjustment,
                                                 enabled=False,
                                                 icon=QtGui.QIcon(':/icons/ua.png'))
         # self.mnAdjCompareAllDatum = self.create_action("Plot absolute vs. relative offset",

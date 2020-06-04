@@ -155,13 +155,10 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
     text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
     text_out.append("Number of loops:                    {:d}\n".format(nloops))
     text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
-    text_out.append("Polynomial degree for temperature:  {:d}\n".format(drift_temp))
-    text_out.append("\n")
     text_out.append("Number of unknowns:                 {:d}\n".format(nb_x))
     text_out.append("Number of relative observations:    {:d}\n".format(n_rel_obs))
     text_out.append("Number of absolute observations:    {:d}\n".format(n_abs_obs))
     text_out.append("Degrees of freedom (nobs-nunknowns): {:d}\n".format(adjustment.dof))
-    text_out.append("\n")
     text_out.append(
         "SD a posteriori:                    {:f}\n".format(
             float(np.sqrt(adjustment.VtPV / adjustment.dof))))

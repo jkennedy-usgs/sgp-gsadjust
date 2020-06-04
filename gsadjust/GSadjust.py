@@ -614,7 +614,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.setModel(None)
         self.tab_adjust.results_view.update()
-        self.tab_adjust.textAdjResults.clear()
+        self.tab_adjust.stats_view.clear()
         self.setWindowTitle('GSadjust')
         self.update_menus()
 
@@ -1114,19 +1114,28 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.setSortingEnabled(True)
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
         self.tab_adjust.datum_view.setModel(self.tab_adjust.datum_proxy_model)
-        self.tab_adjust.textAdjResults.clear()
 
-        try:
+        stats_model = QtGui.QStandardItemModel()
+        stats_model.setColumnCount(2)
+        if survey.adjustment.adjustmentresults.text:
             for line in survey.adjustment.adjustmentresults.text:
-                self.tab_adjust.textAdjResults.append(line.strip())
-        except:
-            pass
-        # if refresh_needed:
+                try:
+                    line_elems = line.split(':')
+                    if len(line_elems) == 2:
+                        stats_model.appendRow([QtGui.QStandardItem(line_elems[0]),
+                                               QtGui.QStandardItem(line_elems[1].strip())])
+                    else:
+                        text = line_elems[0].strip()
+                        qt_item = QtGui.QStandardItem(text)
+                        if 'rejected' in text:
+                            qt_item.setForeground(QtCore.Qt.red)
+                        stats_model.appendRow([qt_item, QtGui.QStandardItem('')])
+                except:
+                    pass
+            self.tab_adjust.stats_view.setModel(stats_model)
+        self.tab_adjust.stats_view.setColumnWidth(0, 250)
+        self.tab_adjust.stats_view.setColumnWidth(1, 80)
         self.tab_adjust.update_col_widths()
-
-        # survey.delta_model.layoutChanged.emit()
-        # survey.datum_model.layoutChanged.emit()
-        # survey.results_model.layoutChanged.emit()
 
     def update_drift_tables_and_plots(self, update=True):
         """
@@ -1259,7 +1268,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.set_window_title_asterisk()
 
     def clear_adjustment_test(self):
-        self.tab_adjust.textAdjResults.clear()
+        self.tab_adjust.stats_view.clear()
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         survey.adjustment.adjustmentresults.text = []
 
@@ -1773,7 +1782,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_menus()
 
 
-    def update_SD(self):
+    def update_SD_and_run_adjustment(self):
         obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         ao = copy.deepcopy(obstreesurvey.adjustment.adjustmentoptions)
         ao.use_sigma_factor = True
@@ -1781,7 +1790,6 @@ class MainProg(QtWidgets.QMainWindow):
         obstreesurvey.adjustment.adjustmentoptions = ao
         self.set_adj_sd(obstreesurvey, ao)
         obstreesurvey.run_inversion()
-        # self.update_adjust_tables()
         self.adjust_update_not_required()
         self.update_menus()
 

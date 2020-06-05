@@ -30,6 +30,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
+import numpy as np
 
 import logging
 import a10
@@ -631,25 +632,30 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
+        self.canvas_widget = QtWidgets.QWidget()
         self.canvas = FigureCanvas(self.figure)
-
+        self.canvas.setParent(self.canvas_widget)
         # this is the Navigation widget
         # it takes the Canvas widget and a parent
         self.toolbar = NavigationToolbar(self.canvas, self)
-
+        # self.toolbar._actions['zoom'].changed.connect(self.update_plot)
         self.time_widget = QtWidgets.QWidget()
         self.btnIncremental = QtWidgets.QRadioButton("Incremental", self)
         self.btnIncremental.setChecked(True)
         self.btnReference = QtWidgets.QRadioButton("Change relative to", self)
         self.drpReference = QtWidgets.QComboBox()
-        self.drpReference.currentIndexChanged.connect(self.plot)
+        self.btnTrend = QtWidgets.QRadioButton("Trend", self)
         self.btnIncremental.toggled.connect(self.plot)
         self.btnReference.toggled.connect(self.plot)
+        self.drpReference.currentIndexChanged.connect(self.plot)
+        self.btnTrend.toggled.connect(self.plot)
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.btnIncremental)
         bbox.addSpacing(10)
         bbox.addWidget(self.btnReference)
         bbox.addWidget(self.drpReference)
+        bbox.addSpacing(10)
+        bbox.addWidget(self.btnTrend)
         bbox.addStretch(1)
         self.time_widget.setLayout(bbox)
 
@@ -663,6 +669,8 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.sliderResolution.setMinimum(5)
         self.sliderResolution.setMaximum(17)
         self.sliderResolution.setValue(12)
+        btnRefresh = QtWidgets.QPushButton('Refresh')
+        btnRefresh.clicked.connect(self.resolution_slider_changed)
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.cbBasemap)
         bbox.addSpacing(10)
@@ -670,6 +678,8 @@ class GravityChangeMap(QtWidgets.QDialog):
         bbox.addSpacing(40)
         bbox.addWidget(QtWidgets.QLabel('Resolution'))
         bbox.addWidget(self.sliderResolution)
+        bbox.addSpacing(10)
+        bbox.addWidget(btnRefresh)
         bbox.addStretch(1)
         self.basemap_widget.setLayout(bbox)
 
@@ -692,7 +702,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         bbox.addStretch(1)
         self.units_widget.setLayout(bbox)
 
-        # Slider
+        # Date slider
         self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.slider.valueChanged.connect(self.update_plot)
         self.slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
@@ -725,8 +735,11 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         for map in self.maps:
             self.drpBasemap.addItem(map)
-
         self.plot()
+
+    def resolution_slider_changed(self):
+        if self.cbBasemap.isChecked():
+            self.plot()
 
     def get_survey_dates(self, header):
         dates = []
@@ -751,10 +764,8 @@ class GravityChangeMap(QtWidgets.QDialog):
                                           zorder=10,
                                           transform=self.ccrs.Geodetic())
             self.cb = self.figure.colorbar(self.points)
-            if not self.cbUnits.isChecked():
-                self.cb.set_label('Gravity change, in µGal', fontsize=16)
-            elif self.cbUnits.isChecked():
-                self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
+            self.set_cb_label()
+            # self.figure.subplots_adjust(0.1,0.1, 0.9, 0.9)
             # self.cb.set_clim(vmin=clim[0], vmax=clim[1])
             # self.cb.draw_all()
             self.points.name = name
@@ -763,7 +774,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.canvas.draw()
 
     def get_data(self):
-        x, y, d, name = [], [], [], []
+        x, y, value, name = [], [], [], []
 
         if self.btnIncremental.isChecked():
             data = self.table[self.slider.value()]
@@ -775,7 +786,7 @@ class GravityChangeMap(QtWidgets.QDialog):
                     y.append(self.coords[sta][1])
                     if self.cbUnits.isChecked():
                         datum /= 41.9
-                    d.append(datum)
+                    value.append(datum)
                     name.append(sta)
 
         elif self.btnReference.isChecked():
@@ -795,12 +806,39 @@ class GravityChangeMap(QtWidgets.QDialog):
                     else:
                         datum = (surv_g - ref_g)
                     if self.cbUnits.isChecked():
-                        d.append(datum / 41.9)
+                        value.append(datum / 41.9)
                     else:
-                        d.append(datum)
+                        value.append(datum)
                     name.append(sta)
 
-        return x, y, d, name
+        elif self.btnTrend.isChecked():
+            obs_idxs, obs_dates = [], []
+            for item in self.full_header:
+                try:
+                    obs_dates.append(date2num(dt.datetime.strptime(item, '%Y-%m-%d')))
+                    obs_idxs.append(self.full_header.index(item))
+                except:
+                    pass
+            for r in self.full_table:
+                sta = r[0]
+                X = []
+                Y = [float(r[idx]) for idx in obs_idxs if float(r[idx]) > -998]
+                for idx, obs_idx in enumerate(obs_idxs):
+                    if float(r[obs_idx]) > -998:
+                        X.append(obs_dates[idx])
+                # Y = [obs_dates[idx] for idx in obs_idxs if float(r[idx]) > -998]
+                if len(X) > 1:
+                    z = np.polyfit(X, Y, 1)
+                    x.append(self.coords[sta][0])
+                    y.append(self.coords[sta][1])
+                    uGal_per_year = z[0]*365.25
+                    if self.cbUnits.isChecked():
+                        value.append(uGal_per_year / 41.9)
+                    else:
+                        value.append(uGal_per_year)
+                    name.append(sta)
+
+        return x, y, value, name
 
     def get_name(self):
         if self.btnIncremental.isChecked():
@@ -817,19 +855,24 @@ class GravityChangeMap(QtWidgets.QDialog):
     def plot(self):
         clim = self.get_color_lims(self.table)
 
+        if self.btnTrend.isChecked():
+            self.slider.setEnabled(False)
         if self.btnIncremental.isChecked():
+            self.slider.setEnabled(True)
             self.slider.setRange(1, self.n_surveys)
+            # self.slider.setValue(1)
         elif not self.btnIncremental.isChecked():
+            self.slider.setEnabled(True)
             self.slider.setRange(1, self.n_surveys + 1)
-        self.slider.setValue(1)
 
         self.figure.clf()
 
         map_center = (self.axlim[0] + self.axlim[1]) / 2
         self.ax = self.figure.add_subplot(1, 1, 1,
+                                          position=[0.15, 0.15, 0.75, 0.75],
                                           projection=self.ccrs.AlbersEqualArea(map_center))  # self.stamen_terrain.crs)
-        self.ax.clear()
-
+        # self.ax.clear()
+        # self.ax.set_aspect('')
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         self.points = []
         x, y, d, names = self.get_data()
@@ -845,25 +888,37 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.cb = self.figure.colorbar(self.points)
 
         self.ax.set_xlabel('Distance, in meters', fontsize=16)
-        if not self.cbUnits.isChecked():
-            self.cb.set_label('Gravity change, in µGal', fontsize=16)
-        elif self.cbUnits.isChecked():
-            self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
 
+        self.set_cb_label()
+        self.ax.set_extent(self.axlim, crs=self.ccrs.Geodetic())
         self.show_background(self.sliderResolution.value())
-        self.ax.set_extent(self.axlim)  # , crs=self.ccrs.Geodetic())
-        self.ax.callbacks.connect('xlim_changed', self.on_xlims_change)
+         # , crs=self.ccrs.Geodetic())
+        self.ax.callbacks.connect('xlim_changed', self.on_lims_change)
+        self.ax.callbacks.connect('ylim_changed', self.on_lims_change)
         self.slider_label.setText(self.get_name())
 
         # refresh canvas
         self.figure.canvas.mpl_connect('pick_event', self.show_point_label)
         self.canvas.draw()
 
-    def on_xlims_change(self, axes):
+    def set_cb_label(self):
+        if self.btnTrend.isChecked():
+            if not self.cbUnits.isChecked():
+                self.cb.set_label('Gravity trend, in µGal/yr')
+            else:
+                self.cb.set_label('Gravity trend, in meters of water/yr')
+        else:
+            if not self.cbUnits.isChecked():
+                self.cb.set_label('Gravity change, in µGal', fontsize=16)
+            elif self.cbUnits.isChecked():
+                self.cb.set_label('Aquifer-storage change,\n in meters of water', fontsize=16)
+
+    def on_lims_change(self, axes):
         # self.show_background(self.sliderResolution.value())
         # self.canvas.draw()
         self.axlim = self.ax.get_extent(crs=self.ccrs.Geodetic())
-        self.plot()
+        # self.figure.subplots_adjust(0.1, 0.1, 0.8, 0.8)
+        # self.canvas.draw()
         # (xmin, xmax, ymin, ymax)
         return
 
@@ -896,6 +951,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         return clim
 
     def get_axis_lims_from_data(self, coords):
+        ratio = 1.2  # width to height
         margin = 0.25
         x, y = [], []
         for c in coords.values():
@@ -904,10 +960,17 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         xrange = abs(max(x) - min(x))
         yrange = abs(max(y) - min(y))
+
+        if xrange > yrange:
+            yrange = xrange / ratio
+        else:
+            xrange = yrange / ratio
+
         xmin = min(x) - xrange * margin
         xmax = max(x) + xrange * margin
         ymin = min(y) - yrange * margin
         ymax = max(y) + yrange * margin
+
         return xmin, xmax, ymin, ymax
 
 

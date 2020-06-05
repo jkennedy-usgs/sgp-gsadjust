@@ -614,7 +614,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.setModel(None)
         self.tab_adjust.results_view.update()
-        self.tab_adjust.stats_view.clear()
+        self.tab_adjust.stats_view.setModel(None)
+        self.tab_adjust.stats_view.update()
         self.setWindowTitle('GSadjust')
         self.update_menus()
 
@@ -1134,7 +1135,7 @@ class MainProg(QtWidgets.QMainWindow):
                     pass
             self.tab_adjust.stats_view.setModel(stats_model)
         self.tab_adjust.stats_view.setColumnWidth(0, 250)
-        self.tab_adjust.stats_view.setColumnWidth(1, 80)
+        self.tab_adjust.stats_view.setColumnWidth(1, 120)
         self.tab_adjust.update_col_widths()
 
     def update_drift_tables_and_plots(self, update=True):

@@ -27,7 +27,7 @@ from matplotlib.figure import Figure
 
 from data_objects import Delta
 from gui_objects import IncrMinuteTimeEdit, show_message
-from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop, TareTableModel
+from pyqt_models import DeltaTableModel, RomanTableModel, ObsTreeLoop, TareTableModel, NoCheckDeltaTableModel
 from drift_roman import drift_roman
 from drift_continuous import drift_continuous
 
@@ -437,7 +437,7 @@ class TabDrift(QtWidgets.QWidget):
                     if delta_key1 == testdelta_key1 or delta_key1 == testdelta_key2:
                         avg_dg[delta_key1].append(testdelta)
 
-        roman_avg_dg_model = DeltaTableModel()
+        roman_avg_dg_model = NoCheckDeltaTableModel()
         for station_pair in avg_dg.items():
             # just send list of deltas, not key (station info is already in the deltas)
             avg_delta = Delta.from_list(station_pair[1])

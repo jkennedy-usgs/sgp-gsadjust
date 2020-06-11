@@ -828,7 +828,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     logging.info('Gravnet inversion, Survey: {}'.format(self.name))
                     self.gravnet_inversion()
             except ZeroDivisionError:
-                self.msg = show_message('Are there standard deviations that are zero or very small?',
+                self.msg = show_message('Unable to adjust. Are there standard deviations that are zero or very small?',
                                         'ZeroDivisionError')
             except KeyError as e:
                 self.msg = show_message('Station error\nSurvey: {}\nStation: {}'.format(self.name, e.args[0]),
@@ -2204,6 +2204,74 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             }
             json_deltas.append(temp_delta)
         return json_deltas
+
+
+class NoCheckDeltaTableModel(DeltaTableModel):
+    def __init__(self):
+        super(NoCheckDeltaTableModel, self).__init__()
+
+    def data(self, index, role):
+        if index.isValid():
+            delta = self._deltas[index.row()]
+            column = index.column()
+            if role == QtCore.Qt.ForegroundRole:
+                brush = QtGui.QBrush(QtCore.Qt.black)
+                if delta.type == 'normal':
+                    try:
+                        if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2 and \
+                                delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
+                            brush = QtGui.QBrush(QtCore.Qt.black)
+                        else:
+                            if delta.station1.data(role=QtCore.Qt.CheckStateRole) == 2:
+                                if column == 0:
+                                    brush = QtGui.QBrush(QtCore.Qt.darkGray)
+                                else:
+                                    brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                            elif delta.station2.data(role=QtCore.Qt.CheckStateRole) == 2:
+                                if column == 1:
+                                    brush = QtGui.QBrush(QtCore.Qt.darkGray)
+                                else:
+                                    brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                            else:
+                                brush = QtGui.QBrush(QtCore.Qt.lightGray)
+                    except:
+                        catch = 1
+                elif delta.type == 'assigned':
+                    if column == DELTA_G:
+                        brush = QtGui.QBrush(QtCore.Qt.red)
+                return brush
+            if role == QtCore.Qt.DisplayRole:
+                def delta_station_loop():
+                    if delta.loop is None:
+                        if type(delta.station2) == list:
+                            return delta.station2[0].loop
+                        else:
+                            return "NA"
+                    else:
+                        return delta.loop
+
+                def format_datetime(date):
+                    return dt.datetime.utcfromtimestamp((date - 719163) * 86400.).strftime('%Y-%m-%d %H:%M:%S')
+
+                fn, *args = {
+                    DELTA_STATION1: (str, delta.sta1),
+                    DELTA_STATION2: (str, delta.sta2),
+                    LOOP: (str, delta_station_loop()),
+                    DELTA_TIME: (format_datetime, delta.time()),
+                    DELTA_G: (format, delta.dg(), "0.1f"),
+                    DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
+                    DELTA_SD: (format, delta.sd, "0.1f"),
+                    DELTA_ADJ_SD: (format, delta.sd_for_adjustment, "0.1f"),
+                    DELTA_RESIDUAL: (format, delta.residual, "0.1f")
+                }.get(column, (str, "NA"))
+
+                return fn(*args)
+
+            elif role == QtCore.Qt.CheckStateRole:
+                return None
+
+            elif role == QtCore.Qt.UserRole:
+                return delta
 
 
 class ScintrexTableModel(QtCore.QAbstractTableModel):

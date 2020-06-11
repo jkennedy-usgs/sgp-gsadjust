@@ -1148,7 +1148,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.driftmethod_comboboxbox.setCurrentIndex(self.drift_lookup[drift_method])
         self.tab_drift.set_drift_method(update)
 
-
     def on_obs_checked_change(self, selected):
         """
         Called when a checkbox state is changed, but not when a new item selected. Should update drift plots
@@ -1156,9 +1155,9 @@ class MainProg(QtWidgets.QMainWindow):
         :param selected: Selected indexes
         """
         if selected.model() is not None:
-            if self.tab_widget.currentIndex() == 1:
-                self.update_drift_tables_and_plots()
-            elif self.tab_widget.currentIndex() == 2:
+            # if self.tab_widget.currentIndex() == 1:
+            self.update_drift_tables_and_plots(update=False)
+            if self.tab_widget.currentIndex() == 2:
                 self.adjust_update_required()
                 self.tab_adjust.delta_view.update()
                 self.tab_adjust.delta_view.repaint()

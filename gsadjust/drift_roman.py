@@ -132,29 +132,3 @@ def drift_roman(data, loop_name, time_threshold=None):
                         other1 = other2
 
     return deltas, vert_lines
-
-    # If there is more than one delta-g between a given station pair, average them
-    # Setup dict to store averages '(sta1, sta2)':[g]
-    avg_dg = dict()
-    unique_pairs = set()
-    for i in range(roman_dg_model.rowCount()):
-        delta = roman_dg_model.data(roman_dg_model.index(i, 0), role=QtCore.Qt.UserRole)
-        delta_key1 = (delta.station1.station_name, delta.station2[0].station_name)
-        delta_key2 = (delta.station2[0].station_name, delta.station1.station_name)
-        if delta_key1 not in unique_pairs and delta_key2 not in unique_pairs:
-            unique_pairs.add(delta_key1)
-            avg_dg[delta_key1] = [delta]
-            for ii in range(i + 1, roman_dg_model.rowCount()):
-                testdelta = roman_dg_model.data(roman_dg_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                testdelta_key1 = (testdelta.station1.station_name, testdelta.station2[0].station_name)
-                testdelta_key2 = (testdelta.station2[0].station_name, testdelta.station1.station_name)
-                if delta_key1 == testdelta_key1 or delta_key1 == testdelta_key2:
-                    avg_dg[delta_key1].append(testdelta)
-
-    roman_avg_dg_model = DeltaTableModel()
-    for station_pair in avg_dg.items():
-        # just send list of deltas, not key (station info is already in the deltas)
-        avg_delta = Delta.from_list(station_pair[1])
-        roman_avg_dg_model.insertRows(avg_delta, 0)
-
-    return roman_dg_model, roman_avg_dg_model, vert_lines

@@ -1135,7 +1135,7 @@ class MainProg(QtWidgets.QMainWindow):
                     pass
             self.tab_adjust.stats_view.setModel(stats_model)
         self.tab_adjust.stats_view.setColumnWidth(0, 250)
-        self.tab_adjust.stats_view.setColumnWidth(1, 120)
+        self.tab_adjust.stats_view.setColumnWidth(1, 150)
         self.tab_adjust.update_col_widths()
 
     def update_drift_tables_and_plots(self, update=True):
@@ -1263,13 +1263,13 @@ class MainProg(QtWidgets.QMainWindow):
         """
         self.obsTreeModel.itemFromIndex(self.index_current_survey).delta_model.clearDeltas()
         self.obsTreeModel.itemFromIndex(self.index_current_survey).results_model.clearResults()
-        self.clear_adjustment_test()
+        self.clear_adjustment_text()
         self.deltas_update_required()
         self.update_adjust_tables()
         self.set_window_title_asterisk()
 
-    def clear_adjustment_test(self):
-        self.tab_adjust.stats_view.clear()
+    def clear_adjustment_text(self):
+        self.tab_adjust.stats_view.setModel(None)
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         survey.adjustment.adjustmentresults.text = []
 
@@ -1280,7 +1280,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         self.obsTreeModel.itemFromIndex(self.index_current_survey).datum_model.clearDatums()
         self.obsTreeModel.itemFromIndex(self.index_current_survey).results_model.clearResults()
-        self.clear_adjustment_test()
+        self.clear_adjustment_text()
         self.update_adjust_tables()
         self.set_window_title_asterisk()
 
@@ -2108,9 +2108,7 @@ class MainProg(QtWidgets.QMainWindow):
                 logging.info('Git fetched: {}'.format(f))
             self.commit = str(repo.head.commit)[:5]
             if repo.head.commit != master.commit:
-                msg = "An update is available for GSadjust.\n"
-                msg += "Would you like to install now?"
-
+                msg = "An update is available for GSadjust.\nWould you like to install now?"
                 confirm = QtWidgets.QMessageBox.question(parent, "Update Available", msg,
                                                          QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                 if confirm == QtWidgets.QMessageBox.Yes:

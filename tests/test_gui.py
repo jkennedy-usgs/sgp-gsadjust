@@ -68,7 +68,7 @@ def test_gui(qtbot, monkeypatch):
 
     # Verify gravnet input
     assert survey.results_model.rowCount() == 30
-    assert len(survey.adjustment.adjustmentresults.text) == 14  # number of lines in Numpy output
+    assert len(survey.adjustment.adjustmentresults.text) == 11  # number of lines in Numpy output
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
 

@@ -765,13 +765,20 @@ class GravityChangeMap(QtWidgets.QDialog):
                                           transform=self.ccrs.Geodetic())
             self.cb = self.figure.colorbar(self.points)
             self.set_cb_label()
-            # self.figure.subplots_adjust(0.1,0.1, 0.9, 0.9)
-            # self.cb.set_clim(vmin=clim[0], vmax=clim[1])
-            # self.cb.draw_all()
             self.points.name = name
             self.slider_label.setText(self.get_name())
             self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
             self.canvas.draw()
+
+    def get_datenums(self, full_header):
+        obs_idxs, obs_dates = [], []
+        for item in full_header:
+            try:
+                obs_dates.append(date2num(dt.datetime.strptime(item, '%Y-%m-%d')))
+                obs_idxs.append(full_header.index(item))
+            except:
+                pass
+        return obs_dates, obs_idxs
 
     def get_data(self):
         x, y, value, name = [], [], [], []
@@ -812,13 +819,7 @@ class GravityChangeMap(QtWidgets.QDialog):
                     name.append(sta)
 
         elif self.btnTrend.isChecked():
-            obs_idxs, obs_dates = [], []
-            for item in self.full_header:
-                try:
-                    obs_dates.append(date2num(dt.datetime.strptime(item, '%Y-%m-%d')))
-                    obs_idxs.append(self.full_header.index(item))
-                except:
-                    pass
+            obs_dates, obs_idxs = self.get_datenums(self.full_header)
             for r in self.full_table:
                 sta = r[0]
                 X = []
@@ -841,16 +842,19 @@ class GravityChangeMap(QtWidgets.QDialog):
         return x, y, value, name
 
     def get_name(self):
-        if self.btnIncremental.isChecked():
+        if self.btnTrend.isChecked():
+            title = "{} to {}".format(self.surveys[0], self.surveys[-1])
+            return title
+        elif self.btnIncremental.isChecked():
             name = self.header[self.slider.value()]
             return name.replace('_', ' ')
         elif not self.btnIncremental.isChecked():
             ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
             current_survey = self.surveys[self.slider.value() - 1]
             if current_survey < ref_survey:
-                return current_survey + ' to ' + ref_survey
+                return "{} to {}".format(current_survey, ref_survey)
             else:
-                return ref_survey + ' to ' + current_survey
+                return "{} to {}".format(ref_survey, current_survey)
 
     def plot(self):
         clim = self.get_color_lims(self.table)

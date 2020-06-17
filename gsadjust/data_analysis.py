@@ -146,66 +146,25 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
         for k, v in adjustment.meter_dic.items():
             cal_dic[k] = (float(1 - adjustment.X[len(sta_dic_ls) + v]),
                           float(np.sqrt(adjustment.var[len(sta_dic_ls) + v])))
-
+        adjustment.adjustmentresults.cal_dic = cal_dic
     # calculate and display statistics:
     adjustment.lsq_statistics()
 
     # write output files
-    text_out = list()
-    text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
-    text_out.append("Number of loops:                    {:d}\n".format(nloops))
-    text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
-    text_out.append("Number of unknowns:                 {:d}\n".format(nb_x))
-    text_out.append("Number of relative observations:    {:d}\n".format(n_rel_obs))
-    text_out.append("Number of absolute observations:    {:d}\n".format(n_abs_obs))
-    text_out.append("Degrees of freedom (nobs-nunknowns): {:d}\n".format(adjustment.dof))
-    text_out.append(
-        "SD a posteriori:                    {:f}\n".format(
-            float(np.sqrt(adjustment.VtPV / adjustment.dof))))
-    text_out.append("chi square value:                   {:6.2f}\n".format(float(adjustment.chi2)))
-    text_out.append("critical chi square value:          {:6.2f}\n".format(float(adjustment.chi2c)))
-    if float(adjustment.chi2) < float(adjustment.chi2c):
-        text_out.append("Chi-test accepted\n")
-    else:
-        text_out.append("Chi-test rejected\n")
-    if adjustment.adjustmentoptions.cal_coeff:
-        for k, v in cal_dic.items():
-            text_out.append("Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".
-                            format(k, v[0], v[1]))
-    elif adjustment.adjustmentoptions.specify_cal_coeff:
-        for k, v in adjustment.adjustmentoptions.meter_cal_dict.items():
-            text_out.append("Specified calibration coefficient for meter {}: {:.6f}".
-                            format(k, v))
 
-    if netadj_loop_keys:
-        text_out.append("Gravimeter drift coefficient(s):\n")
-        for loop in netadj_loop_keys.items():  # this dict only has loops with netadj option
-            text_out.append("Loop " + loop[0] + ": ")
-            for i in range(loop[1][1]):  # degree of polynomial
-                text_out.append("Drift coefficient, degree {}: {:.3f}".
-                                format(i + 1,
-                                       adjustment.X[
-                                           len(sta_dic_ls) +
-                                           n_meters +
-                                           loop[1][0] +
-                                           i][0]))
-
-    adjustment.adjustmentresults.text = text_out
-
-    # Write output to file
-    if write_out_files == 'y':
-        survdir = output_root_dir + os.sep + survey_name
-        if not os.path.exists(survdir):
-            os.makedirs(survdir)
-        tday = dt.datetime.now()
-
-        with open(survdir + os.sep +
-                  "LSresults_{:4d}{:02d}{:02d}_{:02d}{:02d}.dat".format(tday.year, tday.month, tday.day,
-                                                                        tday.hour, tday.minute),
-                  'w') as fid:
-            for line in text_out:
-                fid.write(line)
-        fid.close()
+    # Write output to     if write_out_files == 'y':
+    #     survdir = output_root_dir + os.sep + survey_name
+    #     if not os.path.exists(survdir):
+    #         os.makedirs(survdir)
+    #     tday = dt.datetime.now()
+    #
+    #     with open(survdir + os.sep +
+    #               "LSresults_{:4d}{:02d}{:02d}_{:02d}{:02d}.dat".format(tday.year, tday.month, tday.day,
+    #                                                                     tday.hour, tday.minute),
+    #               'w') as fid:
+    #         for line in text_out:
+    #             fid.write(line)
+    #     fid.close()
 
     return cal_dic
 

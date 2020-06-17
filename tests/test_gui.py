@@ -68,9 +68,10 @@ def test_gui(qtbot, monkeypatch):
 
     # Verify gravnet input
     assert survey.results_model.rowCount() == 30
-    assert len(survey.adjustment.adjustmentresults.text) == 11  # number of lines in Numpy output
+    assert len(survey.adjustment.results_string()) == 12  # number of lines in Numpy output
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
+
 
     test_workspace = 'test1.gsa'
     success = window.obsTreeModel.save_workspace(test_workspace)
@@ -86,11 +87,13 @@ def test_gui(qtbot, monkeypatch):
     assert loop.rowCount() == 12
     assert survey.rowCount() == 3
 
+    window.menus.mnAdjGravnet.setChecked(True)
+    window.adjust_network()
+
     window.menus.mnAdjPyLSQ.setChecked(True)
     window.adjust_network()
 
-    window.adjust_network()
-    for line in survey.adjustment.adjustmentresults.text:
+    for line in survey.adjustment.results_string():
         elems = line.split(' ')
         if elems[0] == 'SD':
             sd0 = float(elems[-1])
@@ -101,7 +104,7 @@ def test_gui(qtbot, monkeypatch):
         survey.delta_model.setData(survey.delta_model.index(row, 0), QtCore.Qt.Unchecked, role=QtCore.Qt.CheckStateRole)
 
     window.adjust_network()
-    for line in survey.adjustment.adjustmentresults.text:
+    for line in survey.adjustment.results_string():
         elems = line.split(' ')
         if elems[0] == 'SD':
             sd1 = float(elems[-1])
@@ -120,7 +123,7 @@ def test_gui(qtbot, monkeypatch):
 
     window.workspace_open_json(test_workspace)
     window.adjust_network()
-    for line in survey.adjustment.adjustmentresults.text:
+    for line in survey.adjustment.results_string():
         elems = line.split(' ')
         if elems[0] == 'SD':
             sd2 = float(elems[-1])

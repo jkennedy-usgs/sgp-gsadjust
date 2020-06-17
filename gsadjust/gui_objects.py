@@ -295,7 +295,7 @@ class AdjustOptions(QtWidgets.QDialog):
 
     def init_ui(self, survey_name):
         if survey_name is not None:
-            self.drift_temp_chk.setChecked(self.ao.use_model_temp)
+            # self.drift_temp_chk.setChecked(self.ao.use_model_temp)
             self.sigma_factor_chk.setChecked(self.ao.use_sigma_factor)
             self.sigma_add_chk.setChecked(self.ao.use_sigma_add)
             self.sigma_min_chk.setChecked(self.ao.use_sigma_min)
@@ -329,8 +329,8 @@ class AdjustOptions(QtWidgets.QDialog):
             buttonBox.addButton(cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
 
             grid = QtWidgets.QGridLayout()
-            grid.addWidget(self.drift_temp_chk, 1, 0)
-            grid.addWidget(self.drift_temp_edit, 1, 1)
+            # grid.addWidget(self.drift_temp_chk, 1, 0)
+            # grid.addWidget(self.drift_temp_edit, 1, 1)
             grid.addWidget(self.sigma_factor_chk, 2, 0)
             grid.addWidget(self.sigma_factor_edit, 2, 1)
             grid.addWidget(self.sigma_add_chk, 3, 0)
@@ -342,7 +342,7 @@ class AdjustOptions(QtWidgets.QDialog):
             grid.addWidget(self.cal_coeff_table, 7, 0)
             grid.addWidget(self.alpha_text, 8, 0)
             grid.addWidget(self.alpha_edit, 8, 1)
-            grid.addWidget(self.woutfiles_chk, 9, 0)
+            # grid.addWidget(self.woutfiles_chk, 9, 0)
             grid.addWidget(buttonBox, 10, 0)
 
             self.setLayout(grid)
@@ -366,11 +366,12 @@ class AdjustOptions(QtWidgets.QDialog):
             self.cal_coeff_chk.setEnabled(True)
 
     def set_adjust_options(self):
-        if self.drift_temp_chk.isChecked():
-            self.ao.use_model_temp = True
-            self.ao.model_temp_degree = int(self.ao.model_temp_degree.text())
-        else:
-            self.ao.use_model_temp = False
+        # if self.drift_temp_chk.isChecked():
+        #     self.ao.use_model_temp = True
+        #     self.ao.model_temp_degree = int(self.ao.model_temp_degree.text())
+        # else:
+        #     self.ao.use_model_temp = False
+        self.ao.use_model_temp = False
         if self.sigma_factor_chk.isChecked():
             self.ao.use_sigma_factor = True
             self.ao.sigma_factor = float(self.sigma_factor_edit.text())

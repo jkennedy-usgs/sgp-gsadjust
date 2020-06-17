@@ -946,8 +946,8 @@ class MainProg(QtWidgets.QMainWindow):
 
         if populate_type == 'all':
             self.update_all_drift_plots()
-            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-                survey = self.obsTreeModel.invisibleRootItem().child(i)
+            for survey in self.obsTreeModel.checked_surveys():
+
                 table_updated = survey.populate_delta_model(clear=True)
                 self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
@@ -1115,17 +1115,19 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.results_view.setSortingEnabled(True)
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
         self.tab_adjust.datum_view.setModel(self.tab_adjust.datum_proxy_model)
-
         stats_model = QtGui.QStandardItemModel()
-        stats_model.setColumnCount(2)
-        if survey.adjustment.adjustmentresults.text:
-            for line in survey.adjustment.adjustmentresults.text:
+        if not survey.adjustment.adjustmentresults.text:  # Numpy adjustment
+            stats_model.setColumnCount(2)
+            stats_model.setHorizontalHeaderLabels(['', ''])
+            self.tab_adjust.stats_view.setColumnWidth(0, 250)
+            self.tab_adjust.stats_view.setColumnWidth(1, 150)
+            for line in survey.adjustment.results_string():
                 try:
                     line_elems = line.split(':')
-                    if len(line_elems) == 2:
+                    if len(line_elems) == 2:  # normal line, stat: value
                         stats_model.appendRow([QtGui.QStandardItem(line_elems[0]),
                                                QtGui.QStandardItem(line_elems[1].strip())])
-                    else:
+                    else:  # Chi test accepted or rejected. No ":"
                         text = line_elems[0].strip()
                         qt_item = QtGui.QStandardItem(text)
                         if 'rejected' in text:
@@ -1133,9 +1135,13 @@ class MainProg(QtWidgets.QMainWindow):
                         stats_model.appendRow([qt_item, QtGui.QStandardItem('')])
                 except:
                     pass
-            self.tab_adjust.stats_view.setModel(stats_model)
-        self.tab_adjust.stats_view.setColumnWidth(0, 250)
-        self.tab_adjust.stats_view.setColumnWidth(1, 150)
+        else:  # Gravnet adjustment
+            self.tab_adjust.stats_view.setColumnWidth(0, 600)
+            stats_model.setColumnCount(1)
+            stats_model.setHorizontalHeaderLabels([''])
+            for line in survey.adjustment.adjustmentresults.text:
+                stats_model.appendRow([QtGui.QStandardItem(line)])
+        self.tab_adjust.stats_view.setModel(stats_model)
         self.tab_adjust.update_col_widths()
 
     def update_drift_tables_and_plots(self, update=True):
@@ -1759,23 +1765,13 @@ class MainProg(QtWidgets.QMainWindow):
         # obstreesurvey.results_model.layoutChanged.emit()
 
         if how_many == 'all':
-            for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-                obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
+            for obstreesurvey in self.obsTreeModel.checked_surveys():
                 obstreesurvey.run_inversion(adj_type)
-            obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         elif how_many == 'current':
             obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
             obstreesurvey.run_inversion(adj_type)
 
         self.statusBar().showMessage("Network adjustment complete")
-        # self.update_adjust_tables()
-
-        # obstreesurvey.delta_model.layoutChanged.emit()
-        # obstreesurvey.datum_model.layoutChanged.emit()
-        # obstreesurvey.results_model.layoutChanged.emit()
-        # self.tab_adjust.delta_proxy_model.invalidate()
-        # self.tab_adjust.datum_proxy_model.invalidate()
-        # self.tab_adjust.results_proxy_model.invalidate()
         self.update_adjust_tables()
         QtWidgets.QApplication.restoreOverrideCursor()
         self.adjust_update_not_required()
@@ -1790,6 +1786,7 @@ class MainProg(QtWidgets.QMainWindow):
         obstreesurvey.adjustment.adjustmentoptions = ao
         self.set_adj_sd(obstreesurvey, ao)
         obstreesurvey.run_inversion()
+        self.update_adjust_tables()
         self.adjust_update_not_required()
         self.update_menus()
 

@@ -40,11 +40,12 @@ DELTA_STATION1, DELTA_STATION2, LOOP, DELTA_TIME, DELTA_G, DELTA_DRIFTCORR, DELT
     range(9)
 ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
 SCINTREX_STATION, SCINTREX_DATE, SCINTREX_G, SCINTREX_SD, SCINTREX_X_TILT, SCINTREX_Y_TILT, SCINTREX_TEMP, \
-    SCINTREX_DUR, SCINTREX_REJ = range(9)
+SCINTREX_DUR, SCINTREX_REJ = range(9)
 BURRIS_STATION, BURRIS_OPER, BURRIS_METER, BURRIS_DATE, BURRIS_G, BURRIS_DIAL, BURRIS_FEEDBACK, BURRIS_TIDE, \
-    BURRIS_ELEVATION, BURRIS_LAT, BURRIS_LONG = range(11)
+BURRIS_ELEVATION, BURRIS_LAT, BURRIS_LONG = range(11)
 TARE_DATE, TARE_TIME, TARE_TARE = range(3)
 ROMAN_FROM, ROMAN_TO, ROMAN_DELTA = range(3)
+
 
 def format_numeric_column(column):
     """
@@ -155,9 +156,9 @@ class ObsTreeStation(ObsTreeItem):
     @property
     def display_column_map(self):
         return {
-            STATION_NAME: (self.display_name, ),
-            STATION_DATETIME: (self.display_datetime_or_tmean, ),
-            STATION_MEAN: (self.display_mean_stddev, )
+            STATION_NAME: (self.display_name,),
+            STATION_DATETIME: (self.display_datetime_or_tmean,),
+            STATION_MEAN: (self.display_mean_stddev,)
         }
 
     @property
@@ -174,7 +175,7 @@ class ObsTreeStation(ObsTreeItem):
             gtmp = [g[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
             d = sum(self._weights_())
             w = self._weights_()
-            wg = [g * w for (g,w) in zip(gtmp, w)]
+            wg = [g * w for (g, w) in zip(gtmp, w)]
             gmean = sum(wg) / d
             return gmean
         except:
@@ -189,7 +190,7 @@ class ObsTreeStation(ObsTreeItem):
             ttmp = [self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
             d = sum(self._weights_())
             w = self._weights_()
-            wt = [g * w for (g,w) in zip(ttmp, w)]
+            wt = [g * w for (g, w) in zip(ttmp, w)]
             tmean = sum(wt) / d
             return tmean
         except:
@@ -311,7 +312,7 @@ class ObsTreeLoop(ObsTreeItem):
         self.delta_model = DeltaTableModel()
         self.tare_model = TareTableModel()
         self.name = name
-        self.drift_method = 'none'
+        self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'
         self.drift_cont_method = 0  # If continuous model, also need to keep track of which type of model
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
@@ -321,17 +322,31 @@ class ObsTreeLoop(ObsTreeItem):
         self.source = ''
 
     def __str__(self):
-        return 'Loop: {}, ' \
-               'Drift method: {}, ' \
-               'Meter type: {}, ' \
-               'Continuous drift method: {}, ' \
-               'Continuous drift start/end method: {}, ' \
-               'Netadj method: {}\n'.format(self.name,
-                                            self.drift_method,
-                                            self.meter_type,
-                                            self.drift_cont_method,
-                                            self.drift_cont_startend,
-                                            self.drift_netadj_method)
+        if self.drift_method == 'roman' or self.drift_method == 'none':
+            return 'Loop: {}, ' \
+                   'Drift method: {}, ' \
+                   'Meter type: {}\n'.format(self.name,
+                                             self.drift_method,
+                                             self.meter_type)
+
+        elif self.drift_method == 'continuous':
+            return 'Loop: {}, ' \
+                   'Drift method: {}, ' \
+                   'Meter type: {}, ' \
+                   'Continuous drift method: {}, ' \
+                   'Continuous drift start/end method: {}\n'.format(self.name,
+                                                                    self.drift_method,
+                                                                    self.meter_type,
+                                                                    self.drift_cont_method,
+                                                                    self.drift_cont_startend)
+        elif self.drift_method == 'netadj':
+            return 'Loop: {}, ' \
+                   'Drift method: {}, ' \
+                   'Meter type: {}, ' \
+                   'Netadj method: {}\n'.format(self.name,
+                                                self.drift_method,
+                                                self.meter_type,
+                                                self.drift_netadj_method)
 
     @property
     # To accomodate legacy files, which might have meter and oper set to None:
@@ -342,13 +357,13 @@ class ObsTreeLoop(ObsTreeItem):
                'Operator: {}\n' \
                'Comment: {}\n' \
                'Source: {}' \
-               .format(
-                    self.name,
-                    self.__dict__.get('drift_method', ''),
-                    self.__dict__.get('meter', ''),
-                    self.__dict__.get('oper', ''),
-                    self.__dict__.get('comment', ''),
-                    self.__dict__.get('source', ''),
+            .format(
+            self.name,
+            self.__dict__.get('drift_method', ''),
+            self.__dict__.get('meter', ''),
+            self.__dict__.get('oper', ''),
+            self.__dict__.get('comment', ''),
+            self.__dict__.get('source', ''),
         )
 
     @property
@@ -357,8 +372,8 @@ class ObsTreeLoop(ObsTreeItem):
             # Column name map
             # index: name
             LOOP_NAME: (str, self.name),
-            1: (str,''),
-            2: (str,'')
+            1: (str, ''),
+            2: (str, '')
         }
 
     @property
@@ -614,7 +629,6 @@ class ObsTreeSurvey(ObsTreeItem):
             d.residual = -999
             temp.datum_model.insertRows(d, 0)
 
-
         ao = data_objects.AdjustmentOptions()
         ao.__dict__ = data['adjoptions']
         temp.adjustment.adjustmentoptions = ao
@@ -622,7 +636,6 @@ class ObsTreeSurvey(ObsTreeItem):
         if 'checked' in data:
             temp.setCheckState(data['checked'])
         return temp
-
 
     def to_json(self):
         loops, datums = [], []
@@ -660,7 +673,6 @@ class ObsTreeSurvey(ObsTreeItem):
             meters.append(station.meter[0])  # Get the first entry; Assume meter number can't change at a station
         return list(set(meters))
 
-    @property
     def loops(self):
         return [self.child(i) for i in range(self.rowCount())]
 
@@ -871,10 +883,9 @@ class ObsTreeSurvey(ObsTreeItem):
         unique_ls = list(set(ls_degree))
         if len(unique_ls) > 1:
             self.msg = show_message(
-                'It appears that more than one polynomial degree was specified for different loops for the '
-                'network, or that some loops are not using the ' +
-                'adjustment drift option. When using Gravnet, all loops must have the same degree drift ' +
-                'model. Aborting.',
+                'It appears that more than one polynomial degree was specified for different loops for the network, '
+                'or that some loops are not using the adjustment drift option. When using Gravnet, all loops must '
+                'have the same degree drift model. Aborting.',
                 'Inversion error')
             return
         if len(unique_ls) == 1:
@@ -908,10 +919,10 @@ class ObsTreeSurvey(ObsTreeItem):
             for delta in self.adjustment.deltas:
                 fid.write('{} {} {:0.6f} {} {} {:0.6f} {} {:0.6f}\n'.format(delta.sta1[:6],
                                                                             delta.sta2[:6],
-                                                                            delta.dg / 1000. * delta.cal_coeff,
+                                                                            delta.dg() / 1000. * delta.cal_coeff,
                                                                             delta.sta1_t(),
                                                                             delta.sta2_t(),
-                                                                            delta.dg / 1000, '0',
+                                                                            delta.dg() / 1000, '0',
                                                                             delta.sd_for_adjustment / 1000.))
         # Write absolute-g (aka datum, aka fix) file
         fix_file = self.name + '_fix.txt'
@@ -934,7 +945,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     " Aborting.", "Inversion warning")
                 return
             # Run gravnet with calibration coefficient
-            os.system('gravnet -D' + dg_file + ' -N' + self.name + ' -M2 -C1 ' + drift_term + ' -F' + fix_file)
+            os.system('gravnet -D{} -N{} -M2 -C1 {} -F{}'.format(dg_file, self.name, drift_term, fix_file))
             with open(self.name + '.met', 'r') as fid:
                 symbol = ''
                 while symbol != 'Y_l':
@@ -944,7 +955,7 @@ class ObsTreeSurvey(ObsTreeItem):
                 cal_dic[self.unique_meters[0]] = (1 + float(meter_calib_params[0]), float(meter_calib_params[1]))
         else:
             # Run gravnet without calibration coefficient
-            os.system('gravnet -D' + dg_file + ' -N' + self.name + ' -M2 ' + drift_term + ' -F' + fix_file)
+            os.system('gravnet -D{} -N{} -M2 {} -F{}'.format(dg_file, self.name, drift_term, fix_file))
 
         # Read drift coefficients
         if drift_term != '':
@@ -992,15 +1003,19 @@ class ObsTreeSurvey(ObsTreeItem):
                 fh = fid.readline()
                 if len(fh) == 0:
                     break
-                self.adjustment.adjustmentresults.text.append(fh)
+                self.adjustment.adjustmentresults.text.append(fh.strip())
             if self.adjustment.adjustmentoptions.cal_coeff:
-                self.adjustment.adjustmentresults.text.append("\n\nGravimeter calibration coefficient: " +
-                                                              str(1 + float(meter_calib_params[0])) + ' ± ' +
-                                                              meter_calib_params[1])
+                self.adjustment.adjustmentresults.text.append("Gravimeter calibration coefficient: {:.6} ± {:.6}" \
+                                                              .format(1 + float(meter_calib_params[0]),
+                                                                      meter_calib_params[1]))
+            elif self.adjustment.adjustmentoptions.specify_cal_coeff:
+                for k, v in self.adjustment.adjustmentoptions.meter_cal_dict.items():
+                    self.adjustment.adjustmentresults.text.append(
+                        "Specified calibration coefficient for meter {}: {:.6f}".format(k, v))
             if drift_term != '':
-                self.adjustment.adjustmentresults.text.append("\n\nGravimeter drift coefficient(s):\n ")
+                self.adjustment.adjustmentresults.text.append("Gravimeter drift coefficient(s):")
                 for coeffs in meter_drift_params:
-                    self.adjustment.adjustmentresults.text.append(coeffs[0] + ' ± ' + coeffs[1] + '\n')
+                    self.adjustment.adjustmentresults.text.append("{:.3} ± {:.3}".format(coeffs[0], coeffs[1]))
 
         if dir_changed1:
             os.chdir('..\\gsadjust')
@@ -1079,6 +1094,7 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.loop_ls_dict = loop_ls_dict
         self.adjustment.ndrift = ndrift
         self.adjustment.netadj_loop_keys = netadj_loop_keys
+        self.adjustment.adjustmentresults.text = ''
         cal_dic = numpy_inversion(self.adjustment, self.results_model, output_root_dir, write_out_files='n')
         self.match_inversion_results('numpy', cal_dic)
 
@@ -1144,10 +1160,10 @@ class ObsTreeSurvey(ObsTreeItem):
             tempdatum.residual = residual
             self.datum_model.setData(ind, tempdatum, QtCore.Qt.UserRole)
 
-        self.adjustment.adjustmentresults.min_dg_residual = np.min(dg_residuals)
-        self.adjustment.adjustmentresults.max_dg_residual = np.max(dg_residuals)
-        self.adjustment.adjustmentresults.min_datum_residual = np.min(datum_residuals)
-        self.adjustment.adjustmentresults.max_datum_residual = np.max(datum_residuals)
+        self.adjustment.adjustmentresults.min_dg_residual = np.min(np.abs(dg_residuals))
+        self.adjustment.adjustmentresults.max_dg_residual = np.max(np.abs(dg_residuals))
+        self.adjustment.adjustmentresults.min_datum_residual = np.min(np.abs(datum_residuals))
+        self.adjustment.adjustmentresults.max_datum_residual = np.max(np.abs(datum_residuals))
 
     def get_station_indices(self):
         """
@@ -1189,9 +1205,9 @@ class ObsTreeSurvey(ObsTreeItem):
         if type(loop) is ObsTreeLoop:
             try:
                 for ii in range(loop.delta_model.rowCount()):
-                    if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
-                        delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                        self.delta_model.insertRows(delta, 0)
+                    # if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
+                    delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                    self.delta_model.insertRows(delta, 0)
             except Exception as e:
                 self.msg = show_message("Error populating delta table. Please check the drift correction " +
                                         "for survey " + self.name + ", loop " + loop.name,
@@ -1203,20 +1219,20 @@ class ObsTreeSurvey(ObsTreeItem):
                 if loop.checkState() == QtCore.Qt.Checked:
                     try:
                         for ii in range(loop.delta_model.rowCount()):
-                            if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
-                                delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                                # Need to create a new delta here instead of just putting the original one, from the
-                                # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
-                                # overrides repopulating the delta table.
-                                if type(delta.station2) == list:
-                                    newdelta = data_objects.Delta.from_list(delta.station2)
-                                else:
-                                    newdelta = data_objects.Delta(delta.station1, delta.station2)
-                                newdelta.ls_drift = delta.ls_drift
-                                newdelta.driftcorr = delta.driftcorr
-                                newdelta.type = delta.type
-                                newdelta.loop = delta.loop
-                                self.delta_model.insertRows(newdelta, 0)
+                            # if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
+                            delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                            # Need to create a new delta here instead of just putting the original one, from the
+                            # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
+                            # overrides repopulating the delta table.
+                            if type(delta.station2) == list:
+                                newdelta = data_objects.Delta.from_list(delta.station2)
+                            else:
+                                newdelta = data_objects.Delta(delta.station1, delta.station2)
+                            newdelta.ls_drift = delta.ls_drift
+                            newdelta.driftcorr = delta.driftcorr
+                            newdelta.type = delta.type
+                            newdelta.loop = delta.loop
+                            self.delta_model.insertRows(newdelta, 0)
                     except Exception as e:
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded
@@ -1225,6 +1241,7 @@ class ObsTreeSurvey(ObsTreeItem):
                                                 "for survey " + self.name + ", loop " + loop.name,
                                                 "GSadjust error")
         return True
+
 
 class ObsTreeModel(QtGui.QStandardItemModel):
     """
@@ -1240,6 +1257,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
         self.station_coords = None
+
     #
     # signal_refresh_view = QtCore.pyqtSignal()
     signal_name_changed = QtCore.pyqtSignal()
@@ -1886,7 +1904,7 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
 
             if role == QtCore.Qt.DisplayRole:
                 column = index.column()
-                fn, *args ={
+                fn, *args = {
                     ADJSTA_STATION: (str, sta.station),
                     ADJSTA_G: (format, sta.g, '8.1f'),
                     ADJSTA_SD: (format, sta.sd, '1.1f')

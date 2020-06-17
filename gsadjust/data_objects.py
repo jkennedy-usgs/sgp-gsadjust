@@ -403,9 +403,12 @@ class AdjustmentResults:
     def __init__(self):
         self.n_deltas, self.n_deltas_notused = 0, 0
         self.n_datums, self.n_datums_notused = 0, 0
+        self.n_unknowns, n_dof = 0, 0
         self.max_dg_residual, self.min_dg_residual = 0, 0
         self.max_datum_residual, self.min_datum_residual = 0, 0
         self.avg_stdev = 0
+        self.chi2, self.chi2c = 0, 0
+        self.cal_dic, self.netadj_drift_dic = {}, {}
         self.text = None
 
     def __str__(self):
@@ -416,6 +419,8 @@ class AdjustmentResults:
         for line in self.text:
             return_str += line
         return return_str
+
+
 
 
 ###############################################################################
@@ -609,15 +614,65 @@ class Adjustment:
         self.VtPV = np.array([])
         self.SDaposteriori = 0
         self.dof = 0
-        self.chi2 = 0
-        self.chi2c = 0
         self.adjustmentoptions = AdjustmentOptions()
         self.adjustmentresults = AdjustmentResults()
+        self.n_meters = 0
         self.meter_dic = dict()
         self.deltas = []
         self.datums = []
         self.g_dic = dict()
         self.sd_dic = dict()
+
+    def results_string(self):
+        try:
+            if self.adjustmentresults.text:
+                return [x + '\n' for x in self.adjustmentresults.text]
+            else:
+                text_out = list()
+                # text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
+                # text_out.append("Number of loops:                    {:d}\n".format(nloops))
+                # text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
+                text_out.append("Number of unknowns:                 {:d}\n".format(self.adjustmentresults.n_unknowns))
+                text_out.append("Number of relative observations:    {:d}\n".format(self.adjustmentresults.n_deltas))
+                text_out.append("Number of absolute observations:    {:d}\n".format(self.adjustmentresults.n_datums))
+                text_out.append("Degrees of freedom (nobs-nunknowns): {:d}\n".format(self.dof))
+                text_out.append(
+                    "SD a posteriori:                    {:f}\n".format(
+                        float(np.sqrt(self.VtPV / self.dof))))
+                text_out.append("chi square value:                   {:6.2f}\n".format(float(self.adjustmentresults.chi2)))
+                text_out.append("critical chi square value:          {:6.2f}\n".format(float(self.adjustmentresults.chi2c)))
+                if float(self.adjustmentresults.chi2) < float(self.adjustmentresults.chi2c):
+                    text_out.append("Chi-test accepted\n")
+                else:
+                    text_out.append("Chi-test rejected\n")
+
+                text_out.append("Average standard deviation: {:.2f}\n".format(self.adjustmentresults.avg_stdev))
+                text_out.append("Maximum delta residual: {:.2f}\n".format(self.adjustmentresults.max_dg_residual))
+                text_out.append("Maximum absolute datum residual: {:.2f}\n".format(
+                                self.adjustmentresults.max_datum_residual))
+                text_out.append("Minimum absolute datum residual: {:.2f}\n".format(
+                                self.adjustmentresults.min_datum_residual))
+                if self.adjustmentoptions.cal_coeff:
+                    for k, v in self.adjustmentresults.cal_dic.items():
+                        text_out.append("Calibration coefficient for meter {}: {:.6f} +/- {:.6f}\n".
+                                        format(k, v[0], v[1]))
+                elif self.adjustmentoptions.specify_cal_coeff:
+                    for k, v in self.adjustmentoptions.meter_cal_dict.items():
+                        text_out.append("Specified calibration coefficient for meter {}: {:.6f}\n".
+                                        format(k, v))
+                if self.netadj_loop_keys:
+                    text_out.append("Network adjustment drift coefficient(s):\n")
+                    for loop in self.netadj_loop_keys.items():  # this dict only has loops with netadj option
+                        text_out.append("Loop " + loop[0] + ": ")
+                        for i in range(loop[1][1]):  # degree of polynomial
+                            degree = self.X[len(self.sta_dic_ls) + self.n_meters + loop[1][0] + i][0]
+                            if degree == 1:
+                                text_out.append("Drift coefficient, degree {}: {:.3f}".format(i + 1, degree))
+                            else:
+                                text_out.append("Drift coefficient, degree {}: {:.3f} (µGal/day)".format(i + 1, degree))
+                return text_out
+        except (AttributeError, TypeError) as e:
+            return ''
 
     @property
     def adjustment_gdic_str(self):
@@ -649,21 +704,21 @@ class Adjustment:
         a priori variance of unit weight = 1
         """
         alpha = self.adjustmentoptions.alpha
-        self.chi2 = self.VtPV
+        self.adjustmentresults.chi2 = self.VtPV
 
         t = np.sqrt(2 * np.log(1 / alpha))
         chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (
                 1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3)
         dof = float(self.dof)
-        self.chi2c = dof * (chi_1_alpha * np.sqrt(2 / (9 * dof)) + 1 - 2. / (9 * dof)) ** 3
+        self.adjustmentresults.chi2c = dof * (chi_1_alpha * np.sqrt(2 / (9 * dof)) + 1 - 2. / (9 * dof)) ** 3
 
-        print("SD a posteriori: {:6.2f}".format(float(self.SDaposteriori)))
-        print("chi square value: {:6.2f}".format(float(self.chi2)))
-        print("critical chi square value: {:6.2f}".format(float(self.chi2c)))
-
-        if self.chi2 < self.chi2c:
-            print("Chi-test accepted")
-        else:
-            print("Chi-test rejected")
+        # print("SD a posteriori: {:6.2f}".format(float(self.SDaposteriori)))
+        # print("chi square value: {:6.2f}".format(float(self.chi2)))
+        # print("critical chi square value: {:6.2f}".format(float(self.chi2c)))
+        #
+        # if self.adjustmentresults.chi2 < self.adjustmentresults.chi2c:
+        #     print("Chi-test accepted")
+        # else:
+        #     print("Chi-test rejected")
 
 

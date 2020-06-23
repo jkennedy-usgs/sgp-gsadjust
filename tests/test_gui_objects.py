@@ -19,7 +19,7 @@ from gsa_plots import PlotGravityChange
 
 def test_PlotGravityChange(qtbot, mainprog):
     mainprog.workspace_clear()
-    mainprog.workspace_open_json(os.path.join('test_data', 'field', 'Burris', 'complete_example2.gsa'))
+    mainprog.workspace_open_json(os.path.join('test_data', 'complete_example2.gsa'))
     mainprog.adjust_network()
     data = compute_gravity_change(mainprog.obsTreeModel)
     change_table = GravityChangeTable(mainprog, data=data)

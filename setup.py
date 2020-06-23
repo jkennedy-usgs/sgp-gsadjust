@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='GSadjust',
-      version='0.98',
+      version='0.99b',
       description='Gravity-survey network adjustment',
       author='',
       author_email='jkennedy@usgs.gov',

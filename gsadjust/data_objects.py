@@ -561,8 +561,10 @@ class AdjustmentOptions:
     def __init__(self):
         self.use_model_temp = False
         self.model_temp_degree = 0
-        self.use_sigma_factor = False
-        self.sigma_factor = 1.0
+        self.use_sigma_prefactor = False
+        self.sigma_prefactor = 1.0
+        self.use_sigma_postfactor = False
+        self.sigma_postfactor = 1.0
         self.use_sigma_add = False
         self.sigma_add = 0.0
         self.use_sigma_min = False

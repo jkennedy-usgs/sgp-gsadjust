@@ -127,7 +127,8 @@ _ENABLED_MENUS = {
         ('mnToolsWriteTabularOutput', True),
         ('mnToolsWriteMetadataText', True),
         ('mnAdjPlotObservedAdjustedAbs', True),
-        ('mnAdjUpdateSD', True)
+        ('mnAdjUpdateSD', True),
+        ('mnToolsShowCalCoeffTimeSeries', True)
     ],
     MENU_STATE.SURVEY_HAS_NO_RESULTS: [
         ('mnAdjPlotHist', False),
@@ -452,6 +453,9 @@ class Menus:
         self.mnToolsComputeGravityChangeAction = self.create_action("&Compute gravity change",
                                                                     slot=self.mainProg.show_gravity_change_table,
                                                                     tip="Compute gravity change", enabled=False)
+        self.mnToolsShowCalCoeffTimeSeries = self.create_action("Show calibration coefficients",
+                                                                slot=self.mainProg.show_cal_coeff,
+                                                                enabled=False)
         self.mnToolsLOO = self.create_action("Adjusted vs. observed datum...",
                                              slot=self.mainProg.adjusted_vs_observed_datum_analysis,
                                              enabled=False)
@@ -460,6 +464,7 @@ class Menus:
                                         self.mnToolsNGMap,
                                         None,
                                         self.mnToolsComputeGravityChangeAction,
+                                        self.mnToolsShowCalCoeffTimeSeries,
                                         # self.mnToolsLOO,
                                         None,
                                         self.mnToolsWriteMetadataText,

@@ -213,7 +213,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
         date_col, station_col, sd_col = [], [], []
         for survey in obstreemodel.checked_surveys():
             dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
-            header = ['Station', 'Date', 'g','Std. dev.']
+            header = ['Station', 'Date', 'g', 'Std. dev.']
             for ii in range(survey.results_model.rowCount()):
                 adj_station = survey.results_model.data(survey.results_model.index(ii, 0),
                                                         role=256)  # 256=QtCore.Qt.UserRole
@@ -231,9 +231,9 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
             # station_coords can not exist during testing, maybe other times also?
             try:
                 coords = obstreemodel.station_coords[station]
-                lat.append(coords[0])
-                lon.append(coords[1])
-                elev.append(coords[2])
+                lon.append("{:.5f}".format(coords[0]))
+                lat.append("{:.5f}".format(coords[1]))
+                elev.append("{:.5f}".format(coords[2]))
             except TypeError:
                 lat.append(-999)
                 lon.append(-999)
@@ -364,10 +364,10 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
         table += g
         # deal with 2-survey case
         if header1 == header2:
-            header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1
+            header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1
             table += out_table_iteration
         else:
-            header = ['Station', 'Longitude', 'Latitude', 'Elevation'] + g_header + header1 + header2
+            header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
             table += out_table_iteration
             table += out_table_cumulative
         # transpose back

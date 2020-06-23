@@ -262,6 +262,34 @@ class DialogLoopProperties(QtWidgets.QDialog):
         self.accept()
 
 
+class ShowCalCoeffs(QtWidgets.QDialog):
+    def __init__(self, cal_coeffs, parent=None):
+        super(ShowCalCoeffs, self).__init__(parent)
+        self.setWindowTitle("Calibration coefficients")
+        # self.resize(20, 20)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        vlayout = QtWidgets.QVBoxLayout()
+        for meter, data in cal_coeffs.items():
+            h = 0
+            vlayout.addWidget(QtWidgets.QLabel(meter))
+            view = QtWidgets.QTableView()
+            vlayout.addWidget(view)
+            cal_model = QtGui.QStandardItemModel()
+            cal_model.setColumnCount(3)
+            cal_model.setHorizontalHeaderLabels(['Date', 'Coeff.', 'S.D.'])
+            for row in data:
+                cal_model.appendRow([QtGui.QStandardItem(row[0]),
+                                     QtGui.QStandardItem("{:.6f}".format(row[1])),
+                                     QtGui.QStandardItem("{:.6f}".format(row[2]))])
+                h += 30
+            view.setModel(cal_model)
+            w = view.horizontalHeader().width()
+            view.setFixedSize(340, h+40)
+        self.setLayout(vlayout)
+        self.resize(self.sizeHint())
+
+
+
 class AdjustOptions(QtWidgets.QDialog):
     """
     Dialog to set network adjustment options.
@@ -274,9 +302,15 @@ class AdjustOptions(QtWidgets.QDialog):
         self.surveys_to_update = ''
         self.update_options = []
         self.drift_temp_chk = QtWidgets.QCheckBox('Model temperature drift, polynomial degree:')
-        self.sigma_factor_chk = QtWidgets.QCheckBox('Std. dev. multiplier')
-        self.sigma_add_chk = QtWidgets.QCheckBox('Add to std. dev.')
-        self.sigma_min_chk = QtWidgets.QCheckBox('Minimum std. dev.')
+        self.sigma_prefactor_chk = QtWidgets.QCheckBox('Standard deviation multiplier: pre-minimum')
+        self.sigma_postfactor_chk = QtWidgets.QCheckBox('Standard deviation multiplier: post-minimum')
+        self.sigma_prefactor_chk.setToolTip('This multiplier is applied prior to enforcing the minimum standard '
+                                            'deviation (if checked)')
+        self.sigma_postfactor_chk.setToolTip('This multiplier is applied after enforcing the minimum standard '
+                                             'deviation (if checked)')
+        self.sigma_add_chk = QtWidgets.QCheckBox('Add to standard deviation: pre-minimum')
+        self.sigma_min_chk = QtWidgets.QCheckBox('Minimum standard deviation')
+        self.sigma_min_chk.stateChanged.connect(self.min_sd_checked_or_unchecked)
         self.cal_coeff_chk = QtWidgets.QCheckBox('Calculate relative meter calibration coefficient')
         self.cal_coeff_chk.stateChanged.connect(self.calc_cal_coeff_checked_or_unchecked)
         self.alpha_text = QtWidgets.QLabel('Significance level for global model test')
@@ -287,7 +321,8 @@ class AdjustOptions(QtWidgets.QDialog):
         self.cal_coeff_table = QtWidgets.QTableView()
 
         self.drift_temp_edit = QtWidgets.QLineEdit(str(self.ao.model_temp_degree))
-        self.sigma_factor_edit = QtWidgets.QLineEdit(str(self.ao.sigma_factor))
+        self.sigma_prefactor_edit = QtWidgets.QLineEdit("{:.4f}".format(self.ao.sigma_prefactor))
+        self.sigma_postfactor_edit = QtWidgets.QLineEdit("{:.4f}".format(self.ao.sigma_postfactor))
         self.sigma_add_edit = QtWidgets.QLineEdit(str(self.ao.sigma_add))
         self.sigma_min_edit = QtWidgets.QLineEdit(str(self.ao.sigma_min))
         self.alpha_edit = QtWidgets.QLineEdit(str(self.ao.alpha))
@@ -296,9 +331,11 @@ class AdjustOptions(QtWidgets.QDialog):
     def init_ui(self, survey_name):
         if survey_name is not None:
             # self.drift_temp_chk.setChecked(self.ao.use_model_temp)
-            self.sigma_factor_chk.setChecked(self.ao.use_sigma_factor)
+            self.sigma_prefactor_chk.setChecked(self.ao.use_sigma_prefactor)
+            self.sigma_postfactor_chk.setChecked(self.ao.use_sigma_postfactor)
             self.sigma_add_chk.setChecked(self.ao.use_sigma_add)
             self.sigma_min_chk.setChecked(self.ao.use_sigma_min)
+            self.sigma_postfactor_chk.setEnabled(self.ao.use_sigma_min)
             self.cal_coeff_chk.setChecked(self.ao.cal_coeff)
             try:
                 self.cal_coeff_specify_chk.setChecked(self.ao.specify_cal_coeff)
@@ -313,43 +350,80 @@ class AdjustOptions(QtWidgets.QDialog):
                 self.cal_coeff_model.appendRow([QtGui.QStandardItem(k), QtGui.QStandardItem(str(v))])
 
             self.cal_coeff_table.setModel(self.cal_coeff_model)
+            self.cal_coeff_table.setFixedWidth(260)
             self.woutfiles_chk.setChecked(self.ao.woutfiles)
 
             # create buttons and actions
-            cancel_button = QtWidgets.QPushButton('Cancel')
-            cancel_button.clicked.connect(self.close)
-            current_button = QtWidgets.QPushButton('Apply to current survey (' + survey_name + ')')
-            current_button.clicked.connect(self.apply_current)
-            all_button = QtWidgets.QPushButton('Apply to all surveys')
-            all_button.clicked.connect(self.apply_all)
+            btn_restore_default = QtWidgets.QPushButton('Restore defaults')
+            btn_restore_default.clicked.connect(self.restore_default)
+            btn_cancel = QtWidgets.QPushButton('Cancel')
+            btn_cancel.clicked.connect(self.close)
+            btn_current = QtWidgets.QPushButton('Apply to current survey (' + survey_name + ')')
+            btn_current.clicked.connect(self.apply_current)
+            btn_all = QtWidgets.QPushButton('Apply to all surveys')
+            btn_all.clicked.connect(self.apply_all)
 
             buttonBox = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
-            buttonBox.addButton(current_button, QtWidgets.QDialogButtonBox.ActionRole)
-            buttonBox.addButton(all_button, QtWidgets.QDialogButtonBox.ActionRole)
-            buttonBox.addButton(cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
+            buttonBox.addButton(btn_restore_default, QtWidgets.QDialogButtonBox.ActionRole)
+            buttonBox.addButton(btn_current, QtWidgets.QDialogButtonBox.ActionRole)
+            buttonBox.addButton(btn_all, QtWidgets.QDialogButtonBox.ActionRole)
+            buttonBox.addButton(btn_cancel, QtWidgets.QDialogButtonBox.ActionRole)
 
+            vlayout = QtWidgets.QVBoxLayout()
+            gridwidget = QtWidgets.QWidget()
             grid = QtWidgets.QGridLayout()
+            vlayout.addWidget(gridwidget)
             # grid.addWidget(self.drift_temp_chk, 1, 0)
             # grid.addWidget(self.drift_temp_edit, 1, 1)
-            grid.addWidget(self.sigma_factor_chk, 2, 0)
-            grid.addWidget(self.sigma_factor_edit, 2, 1)
-            grid.addWidget(self.sigma_add_chk, 3, 0)
-            grid.addWidget(self.sigma_add_edit, 3, 1)
-            grid.addWidget(self.sigma_min_chk, 4, 0)
-            grid.addWidget(self.sigma_min_edit, 4, 1)
-            grid.addWidget(self.cal_coeff_chk, 5, 0)
-            grid.addWidget(self.cal_coeff_specify_chk, 6, 0)
-            grid.addWidget(self.cal_coeff_table, 7, 0)
-            grid.addWidget(self.alpha_text, 8, 0)
-            grid.addWidget(self.alpha_edit, 8, 1)
-            # grid.addWidget(self.woutfiles_chk, 9, 0)
-            grid.addWidget(buttonBox, 10, 0)
+            grid.addWidget(self.sigma_prefactor_chk, 0, 0)
+            grid.addWidget(self.sigma_prefactor_edit, 0, 1)
+            grid.addWidget(self.sigma_postfactor_chk, 1, 0)
+            grid.addWidget(self.sigma_postfactor_edit, 1, 1)
+            grid.addWidget(self.sigma_add_chk, 2, 0)
+            grid.addWidget(self.sigma_add_edit, 2, 1)
+            grid.addWidget(self.sigma_min_chk, 3, 0)
+            grid.addWidget(self.sigma_min_edit, 3, 1)
+            grid.addWidget(self.cal_coeff_chk, 4, 0)
+            grid.addWidget(self.cal_coeff_specify_chk, 5, 0)
+            grid.addWidget(self.cal_coeff_table, 6, 0)
+            grid.addWidget(self.alpha_text, 7, 0)
+            grid.addWidget(self.alpha_edit, 7, 1)
 
-            self.setLayout(grid)
+            # This isn't working? Column 1 always seems to be stretching, regardless of the vales
+            grid.setColumnStretch(0,1)
+            grid.setColumnStretch(1,0)
+
+            # grid.addWidget(self.woutfiles_chk, 9, 0)
+            gridwidget.setLayout(grid)
+
+            vlayout.addWidget(buttonBox)
+
+            self.setLayout(vlayout)
             self.setWindowTitle('Network adjustment options')
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
             self.msg = show_message('Please load a survey first', 'Network adjustment options')
+
+    def restore_default(self):
+        cbs = [self.sigma_add_chk, self.sigma_postfactor_chk, self.sigma_prefactor_chk, self.sigma_min_chk]
+        edits = [self.sigma_add_edit, self.sigma_postfactor_edit, self.sigma_prefactor_edit, self.sigma_min_edit]
+        values = ["0.0", "1.0", "1.0", "3.0"]
+        for cb, ed, v in zip(cbs, edits, values):
+            self.set_value_and_uncheck(cb, v)
+        self.cal_coeff_specify_chk.setChecked(False)
+        self.cal_coeff_chk.setChecked(False)
+        self.alpha_edit.setText("0.05")
+
+    def set_value_and_uncheck(self, cb, ed, value="1.0"):
+        cb.setChecked(False)
+        ed.setText(value)
+
+
+    def min_sd_checked_or_unchecked(self, state):
+        if state == 2:  # checked
+            self.sigma_postfactor_chk.setEnabled(True)
+        else:
+            self.sigma_postfactor_chk.setEnabled(False)
 
     def calc_cal_coeff_checked_or_unchecked(self, state):
         if state == 2:  # checked
@@ -371,41 +445,30 @@ class AdjustOptions(QtWidgets.QDialog):
         #     self.ao.model_temp_degree = int(self.ao.model_temp_degree.text())
         # else:
         #     self.ao.use_model_temp = False
-        self.ao.use_model_temp = False
-        if self.sigma_factor_chk.isChecked():
-            self.ao.use_sigma_factor = True
-            self.ao.sigma_factor = float(self.sigma_factor_edit.text())
-        else:
-            self.ao.use_sigma_factor = False
-        if self.sigma_add_chk.isChecked():
-            self.ao.use_sigma_add = True
+        try:
+            self.ao.use_model_temp = False
+            self.ao.use_sigma_prefactor = self.sigma_prefactor_chk.isChecked()
+            self.ao.use_sigma_postfactor = self.sigma_postfactor_chk.isChecked()
+            self.ao.sigma_prefactor = float(self.sigma_prefactor_edit.text())
+            self.ao.sigma_postfactor = float(self.sigma_postfactor_edit.text())
+            self.ao.use_sigma_add = self.sigma_add_chk.isChecked()
             self.ao.sigma_add = float(self.sigma_add_edit.text())
-        else:
-            self.ao.use_sigma_add = False
-        if self.sigma_min_chk.isChecked():
-            self.ao.use_sigma_min = True
+            self.ao.use_sigma_min = self.sigma_min_chk.isChecked()
             self.ao.sigma_min = float(self.sigma_min_edit.text())
-        else:
-            self.ao.use_sigma_min = False
-        if self.cal_coeff_chk.isChecked():
-            self.ao.cal_coeff = True
-            self.ao.specify_cal_coeff = False
-        else:
-            self.ao.cal_coeff = False
-        if self.cal_coeff_specify_chk.isChecked():
-            self.ao.specify_cal_coeff = True
-            self.ao.cal_coeff = False
-            for i in range(self.cal_coeff_model.rowCount()):
-                meter = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i, 0))
-                calval = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i, 1))
-                self.ao.meter_cal_dict[meter.text()] = float(calval.text())
-        else:
-            self.ao.specify_cal_coeff = False
-        self.ao.alpha = float(self.alpha_edit.text())
-        if self.woutfiles_chk.isChecked():
-            self.ao.woutfiles = True
-        else:
-            self.ao.woutfiles = False
+            self.ao.cal_coeff = self.cal_coeff_chk.isChecked()
+            self.ao.specify_cal_coeff = self.cal_coeff_specify_chk.isChecked()
+            if self.cal_coeff_specify_chk.isChecked():
+                for i in range(self.cal_coeff_model.rowCount()):
+                    meter = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i, 0))
+                    calval = self.cal_coeff_model.itemFromIndex(self.cal_coeff_model.index(i, 1))
+                    self.ao.meter_cal_dict[meter.text()] = float(calval.text())
+            self.ao.alpha = float(self.alpha_edit.text())
+            # if self.woutfiles_chk.isChecked():
+            #     self.ao.woutfiles = True
+            # else:
+            #     self.ao.woutfiles = False
+        except ValueError as e:  # caught if invalid number is entered in any box
+            logging.error('Error setting adjustment options: {}'.format(e))
 
     def apply_current(self):
         self.set_adjust_options()

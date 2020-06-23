@@ -232,8 +232,8 @@ class TabData(QtWidgets.QWidget):
         axe.grid(True)
         xfmt = DateFormatter('%H:%M')
         # It should be possible to just set_data on the plot object returned from axe.plot, but I couldn't figure it out
+        mean_g = np.mean(seriey_selec)
         if serie_type == 'Gravity' and seriey_selec:  # Plot horizontal line at mean g
-            mean_g = np.mean(seriey_selec)
             axe.plot([seriex[0], seriex[-1]], [mean_g, mean_g], '-', color='b', label=serie_type)
 
         setattr(self, 'plot1_' + plot_location, axe.plot(seriex, seriey, 'o-', color='k', label=serie_type))

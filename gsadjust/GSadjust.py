@@ -126,7 +126,7 @@ from gsa_plots import (
     PlotNetworkGraph, PlotDatumCompare, PlotDgResidualHistogram
 )
 from gui_objects import (
-    AddDatumFromList, CoordinatesTable, ProgressBar,
+    AddDatumFromList, CoordinatesTable, ProgressBar, ShowCalCoeffs,
     GravityChangeTable, TideCorrectionDialog, TideCoordinatesDialog, DialogApplyTimeCorrection,
     VerticalGradientDialog, AddTareDialog, DialogMeterType, LoopTimeThresholdDialog, DialogOverwrite,
     show_message, SelectAbsg, AdjustOptions, DialogLoopProperties, AboutDialog
@@ -1161,13 +1161,17 @@ class MainProg(QtWidgets.QMainWindow):
         :param selected: Selected indexes
         """
         if selected.model() is not None:
-            # if self.tab_widget.currentIndex() == 1:
-            self.update_drift_tables_and_plots(update=False)
-            if self.tab_widget.currentIndex() == 2:
-                self.adjust_update_required()
+            self.deltas_update_required()
+            self.adjust_update_required()
+            if self.tab_widget.currentIndex() == 0:
+                self.update_drift_tables_and_plots(update=False)
+            elif self.tab_widget.currentIndex() == 1:
+                self.update_drift_tables_and_plots(update=True)
+            elif self.tab_widget.currentIndex() == 2:
+                self.update_drift_tables_and_plots(update=False)
                 self.tab_adjust.delta_view.update()
                 self.tab_adjust.delta_view.repaint()
-            self.set_window_title_asterisk()
+        self.set_window_title_asterisk()
         self.update_menus()
 
     def on_obs_tree_change(self, selected):
@@ -1781,8 +1785,12 @@ class MainProg(QtWidgets.QMainWindow):
     def update_SD_and_run_adjustment(self):
         obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         ao = copy.deepcopy(obstreesurvey.adjustment.adjustmentoptions)
-        ao.use_sigma_factor = True
-        ao.sigma_factor = ao.sigma_factor * float(obstreesurvey.adjustment.SDaposteriori[0])
+        if ao.use_sigma_min:
+            ao.use_sigma_postfactor = True
+            ao.sigma_postfactor = ao.sigma_postfactor * float(obstreesurvey.adjustment.SDaposteriori[0])
+        else:
+            ao.use_sigma_prefactor = True
+            ao.sigma_prefactor = ao.sigma_prefactor * float(obstreesurvey.adjustment.SDaposteriori[0])
         obstreesurvey.adjustment.adjustmentoptions = ao
         self.set_adj_sd(obstreesurvey, ao)
         obstreesurvey.run_inversion()
@@ -1794,6 +1802,12 @@ class MainProg(QtWidgets.QMainWindow):
         data = compute_gravity_change(self.obsTreeModel)
         if data:
             win = GravityChangeTable(self, data, table_type='simple')
+            win.show()
+
+    def show_cal_coeff(self):
+        cal_coeffs = self.obsTreeModel.get_cal_coeffs()
+        if cal_coeffs:
+            win = ShowCalCoeffs(cal_coeffs, parent=self)
             win.show()
 
     def plot_network_graph_circular(self):
@@ -1839,10 +1853,12 @@ class MainProg(QtWidgets.QMainWindow):
             factor = 1
             if ao.use_sigma_add:
                 additive = ao.sigma_add
-            if ao.use_sigma_factor:
-                factor = ao.sigma_factor
+            if ao.use_sigma_prefactor:
+                factor = ao.sigma_prefactor
             if ao.use_sigma_min:
                 sigma = max(ao.sigma_min, delta.sd * factor + additive)
+                if ao.use_sigma_postfactor:
+                    sigma *= ao.sigma_postfactor
             else:
                 sigma = delta.sd * factor + additive
             survey.delta_model.setData(ind, sigma, role=QtCore.Qt.EditRole)
@@ -2213,7 +2229,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
 
-DEBUG = True
+DEBUG = False
 
 
 def main():

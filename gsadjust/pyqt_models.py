@@ -620,7 +620,6 @@ class ObsTreeSurvey(ObsTreeItem):
                 # Raised if delta type is 'assigned'
                 pass
             deltas.append(sd)
-
         temp.deltas = deltas
 
         for datum in data['datums']:
@@ -631,6 +630,11 @@ class ObsTreeSurvey(ObsTreeItem):
 
         ao = data_objects.AdjustmentOptions()
         ao.__dict__ = data['adjoptions']
+        if not hasattr(ao, 'use_sigma_prefactor') and hasattr(ao, 'sigma_factor'):
+            ao.sigma_prefactor = ao.sigma_factor
+            ao.use_sigma_prefactor = ao.use_sigma_factor
+            ao.sigma_postfactor = 1.0
+            ao.use_sigma_postfactor = False
         temp.adjustment.adjustmentoptions = ao
 
         if 'checked' in data:
@@ -1382,6 +1386,25 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             if self.invisibleRootItem().child(i).checkState() == 2:
                 data.append(self.invisibleRootItem().child(i))
         return data
+
+    def unique_meters(self):
+        meters = []
+        for survey in self.checked_surveys():
+            meters += survey.unique_meters
+        return list(set(meters))
+
+    def get_cal_coeffs(self):
+        cal_dict = {}
+        for m in self.unique_meters():
+            cal_dict[m] = []
+        for survey in self.checked_surveys():
+            if survey.adjustment.adjustmentoptions.cal_coeff:
+                for k, v in survey.adjustment.adjustmentresults.cal_dic.items():
+                    cal_dict[k].append((survey.name, v[0], v[1]))
+            elif survey.adjustment.adjustmentoptions.specify_cal_coeff:
+                for k, v in survey.adjustment.adjustmentoptions.meter_cal_dict.items():
+                    cal_dict[k].append((survey.name, v, 0))
+        return cal_dict
 
     def checkState(self, index):
         if index.column > 0:

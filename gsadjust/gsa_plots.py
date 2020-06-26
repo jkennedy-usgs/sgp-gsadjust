@@ -384,8 +384,6 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         try:
             TimedAnimation._step(self, *args)
         except Exception as e:
-            self.abc += 1
-            print(str(self.abc))
             TimedAnimation._stop(self)
             pass
 
@@ -423,7 +421,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
 def highResPoints(x, y, factor=10):
     '''
     Take points listed in two vectors and return them at a higher
-    resultion. Create at least factor*len(x) new points that include the
+    resolution. Create at least factor*len(x) new points that include the
     original points and those spaced in between.
 
     Returns new x and y arrays as a tuple (x,y).

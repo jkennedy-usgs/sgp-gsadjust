@@ -152,6 +152,10 @@ def test_adjustmentoptions_dialog(qtbot, mainprog):
     assert ao.cal_coeff_table.isEnabled() == False
     ao.calc_cal_coeff_checked_or_unchecked(0)
     ao.specify_cal_coeff_checked_or_unchecked(2)
+    ao.sigma_min_chk.setChecked(True)
+    ao.restore_default()
+    assert ao.sigma_min_chk.checkState() == 0
+    assert ao.sigma_prefactor_edit.text() == "1.0"
     ao.apply_current()
 
 

@@ -390,6 +390,7 @@ class MainProg(QtWidgets.QMainWindow):
         obstreeloop = obstreestation.parent()
         station = obstreestation
         if obstreeloop.meter_type == 'CG5' \
+                or obstreeloop.meter_type == 'Scintrex' \
                 or obstreeloop.meter_type == 'CG6' \
                 or obstreeloop.meter_type == 'csv' \
                 or obstreeloop.meter_type == 'CG6Tsoft':
@@ -947,7 +948,6 @@ class MainProg(QtWidgets.QMainWindow):
         if populate_type == 'all':
             self.update_all_drift_plots()
             for survey in self.obsTreeModel.checked_surveys():
-
                 table_updated = survey.populate_delta_model(clear=True)
                 self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
@@ -989,7 +989,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.deltas_update_not_required()
             self.adjust_update_required()
             self.update_adjust_tables()
-
+            self.tab_adjust.delta_proxy_model.sort(3)
         self.menus.set_state(MENU_STATE.DELTA_MODEL)
 
     def activate_survey_or_loop(self, index):
@@ -1076,13 +1076,13 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Updates drift_tab plots and delta_models, even if not in view.
         """
-        for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            survey = self.obsTreeModel.invisibleRootItem().child(i)
+        orig_loop_index = self.index_current_loop
+        for survey in self.obsTreeModel.surveys():
             self.update_survey_drift_plots(survey)
+        self.index_current_loop = orig_loop_index
 
     def update_survey_drift_plots(self, survey):
-        for ii in range(survey.rowCount()):
-            loop = survey.child(ii)
+        for loop in survey.loops():
             self.update_loop_drift_plots(loop)
 
     def update_loop_drift_plots(self, loop):
@@ -1151,7 +1151,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
 
         drift_method = self.obsTreeModel.itemFromIndex(self.index_current_loop).drift_method
-        self.tab_drift.driftmethod_comboboxbox.setCurrentIndex(self.drift_lookup[drift_method])
+        self.tab_drift.driftmethod_combobox.setCurrentIndex(self.drift_lookup[drift_method])
         self.tab_drift.set_drift_method(update)
 
     def on_obs_checked_change(self, selected):
@@ -1303,17 +1303,20 @@ class MainProg(QtWidgets.QMainWindow):
     def animate_loop(self):
         loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
         coords = self.obsTreeModel.station_coords
-        lat, lon, dates = [], [], []
-        try:
-            for i in range(loop.rowCount()):
-                station = loop.child(i)
-                lat.append(coords[station.station_name][1])
-                lon.append(coords[station.station_name][0])
-                dates.append(station.tmean())
-            plt = PlotLoopAnimation([lat, lon, dates])
-        except:
-            msg = show_message('Unknown error', 'GSadjust error')
-        plt.show()
+        if not coords:
+            self.msg = show_message('No station coordinates', 'GSadjust error')
+        else:
+            lat, lon, dates = [], [], []
+            try:
+                for station in loop.checked_stations():
+                    lat.append(coords[station.station_name][1])
+                    lon.append(coords[station.station_name][0])
+                    dates.append(station.tmean())
+                plt = PlotLoopAnimation([lat, lon, dates])
+                plt.show()
+            except:
+                self.msg = show_message('Unknown error', 'GSadjust error')
+
 
     def properties_loop(self):
         """
@@ -1601,8 +1604,9 @@ class MainProg(QtWidgets.QMainWindow):
                 self.new_loop_from_indexes(indexes)
                 indexes = []
         self.index_current_loop = original_loop_index
-        self.update_drift_tables_and_plots()
+        self.update_all_drift_plots()
         self.deltas_update_required()
+        pbar.close()
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
         self.set_window_title_asterisk()
@@ -2050,9 +2054,11 @@ class MainProg(QtWidgets.QMainWindow):
         Shows station coordinates dialog.
         :return:
         """
+        if not self.obsTreeModel.station_coords:
+            init_station_coords_dict(self.obsTreeModel)
         coordinates_dialog = CoordinatesTable(self.obsTreeModel.station_coords)
-        test = coordinates_dialog.exec_()
-        if test == 1:
+        accept = coordinates_dialog.exec_()
+        if accept == 1:
             self.obsTreeModel.station_coords = coordinates_dialog.coords()
 
     def load_station_coordinates(self):
@@ -2062,8 +2068,6 @@ class MainProg(QtWidgets.QMainWindow):
         """
         # TODO: load station coordinates dialog
         return
-
-
 
     def closeEvent(self, event):
         self.settings.sync()
@@ -2109,7 +2113,6 @@ class MainProg(QtWidgets.QMainWindow):
             gitpath = os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"
             os.environ["PATH"] += os.pathsep + gitpath
             from git import Repo
-            # install_dir = utils.get_install_dname('pymdwizard')
             logging.info('Checking for updates')
             repo = Repo(self.path_install)
             if not repo.active_branch.name == 'master':
@@ -2249,7 +2252,8 @@ def main():
     try:
         logging.basicConfig(filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO)
     except PermissionError:
-        show_message('Please install GSadjust somewhere where admin rights are not required.', 'GSadjust error')
+        self.msg = show_message('Please install GSadjust somewhere where admin rights are not required.',
+                                'GSadjust error')
 
     splash_pix = QtGui.QPixmap(':/icons/Splash.png')
     splash = QtWidgets.QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)

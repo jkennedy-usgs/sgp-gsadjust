@@ -28,7 +28,6 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
     xp = np.linspace(min(drift_x), max(drift_x), N_PTS_IN_INTERPOLATION)  # constant
     drift_stats = None
     z_main = []
-    # method_key = self.drift_polydegree_combobox.currentIndex()
     if method_key == 0:  # constant drift correction
         if weight_obs == 0:
             mean_drift = sum(drift_rate) / len(drift_rate)

@@ -81,6 +81,9 @@ def init_station_coords_dict(obstreemodel):
             loop = survey.child(ii)
             for iii in range(loop.rowCount()):
                 station = loop.child(iii)
-                station_coords[station.station_name] = (station.long[0], station.lat[0], station.elev[0])
+                try:
+                    station_coords[station.station_name] = (station.long[0], station.lat[0], station.elev[0])
+                except:
+                    station_coords[station.station_name] = (0, 0, 0)
     return station_coords
 

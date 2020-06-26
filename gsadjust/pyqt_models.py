@@ -263,6 +263,8 @@ class ObsTreeStation(ObsTreeItem):
             tm = self.tmean()
         else:
             tm = num2date(self.tmean()).strftime('%Y-%m-%d %H:%M:%S')
+        if len(self.lat) == 0:
+            self.lat, self.long, self.elev = [0], [0], [0]
         summary_str = '{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n'.format(self.display_name(),
                                                                       tm,
                                                                       self.oper[0],
@@ -379,7 +381,11 @@ class ObsTreeLoop(ObsTreeItem):
     @property
     def meter_type(self):
         station = self.child(0)
-        return station.meter_type
+        # To deal with old-format files (2020-06). Can probably be deleted someday.
+        if station.meter_type == 'Scintrex':
+            return 'CG5'
+        else:
+            return station.meter_type
 
     @classmethod
     def from_json(cls, data):
@@ -708,8 +714,7 @@ class ObsTreeSurvey(ObsTreeItem):
 
     @property
     def loop_count(self):
-        a = self.loop_names
-        return len(a)
+        return len(self.loop_names)
 
     @property
     def loop_names(self):
@@ -851,7 +856,7 @@ class ObsTreeSurvey(ObsTreeItem):
                                         'KeyError')
             except Exception as e:
                 logging.exception(e, exc_info=True)
-                self.msg = show_message("Inversion error", "unknown error")
+                self.msg = show_message("Inversion error", "GSadjust")
 
     def gravnet_inversion(self):
         """
@@ -1218,12 +1223,10 @@ class ObsTreeSurvey(ObsTreeItem):
                                         "GSadjust error")
         # Populate all loops
         elif loop is None:
-            for i in range(self.rowCount()):
-                loop = self.child(i)
+            for loop in self.loops():
                 if loop.checkState() == QtCore.Qt.Checked:
                     try:
                         for ii in range(loop.delta_model.rowCount()):
-                            # if loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.CheckStateRole) == 2:
                             delta = loop.delta_model.data(loop.delta_model.index(ii, 0), role=QtCore.Qt.UserRole)
                             # Need to create a new delta here instead of just putting the original one, from the
                             # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
@@ -1488,16 +1491,19 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def deltas(self):
         delta_list = []
-        for i in range(self.rowCount()):
-            obstreesurvey = self.itemFromIndex(self.index(i, 0))
-            for ii in range(obstreesurvey.datum_model.rowCount()):
-                idx = obstreesurvey.datum_model.index(ii, 0)
-                delta = obstreesurvey.datum_model.data(idx, role=QtCore.Qt.UserRole)
-                delta_list.append(delta.station)
+        for obstreesurvey in self.surveys():
+            delta_list += obstreesurvey.delta_list()
         return delta_list
 
+    def stations(self):
+        station_list = []
+        for obstreesurvey in self.surveys():
+            for obstreeloop in obstreesurvey.loops():
+                for station in obstreeloop:
+                    station_list += station
+        return list(set(station_list))
+
     def save_workspace(self, fname):
-        # try:
         surveys = []
         for i in range(self.rowCount()):
             obstreesurvey = self.itemFromIndex(self.index(i, 0))
@@ -1509,11 +1515,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
         logging.info('Saving JSON workspace to {}'.format(fname))
-        # except Exception as e:
-        #     logging.error(e)
-        #     return False
         return fname
-
 
 class tempStation():
     def __init__(self, station):
@@ -2025,16 +2027,14 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             return len(self._deltas)
         elif parent.isValid():
             return 0
-        else:
-            return len(self._deltas)
+        return len(self._deltas)
 
     def columnCount(self, parent=None):
         if parent is None:
             return 9
         elif parent.isValid():
             return 0
-        else:
-            return 9
+        return 9
 
     def data(self, index, role):
         if index.isValid():

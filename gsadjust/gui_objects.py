@@ -72,6 +72,7 @@ class DialogOverwrite(QtWidgets.QMessageBox):
         super(DialogOverwrite, self).__init__()
         self.overwrite = False
         self.setText("Overwrite existing data?")
+        self.setWindowTitle("GSadjust")
         ow_button = QtWidgets.QPushButton('Overwrite')
         ow_button.clicked.connect(self.onClicked)
 
@@ -409,7 +410,7 @@ class AdjustOptions(QtWidgets.QDialog):
         edits = [self.sigma_add_edit, self.sigma_postfactor_edit, self.sigma_prefactor_edit, self.sigma_min_edit]
         values = ["0.0", "1.0", "1.0", "3.0"]
         for cb, ed, v in zip(cbs, edits, values):
-            self.set_value_and_uncheck(cb, v)
+            self.set_value_and_uncheck(cb, ed, v)
         self.cal_coeff_specify_chk.setChecked(False)
         self.cal_coeff_chk.setChecked(False)
         self.alpha_edit.setText("0.05")

@@ -56,7 +56,7 @@ class TabDrift(QtWidgets.QWidget):
         self.axes_drift_single = self.drift_fig.add_subplot(111)
 
         # Drift figure: continuous
-        # Plot pannel
+        # Plot panel
         self.drift_cont_plotpanel = QtWidgets.QSplitter(QtCore.Qt.Vertical, self)
         # Top plot - lines
         self.drift_cont_figtop = Figure((3.0, 5.0), dpi=self.dpi, facecolor='white')
@@ -81,14 +81,14 @@ class TabDrift(QtWidgets.QWidget):
         # Widgets for right-hand display of drift controls/options
         #######################################################################
         # Drift method widget
-        self.driftmethod_comboboxbox_key = {0: "None",
+        self.driftmethod_combobox_key = {0: "None",
                                             1: "Network adjustment",
                                             2: "Roman (interpolate)",
                                             3: "Continuous model"}
-        self.driftmethod_comboboxbox = QtWidgets.QComboBox()
-        self.driftmethod_comboboxbox.activated.connect(self.set_drift_method)
-        for item in self.driftmethod_comboboxbox_key.values():
-            self.driftmethod_comboboxbox.addItem(item)
+        self.driftmethod_combobox = QtWidgets.QComboBox()
+        self.driftmethod_combobox.activated.connect(self.set_drift_method)
+        for item in self.driftmethod_combobox_key.values():
+            self.driftmethod_combobox.addItem(item)
 
         # Widget to remove dg-observations with a long elapsed time in between
         self.drift_screen_elapsed_time = QtWidgets.QCheckBox('Max. time between repeats (hh:mm)')
@@ -141,7 +141,7 @@ class TabDrift(QtWidgets.QWidget):
         grid_widget = QtWidgets.QWidget()
         grid = QtWidgets.QGridLayout()
         grid.addWidget(QtWidgets.QLabel('Drift correction method'), 0, 0)
-        grid.addWidget(self.driftmethod_comboboxbox, 0, 1)
+        grid.addWidget(self.driftmethod_combobox, 0, 1)
         grid.addWidget(QtWidgets.QLabel('Drift model type'), 1, 0)
         grid.addWidget(self.drift_polydegree_combobox, 1, 1)
         grid.addWidget(QtWidgets.QLabel('Behavior at start/end:'), 2, 0)
@@ -184,8 +184,6 @@ class TabDrift(QtWidgets.QWidget):
 
         self.drift_cont_plotpanel.addWidget(self.drift_cont_canvastop)
         self.drift_cont_plotpanel.addWidget(self.drift_cont_canvasbot)
-        self.drift_window.addWidget(self.drift_cont_plotpanel)
-
         self.drift_window.addWidget(self.drift_single_canvas)
         self.drift_window.addWidget(self.drift_cont_plotpanel)
         self.drift_window.addWidget(drift_controls)
@@ -226,7 +224,7 @@ class TabDrift(QtWidgets.QWidget):
         self.setLayout(layout_main)
 
     def reset(self):
-        self.driftmethod_comboboxbox.setCurrentIndex(0)
+        self.driftmethod_combobox.setCurrentIndex(0)
         self.drift_polydegree_combobox.setCurrentIndex(0)
         self.axes_drift_single.cla()
         self.axes_drift_cont_lower.clear()
@@ -733,7 +731,7 @@ class TabDrift(QtWidgets.QWidget):
         :param update: Boolean or int, controls if plots are updated. For performance, it's set to false when loading a file
         """
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
-        method_key = self.driftmethod_comboboxbox.currentIndex()
+        method_key = self.driftmethod_combobox.currentIndex()
 
         tare_model = obstreeloop.tare_model
         if tare_model:
@@ -751,6 +749,7 @@ class TabDrift(QtWidgets.QWidget):
         # update is an int (index of menu item) when this function is called from the
         # menu-item callback
         if type(update) is int or update is True:
+            width = self.drift_window.sizes()
             if method == 'none':
                 self.drift_none()
             if method == 'netadj':
@@ -758,19 +757,43 @@ class TabDrift(QtWidgets.QWidget):
             if method == 'roman':
                 self.drift_roman()
             if method == 'continuous':
-                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
-                self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
                 self.drift_continuous()
+                # if orig_method != 'continuous':
+                #     self.drift_window.setSizes([width[1], width[0], width[2]])
             else:
                 self.disable_weighted_checkbox()
+                # if orig_method == 'continuous':
+                #     self.drift_window.setSizes([width[1], width[0], width[2]])
+            self.set_width(width, method)
+        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
+        self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
         model = self.plot_drift(update=update)
+        if method == 'roman':
+            obstreeloop.delta_model = model[1]
+        else:
+            obstreeloop.delta_model = model
 
         if method != orig_method or self.parent.workspace_loaded:
             # Leave the status bar hollow if a workspace was loaded
             if not self.parent.workspace_loaded:
                 self.parent.deltas_update_required()
             self.parent.workspace_loaded = False
-        self.update_delta_model(method, model)
+
+        if update:
+            self.update_delta_model(method, model)
+
+    def set_width(self, width, method):
+        if method == 'none' or method == 'netadj' or method == 'roman':
+            if width[0] > width[1]:
+                self.drift_window.setSizes([width[0], width[1], width[2]])
+            else:
+                self.drift_window.setSizes([width[1], width[0], width[2]])
+        else:
+            if width[0] > width[1]:
+                self.drift_window.setSizes([width[1], width[0], width[2]])
+            else:
+                self.drift_window.setSizes([width[0], width[1], width[2]])
+
 
     def update_delta_model(self, method, model):
         """
@@ -782,11 +805,9 @@ class TabDrift(QtWidgets.QWidget):
         """
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         if method == 'roman':
-            models = model
-            self.dg_samples_view.setModel(models[0])
-            obstreeloop.delta_model = models[1]
-            self.delta_view.setModel(models[1])
             # Hide drift correction, std_for_adj, and residual columns
+            self.dg_samples_view.setModel(model[0])
+            self.delta_view.setModel(model[1])
             self.show_all_columns(self.delta_view)
             self.delta_view.hideColumn(2)
             self.delta_view.hideColumn(5)
@@ -973,7 +994,7 @@ class TabDrift(QtWidgets.QWidget):
 
     def drift_combobox_updated(self):
         """
-        Called when either the drift method or extrapolate/constant combobox is changed.
+        Called when either the drift poly degree or extrapolate/constant combobox is changed.
         """
 
         method_key = self.drift_polydegree_combobox.currentIndex()

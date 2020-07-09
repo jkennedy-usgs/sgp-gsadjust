@@ -21,7 +21,7 @@ Windows: Download the [.zip](https://github.com/jkennedy-usgs/sgp-gsadjust/relea
 ## Data selection interface
 * Select/deselect samples and stations
 * Plot gravity, earth tide correction, tilt, etc.
-* Imports both Scintrex and Burris data formats
+* Imports both Scintrex (CG-3, CG-5, CG-6) and ZLS (Burris) data formats
 
 ![data tab](https://cloud.githubusercontent.com/assets/9754449/22989620/d5923194-f373-11e6-80a6-1d106a1623f7.png)
 

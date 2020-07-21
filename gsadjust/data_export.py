@@ -28,7 +28,7 @@ def export_metadata(obsTreeModel, data_path):
     Write metadata text to file. Useful for USGS data releases.
     """
     fn = os.path.join(data_path, 'GSadjust_MetadataText_' + time.strftime("%Y%m%d-%H%M") + '.txt')
-    results_written = False
+    results_written, sf_header_written = False, False
     output_format = 'table'
     with open(fn, 'w') as fid:
 
@@ -48,6 +48,24 @@ def export_metadata(obsTreeModel, data_path):
                                                         survey.adjustment.adjustmentresults.n_deltas_notused,
                                                         survey.adjustment.adjustmentresults.n_datums,
                                                         survey.adjustment.adjustmentresults.n_datums_notused))
+            for survey in obsTreeModel.checked_surveys():
+                if survey.adjustment.adjustmentresults.n_datums > 0:
+                    if len(survey.adjustment.adjustmentresults.cal_dic) > 0:
+                        if not sf_header_written:
+                            table.append("Relative gravimeter scale factor(s)\n")
+                            table.append("Survey | Meter | Scale factor | Scale factor S.D. (0 = specified S.F.)\n")
+                            sf_header_written = True
+                        for k, v in survey.adjustment.adjustmentresults.cal_dic.items():
+                            table.append("{} {:>6} {:>10.6f} {:>10.6f}\n".format(survey.name,
+                                                                               k, v[0], v[1]))
+                    elif survey.adjustment.adjustmentoptions.specify_cal_coeff:
+                        if not sf_header_written:
+                            table.append("Relative gravimeter scale factor(s)\n")
+                            table.append("Survey | Meter | Scale factor | Scale factor S.D.\n")
+                            sf_header_written = True
+                        for k, v in survey.adjustment.adjustmentoptions.meter_cal_dict.items():
+                            table.append("{} {:>6} {:>10.6f} 0\n".format(survey.name, k, v))
+
             fid.writelines(table)
         else:
             for survey in obsTreeModel.checked_surveys():

@@ -1089,6 +1089,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.index_current_loop = loop.index()
         self.update_drift_tables_and_plots(update=False)
 
+    def show_delta_update_message(self):
+        self.msg = show_message('The Delta-g value can only be edited if the drift-correction method for the '
+                                'respective loop is a method other than the Roman method.',
+                                'Delta error')
+
     def update_adjust_tables(self):
         """
         Update delta-g and datum tables after selecting a new survey in the tree view, or after a network adjustment
@@ -1102,6 +1107,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         try:
             survey.delta_model.signal_adjust_update_required.connect(self.adjust_update_required)
+            survey.delta_model.tried_to_update_list_delta.connect(self.show_delta_update_message)
             survey.datum_model.signal_adjust_update_required.connect(self.adjust_update_required)
             self.tab_adjust.delta_proxy_model.setSourceModel(survey.delta_model)
             self.tab_adjust.datum_proxy_model.setSourceModel(survey.datum_model)
@@ -1760,8 +1766,8 @@ class MainProg(QtWidgets.QMainWindow):
         # Collect checked items into adjustment object
         if self.label_deltas_update_required_set is True:
             reply = QtWidgets.QMessageBox.question(self, 'Message',
-                                                   'The Relative-gravity differences table on the Network Adjustment ' +
-                                                   'is out of date. Proceed anyway?',
+                                                   'The relative-gravity differences table on the Network Adjustment ' +
+                                                   'tab is out of date. Proceed anyway?',
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
             if reply == QtWidgets.QMessageBox.No:

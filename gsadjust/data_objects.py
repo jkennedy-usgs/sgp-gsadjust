@@ -209,8 +209,8 @@ class Delta:
                     return 3.0
             elif self.type == 'normal' or self.type == 'assigned':
                 if hasattr(self.station1, 'asd'):
-                    if self.station1.asd:
-                        s = np.sqrt(self.station2.asd ** 2 + self.station1.asd ** 2)
+                    if self.station1.assigned_sd:
+                        s = np.sqrt(self.station2.assigned_sd ** 2 + self.station1.assigned_sd ** 2)
                     else:
                         s = np.sqrt(self.station2.stdev() ** 2 + self.station1.stdev() ** 2)
                 else:
@@ -403,7 +403,7 @@ class AdjustmentResults:
     def __init__(self):
         self.n_deltas, self.n_deltas_notused = 0, 0
         self.n_datums, self.n_datums_notused = 0, 0
-        self.n_unknowns, n_dof = 0, 0
+        self.n_unknowns = 0
         self.max_dg_residual, self.min_dg_residual = 0, 0
         self.max_datum_residual, self.min_datum_residual = 0, 0
         self.avg_stdev = 0

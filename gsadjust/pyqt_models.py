@@ -113,8 +113,8 @@ class ObsTreeStation(ObsTreeItem):
         if self.meter_type == 'Burris' or self.meter_type == 'CG6Tsoft':
             return [1 for i in self.keepdata if i == 1]
         else:
-            sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]
-            w = [1. / (sdtmp[i] * sdtmp[i]) for i in range(len(self.t)) if self.keepdata[i] == 1]
+            # sdtmp = [self.sd[i] / np.sqrt(self.dur[i]) for i in range(len(self.t))]
+            w = [1. / (self.sd[i] * self.sd[i]) for i in range(len(self.t)) if self.keepdata[i] == 1]
             return w
 
     @classmethod
@@ -205,7 +205,7 @@ class ObsTreeStation(ObsTreeItem):
                 ttmp = np.array([self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 num = np.zeros(len(ttmp))
                 for i in range(len(ttmp)):
-                    num[i] = self._weights_()[i] * (ttmp[i] - np.mean(ttmp)) ** 2
+                    num[i] = self._weights_()[i] * ((ttmp[i] - np.mean(ttmp))*24) ** 2
                 sd = np.sqrt(
                     np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
                 # self._weights_()))
@@ -234,9 +234,9 @@ class ObsTreeStation(ObsTreeItem):
         """
         try:
             g = self.grav()
-            if hasattr(self, 'asd'):
-                if self.asd:
-                    return self.asd
+            if hasattr(self, 'assigned_sd'):
+                if self.assigned_sd:
+                    return self.assigned_sd
             if self.sd[0] == -999:  # Burris meter: return the S.D. calculated from all the samples at a station
                 gtmp = np.array([g[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 if len(gtmp) == 1:  # Can't take S.D. if there's only one sample
@@ -245,14 +245,19 @@ class ObsTreeStation(ObsTreeItem):
                     return float(np.std(gtmp))
             else:  # Scintrex: return the average SD of the samples
                 sdtmp = np.array([self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
-                sd = np.mean(sdtmp)  #
+                # sd = np.mean(sdtmp)  #
                 gtmp = np.array([g[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 num = np.zeros(len(sdtmp))
+
                 for i in range(len(sdtmp)):
                     num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
                 sd = np.sqrt(
                     np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
                 # self._weights_()))
+                if self.station_name == 'BLDG8115':
+                    if self.station_count == '2':
+                        if sd > 2:
+                            jeff = 1
                 return sd
         except:
             return -999
@@ -306,7 +311,7 @@ class ObsTreeStation(ObsTreeItem):
 
 class ObsTreeLoop(ObsTreeItem):
     """
-    PyQt model for Loops, parent item for stations. Loop attributes stored in .loop
+    PyQt model for Loops, parent item for stations.
     """
 
     def __init__(self, name):
@@ -314,14 +319,15 @@ class ObsTreeLoop(ObsTreeItem):
         self.delta_model = DeltaTableModel()
         self.tare_model = TareTableModel()
         self.name = name
-        self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'
-        self.drift_cont_method = 0  # If continuous model, also need to keep track of which type of model
+        self.drift_method = 'none'    # 'none', 'netadj', 'roman', or 'continuous'
+        self.drift_cont_method = 0    # If continuous model, also need to keep track of which type of model
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
-        self.meter = ''  # Meter S/N, for the case where multiple meters are calibrated
-        self.comment = ''
-        self.oper = ''
-        self.source = ''
+        self.meter = ''   # Meter S/N, for the case where multiple meters are calibrated
+        self.comment = '' # String that can be specified from GUI
+        # TODO: Import comment from Burris file?
+        self.oper = ''    # May or may not be specified in raw input file
+        self.source = ''  # Filename of raw input file
 
     def __str__(self):
         if self.drift_method == 'roman' or self.drift_method == 'none':
@@ -457,15 +463,6 @@ class ObsTreeLoop(ObsTreeItem):
                 self.appendRow([obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
             prev_sta = curr_sta
 
-    def get_station_reoccupation(self, station):
-        """
-        Get index of station reoccupation. To be used iteratively within the populate_station_dic function
-        :param station: Station for which a repeat occupation is sought.
-        :return: index of station reoccupation
-        """
-        station_reoc = [sta[0] for sta, stakey in self.station_dic.items() if sta[0] == station]
-        return len(station_reoc)
-
     def get_data_for_plot(self):
         """
         Retrieves data from loop that is used for plotting: occupations must be checked, and there must be
@@ -512,15 +509,24 @@ class ObsTreeLoop(ObsTreeItem):
 
     def checked_stations(self):
         """
-        Retrieves checked data from loop; used for calculating delta-gs in the "None" and "Continuous" drift options.
+        Retrieves checked stations from loop; used for calculating delta-gs in the "None" and "Continuous" drift
+        options.
         :return: list of checked stations
         """
-        data = []
+        stations = []
         for i in range(self.rowCount()):
             station = self.child(i)
             if self.child(i).data(role=QtCore.Qt.CheckStateRole) == 2:
-                data.append(station)
-        return data
+                stations.append(station)
+        return stations
+
+    def stations(self):
+        """
+        """
+        stations = []
+        for i in range(self.rowCount()):
+            stations.append(self.child(i))
+        return stations
 
     def deltas(self):
         """
@@ -537,22 +543,21 @@ class ObsTreeLoop(ObsTreeItem):
 
     def to_json(self):
         # Copy tares and stations from PyQt models to lists
-        stations, tares = [], []
+        tares = []
         if self.tare_model is not None:
             for i in range(self.tare_model.rowCount()):
                 ind = self.tare_model.createIndex(i, 0)
                 tares.append(self.tare_model.data(ind, QtCore.Qt.UserRole))
-        for i in range(self.rowCount()):
-            station = self.child(i).to_json()
-            stations.append(station)
+        stations_json = [s.to_json() for s in self.stations()]
 
         self.delta_model = None
         self.tare_model = None
+
         return {
             'checked': self.checkState(),
             'delta_model': None,
             'tare_model': None,
-            'stations': stations,
+            'stations': stations_json,
             'tares': tares,
             'name': self.name,
             'drift_method': self.drift_method,
@@ -844,7 +849,7 @@ class ObsTreeSurvey(ObsTreeItem):
                     return
                 if adj_type == 'PyLSQ':
                     logging.info('Numpy inversion, Survey: {}'.format(self.name))
-                    self.start_inversion(output_root_dir, write_out_files)
+                    self.start_numpy_inversion(output_root_dir, write_out_files)
                 elif adj_type == 'Gravnet':
                     logging.info('Gravnet inversion, Survey: {}'.format(self.name))
                     self.gravnet_inversion()
@@ -1031,7 +1036,7 @@ class ObsTreeSurvey(ObsTreeItem):
         elif dir_changed2:
             os.chdir('..')
 
-    def start_inversion(self, output_root_dir, write_out_files='n'):
+    def start_numpy_inversion(self, output_root_dir, write_out_files='n'):
         """
         Least-squares network adjustment using numpy
 
@@ -1309,7 +1314,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             m.setCheckState(value)
             if type(m) is ObsTreeLoop:
                 self.signal_delta_update_required.emit()
-
             self.dataChanged.emit(index, index)
             # # self.layoutChanged.emit()
             # self.signal_refresh_view.emit()
@@ -1464,6 +1468,10 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                         obstreeloop.appendRow([obstreestation,
                                                QtGui.QStandardItem('0'),
                                                QtGui.QStandardItem('0')])
+                # stations is provided by loop.stations(), it doesn't need to be stored separately in the ObsTreeLoop
+                # object
+                if hasattr(obstreeloop, 'stations'):
+                    del obstreeloop.stations
                 obstreesurvey.appendRow([obstreeloop,
                                          QtGui.QStandardItem('0'),
                                          QtGui.QStandardItem('0')])
@@ -1499,9 +1507,14 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         station_list = []
         for obstreesurvey in self.surveys():
             for obstreeloop in obstreesurvey.loops():
-                for station in obstreeloop:
-                    station_list += station
+                station_list += obstreeloop.stations()
         return list(set(station_list))
+
+    def resetStationAsd(self):
+        for survey in self.surveys():
+            for loop in survey.loops():
+                for station in loop.stations():
+                    station.assigned_sd = None
 
     def save_workspace(self, fname):
         surveys = []
@@ -1511,7 +1524,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         workspace_data = [surveys, self.station_coords]
         if fname[-4:] != '.gsa':
             fname += '.gsa'
-
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
         logging.info('Saving JSON workspace to {}'.format(fname))
@@ -2006,6 +2018,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         super(DeltaTableModel, self).__init__(parent=None)
         self._deltas = []
 
+    tried_to_update_list_delta = QtCore.pyqtSignal()
     signal_adjust_update_required = QtCore.pyqtSignal()
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
@@ -2122,8 +2135,12 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     if column == DELTA_ADJ_SD:
                         delta.adj_sd = float(value)
                     if column == DELTA_G:
-                        delta.type = 'assigned'
-                        delta.assigned_dg = float(value)
+                        if delta.type == 'list':
+                            self.tried_to_update_list_delta.emit()
+                            return False
+                        else:
+                            delta.type = 'assigned'
+                            delta.assigned_dg = float(value)
                     self.dataChanged.emit(index, index)
                     self.signal_adjust_update_required.emit()
                 return True

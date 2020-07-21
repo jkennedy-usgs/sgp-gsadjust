@@ -486,6 +486,8 @@ class TabDrift(QtWidgets.QWidget):
         drift_type = obstreeloop.drift_method
         plot_data = obstreeloop.get_data_for_plot()
 
+        self.parent.obsTreeModel.resetStationAsd()
+
         # Check that there's station repeats. If there isn't, skip the plotting but we still want to calculate
         # delta-g's (except for Roman correction).
         no_data = True
@@ -503,6 +505,7 @@ class TabDrift(QtWidgets.QWidget):
             plot_data = self.screen_for_elapsed_time(plot_data, elapsed_time=time_threshold)
         if drift_type == 'none' or drift_type == 'netadj':
             # none, netadj, and roman all use axes_drift_single
+
             delta_model = None
             if update:
                 self.axes_drift_single.cla()
@@ -658,9 +661,6 @@ class TabDrift(QtWidgets.QWidget):
                                             # fig.canvas.draw_idle()
 
                             self.drift_cont_figbot.canvas.mpl_connect('motion_notify_event', hover)
-                        # if (max(yp) - min(yp)) < 0.0001:
-                        #     self.axes_drift_cont_lower.set_ylim(np.round(yp[0], 0) - 10, np.round(yp[0], 0) + 10)
-                        # else:
                         self.axes_drift_cont_lower.set_ylim(np.round(min(drift_rate), 0) - 5, np.round(max(drift_rate),
                                                                                                        0) + 5)
                         self.axes_drift_cont_upper.set_title(
@@ -730,6 +730,9 @@ class TabDrift(QtWidgets.QWidget):
         Called from update_drift_tables_and_plots + callback from GUI. Initiates plotting on drift tab.
         :param update: Boolean or int, controls if plots are updated. For performance, it's set to false when loading a file
         """
+
+        if type(update) is int:
+            update = True
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
         method_key = self.driftmethod_combobox.currentIndex()
 
@@ -744,19 +747,20 @@ class TabDrift(QtWidgets.QWidget):
         orig_method = obstreeloop.drift_method
         obstreeloop.drift_method = method
 
-        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
         # These control the visibility of different tables
         # update is an int (index of menu item) when this function is called from the
         # menu-item callback
-        if type(update) is int or update is True:
+        if update:
             width = self.drift_window.sizes()
             if method == 'none':
                 self.drift_none()
             if method == 'netadj':
+                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_netadj_method)
                 self.drift_adjust()
             if method == 'roman':
                 self.drift_roman()
             if method == 'continuous':
+                self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
                 self.drift_continuous()
                 # if orig_method != 'continuous':
                 #     self.drift_window.setSizes([width[1], width[0], width[2]])
@@ -765,7 +769,7 @@ class TabDrift(QtWidgets.QWidget):
                 # if orig_method == 'continuous':
                 #     self.drift_window.setSizes([width[1], width[0], width[2]])
             self.set_width(width, method)
-        self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
+
         self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
         model = self.plot_drift(update=update)
         if method == 'roman':

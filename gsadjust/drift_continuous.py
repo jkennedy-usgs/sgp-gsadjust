@@ -42,12 +42,12 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
                 if len(t) > 1:
                     for i in range(1, len(t)):
                         dr = R[i] - R[0]
-                        dt = t[i] - t[0]
+                        dt = (t[i] - t[0])*24
                         sdr = np.sqrt(Rsd[i]**2 + Rsd[0]**2)
                         sdt = np.sqrt(tsd[i]**2 + tsd[0]**2)
-                        drifts.append(dr/dt/24)
+                        drifts.append(dr/dt)
                         drift_sd = np.sqrt(
-                            sdr**2/dt**2 + (dr**2/dt**4)*sdt**2
+                            sdr**2/dt**2 + dr**2 * sdt**2 / dt**4
                         )
                         drift_w.append(1/drift_sd**2)
             num = []
@@ -86,7 +86,7 @@ def drift_continuous(data, plot_data, drift_x, drift_rate, method_key, tension_s
                 raise IndexError
         else:
             # Polynomial interpolation. Degree is one less than the method key, e.g.,
-            #     method_key == 2 is 1st orderpolynomial, etc.
+            #     method_key == 2 is 1st order polynomial, etc.
             try:
                 z_main = np.polyfit(x0, drift_rate, method_key - 1)
                 p = np.poly1d(z_main)
@@ -152,11 +152,11 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
     prev_station = data.pop(0)
     for station in data:
         if drift_stats:
-            station.asd = np.sqrt(station.original_sd**2 +
-                                  ((station.tmean() - drift_stats['t0'])*24)**2*drift_stats['sigma_d']**2 +
+            station.assigned_sd = np.sqrt(station.original_sd**2 +
+                                  ((station.tmean() - drift_stats['t0'])*24)**2 * drift_stats['sigma_d']**2 +
                                   np.sqrt(station.t_stdev**2 + data[0].t_stdev**2) * drift_stats['mean_drift']**2)
         else:
-            station.asd = None
+            station.assigned_sd = None
         drift1_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean()))
         drift1 = yp[drift1_idx]
         drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean()))

@@ -64,6 +64,7 @@ def numpy_inversion(adjustment, results_model, output_root_dir, write_out_files=
     # Initialize least squares matrices
     # number of unknowns                                                                   #
     nb_x = len(sta_dic_ls) + ndrift + drift_temp * nloops + n_meters
+    adjustment.adjustmentresults.n_unknowns = nb_x
     # model matrix:
     A = np.zeros((n_rel_obs + n_abs_obs, nb_x))
     # weight matrix:

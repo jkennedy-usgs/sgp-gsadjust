@@ -330,10 +330,12 @@ class TabDrift(QtWidgets.QWidget):
         """
         Callback for weight drift observations
         """
-        model = self.plot_drift()
-        if model:
-            obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
-            self.update_delta_model(obstreeloop.drift_method, model)
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.index_current_loop)
+        if obstreeloop:
+            obstreeloop.drift_cont_weighting = self.drift_plot_weighted.checkState()
+            model = self.plot_drift()
+            if model:
+                self.update_delta_model(obstreeloop.drift_method, model)
 
     def update_tension(self):
         """
@@ -632,7 +634,7 @@ class TabDrift(QtWidgets.QWidget):
                             elif len(z) == 4:
                                 annot_text = "{:.2f}*t^3 {:+.2f}*t^2 {:+.2f}*t {:+.2f}".format(*z)
                             else:
-                                annot_text = "JEFF"
+                                annot_text = ""
                             annot = self.axes_drift_cont_lower.annotate(annot_text, xy=(737287,45),
                                                                         # xycoords='axes fraction',
                                                                         xytext=(-20, 20),
@@ -761,6 +763,8 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_roman()
             if method == 'continuous':
                 self.drift_polydegree_combobox.setCurrentIndex(obstreeloop.drift_cont_method)
+                self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
+                self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
                 self.drift_continuous()
                 # if orig_method != 'continuous':
                 #     self.drift_window.setSizes([width[1], width[0], width[2]])
@@ -770,7 +774,7 @@ class TabDrift(QtWidgets.QWidget):
                 #     self.drift_window.setSizes([width[1], width[0], width[2]])
             self.set_width(width, method)
 
-        self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
+
         model = self.plot_drift(update=update)
         if method == 'roman':
             obstreeloop.delta_model = model[1]
@@ -956,6 +960,7 @@ class TabDrift(QtWidgets.QWidget):
         self.roman_label_widget.hide()
         self.drift_window.setMinimumHeight(200)
         # Re-enable these options (they're disabled if netadj drift was selected)
+
         self.drift_polydegree_combobox.model().item(0).setEnabled(True)
         self.drift_polydegree_combobox.model().item(1).setEnabled(True)
         self.tension_slider.setEnabled(True)

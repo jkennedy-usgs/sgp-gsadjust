@@ -838,11 +838,12 @@ class GravityChangeMap(QtWidgets.QDialog):
     def get_datenums(self, full_header):
         obs_idxs, obs_dates = [], []
         for item in full_header:
-            try:
-                obs_dates.append(date2num(dt.datetime.strptime(item, '%Y-%m-%d')))
-                obs_idxs.append(full_header.index(item))
-            except:
-                pass
+            if item[-2:] == '_g':
+                try:
+                    obs_dates.append(date2num(dt.datetime.strptime(item[:-2], '%Y-%m-%d')))
+                    obs_idxs.append(full_header.index(item))
+                except:
+                    pass
         return obs_dates, obs_idxs
 
     def get_data(self):
@@ -862,9 +863,9 @@ class GravityChangeMap(QtWidgets.QDialog):
                     name.append(sta)
 
         elif self.btnReference.isChecked():
-            ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
+            ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + '_g'
             ref_col_idx = self.full_header.index(ref_survey)
-            current_survey = self.surveys[self.slider.value() - 1]
+            current_survey = self.surveys[self.slider.value() - 1] + '_g'
             current_col_idx = self.full_header.index(current_survey)
             for r in self.full_table:
                 sta = r[0]
@@ -916,7 +917,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         elif not self.btnIncremental.isChecked():
             ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
             current_survey = self.surveys[self.slider.value() - 1]
-            if current_survey < ref_survey:
+            if dt.datetime.strptime(current_survey, '%Y-%m-%d') < dt.datetime.strptime(ref_survey, '%Y-%m-%d'):
                 return "{} to {}".format(current_survey, ref_survey)
             else:
                 return "{} to {}".format(ref_survey, current_survey)

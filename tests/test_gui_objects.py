@@ -8,7 +8,7 @@ from test_fixture_pyqt import mainprog
 from data_analysis import compute_gravity_change
 from gui_objects import (
     CoordinatesTable, AdjustOptions, SelectAbsg, DialogApplyTimeCorrection, DialogOverwrite,
-    DialogMeterType, DialogLoopProperties, GravityChangeTable
+    DialogMeterType, DialogLoopProperties, GravityChangeTable, GravityChangeMap, LoopTimeThresholdDialog
 )
 from gsa_plots import PlotGravityChange
 
@@ -17,17 +17,43 @@ from gsa_plots import PlotGravityChange
 #     gravity_change_map = GravityChangeMap(table, header, coords, full_table, full_header)
 
 
-def test_PlotGravityChange(qtbot, mainprog):
+def test_PlotGravityChangeAndMap(qtbot, mainprog):
     mainprog.workspace_clear()
     mainprog.workspace_open_json(os.path.join('test_data', 'complete_example2.gsa'))
     mainprog.adjust_network()
     data = compute_gravity_change(mainprog.obsTreeModel)
     change_table = GravityChangeTable(mainprog, data=data)
     change_plot = PlotGravityChange(change_table.dates, change_table.table)
-    jeff = 1
     assert change_plot.figure is not None
     assert len(change_plot.figure.axes[0].get_children()[0].get_xdata()) == 2
     assert np.abs(change_plot.figure.axes[0].get_children()[0].get_ydata()[1] + 6.8) < 0.01
+
+    win = GravityChangeMap(change_table.table, change_table.header, change_table.coords,
+                           change_table.full_table, change_table.full_header)
+    assert win.points.get_offsets().min() == -106.6763032
+    assert win.points.get_array().min() == -12.6
+    assert len(win.drpReference) == 2
+    win.btnReference.click()
+    win.plot()
+    # TODO: This test problem only was two surveys, i.e., 1 increment of gravity change. Can only do minimal testing,
+    #  can't test trend.
+    assert win.points.get_array().min() == 0
+    win.update_plot()
+    win.drpReference.setCurrentIndex(1)
+    win.plot()
+    assert np.abs(win.points.get_array().min() + 12.6) < 0.01
+    win.btnTrend.click()
+    win.plot()
+    assert len(win.points.get_array()) == 35
+
+def test_LoopTimeThresholdDialog(qtbot):
+    time_threshold_dialog = LoopTimeThresholdDialog()
+    def on_timeout():
+        qtbot.keyClick(time_threshold_dialog, QtCore.Qt.Key_Enter)
+
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    result = time_threshold_dialog.exec_()
+    assert time_threshold_dialog.dt_edit.dateTime().time().hour() == 8
 
 def test_ApplyTimeCorrection(qtbot):
     time_correction_dialog = DialogApplyTimeCorrection()

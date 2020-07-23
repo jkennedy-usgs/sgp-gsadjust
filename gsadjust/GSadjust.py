@@ -609,6 +609,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.dg_samples_view.setModel(None)
         self.tab_drift.dg_samples_view.update()
         self.tab_drift.clear_axes()
+        self.tab_drift.drift_plot_weighted.setCheckState(0)
+        self.tab_drift.drift_cont_startendcombobox.setCurrentIndex(0)
+        self.tab_drift.drift_polydegree_combobox.setCurrentIndex(0)
+        self.tab_drift.driftmethod_combobox.setCurrentIndex(0)
+        self.tab_drift.tension_slider.setValue(1250)
         self.tab_adjust.delta_view.setModel(None)
         self.tab_adjust.delta_view.update()
         self.tab_adjust.datum_view.setModel(None)
@@ -1122,11 +1127,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
         self.tab_adjust.datum_view.setModel(self.tab_adjust.datum_proxy_model)
         stats_model = QtGui.QStandardItemModel()
-        if not survey.adjustment.adjustmentresults.text:  # Numpy adjustment
-            stats_model.setColumnCount(2)
-            stats_model.setHorizontalHeaderLabels(['', ''])
-            self.tab_adjust.stats_view.setColumnWidth(0, 250)
-            self.tab_adjust.stats_view.setColumnWidth(1, 150)
+        if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
+
             for line in survey.adjustment.results_string():
                 try:
                     line_elems = line.split(':')
@@ -1141,13 +1143,17 @@ class MainProg(QtWidgets.QMainWindow):
                         stats_model.appendRow([qt_item, QtGui.QStandardItem('')])
                 except:
                     pass
-        else:  # Gravnet adjustment
+        elif survey.adjustment.adjustmentresults.text:  # Gravnet adjustment
             self.tab_adjust.stats_view.setColumnWidth(0, 600)
             stats_model.setColumnCount(1)
             stats_model.setHorizontalHeaderLabels([''])
             for line in survey.adjustment.adjustmentresults.text:
                 stats_model.appendRow([QtGui.QStandardItem(line)])
         self.tab_adjust.stats_view.setModel(stats_model)
+        stats_model.setColumnCount(2)
+        stats_model.setHorizontalHeaderLabels(['', ''])
+        self.tab_adjust.stats_view.setColumnWidth(0, 250)
+        self.tab_adjust.stats_view.setColumnWidth(1, 150)
         self.tab_adjust.update_col_widths()
 
     def update_drift_tables_and_plots(self, update=True):
@@ -1285,8 +1291,10 @@ class MainProg(QtWidgets.QMainWindow):
 
     def clear_adjustment_text(self):
         self.tab_adjust.stats_view.setModel(None)
+        self.tab_adjust.stats_view.update()
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         survey.adjustment.adjustmentresults.text = []
+        survey.adjustment.adjustmentresults.n_unknowns = 0
 
     def clear_datum_model(self):
         """

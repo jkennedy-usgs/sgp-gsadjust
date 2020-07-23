@@ -135,7 +135,7 @@ def export_summary(obsTreeModel, data_path):
         fid.write('# Station data\n')
         for survey in obsTreeModel.surveys():
             for loop in survey.loops():
-                fid.write('Survey {}, Loop {}\n'.format(survey.name, loop.name))
+                fid.write('Survey {}, Loop {}, Source file: {}\n'.format(survey.name, loop.name, loop.source))
                 for iii in range(loop.rowCount()):
                     station = loop.child(iii)
                     fid.write(station.summary_str)
@@ -145,7 +145,7 @@ def export_summary(obsTreeModel, data_path):
         for survey in obsTreeModel.surveys():
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
-                fid.write('Survey {}, Loop {}\n'.format(survey.name, loop.name))
+                fid.write('Survey {}, Loop {}, Source file: {}\n'.format(survey.name, loop.name, loop.source))
                 fid.write(str(loop))
                 for delta in loop.deltas():
                     fid.write('{}\n'.format(delta))

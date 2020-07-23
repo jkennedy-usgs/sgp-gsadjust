@@ -205,7 +205,7 @@ class ObsTreeStation(ObsTreeItem):
                 ttmp = np.array([self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
                 num = np.zeros(len(ttmp))
                 for i in range(len(ttmp)):
-                    num[i] = self._weights_()[i] * ((ttmp[i] - np.mean(ttmp))*24) ** 2
+                    num[i] = self._weights_()[i] * ((ttmp[i] - np.mean(ttmp)) * 24) ** 2
                 sd = np.sqrt(
                     np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
                 # self._weights_()))
@@ -253,11 +253,6 @@ class ObsTreeStation(ObsTreeItem):
                     num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
                 sd = np.sqrt(
                     np.sum(num) / ((len(self._weights_()) - 1) * np.sum(self._weights_())))  # np.sqrt(1. / sum(
-                # self._weights_()))
-                if self.station_name == 'BLDG8115':
-                    if self.station_count == '2':
-                        if sd > 2:
-                            jeff = 1
                 return sd
         except:
             return -999
@@ -296,7 +291,7 @@ class ObsTreeStation(ObsTreeItem):
                                                                               self.sd[i],
                                                                               self.etc[i])
             else:
-                return_str = '{} {} {:0.2f} {} {}\n'.format(self.keepdata[i],
+                return_str = '{} {} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
                                                             self.station[i],
                                                             self.raw_grav[i],
                                                             self.sd[i],
@@ -319,14 +314,15 @@ class ObsTreeLoop(ObsTreeItem):
         self.delta_model = DeltaTableModel()
         self.tare_model = TareTableModel()
         self.name = name
-        self.drift_method = 'none'    # 'none', 'netadj', 'roman', or 'continuous'
-        self.drift_cont_method = 0    # If continuous model, also need to keep track of which type of model
+        self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'
+        self.drift_cont_method = 0  # If continuous model, also need to keep track of which type of model
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
+        self.drift_cont_weighting = 0  # check box check state
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
-        self.meter = ''   # Meter S/N, for the case where multiple meters are calibrated
-        self.comment = '' # String that can be specified from GUI
+        self.meter = ''  # Meter S/N, for the case where multiple meters are calibrated
+        self.comment = ''  # String that can be specified from GUI
         # TODO: Import comment from Burris file?
-        self.oper = ''    # May or may not be specified in raw input file
+        self.oper = ''  # May or may not be specified in raw input file
         self.source = ''  # Filename of raw input file
 
     def __str__(self):
@@ -334,19 +330,21 @@ class ObsTreeLoop(ObsTreeItem):
             return 'Loop: {}, ' \
                    'Drift method: {}, ' \
                    'Meter type: {}\n'.format(self.name,
-                                             self.drift_method,
-                                             self.meter_type)
+                                              self.drift_method,
+                                              self.meter_type)
 
         elif self.drift_method == 'continuous':
             return 'Loop: {}, ' \
                    'Drift method: {}, ' \
                    'Meter type: {}, ' \
                    'Continuous drift method: {}, ' \
-                   'Continuous drift start/end method: {}\n'.format(self.name,
-                                                                    self.drift_method,
-                                                                    self.meter_type,
-                                                                    self.drift_cont_method,
-                                                                    self.drift_cont_startend)
+                   'Continuous drift start/end method: {}, ' \
+                   'Weighting: {},\n'.format(self.name,
+                                              self.drift_method,
+                                              self.meter_type,
+                                              self.drift_cont_method,
+                                              self.drift_cont_startend,
+                                              self.drift_cont_weighting)
         elif self.drift_method == 'netadj':
             return 'Loop: {}, ' \
                    'Drift method: {}, ' \
@@ -357,7 +355,6 @@ class ObsTreeLoop(ObsTreeItem):
                                                 self.drift_netadj_method)
 
     @property
-    # To accomodate legacy files, which might have meter and oper set to None:
     def tooltip(self):
         return 'Loop: {}\n' \
                'Drift method: {}\n' \
@@ -397,7 +394,7 @@ class ObsTreeLoop(ObsTreeItem):
     def from_json(cls, data):
         temp = cls(data['name'])
         temp.__dict__ = data
-        potential_missing_fields = ['comment', 'oper']
+        potential_missing_fields = {'comment': '', 'oper': '', 'drift_cont_weighting': 0}
         temp.delta_model = DeltaTableModel()
         temp.tare_model = TareTableModel()
         for tare_dict in data['tares']:
@@ -406,9 +403,9 @@ class ObsTreeLoop(ObsTreeItem):
             temp.tare_model.insertRows(tare_object, 0)
         if 'checked' in data:
             temp.setCheckState(data['checked'])
-        for field in potential_missing_fields:
-            if not hasattr(temp, field):
-                setattr(temp, field, '')
+        for k, v in potential_missing_fields.items():
+            if not hasattr(temp, k):
+                setattr(temp, k, v)
         return temp
 
     def rename(self, from_name, to_name):
@@ -1294,8 +1291,12 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-                fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
-                return fn(*args)
+                try: # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
+                    # after deleting a survey
+                    fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
+                    return fn(*args)
+                except AttributeError:
+                    return ''
 
             elif role == QtCore.Qt.CheckStateRole:
                 if column == 0:
@@ -1375,13 +1376,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def _handler_edit_ObsTreeSurvey(self, item, value):
         new_name = str(value)
         try:
-            name_as_date = dt.datetime.strptime(new_name, 'yyyy-MM-dd')
+            name_as_date = dt.datetime.strptime(new_name, '%Y-%m-%d')
             old_name = name_as_date
             logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
             item.name = new_name
             return True
         except Exception as e:
-            pass
+            return False
 
     def checked_surveys(self):
         """
@@ -1528,6 +1529,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             json.dump(jsons.dump(workspace_data), f)
         logging.info('Saving JSON workspace to {}'.format(fname))
         return fname
+
 
 class tempStation():
     def __init__(self, station):

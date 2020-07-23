@@ -241,7 +241,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                 elev.append(-999)
             for survey in obstreemodel.checked_surveys():
                 # survey = obstreemodel.invisibleRootItem().child(i)
-                g_header.append(survey.name)
+                g_header.append(survey.name + '_g')
                 g_header.append(survey.name + '_sd')
                 for ii in range(survey.results_model.rowCount()):
                     adj_station = survey.results_model.data(survey.results_model.index(ii, 0),

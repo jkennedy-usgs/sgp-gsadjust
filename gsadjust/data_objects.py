@@ -627,9 +627,9 @@ class Adjustment:
 
     def results_string(self):
         try:
-            if self.adjustmentresults.text:
+            if self.adjustmentresults.text:  # Gravnet results
                 return [x + '\n' for x in self.adjustmentresults.text]
-            else:
+            elif self.adjustmentresults.n_unknowns > 0:
                 text_out = list()
                 # text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
                 # text_out.append("Number of loops:                    {:d}\n".format(nloops))

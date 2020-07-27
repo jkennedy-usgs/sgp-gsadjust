@@ -237,47 +237,51 @@ class TabDrift(QtWidgets.QWidget):
         self.tare_view.setModel(TareTableModel())
 
     def time_extent_changed(self):
+        """
+        Called when "Max time between repeats" is checked/unchecked
+        """
         self.parent.deltas_update_required()
         self.plot_drift()
 
-    def drift_newpoint_picked(self, event):
-        if event.button == 3:
-            self.drift_rate_context_menu()
-
-    def drift_point_picked(self, event):
-        if event.mouseevent.button == 3:
-            self.drift_rate_context_menu(from_pick=True)
-
-    def drift_rate_context_menu(self, from_pick=False):
-        """
-        Not functional (other than showing the menu). Should allow points to be excluded, or artificial points added,
-        to the continuous drift correction.
-        :param from_pick: Boolean, True if a point was picked
-        """
-        if from_pick:
-            add = QtWidgets.QAction(QtGui.QIcon(""), "Add point to drift model", self,
-                                    triggered=self.drift_cont_addpoint,
-                                    enabled=False)
-            remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
-                                       triggered=self.drift_cont_removepoint)
-            self.popup_menu.addAction(remove)
-        else:
-            add = QtWidgets.QAction(QtGui.QIcon(""), "Add point to drift model", self,
-                                    triggered=self.drift_cont_addpoint)
-            remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
-                                       triggered=self.drift_cont_removepoint,
-                                       enabled=False)
-
-        self.popup_menu.addAction(add)
-        self.popup_menu.addAction(remove)
-        cursor = QtGui.QCursor()
-        self.popup_menu.popup(cursor.pos())
-
-    def drift_cont_removepoint(self):
-        pass
-
-    def drift_cont_addpoint(self):
-        pass
+    # This section provides the right-click context menu in the continuous drift lower plot - not implemented
+    # def drift_newpoint_picked(self, event):
+    #     if event.button == 3:
+    #         self.drift_rate_context_menu()
+    #
+    # def drift_point_picked(self, event):
+    #     if event.mouseevent.button == 3:
+    #         self.drift_rate_context_menu(from_pick=True)
+    #
+    # def drift_rate_context_menu(self, from_pick=False):
+    #     """
+    #     Not functional (other than showing the menu). Should allow points to be excluded, or artificial points added,
+    #     to the continuous drift correction.
+    #     :param from_pick: Boolean, True if a point was picked
+    #     """
+    #     if from_pick:
+    #         add = QtWidgets.QAction(QtGui.QIcon(""), "Add point to drift model", self,
+    #                                 triggered=self.drift_cont_addpoint,
+    #                                 enabled=False)
+    #         remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
+    #                                    triggered=self.drift_cont_removepoint)
+    #         self.popup_menu.addAction(remove)
+    #     else:
+    #         add = QtWidgets.QAction(QtGui.QIcon(""), "Add point to drift model", self,
+    #                                 triggered=self.drift_cont_addpoint)
+    #         remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
+    #                                    triggered=self.drift_cont_removepoint,
+    #                                    enabled=False)
+    #
+    #     self.popup_menu.addAction(add)
+    #     self.popup_menu.addAction(remove)
+    #     cursor = QtGui.QCursor()
+    #     self.popup_menu.popup(cursor.pos())
+    #
+    # def drift_cont_removepoint(self):
+    #     pass
+    #
+    # def drift_cont_addpoint(self):
+    #     pass
 
     def show_line_label(self, event, axes):
         """
@@ -477,7 +481,6 @@ class TabDrift(QtWidgets.QWidget):
         Catch-all function to plot drift
         :param obstreeloop: Can either specify a loop, or by default use the currentLoopIndex.
         """
-        # TODO: plotting and calculating delta-gs is entertwined. To be efficient when loading many loops,
         # I use update to indicate lines that are run only if the plots are visible. If the plotting and
         # delta-g code were better separated, update wouldn't be needed.
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -549,11 +552,10 @@ class TabDrift(QtWidgets.QWidget):
             logging.info('Plotting continuous drift, Loop ' + obstreeloop.name)
             self.axes_drift_cont_lower.clear()
             self.axes_drift_cont_upper.clear()
-            drift_rate, drift_time, drift_x = [], [], []
-
             # Get data for plotting
             min_time = 100000000
             max_time = 0
+            drift_rate, drift_time, drift_x = [], [], []
             for line in plot_data:
                 # x and y are the time and g values for each station.
                 # Make values relative to first station value
@@ -599,8 +601,10 @@ class TabDrift(QtWidgets.QWidget):
                     self.drift_cont_figtop.canvas.mpl_connect('pick_event',
                                                               lambda event: self.show_line_label
                                                               (event, self.axes_drift_cont_upper))
-                    self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
-                    self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
+                    # drift_point_picked and drift_newpoint_picked are for adding/removing points to continuous drift
+                    # curve - not yet implemented.
+                    # self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
+                    # self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
 
                 try:
                     z = []
@@ -636,7 +640,6 @@ class TabDrift(QtWidgets.QWidget):
                             else:
                                 annot_text = ""
                             annot = self.axes_drift_cont_lower.annotate(annot_text, xy=(737287,45),
-                                                                        # xycoords='axes fraction',
                                                                         xytext=(-20, 20),
                                                                         textcoords="offset points",
                                                                         bbox=dict(boxstyle="round", fc="w"),
@@ -766,14 +769,9 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_cont_startendcombobox.setCurrentIndex(obstreeloop.drift_cont_startend)
                 self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
                 self.drift_continuous()
-                # if orig_method != 'continuous':
-                #     self.drift_window.setSizes([width[1], width[0], width[2]])
             else:
                 self.disable_weighted_checkbox()
-                # if orig_method == 'continuous':
-                #     self.drift_window.setSizes([width[1], width[0], width[2]])
             self.set_width(width, method)
-
 
         model = self.plot_drift(update=update)
         if method == 'roman':
@@ -791,6 +789,9 @@ class TabDrift(QtWidgets.QWidget):
             self.update_delta_model(method, model)
 
     def set_width(self, width, method):
+        """
+        Maintains relative width of plot windows when switching between drift-correction methods.
+        """
         if method == 'none' or method == 'netadj' or method == 'roman':
             if width[0] > width[1]:
                 self.drift_window.setSizes([width[0], width[1], width[2]])
@@ -839,35 +840,6 @@ class TabDrift(QtWidgets.QWidget):
         if selected:
             self.tare_popup_menu.addAction(self.mnDeleteTare)
             self.tare_popup_menu.exec_(self.tare_view.mapToGlobal(point))
-
-    #     self.tarepopMenu = QtWidgets.QMenu("Menu", self)
-    #     self.tarepopMenu.addAction(self.mnDeleteTare)
-    #     self.tarepopMenu.exec_(self.tare_view.mapToGlobal(point))
-    #
-    # def datum_context_menu(self, point):
-    #     selected = self.datum_view.selectedIndexes()
-    #     if selected:
-    #         self.datum_popup_menu.addAction(self.mnDeleteDatum)
-    #         self.datum_popup_menu.exec_(self.datum_view.mapToGlobal(point))
-
-    # def init_tares_popup_menu(self):
-    #     """
-    #     Right-click menu on results table
-    #     """
-    #     self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
-    #     self.mnDeleteTare.triggered.connect(self.delete_tare)
-    #
-    # def delete_tare(self, idxs):
-    #     obstreeloop = self.parent.obsTreeModel.itemFromIndex(self.parent.currentLoopIndex)
-    #     idxs = self.tare_view.selectedIndexes()
-    #     if len(idxs) > 1:
-    #         return
-    #     else:
-    #         obstreeloop.tare_model.removeRow(idxs[0].row(), idxs[0].parent())
-    #         obstreeloop.tare_model.deleteTare(idxs[0])
-    #         # tare = obstreeloop.tare_model.data(idxs[0], role=QtCore.Qt.UserRole)
-    #         # obstreeloop.tare_mode.deleteTare(idxs[0])
-    #     return
 
     @staticmethod
     def process_tares(obstreeloop):

@@ -292,10 +292,10 @@ class ObsTreeStation(ObsTreeItem):
                                                                               self.etc[i])
             else:
                 return_str = '{} {} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
-                                                            self.station[i],
-                                                            self.raw_grav[i],
-                                                            self.sd[i],
-                                                            self.etc[i])
+                                                                      self.station[i],
+                                                                      self.raw_grav[i],
+                                                                      self.sd[i],
+                                                                      self.etc[i])
             yield return_str
 
     def to_json(self):
@@ -330,8 +330,8 @@ class ObsTreeLoop(ObsTreeItem):
             return 'Loop: {}, ' \
                    'Drift method: {}, ' \
                    'Meter type: {}\n'.format(self.name,
-                                              self.drift_method,
-                                              self.meter_type)
+                                             self.drift_method,
+                                             self.meter_type)
 
         elif self.drift_method == 'continuous':
             return 'Loop: {}, ' \
@@ -340,11 +340,11 @@ class ObsTreeLoop(ObsTreeItem):
                    'Continuous drift method: {}, ' \
                    'Continuous drift start/end method: {}, ' \
                    'Weighting: {},\n'.format(self.name,
-                                              self.drift_method,
-                                              self.meter_type,
-                                              self.drift_cont_method,
-                                              self.drift_cont_startend,
-                                              self.drift_cont_weighting)
+                                             self.drift_method,
+                                             self.meter_type,
+                                             self.drift_cont_method,
+                                             self.drift_cont_startend,
+                                             self.drift_cont_weighting)
         elif self.drift_method == 'netadj':
             return 'Loop: {}, ' \
                    'Drift method: {}, ' \
@@ -1278,8 +1278,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def flags(self, QModelIndex):
         if not QModelIndex.isValid():
             return QtCore.Qt.NoItemFlags
-        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | \
-               QtCore.Qt.ItemIsEditable | \
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | \
                QtCore.Qt.ItemIsUserCheckable
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
@@ -1291,7 +1290,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-                try: # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
+                try:  # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
                     # after deleting a survey
                     fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
                     return fn(*args)

@@ -119,17 +119,20 @@ class Delta:
     drift-corrected. Before a network adjustment is done, there is no residual and the default value of -999 is 
     assigned.
 
-    Types of deltas:
-    'normal': calculated between two stations
+    Four types of deltas (self.type):
+    'normal': calculated between two stations (g2 - g1)
     'three_point': calculated between one station, and an interpolated value betweeen two stations (Roman method).
       self.station2 is a tuple with two stations, self.station1 is a single station.
     'list': a delta is calculated from a list of deltas. Used with the Roman method to average three-point deltas.
       self.station2 is a list. self.station1 is None.
+    'assigned': delta-g is manually assigned. Created automatically when a 'normal' delta is edited on the network
+      adjustment tab. Roman ('three_point' and 'list') deltas can't be converted to 'assigned'.
 
     ls_drift: records degree of least squares adjustment: they must be identical for all deltas to use Gravnet.
       Its a tuple with (loop name, degree of drift polynomial).
     adj_sd: stores the standard deviation used in the adjusment, which may differ from the one initially associated
             with the delta.
+    assigned_sd: Manually-edited std. dev.
     """
 
     def __init__(self, sta1, sta2, driftcorr=0., ls_drift=None, delta_type='normal', checked=2,
@@ -245,7 +248,6 @@ class Delta:
         else:
             return self.station2.station_name
 
-    # @property
     def dg(self):
         # Roman correction: dg requires three station-observations
 
@@ -266,10 +268,10 @@ class Delta:
             dg = gm2 - gm1 - self.driftcorr
         elif self.type == 'assigned':
             dg = self.assigned_dg
-
+        else:
+            dg = -999
         return dg
 
-    # @property
     def sta1_t(self):
         if self.type == 'three_point':
             return self.station1.tmean()
@@ -278,7 +280,6 @@ class Delta:
         else:
             return self.station1.tmean()
 
-    # @property
     def sta2_t(self):
         if self.type == 'three_point':
             return self.station2[0].tmean()
@@ -419,8 +420,6 @@ class AdjustmentResults:
         for line in self.text:
             return_str += line
         return return_str
-
-
 
 
 ###############################################################################
@@ -624,6 +623,8 @@ class Adjustment:
         self.datums = []
         self.g_dic = dict()
         self.sd_dic = dict()
+        self.netadj_loop_keys = dict()
+        self.sta_dic_ls = dict()
 
     def results_string(self):
         try:
@@ -641,8 +642,10 @@ class Adjustment:
                 text_out.append(
                     "SD a posteriori:                    {:f}\n".format(
                         float(np.sqrt(self.VtPV / self.dof))))
-                text_out.append("chi square value:                   {:6.2f}\n".format(float(self.adjustmentresults.chi2)))
-                text_out.append("critical chi square value:          {:6.2f}\n".format(float(self.adjustmentresults.chi2c)))
+                text_out.append(
+                    "chi square value:                   {:6.2f}\n".format(float(self.adjustmentresults.chi2)))
+                text_out.append(
+                    "critical chi square value:          {:6.2f}\n".format(float(self.adjustmentresults.chi2c)))
                 if float(self.adjustmentresults.chi2) < float(self.adjustmentresults.chi2c):
                     text_out.append("Chi-test accepted\n")
                 else:
@@ -651,9 +654,9 @@ class Adjustment:
                 text_out.append("Average standard deviation: {:.2f}\n".format(self.adjustmentresults.avg_stdev))
                 text_out.append("Maximum delta residual: {:.2f}\n".format(self.adjustmentresults.max_dg_residual))
                 text_out.append("Maximum absolute datum residual: {:.2f}\n".format(
-                                self.adjustmentresults.max_datum_residual))
+                    self.adjustmentresults.max_datum_residual))
                 text_out.append("Minimum absolute datum residual: {:.2f}\n".format(
-                                self.adjustmentresults.min_datum_residual))
+                    self.adjustmentresults.min_datum_residual))
                 if self.adjustmentoptions.cal_coeff:
                     for k, v in self.adjustmentresults.cal_dic.items():
                         text_out.append("Calibration coefficient for meter {}: {:.6f} +/- {:.6f}\n".
@@ -673,7 +676,7 @@ class Adjustment:
                             else:
                                 text_out.append("Drift coefficient, degree {}: {:.3f} (µGal/day)".format(i + 1, degree))
                 return text_out
-        except (AttributeError, TypeError) as e:
+        except (AttributeError, TypeError):
             return ''
 
     @property
@@ -690,7 +693,7 @@ class Adjustment:
         At = np.transpose(self.A)
         # St = np.transpose(self.S)
         N = At.dot(self.P).dot(self.A)
-        # original solution:
+        # original PyGrav solution:
         # self.X = np.linalg.inv(N+self.S.dot(St)).dot(At).dot(self.P).dot(self.Obs)
         self.X = np.linalg.inv(N).dot(At).dot(self.P).dot(self.Obs)
         self.r = self.A.dot(self.X) - self.Obs
@@ -713,14 +716,3 @@ class Adjustment:
                 1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3)
         dof = float(self.dof)
         self.adjustmentresults.chi2c = dof * (chi_1_alpha * np.sqrt(2 / (9 * dof)) + 1 - 2. / (9 * dof)) ** 3
-
-        # print("SD a posteriori: {:6.2f}".format(float(self.SDaposteriori)))
-        # print("chi square value: {:6.2f}".format(float(self.chi2)))
-        # print("critical chi square value: {:6.2f}".format(float(self.chi2c)))
-        #
-        # if self.adjustmentresults.chi2 < self.adjustmentresults.chi2c:
-        #     print("Chi-test accepted")
-        # else:
-        #     print("Chi-test rejected")
-
-

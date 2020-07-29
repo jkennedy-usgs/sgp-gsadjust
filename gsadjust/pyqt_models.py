@@ -283,19 +283,20 @@ class ObsTreeStation(ObsTreeItem):
         """
         g = self.grav()
         for i in range(len(self.raw_grav)):
-            if self.meter_type == 'Burris':
-                return_str = '{} {} {:0.2f} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
-                                                                              self.station[i],
-                                                                              self.raw_grav[i],
-                                                                              g[i],
-                                                                              self.sd[i],
-                                                                              self.etc[i])
-            else:
-                return_str = '{} {} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
-                                                                      self.station[i],
-                                                                      self.raw_grav[i],
-                                                                      self.sd[i],
-                                                                      self.etc[i])
+            # if self.meter_type == 'Burris':
+            return_str = '{} {} {:0.2f} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
+                                                                          self.station[i],
+                                                                          self.raw_grav[i],
+                                                                          self.etc[i],
+                                                                          g[i],
+                                                                          self.sd[i])
+            # else:
+            #     return_str = '{} {} {:0.2f} {:0.2f} {:0.2f}\n'.format(self.keepdata[i],
+            #                                                           self.station[i],
+            #                                                           self.raw_grav[i],
+            #                                                           self.grav[i],
+            #                                                           self.sd[i],
+            #                                                           self.etc[i])
             yield return_str
 
     def to_json(self):
@@ -319,10 +320,8 @@ class ObsTreeLoop(ObsTreeItem):
         self.drift_cont_startend = 0  # behavior at start/end. 0: extrapolate, 1: constant
         self.drift_cont_weighting = 0  # check box check state
         self.drift_netadj_method = 2  # If netadj method, keep track of polynomial degree
-        self.meter = ''  # Meter S/N, for the case where multiple meters are calibrated
         self.comment = ''  # String that can be specified from GUI
         # TODO: Import comment from Burris file?
-        self.oper = ''  # May or may not be specified in raw input file
         self.source = ''  # Filename of raw input file
 
     def __str__(self):
@@ -339,7 +338,7 @@ class ObsTreeLoop(ObsTreeItem):
                    'Meter type: {}, ' \
                    'Continuous drift method: {}, ' \
                    'Continuous drift start/end method: {}, ' \
-                   'Weighting: {},\n'.format(self.name,
+                   'Weighting: {}\n'.format(self.name,
                                              self.drift_method,
                                              self.meter_type,
                                              self.drift_cont_method,
@@ -353,6 +352,20 @@ class ObsTreeLoop(ObsTreeItem):
                                                 self.drift_method,
                                                 self.meter_type,
                                                 self.drift_netadj_method)
+
+    @property
+    def oper(self):
+        try:
+            return self.child(0).oper[0]
+        except AttributeError:
+            return ''
+
+    @property
+    def meter(self):
+        try:
+            return self.child(0).meter[0]
+        except AttributeError:
+            return ''
 
     @property
     def tooltip(self):
@@ -394,7 +407,7 @@ class ObsTreeLoop(ObsTreeItem):
     def from_json(cls, data):
         temp = cls(data['name'])
         temp.__dict__ = data
-        potential_missing_fields = {'comment': '', 'oper': '', 'drift_cont_weighting': 0}
+        potential_missing_fields = {'comment': '', 'oper': '', 'source': '', 'drift_cont_weighting': 0}
         temp.delta_model = DeltaTableModel()
         temp.tare_model = TareTableModel()
         for tare_dict in data['tares']:
@@ -422,8 +435,6 @@ class ObsTreeLoop(ObsTreeItem):
 
         :param data: Passed to Loop.populate_station_dic()
         """
-        self.oper = data.oper[0]
-        self.meter = data.meter[0]
         prev_sta = data.station[0]
         ind_start = 0
         station_count_dic = dict()
@@ -524,6 +535,10 @@ class ObsTreeLoop(ObsTreeItem):
         for i in range(self.rowCount()):
             stations.append(self.child(i))
         return stations
+
+    def n_unique_stations(self):
+        sn = [s.station_name for s in self.stations()]
+        return len(set(sn))
 
     def deltas(self):
         """
@@ -779,6 +794,8 @@ class ObsTreeSurvey(ObsTreeItem):
             deltas = []
             datums = []
             adjustmentresults = data_objects.AdjustmentResults()
+
+            self.adjustment.adjustmentoptions.adj_type = adj_type
 
             # Form datasets for adjustment from selected table items, count number of deltas and datums (used when
             # writing metadata about adjustment).
@@ -1053,10 +1070,10 @@ class ObsTreeSurvey(ObsTreeItem):
         # number of unknowns:
         # TODO: temperature drift function
         drift_time = 0  # self.adjustment.adjustmentoptions.drift_time
-        if self.adjustment.adjustmentoptions.use_model_temp:
-            self.adjustment.drift_temp = self.adjustment.adjustmentoptions.model_temp_degree
-        else:
-            self.adjustment.drift_temp = 0
+        # if self.adjustment.adjustmentoptions.use_model_temp:
+        #     self.adjustment.drift_temp = self.adjustment.adjustmentoptions.model_temp_degree
+        # else:
+        #     self.adjustment.drift_temp = 0
 
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.adjustment.datums) == 1:
@@ -1909,7 +1926,7 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
     _headers = {
         ADJSTA_STATION: 'Station',
         ADJSTA_G: 'g',
-        ADJSTA_SD: 'Std. dev'
+        ADJSTA_SD: 'Std. dev.'
     }
 
     def __init__(self):

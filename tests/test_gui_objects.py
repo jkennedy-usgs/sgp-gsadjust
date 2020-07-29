@@ -134,9 +134,11 @@ def test_loop_options(qtbot, mainprog):
     options_dialog.exec_()
 
     for loop in loops:
-        loop.oper = options_dialog.operator_edit.text()
-        loop.meter = options_dialog.meter_edit.text()
         loop.comment = options_dialog.comment_edit.toPlainText()
+        for i in range(loop.rowCount()):
+            obstreestation = loop.child(i)
+            obstreestation.meter = [options_dialog.meter_edit.text()] * len(obstreestation.meter)
+            obstreestation.oper = [options_dialog.operator_edit.text()] * len(obstreestation.oper)
 
     assert loop.oper == 'USGS'
     assert loop.comment == 'USGS'

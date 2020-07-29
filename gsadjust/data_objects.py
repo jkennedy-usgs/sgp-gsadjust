@@ -299,22 +299,23 @@ class Delta:
             return self.sta2_t() - self.sta1_t()
 
     def __str__(self):
-        if self.checked == 2:
-            in_use = '1'
-        else:
-            in_use = '0'
+        # if self.checked == 2:
+        #     in_use = '1'
+        # else:
+        #     in_use = '0'
         # Rarely a station time will be -999 (if all samples are unchecked)
-        if self.sta1_t() != -999:
-            delta_time = num2date(self.sta1_t()).strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            delta_time = '-999'
-        return_str = '{} {} {} {} {:0.3f} {:0.3f} {:0.3f}'.format(in_use,
+        # if self.sta1_t() != -999:
+        #     delta_time = num2date(self.sta1_t()).strftime('%Y-%m-%d %H:%M:%S')
+        # else:
+        #     delta_time = '-999'
+        return_str = '{} {} {} {} {:0.3f} {:0.3f} {:0.3f} {:0.3f}'.format(int(self.checked/2),
                                                                   self.sta1,
                                                                   self.sta2,
-                                                                  delta_time,
+                                                                  self.time_string(),
                                                                   self.dg(),
                                                                   self.sd,
-                                                                  self.sd_for_adjustment)
+                                                                  self.sd_for_adjustment,
+                                                                  self.residual)
         return return_str
 
     def time(self):
@@ -325,6 +326,12 @@ class Delta:
         elif type(self.station2) is list:
             t = [delta.sta1_t() for delta in self.station2]
             return np.mean(t)
+
+    def time_string(self):
+        try:
+            return num2date(self.time()).strftime('%Y-%m-%d %H:%M:%S')
+        except:
+            return '-999'
 
 
 ###############################################################################
@@ -389,10 +396,15 @@ class Datum:
         Override the built-in method 'print' when applied to such object
         """
         if self.checked == 2:
-            in_use = '1 '
+            in_use = '1'
         else:
-            in_use = '0 '
-        return in_use + self.station + ' ' + str(self.g) + ' ' + str(self.sd) + ' ' + self.date
+            in_use = '0'
+        return '{} {} {} {:.2f} {:.2f} {:.2f}'.format(in_use,
+                                                   self.station,
+                                                   self.date,
+                                                   self.g,
+                                                   self.sd,
+                                                   self.residual)
 
 
 ###############################################################################
@@ -558,8 +570,8 @@ class AdjustmentOptions:
     """
 
     def __init__(self):
-        self.use_model_temp = False
-        self.model_temp_degree = 0
+        # self.use_model_temp = False
+        # self.model_temp_degree = 0
         self.use_sigma_prefactor = False
         self.sigma_prefactor = 1.0
         self.use_sigma_postfactor = False
@@ -569,7 +581,6 @@ class AdjustmentOptions:
         self.use_sigma_min = False
         self.sigma_min = 3.0
         self.alpha = 0.05
-        self.woutfiles = False
         self.cal_coeff = False
         self.adj_type = 'gravnet'
         self.specify_cal_coeff = False
@@ -635,27 +646,28 @@ class Adjustment:
                 # text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
                 # text_out.append("Number of loops:                    {:d}\n".format(nloops))
                 # text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
-                text_out.append("Number of unknowns:                 {:d}\n".format(self.adjustmentresults.n_unknowns))
-                text_out.append("Number of relative observations:    {:d}\n".format(self.adjustmentresults.n_deltas))
-                text_out.append("Number of absolute observations:    {:d}\n".format(self.adjustmentresults.n_datums))
+                text_out.append("Number of unknowns:                  {:d}\n".format(self.adjustmentresults.n_unknowns))
+                text_out.append("Number of relative observations:     {:d}\n".format(self.adjustmentresults.n_deltas))
+                text_out.append("Number of absolute observations:     {:d}\n".format(self.adjustmentresults.n_datums))
                 text_out.append("Degrees of freedom (nobs-nunknowns): {:d}\n".format(self.dof))
-                text_out.append(
-                    "SD a posteriori:                    {:f}\n".format(
+                text_out.append("SD a posteriori:                     {:4f}\n".format(
                         float(np.sqrt(self.VtPV / self.dof))))
-                text_out.append(
-                    "chi square value:                   {:6.2f}\n".format(float(self.adjustmentresults.chi2)))
-                text_out.append(
-                    "critical chi square value:          {:6.2f}\n".format(float(self.adjustmentresults.chi2c)))
+                text_out.append("chi square value:                  {:6.2f}\n".format(float(
+                    self.adjustmentresults.chi2)))
+                text_out.append("critical chi square value:         {:6.2f}\n".format(float(
+                    self.adjustmentresults.chi2c)))
                 if float(self.adjustmentresults.chi2) < float(self.adjustmentresults.chi2c):
                     text_out.append("Chi-test accepted\n")
                 else:
                     text_out.append("Chi-test rejected\n")
 
-                text_out.append("Average standard deviation: {:.2f}\n".format(self.adjustmentresults.avg_stdev))
-                text_out.append("Maximum delta residual: {:.2f}\n".format(self.adjustmentresults.max_dg_residual))
-                text_out.append("Maximum absolute datum residual: {:.2f}\n".format(
+                text_out.append("Average standard deviation:          {:.2f}\n".format(
+                    self.adjustmentresults.avg_stdev))
+                text_out.append("Maximum delta residual:              {:.2f}\n".format(
+                    self.adjustmentresults.max_dg_residual))
+                text_out.append("Maximum absolute datum residual:     {:.2f}\n".format(
                     self.adjustmentresults.max_datum_residual))
-                text_out.append("Minimum absolute datum residual: {:.2f}\n".format(
+                text_out.append("Minimum absolute datum residual:     {:.2f}\n".format(
                     self.adjustmentresults.min_datum_residual))
                 if self.adjustmentoptions.cal_coeff:
                     for k, v in self.adjustmentresults.cal_dic.items():

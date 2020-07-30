@@ -7,6 +7,7 @@ import gui_objects
 from PyQt5 import QtCore, Qt
 from tide_correction import tide_correction_agnew
 
+
 @pytest.mark.skipif("TRAVIS" in os.environ, reason="Doesn't work on Travis")
 def test_gui(qtbot, monkeypatch):
     # Not sure why, but need to store and restore the path after this test
@@ -24,14 +25,20 @@ def test_gui(qtbot, monkeypatch):
     # Update tide correction
     # Not checking that the correction is correct, just that it's been updated.
     # Burris meters only report correction to nearest microGal, this test will fail if the correction wasn't updated.
-    tide_correction_agnew(window, 35., -110., 1000.)
-    assert np.abs(window.obsTreeModel.invisibleRootItem().child(0).child(0).child(0).etc[0] + 20.6) < 0.01
+    tide_correction_agnew(window, 35.0, -110.0, 1000.0)
+    assert (
+        np.abs(
+            window.obsTreeModel.invisibleRootItem().child(0).child(0).child(0).etc[0]
+            + 20.6
+        )
+        < 0.01
+    )
     test_workspace = 'test1.gsa'
     success = window.obsTreeModel.save_workspace(test_workspace)
     assert success == 'test1.gsa'
 
     # Divide into loops
-    window.divide_survey(8/24)
+    window.divide_survey(8 / 24)
     qtbot.wait(2000)
     survey = window.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0)
@@ -80,11 +87,17 @@ def test_gui(qtbot, monkeypatch):
     # Populate delta and datum tables
     qtbot.keyClick(window, 'a', modifier=QtCore.Qt.ControlModifier)
     qtbot.wait(3000)
-    monkeypatch.setattr(gui_objects.AddDatumFromList, 'add_datum', classmethod(lambda *args: 'CDOT'))
+    monkeypatch.setattr(
+        gui_objects.AddDatumFromList, 'add_datum', classmethod(lambda *args: 'CDOT')
+    )
     adj_tab_model = window.tab_adjust.delta_view.model()
-    first_adj_tab_delta = adj_tab_model.data(adj_tab_model.index(0, 4), QtCore.Qt.UserRole)
+    first_adj_tab_delta = adj_tab_model.data(
+        adj_tab_model.index(0, 4), QtCore.Qt.UserRole
+    )
     drift_tab_model = window.tab_drift.delta_view.model()
-    first_drift_tab_delta = drift_tab_model.data(drift_tab_model.index(0, 4), QtCore.Qt.UserRole)
+    first_drift_tab_delta = drift_tab_model.data(
+        drift_tab_model.index(0, 4), QtCore.Qt.UserRole
+    )
     assert first_adj_tab_delta.dg() == first_drift_tab_delta.dg()
     assert first_adj_tab_delta.driftcorr == first_drift_tab_delta.driftcorr
     qtbot.keyClick(window, 'd', modifier=QtCore.Qt.ControlModifier)
@@ -92,10 +105,11 @@ def test_gui(qtbot, monkeypatch):
 
     # Verify gravnet input
     assert survey.results_model.rowCount() == 30
-    assert len(survey.adjustment.results_string()) == 12  # number of lines in Numpy output
+    assert (
+        len(survey.adjustment.results_string()) == 12
+    )  # number of lines in Numpy output
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
-
 
     test_workspace = 'test1.gsa'
     success = window.obsTreeModel.save_workspace(test_workspace)
@@ -123,9 +137,13 @@ def test_gui(qtbot, monkeypatch):
             sd0 = float(elems[-1])
 
     # Disable some observations, save workspace, clear and reload, verify that we get the same adjustment results
-    rows = [1,3,5]
+    rows = [1, 3, 5]
     for row in rows:
-        survey.delta_model.setData(survey.delta_model.index(row, 0), QtCore.Qt.Unchecked, role=QtCore.Qt.CheckStateRole)
+        survey.delta_model.setData(
+            survey.delta_model.index(row, 0),
+            QtCore.Qt.Unchecked,
+            role=QtCore.Qt.CheckStateRole,
+        )
 
     window.adjust_network()
     for line in survey.adjustment.results_string():
@@ -141,7 +159,6 @@ def test_gui(qtbot, monkeypatch):
 
     qtbot.wait(2000)
     window.workspace_clear(confirm=False)
-
 
     assert window.obsTreeModel.rowCount() == 0
 

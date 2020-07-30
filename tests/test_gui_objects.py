@@ -7,8 +7,16 @@ from test_fixture_pyqt import mainprog
 
 from data_analysis import compute_gravity_change
 from gui_objects import (
-    CoordinatesTable, AdjustOptions, SelectAbsg, DialogApplyTimeCorrection, DialogOverwrite,
-    DialogMeterType, DialogLoopProperties, GravityChangeTable, GravityChangeMap, LoopTimeThresholdDialog
+    CoordinatesTable,
+    AdjustOptions,
+    SelectAbsg,
+    DialogApplyTimeCorrection,
+    DialogOverwrite,
+    DialogMeterType,
+    DialogLoopProperties,
+    GravityChangeTable,
+    GravityChangeMap,
+    LoopTimeThresholdDialog,
 )
 from gsa_plots import PlotGravityChange
 
@@ -26,10 +34,17 @@ def test_PlotGravityChangeAndMap(qtbot, mainprog):
     change_plot = PlotGravityChange(change_table.dates, change_table.table)
     assert change_plot.figure is not None
     assert len(change_plot.figure.axes[0].get_children()[0].get_xdata()) == 2
-    assert np.abs(change_plot.figure.axes[0].get_children()[0].get_ydata()[1] + 6.8) < 0.01
+    assert (
+        np.abs(change_plot.figure.axes[0].get_children()[0].get_ydata()[1] + 6.8) < 0.01
+    )
 
-    win = GravityChangeMap(change_table.table, change_table.header, change_table.coords,
-                           change_table.full_table, change_table.full_header)
+    win = GravityChangeMap(
+        change_table.table,
+        change_table.header,
+        change_table.coords,
+        change_table.full_table,
+        change_table.full_header,
+    )
     assert win.points.get_offsets().min() == -106.6763032
     assert win.points.get_array().min() == -12.6
     assert len(win.drpReference) == 2
@@ -46,14 +61,17 @@ def test_PlotGravityChangeAndMap(qtbot, mainprog):
     win.plot()
     assert len(win.points.get_array()) == 35
 
+
 def test_LoopTimeThresholdDialog(qtbot):
     time_threshold_dialog = LoopTimeThresholdDialog()
+
     def on_timeout():
         qtbot.keyClick(time_threshold_dialog, QtCore.Qt.Key_Enter)
 
     QtCore.QTimer.singleShot(1000, on_timeout)
     result = time_threshold_dialog.exec_()
     assert time_threshold_dialog.dt_edit.dateTime().time().hour() == 8
+
 
 def test_ApplyTimeCorrection(qtbot):
     time_correction_dialog = DialogApplyTimeCorrection()
@@ -171,7 +189,9 @@ def test_coordinates_dialog(qtbot):
 
 def test_adjustmentoptions_dialog(qtbot, mainprog):
     obstreesurvey = mainprog.obsTreeModel.invisibleRootItem().child(0)
-    ao = AdjustOptions('test_survey', obstreesurvey.adjustment.adjustmentoptions, parent=mainprog)
+    ao = AdjustOptions(
+        'test_survey', obstreesurvey.adjustment.adjustmentoptions, parent=mainprog
+    )
     ao.show()
     assert ao.sigma_add_chk.checkState() == 0
     ao.calc_cal_coeff_checked_or_unchecked(2)
@@ -189,8 +209,14 @@ def test_selectabsg():
     sa = SelectAbsg('./test_data/field/Absolute/')
     sa.show()
     sa.load_button.click()
-    assert sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.CheckStateRole) == 0
+    assert (
+        sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.CheckStateRole)
+        == 0
+    )
     sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.UserRole).checked = 2
-    assert sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.CheckStateRole) == 2
+    assert (
+        sa.ProxyModel.data(sa.ProxyModel.index(0, 0), role=QtCore.Qt.CheckStateRole)
+        == 2
+    )
     sa.export_and_close()
     assert len(sa.new_datums) == 1

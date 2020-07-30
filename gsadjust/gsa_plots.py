@@ -3,40 +3,46 @@ gsa_plots.py
 ===============
 
 GSadjust plotting module.
---------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
-This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
-timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
-expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related
-material nor shall the fact of release constitute any such warranty. The software is provided on the condition that
-neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
-unauthorized use of the software.
+This software is preliminary, provisional, and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
 """
-import matplotlib
+import datetime as dt
+import threading
+import time
 
-matplotlib.use('qt5agg')
-import numpy as np
+import matplotlib
 import networkx as nx
-from PyQt5 import QtCore, QtWidgets
-from gui_objects import show_message
-from matplotlib.dates import num2date, date2num
-from matplotlib.figure import Figure
+import numpy as np
 from matplotlib.animation import TimedAnimation
-from matplotlib.lines import Line2D
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
-import time
-import threading
-import datetime as dt
+from matplotlib.dates import date2num, num2date
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+
+from gui_objects import show_message
+
+matplotlib.use('qt5agg')
 
 
 class PlotGravityChange(QtWidgets.QDialog):
-
     def __init__(self, dates, table, parent=None):
         super(PlotGravityChange, self).__init__(parent)
         self.setWindowTitle('GSadjust results')
-        self.setWhatsThis("Click on a line in the legend to toggle visibility. Right-click anywhere to " +
-                          "hide all lines. Middle-click to show all lines.")
+        self.setWhatsThis(
+            "Click on a line in the legend to toggle visibility. Right-click anywhere to "
+            "hide all lines. Middle-click to show all lines."
+        )
         self.figure = matplotlib.figure.Figure(figsize=(10, 6), dpi=100)
         self.canvas = FigureCanvas(self.figure)
         layout = QtWidgets.QVBoxLayout()
@@ -53,7 +59,7 @@ class PlotGravityChange(QtWidgets.QDialog):
         stations = table[0]
         ncol = int(np.ceil(nstations / 24))
         ax = self.figure.add_subplot(111)
-        right_margin = (1-ncol/8)
+        right_margin = 1 - ncol / 8
         self.figure.subplots_adjust(right=right_margin)
         for i in range(nstations):
             xdata, ydata = [], []
@@ -95,7 +101,7 @@ class InteractiveLegend(object):
 
     def _setup_connections(self):
         for artist in self.legend.texts + self.legend.legendHandles:
-            artist.set_picker(10) # 10 points tolerance
+            artist.set_picker(10)  # 10 points tolerance
 
         self.fig.canvas.mpl_connect('pick_event', self.on_pick)
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
@@ -159,7 +165,9 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
-        xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names = self.get_data(obsTreeModel)
+        xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names = self.get_data(
+            obsTreeModel
+        )
         self.plot(xdata_all, ydata_obs_all, ydata_adj_all, unique_datum_names)
 
     def get_data(self, obsTreeModel):
@@ -167,7 +175,9 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
         for i in range(obsTreeModel.rowCount()):
             survey = obsTreeModel.invisibleRootItem().child(i)
             for ii in range(survey.datum_model.rowCount()):
-                datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
+                datum = survey.datum_model.data(
+                    survey.datum_model.index(ii, 0), role=Qt.UserRole
+                )
                 datum_names.append(datum.station)
 
         unique_datum_names = list(set(datum_names))
@@ -178,9 +188,17 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
             for i in range(obsTreeModel.rowCount()):
                 survey = obsTreeModel.invisibleRootItem().child(i)
                 for ii in range(survey.datum_model.rowCount()):
-                    datum = survey.datum_model.data(survey.datum_model.index(ii, 0), role=QtCore.Qt.UserRole)
-                    if datum.station == name and datum.residual > -998 and datum.checked == 2:
-                        xdata.append(date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d')))
+                    datum = survey.datum_model.data(
+                        survey.datum_model.index(ii, 0), role=Qt.UserRole
+                    )
+                    if (
+                        datum.station == name
+                        and datum.residual > -998
+                        and datum.checked == 2
+                    ):
+                        xdata.append(
+                            date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
+                        )
                         ydata_obs.append(datum.g)
                         ydata_adj.append(datum.g + datum.residual)
             ydata_obs = [i - ydata_obs[0] for i in ydata_obs]
@@ -228,12 +246,21 @@ class PlotDatumCompare(QtWidgets.QDialog):
         diff, lbl = [], []
         for i in range(survey.datum_model.rowCount()):
             idx = survey.datum_model.index(i, 0)
-            input_datum = survey.datum_model.data(idx, role=QtCore.Qt.UserRole)
+            input_datum = survey.datum_model.data(idx, role=Qt.UserRole)
             input_name = input_datum.station
             for ii in range(results.rowCount()):
-                if results.data(results.index(ii, 0), role=QtCore.Qt.DisplayRole) == input_name:
-                    adj_g = results.data(results.index(ii, 1), role=QtCore.Qt.DisplayRole)
-                    diff.append(float(adj_g) - (input_datum.g - input_datum.meas_height * input_datum.gradient))
+                if (
+                    results.data(results.index(ii, 0), role=Qt.DisplayRole)
+                    == input_name
+                ):
+                    adj_g = results.data(results.index(ii, 1), role=Qt.DisplayRole)
+                    diff.append(
+                        float(adj_g)
+                        - (
+                            input_datum.g
+                            - input_datum.meas_height * input_datum.gradient
+                        )
+                    )
                     lbl.append(input_name)
 
         return diff, lbl
@@ -275,14 +302,18 @@ def dataSendLoop(addData_callbackFunc, data):
     dates = data[2]
     i = 0
 
-    while (True):
+    while True:
         if i > len(data[0]) - 1:
             time.sleep(2)
-            mySrc.data_signal.emit(float(y[0]), n[0], dates[0])  # <- Here you emit a signal!
+            mySrc.data_signal.emit(
+                float(y[0]), n[0], dates[0]
+            )  # <- Here you emit a signal!
             i = 0
         else:
             time.sleep(0.4)
-            mySrc.data_signal.emit(float(y[i]), n[i], dates[i])  # <- Here you emit a signal!
+            mySrc.data_signal.emit(
+                float(y[i]), n[i], dates[i]
+            )  # <- Here you emit a signal!
             i += 1
 
 
@@ -308,8 +339,12 @@ class PlotLoopAnimation(QtWidgets.QMainWindow):
         # Place the matplotlib figure
         self.figure = CustomFigCanvas(xlim, ylim, len(data[0]))
         self.LAYOUT_A.addWidget(self.figure, *(0, 1))
-        myDataLoop = threading.Thread(name='myDataLoop', target=dataSendLoop, daemon=True,
-                                      args=(self.addData_callbackFunc, data))
+        myDataLoop = threading.Thread(
+            name='myDataLoop',
+            target=dataSendLoop,
+            daemon=True,
+            args=(self.addData_callbackFunc, data),
+        )
         myDataLoop.start()
 
     def addData_callbackFunc(self, x, value, date):
@@ -346,7 +381,9 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         for i in range(n_head):
             self.lines_red.append(Line2D([], [], color='red', linewidth=4, alpha=a[i]))
         self.lines_gray = Line2D([], [], color='0.5', linewidth=1)
-        self.points_red = Line2D([], [], color='red', marker='o', markeredgecolor='r', linewidth=0)
+        self.points_red = Line2D(
+            [], [], color='red', marker='o', markeredgecolor='r', linewidth=0
+        )
 
         self.ax1.add_line(self.points_red)
         self.ax1.add_line(self.points_blue)
@@ -355,8 +392,14 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self.ax1.add_line(line)
         self.ax1.set_xlim(xlim[0], xlim[1])
         self.ax1.set_ylim(ylim[0], ylim[1])
-        self.title = self.ax1.text(0.15, 0.95, "", bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
-                                   transform=self.ax1.transAxes, ha="center")
+        self.title = self.ax1.text(
+            0.15,
+            0.95,
+            "",
+            bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
+            transform=self.ax1.transAxes,
+            ha="center",
+        )
         ratio = 1.0
         xleft, xright = self.ax1.get_xlim()
         ybottom, ytop = self.ax1.get_ylim()
@@ -368,7 +411,11 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         return iter(range(self.n.size))
 
     def _init_draw(self):
-        lines = [self.points_blue, self.points_red, self.lines_gray]  # , self.line1_tail]  #, self.line1_head]
+        lines = [
+            self.points_blue,
+            self.points_red,
+            self.lines_gray,
+        ]  # , self.line1_tail]  #, self.line1_head]
         for l in lines:
             l.set_data([], [])
         for l in self.lines_red:
@@ -401,7 +448,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             # cm = plt.get_cmap(MAP)
 
             for idx, line in enumerate(self.lines_red):
-                line.set_data(xHiRes[idx:idx + 2], yHiRes[idx:idx + 2])
+                line.set_data(xHiRes[idx : idx + 2], yHiRes[idx : idx + 2])
             #
             # self.ax1.set_color_cycle([cm(1. * i / (npointsHiRes - 1))
             #                      for i in range(npointsHiRes - 1)])
@@ -493,7 +540,7 @@ class PlotDgResidualHistogram(QtWidgets.QDialog):
             rlist = []
             for i in range(nrows):
                 idx = survey.delta_model.index(i, 8)
-                results = survey.delta_model.data(idx, role=QtCore.Qt.DisplayRole)
+                results = survey.delta_model.data(idx, role=Qt.DisplayRole)
                 d = float(results)
                 if d > -998:
                     rlist.append(float(results))
@@ -535,7 +582,8 @@ def plot_LOO_analysis(self, x_all, adj_g_all, obs_g_all, datums):
 
 class PlotNetworkGraph(QtWidgets.QDialog):
     """
-    Networkx plot of network. If shape == 'map', accurate coordinates must be present in the input file.
+    Networkx plot of network. If shape == 'map', accurate coordinates must be
+    present in the input file.
     :param shape: 'circular' or 'map'
     """
 
@@ -562,12 +610,14 @@ class PlotNetworkGraph(QtWidgets.QDialog):
 
         delta_model = self.survey.delta_model
         if delta_model.rowCount() == 0:
-            msg = show_message('Delta table is empty. Unable to plot network graph', 'Plot error')
+            msg = show_message(
+                'Delta table is empty. Unable to plot network graph', 'Plot error'
+            )
         else:
             for i in range(delta_model.rowCount()):
                 ind = delta_model.index(i, 0)
-                delta = delta_model.data(ind, role=QtCore.Qt.UserRole)
-                chk = delta_model.data(ind, QtCore.Qt.CheckStateRole)
+                delta = delta_model.data(ind, role=Qt.UserRole)
+                chk = delta_model.data(ind, Qt.CheckStateRole)
                 if chk == 2:
                     edges.add_edge(delta.sta1, delta.sta2, key=ind)
                 else:
@@ -626,8 +676,12 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             gs = [H.subgraph(c) for c in nx.connected_components(H)]
             for idx, g in enumerate(gs):
                 ax = self.figure.add_subplot(1, len(gs), idx + 1)
-                nx.draw_networkx_edges(g, pos, ax=ax, width=1, alpha=0.4, node_size=0, edge_color='k')
-                nx.draw_networkx_nodes(g, pos, ax=ax, node_color='w', alpha=0.4, with_labels=True)
+                nx.draw_networkx_edges(
+                    g, pos, ax=ax, width=1, alpha=0.4, node_size=0, edge_color='k'
+                )
+                nx.draw_networkx_nodes(
+                    g, pos, ax=ax, node_color='w', alpha=0.4, with_labels=True
+                )
                 nx.draw_networkx_labels(g, pos, ax=ax, font_color='orange')
                 ax.set_title('Networks are disconnected!')
                 # ax.autoscale(enable=True, axis='both', tight=True)
@@ -639,23 +693,52 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             for (u, v, d) in H.edges(data=True):
                 edgewidth.append(len(edges.get_edge_data(u, v)) * 2 - 1)
 
-            nx.draw_networkx_edges(H, pos, ax=ax, width=edgewidth, alpha=0.4, node_size=0, edge_color='k')
-            nx.draw_networkx_edges(disabled_edges, pos, ax=ax, width=1, alpha=0.4, node_size=0, edge_color='r')
-            nx.draw_networkx_nodes(H, pos, ax=ax, node_size=120, nodelist=datum_nodelist, node_color="k",
-                                   node_shape='^',
-                                   with_labels=True, alpha=0.8)
-            nx.draw_networkx_nodes(H, pos, ax=ax, node_size=120, nodelist=nondatum_nodelist, node_color="k",
-                                   node_shape='o',
-                                   with_labels=True, alpha=0.3)
+            nx.draw_networkx_edges(
+                H, pos, ax=ax, width=edgewidth, alpha=0.4, node_size=0, edge_color='k'
+            )
+            nx.draw_networkx_edges(
+                disabled_edges,
+                pos,
+                ax=ax,
+                width=1,
+                alpha=0.4,
+                node_size=0,
+                edge_color='r',
+            )
+            nx.draw_networkx_nodes(
+                H,
+                pos,
+                ax=ax,
+                node_size=120,
+                nodelist=datum_nodelist,
+                node_color="k",
+                node_shape='^',
+                with_labels=True,
+                alpha=0.8,
+            )
+            nx.draw_networkx_nodes(
+                H,
+                pos,
+                ax=ax,
+                node_size=120,
+                nodelist=nondatum_nodelist,
+                node_color="k",
+                node_shape='o',
+                with_labels=True,
+                alpha=0.3,
+            )
             nx.draw_networkx_labels(H, pos, ax=ax, font_color='r')
             self.format_map_axis(ax, self.shape)
             # ax.autoscale(enable=True, axis='both', tight=True)
 
         self.canvas.draw()
+
+
 #
 #
 # def plot_datum_comparison_timeseries(self):
 #     """
-#     Creating a PyQt window heree in preparation for eventually having a tabbed plot window with various diagnostics
+#     Creating a PyQt window heree in preparation for eventually having a tabbed
+#       plot window with various diagnostics
 #     """
 #     _ = FigureDatumComparisonTimeSeries(self.obsTreeModel)

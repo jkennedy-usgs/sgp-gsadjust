@@ -3,37 +3,44 @@ drift_roman.py
 ==============
 
 GSadjust code for calculating Roman drift correction.
---------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 The main data objects are:
 
-ChannelList: Holds lists of observed data values (g, tilt, temp, etc.). The lists are copied to ObsTreeStation objects.
+ChannelList: Holds lists of observed data values (g, tilt, temp, etc.). The
+lists are copied to ObsTreeStation objects.
 
-Adjustment | AdjustmentOptions } Adjustment Results: The first contains instances of the latter two. Holds the input
-  data, options, and results of the network adjustment.
+Adjustment | AdjustmentOptions } Adjustment Results: The first contains
+instances of the latter two. Holds the input data, options, and results of
+the network adjustment.
 
-Datum: Absolute-gravity observation or other reference for the relative-gravity network. At
-  least one datum is required for network adjustment.
+Datum: Absolute-gravity observation or other reference for the relative-gravity
+network. At least one datum is required for network adjustment.
 
-Delta: Relative-gravity difference calculated from two station occupations. May or may not include drift correction.
+Delta: Relative-gravity difference calculated from two station occupations.
+May or may not include drift correction.
 
-SimpleLoop | SimpleStation: This is a simplified representation of the main ObsTreeSurvey | ObsTreeLoop |
-  ObstreeStation PyQt datastore. The Simple... objects exist because PyQt objects can't be serialized, which is
-  mandatory for saving the workspace using pickle (or json).
+SimpleLoop | SimpleStation: This is a simplified representation of the main
+ObsTreeSurvey | ObsTreeLoop | ObstreeStation PyQt datastore. The Simple...
+objects exist because PyQt objects can't be serialized, which is mandatory for
+saving the workspace using pickle (or json).
 
 Tare: Represents an offset applied to the data
 
 TimeSeries: Used only for tide correction.
 
-This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
-timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
-expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related
-material nor shall the fact of release constitute any such warranty. The software is provided on the condition that
-neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
-unauthorized use of the software.
+This software is preliminary, provisional, and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty.
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
 """
 
 from data_objects import Delta
+
 
 def drift_roman(data, loop_name, time_threshold=None):
     # roman_dg_model = RomanTableModel()
@@ -52,10 +59,11 @@ def drift_roman(data, loop_name, time_threshold=None):
                     initial_g[station_name] = station.gmean()
                     break
     else:
-        # If time_threshold is specified (checked in the GUI) we need to build a list of possible initial g values
-        # for each station. Possible values are those occurring after a gap >= time_threshold (i.e., if there is a
-        # gap, reset the initial g that's subtracted from the measurements. This makes the lines start at y = 0 on
-        # the plots.
+        # If time_threshold is specified (checked in the GUI) we need to build
+        # a list of possible initial g values for each station. Possible values
+        # are those occurring after a gap >= time_threshold (i.e., if there is a
+        # gap, reset the initial g that's subtracted from the measurements.
+        # This makes the lines start at y = 0 on the plots.
         #
         # Builds the dictionary:
         # initial_g{key:station_name value:(time, g)}
@@ -73,8 +81,8 @@ def drift_roman(data, loop_name, time_threshold=None):
                 first_station = station
             initial_g[station_name] = initial_xy
 
-    # For each station in data, loop over all the other stations looking for two observations that bracket the
-    # first station
+    # For each station in data, loop over all the other stations looking for
+    # two observations that bracket the first station
     for station in data:
         for other_station in unique_stations:
             # Ignore it if its the same station
@@ -87,19 +95,26 @@ def drift_roman(data, loop_name, time_threshold=None):
                     iter_stations = iter(other_stations)
                     other1 = next(iter_stations)
                     for other2 in iter_stations:
-                        # Check for 3-point configuration (2 observations at other station bracket the initial obs)
+                        # Check for 3-point configuration (2 observations at
+                        # other station bracket the initial obs)
                         if other1.tmean() < station.tmean() < other2.tmean():
                             # Check that time_threshold is met, or not set
-                            if time_threshold is None or \
-                                    (other2.tmean() - other1.tmean()) * 1440 < time_threshold:
-                                delta = Delta(station,
-                                              (other1, other2),
-                                              delta_type='three_point',
-                                              loop=loop_name)
+                            if (
+                                time_threshold is None
+                                or (other2.tmean() - other1.tmean()) * 1440
+                                < time_threshold
+                            ):
+                                delta = Delta(
+                                    station,
+                                    (other1, other2),
+                                    delta_type='three_point',
+                                    loop=loop_name,
+                                )
                                 sta2_dg = other2.gmean() - other1.gmean()
                                 # this is the drift correction
                                 time_prorate = (station.tmean() - other1.tmean()) / (
-                                        other2.tmean() - other1.tmean())
+                                    other2.tmean() - other1.tmean()
+                                )
                                 # Look for previous occupation at same station. If there is a break > time_threshold
                                 # between the previous and current occupation, we need to account for the shift in
                                 # initial g. Each station has a unique initial g (that might change,
@@ -122,11 +137,20 @@ def drift_roman(data, loop_name, time_threshold=None):
                                     other_initial_g = initial_g[other1.station_name]
                                     station_initial_g = initial_g[station.station_name]
 
-                                vert_lines.append([(station.tmean(), station.tmean()),
-                                                   ((other_initial_g -
-                                                     other1.gmean() -
-                                                     (sta2_dg * time_prorate)) * -1,
-                                                    station.gmean() - station_initial_g)])
+                                vert_lines.append(
+                                    [
+                                        (station.tmean(), station.tmean()),
+                                        (
+                                            (
+                                                other_initial_g
+                                                - other1.gmean()
+                                                - (sta2_dg * time_prorate)
+                                            )
+                                            * -1,
+                                            station.gmean() - station_initial_g,
+                                        ),
+                                    ]
+                                )
                                 deltas.append(delta)
                                 # roman_dg_model.insertRows(delta, 0)
                         other1 = other2

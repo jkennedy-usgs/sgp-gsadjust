@@ -3,22 +3,28 @@ a10.py
 ===============
 
 GSadjust object for absolute gravity observation
---------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 Used to parse .project.txt files generated my Micro-g absolute-gravity meters
 
-This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
-timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
-expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related
-material nor shall the fact of release constitute any such warranty. The software is provided on the condition that
-neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
-unauthorized use of the software.
+This software is preliminary, provisional, and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
 """
 
 import re
 
 
 class A10(object):
+    """
+    GSadjust object for absolute gravity observation
+    """
+
     def __init__(self, fn=None):
         self.created = None
         self.project = None
@@ -53,33 +59,38 @@ class A10(object):
             self.read_project_dot_txt(fn)
 
     def read_project_dot_txt(self, filename):
+        """
+        Read an A10 project.txt file, storing the result on this object.
+        """
         dtf = False
         olf = False
         skip_grad = False
         in_comments = 0
         project_file = open(filename, 'r', encoding='unicode_escape')
         data_array = []  # ['a']*32
-        # Look for these words in the g file
-        tags = re.compile(r'Project|Name|Created|Setup' +
-                          r'|Transfer|Actual|Date|Time|TimeOffset|Nominal|Red' +
-                          r'|Blue|Scatter|SetsColl|SetsProc|Precision|Total_unc')
+        # Look for these words in the g file.
+        tags = re.compile(
+            r'Project|Name|Created|Setup'
+            r'|Transfer|Actual|Date|Time|TimeOffset|Nominal|Red'
+            r'|Blue|Scatter|SetsColl|SetsProc|Precision|Total_unc'
+        )
         # 'Lat' is special because there are three data on the same line:
         # (Lat, Long, Elev)
         lat_tag = re.compile(r'Lat')
 
-        # 'Polar' is also special, for the same reason
+        # 'Polar' is also special, for the same reason.
         pol_tag = re.compile(r'Polar')
 
         version_tag = re.compile(r'Version')
 
-        # Apparently using a delta file is optional, it's not always written to the .project file
+        # Apparently using a delta file is optional, it's not always written to the .project file.
         delta_tag = re.compile(r'DFFile')
         ol_tag = re.compile(r'OLFile')
         rub_tag = re.compile(r'RubFrequency')
         grav_tag = re.compile(r'Grv')
         grad_tag = re.compile(r'Gradient')
 
-        # This one, because "Gradient:" is repeated exactly in this section
+        # This one, because "Gradient:" is repeated exactly in this section.
         unc_tag = re.compile(r'Uncertainties')
 
         # This deals with multi-line comments
@@ -91,7 +102,7 @@ class A10(object):
             line = line.strip()
             line = line.replace('\n\n', '\n')
             line = line.replace(":  ", ": ")
-            # Repeat to take care of ":   " (three spaces)
+            # Repeat to take care of ":   " (three spaces).
             line = line.replace(":  ", ": ")
             line = line.replace(":  ", ": ")
             line = line.replace("g Acquisition Version", "Acq")
@@ -118,7 +129,8 @@ class A10(object):
             line = line.replace("Gravity:", "Grv:")
             line = line.replace("Number of Sets Collected:", "SetsColl")
             line = line.replace("Number of Sets Processed:", "SetsProc")
-            line = line.replace("Polar Motion:", "PolMotC")  # This is the PM error, not the values
+            # This is the PM error, not the values.
+            line = line.replace("Polar Motion:", "PolMotC")
             line = line.replace("Barometric Pressure:", "")
             line = line.replace("System Setup:", "")
             line = line.replace("Total Uncertainty:", "Total_unc")
@@ -127,7 +139,7 @@ class A10(object):
             line = line.replace(",", "")
             line_elements = line.split(" ")
 
-            # Look for tags
+            # Look for tags.
             tags_found = re.search(tags, line)
             lat_tag_found = re.search(lat_tag, line)
             pol_tag_found = re.search(pol_tag, line)
@@ -147,7 +159,7 @@ class A10(object):
                 if not skip_grad:
                     data_array.append(line_elements[1])
 
-            # Old g versions don't output Time Offset, which comes right before gravity
+            # Old g versions don't output Time Offset, which comes right before gravity.
             if grav_tag_found is not None:
                 if version < 5:
                     data_array.append('-999')
@@ -188,9 +200,9 @@ class A10(object):
                 # This accomodates old versions of g. If these data are to be published,
                 # though, they should be reprocessed in a more recent version.
                 if version < 5:
-                    data_array.append('-999')  # Setup Height
-                    data_array.append('-999')  # Transfer Height
-                    data_array.append('-999')  # Actual Height
+                    data_array.append('-999')  # Setup Height.
+                    data_array.append('-999')  # Transfer Height.
+                    data_array.append('-999')  # Actual Height.
 
             if pol_tag_found is not None:
                 data_array.append(line_elements[1])
@@ -208,7 +220,7 @@ class A10(object):
 
         data_array.append(comments)
 
-        # Old g versions don't output transfer height correction
+        # Old g versions don't output transfer height correction.
         if version < 5:
             data_array.append('-999')
         project_file.close()
@@ -232,7 +244,9 @@ class A10(object):
         self.blue = data_array[16]
         self.red = data_array[17]
         date_elems = data_array[18].split('/')
-        self.date = str(int(date_elems[2]) + 2000) + '-' + date_elems[0] + '-' + date_elems[1]
+        self.date = (
+            str(int(date_elems[2]) + 2000) + '-' + date_elems[0] + '-' + date_elems[1]
+        )
         self.time = data_array[19]
         self.timeoffset = data_array[20]
         self.gravity = data_array[21]

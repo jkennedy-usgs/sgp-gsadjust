@@ -3,26 +3,69 @@ data_import.py
 ==============
 
 GSadjust code for importing relative-gravity meter data.
---------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
-This software is preliminary, provisional, and is subject to revision. It is being provided to meet the need for
-timely best science. The software has not received final approval by the U.S. Geological Survey (USGS). No warranty,
-expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related
-material nor shall the fact of release constitute any such warranty. The software is provided on the condition that
-neither the USGS nor the U.S. Government shall be held liable for any damages resulting from the authorized or
-unauthorized use of the software.
+This software is preliminary, provisional, and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
 """
 
 import datetime as dt
+
 from matplotlib.dates import date2num
+
 from data_objects import ChannelList, Datum
+from utils import index_or_none
+
+READ_HANDLERS = {
+    'csv': read_csv,
+    'CG5': read_cg5,
+    'Burris': read_burris,
+    'CG6': read_cg6,
+    'CG6Tsoft': read_cg6tsoft,
+}
+
+
+class InvalidMeterException(Exception):
+    """
+    A loader for an unknown meter type was requested.
+    """
+
+    pass
+
+
+def file_reader(meter_type, fh):
+    """
+    Generic file reader, which given a meter type and a file handle will
+    pass loading off to an appropriate reader, returning the result.
+
+    :param meter_type: the type of data we are loading.
+    :param fh: open file handle to the file to load.
+    :return: ChannelList
+    """
+    read_fn = READ_HANDLERS.get(meter_type)
+    if read_fn is None:
+        raise InvalidMeterException
+
+    # We have a valid reader, return the contents of the file.
+    data = read_fn(fh)
+    return data
 
 
 def read_csv(fh):
+
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
 
+    # FIXME: Moved here from load method, assumed to skip first line, but there
+    # was already a readline here.
+    _ = fh.readline()
     _ = fh.readline()
     for orig_line in fh:
         try:
@@ -44,23 +87,30 @@ def read_csv(fh):
             all_survey_data.lat.append(float(vals_temp3[1]))
             all_survey_data.long.append(float(vals_temp3[2]))
             all_survey_data.elev.append(float(vals_temp3[3]))
-            all_survey_data.raw_grav.append(float(vals_temp3[4]) * 1000. -
-                                            float(vals_temp3[9]) * 1000.)  # convert to microGal; remove etc
+            all_survey_data.raw_grav.append(
+                float(vals_temp3[4]) * 1000.0 - float(vals_temp3[9]) * 1000.0
+            )  # convert to microGal; remove etc
             all_survey_data.tare.append(0)
-            all_survey_data.sd.append(float(vals_temp3[5]) * 1000.)
+            all_survey_data.sd.append(float(vals_temp3[5]) * 1000.0)
             all_survey_data.tiltx.append(float(vals_temp3[6]))
             all_survey_data.tilty.append(float(vals_temp3[7]))
             all_survey_data.temp.append(float(vals_temp3[8]))
-            all_survey_data.etc.append(float(vals_temp3[9]) * 1000.)
-            all_survey_data.meter_etc.append(float(vals_temp3[9]) * 1000.)
+            all_survey_data.etc.append(float(vals_temp3[9]) * 1000.0)
+            all_survey_data.meter_etc.append(float(vals_temp3[9]) * 1000.0)
             all_survey_data.dur.append(int(vals_temp3[10]))
             all_survey_data.rej.append(int(vals_temp3[11]))
-            all_survey_data.t.append(date2num(dt.datetime(int(vals_temp1[-1]),
-                                                          int(vals_temp4[-1]),
-                                                          int(vals_temp1[-2]),
-                                                          int(vals_temp3[-1]),
-                                                          int(vals_temp2[-2]),
-                                                          int(vals_temp4[0]))))
+            all_survey_data.t.append(
+                date2num(
+                    dt.datetime(
+                        int(vals_temp1[-1]),
+                        int(vals_temp4[-1]),
+                        int(vals_temp1[-2]),
+                        int(vals_temp3[-1]),
+                        int(vals_temp2[-2]),
+                        int(vals_temp4[0]),
+                    )
+                )
+            )
             if meter:
                 all_survey_data.meter.append(meter)
             else:
@@ -83,6 +133,11 @@ def read_csv(fh):
 
 
 def read_cg5(fh):
+    """
+    Read CG5 formatted file, from given open file handle.
+    :param fh: open file handle, of type CG5
+    :return: ChannelList
+    """
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
@@ -120,23 +175,30 @@ def read_cg5(fh):
             s = vals_temp3[1].replace('.0000000', '')
             all_survey_data.station.append(s.strip())
             all_survey_data.elev.append(float(vals_temp3[2]))
-            all_survey_data.raw_grav.append(float(vals_temp3[3]) * 1000. -
-                                            float(vals_temp3[8]) * 1000.)  # convert to microGal; remove tide correction
+            all_survey_data.raw_grav.append(
+                float(vals_temp3[3]) * 1000.0 - float(vals_temp3[8]) * 1000.0
+            )  # convert to microGal; remove tide correction
             all_survey_data.tare.append(0)
-            all_survey_data.sd.append(float(vals_temp3[4]) * 1000.)
+            all_survey_data.sd.append(float(vals_temp3[4]) * 1000.0)
             all_survey_data.tiltx.append(float(vals_temp3[5]))
             all_survey_data.tilty.append(float(vals_temp3[6]))
             all_survey_data.temp.append(float(vals_temp3[7]))
-            all_survey_data.etc.append(float(vals_temp3[8]) * 1000.)
-            all_survey_data.meter_etc.append(float(vals_temp3[8]) * 1000.)
+            all_survey_data.etc.append(float(vals_temp3[8]) * 1000.0)
+            all_survey_data.meter_etc.append(float(vals_temp3[8]) * 1000.0)
             all_survey_data.dur.append(int(vals_temp3[9]))
             all_survey_data.rej.append(int(vals_temp3[10]))
-            all_survey_data.t.append(date2num(dt.datetime(int(vals_temp4[3]),
-                                                          int(vals_temp1[1]),
-                                                          int(vals_temp1[2]),
-                                                          int(vals_temp3[11]),
-                                                          int(vals_temp2[1]),
-                                                          int(vals_temp4[0]))))
+            all_survey_data.t.append(
+                date2num(
+                    dt.datetime(
+                        int(vals_temp4[3]),
+                        int(vals_temp1[1]),
+                        int(vals_temp1[2]),
+                        int(vals_temp3[11]),
+                        int(vals_temp2[1]),
+                        int(vals_temp4[0]),
+                    )
+                )
+            )
             if meter:
                 all_survey_data.meter.append(meter)
             else:
@@ -159,6 +221,12 @@ def read_cg5(fh):
 
 
 def read_burris(fh):
+    """
+    Read Burris formatted file, from given open file handle.
+    :param fh: open file handle, of type Burris
+    :return: ChannelList
+    """
+
     i = 0
     all_survey_data = ChannelList()
 
@@ -215,26 +283,33 @@ def read_burris(fh):
             all_survey_data.lat.append(float(vals_temp[c_lat]))
             all_survey_data.long.append(float(vals_temp[c_long]))
             # remove Earth tide correction; it's added in using the @grav property
-            all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000. -
-                                            float(vals_temp[c_tide]) * 1000.)
+            all_survey_data.raw_grav.append(
+                float(vals_temp[c_grav]) * 1000.0 - float(vals_temp[c_tide]) * 1000.0
+            )
             all_survey_data.tare.append(0)
-            all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.)
-            all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.)
+            all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.0)
+            all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.0)
             all_survey_data.dial.append(float(vals_temp[c_dial]))
             all_survey_data.feedback.append(float(vals_temp[c_feedback]))
             all_survey_data.sd.append(-999)  # Burris doesn't ouput SD, tiltx, tilty
             all_survey_data.meter.append(vals_temp[c_meter])
-            all_survey_data.tiltx.append(float(vals_temp[c_tilt]) * 1000.)
-            all_survey_data.tilty.append(0.)
-            all_survey_data.temp.append(0.)
+            all_survey_data.tiltx.append(float(vals_temp[c_tilt]) * 1000.0)
+            all_survey_data.tilty.append(0.0)
+            all_survey_data.temp.append(0.0)
             all_survey_data.dur.append(5)
             all_survey_data.rej.append(5)
-            all_survey_data.t.append(date2num(dt.datetime(int(date_temp[0]),
-                                                          int(date_temp[1]),
-                                                          int(date_temp[2]),
-                                                          int(time_temp[0]),
-                                                          int(time_temp[1]),
-                                                          int(time_temp[2]))))
+            all_survey_data.t.append(
+                date2num(
+                    dt.datetime(
+                        int(date_temp[0]),
+                        int(date_temp[1]),
+                        int(date_temp[2]),
+                        int(time_temp[0]),
+                        int(time_temp[1]),
+                        int(time_temp[2]),
+                    )
+                )
+            )
             all_survey_data.keepdata.append(1)
         except IndexError as e:
             e.i = i
@@ -249,6 +324,12 @@ def read_burris(fh):
 
 
 def read_cg6(fh):
+    """
+    Read CG6 formatted file, from given open file handle.
+    :param fh: open file handle, of type CG6
+    :return: ChannelList
+    """
+
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
@@ -277,29 +358,36 @@ def read_cg6(fh):
             time_temp = vals_temp[c_time].split(':')
 
             # fill object properties:
-            all_survey_data.line.append(0.)
+            all_survey_data.line.append(0.0)
             all_survey_data.station.append(vals_temp[0].strip())
             all_survey_data.elev.append(float(vals_temp[c_elev]))
             all_survey_data.lat.append(float(vals_temp[c_lat]))
             all_survey_data.long.append(float(vals_temp[c_long]))
-            all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000. -
-                                            float(vals_temp[c_tide]) * 1000.)
+            all_survey_data.raw_grav.append(
+                float(vals_temp[c_grav]) * 1000.0 - float(vals_temp[c_tide]) * 1000.0
+            )
             all_survey_data.tare.append(0)
-            all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.)
-            all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.)
-            all_survey_data.sd.append(float(vals_temp[c_sd]) * 1000.)
+            all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.0)
+            all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.0)
+            all_survey_data.sd.append(float(vals_temp[c_sd]) * 1000.0)
             all_survey_data.meter.append(meter)
-            all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.)
-            all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.)
-            all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.)
+            all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.0)
+            all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.0)
+            all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.0)
             all_survey_data.dur.append(int(vals_temp[c_dur]))
             all_survey_data.rej.append(5)
-            all_survey_data.t.append(date2num(dt.datetime(int(date_temp[0]),
-                                                          int(date_temp[1]),
-                                                          int(date_temp[2]),
-                                                          int(time_temp[0]),
-                                                          int(time_temp[1]),
-                                                          int(time_temp[2]))))
+            all_survey_data.t.append(
+                date2num(
+                    dt.datetime(
+                        int(date_temp[0]),
+                        int(date_temp[1]),
+                        int(date_temp[2]),
+                        int(time_temp[0]),
+                        int(time_temp[1]),
+                        int(time_temp[2]),
+                    )
+                )
+            )
             if meter:
                 all_survey_data.meter.append(meter)
             else:
@@ -322,6 +410,12 @@ def read_cg6(fh):
 
 
 def read_cg6tsoft(fh):
+    """
+    Read CG6TSoft formatted file, from given open file handle.
+    :param fh: open file handle, of type CG6TSoft
+    :return: ChannelList
+    """
+
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
@@ -344,7 +438,6 @@ def read_cg6tsoft(fh):
                 continue
 
             # Numbers are columns in the imported file
-            c_year, c_month, c_day, c_hour, c_minute, c_second = 0, 1, 2, 3, 4, 5
             c_tiltx, c_tilty = 12, 13
             c_tide, c_tilt, c_temp = 19, 18, 14
             c_lat, c_long, c_elev = 7, 8, 9
@@ -356,21 +449,23 @@ def read_cg6tsoft(fh):
                 all_survey_data.elev.append(float(vals_temp[c_elev]))
                 all_survey_data.lat.append(float(vals_temp[c_lat]))
                 all_survey_data.long.append(float(vals_temp[c_long]))
-                all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000.)
+                all_survey_data.raw_grav.append(float(vals_temp[c_grav]) * 1000.0)
                 all_survey_data.tare.append(0)
-                all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.)
-                all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.)
-                all_survey_data.sd.append(-999)  # SD not exported in Tsoft format?? It is in regular format
+                all_survey_data.etc.append(float(vals_temp[c_tide]) * 1000.0)
+                all_survey_data.meter_etc.append(float(vals_temp[c_tide]) * 1000.0)
+                all_survey_data.sd.append(
+                    -999
+                )  # SD not exported in Tsoft format?? It is in regular format
                 all_survey_data.meter.append(meter)
-                all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.)
-                all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.)
-                all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.)
-                all_survey_data.t.append(date2num(dt.datetime(int(vals_temp[c_year]),
-                                                              int(vals_temp[c_month]),
-                                                              int(vals_temp[c_day]),
-                                                              int(vals_temp[c_hour]),
-                                                              int(vals_temp[c_minute]),
-                                                              int(vals_temp[c_second]))))
+                all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.0)
+                all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.0)
+                all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.0)
+                all_survey_data.t.append(
+                    date2num(
+                        # cols 0, 1, 2, 3, 4, 5 = year, month, day, hour, minute, second
+                        dt.datetime(int(i) for i in vals_temp[:6])
+                    )
+                )
                 if meter:
                     all_survey_data.meter.append(meter)
                 else:
@@ -399,8 +494,13 @@ def read_cg6tsoft(fh):
 
 def import_abs_g_complete(fname):
     """
-    Imports absolute gravity data as output by A10_parse.py. Adds rows to datum_model
+    Imports absolute gravity data as output by A10_parse.py. 
+    Adds rows to datum_model
+
+    :param fname: filename to open
+    :return: a list of Datum objects
     """
+
     datums = list()
 
     with open(fname, 'r') as fh:
@@ -408,20 +508,19 @@ def import_abs_g_complete(fname):
         # Read header line
         line = fh.readline()
         parts = [p.strip() for p in line.split("\t")]
-        g_idx, n_idx, s_idx, d_idx, th_idx = None, None, None, None, None
-        if 'Gravity' in parts:
-            g_idx = parts.index('Gravity')
-        if 'Station Name' in parts:
-            n_idx = parts.index('Station Name')
-        if 'Set Scatter' in parts:
-            s_idx = parts.index('Set Scatter')
-        if 'Date' in parts:
-            d_idx = parts.index('Date')
-        if 'Transfer Height' in parts:
-            th_idx = parts.index('Transfer Height')
+
+        g_idx = index_or_none(parts, 'Gravity')
+        n_idx = index_or_none(parts, 'Station Name')
+        s_idx = index_or_none(parts, 'Set Scatter')
+        d_idx = index_or_none(parts, 'Date')
+        th_idx = index_or_none(parts, 'Transfer Height')
+
         if 'Gradient' in parts:
             gr_idx = parts.index('Gradient')
 
+            # FIXME: This looks like it might be incorrectly indented? If not
+            # the index_or_none part above it can be moved in here, since we
+            # do nothing if there is no Gradient in parts.
             while True:
                 line = fh.readline()
                 if not line:
@@ -429,16 +528,27 @@ def import_abs_g_complete(fname):
                 try:
                     if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
                         parts = line.split("\t")
-                        datum = Datum(parts[n_idx], g=float(parts[g_idx]), sd=float(parts[s_idx]), date=parts[d_idx],
-                                      meas_height=float(parts[th_idx]), gradient=float(parts[gr_idx]))
+                        datum = Datum(
+                            parts[n_idx],
+                            g=float(parts[g_idx]),
+                            sd=float(parts[s_idx]),
+                            date=parts[d_idx],
+                            meas_height=float(parts[th_idx]),
+                            gradient=float(parts[gr_idx]),
+                        )
                         datums.append(datum)
                 except ValueError:
                     pass  # Log this error?
     return datums
 
+
 def import_abs_g_simple(fname):
     """
-    Imports absolute data from three column file, station g stdev. Adds rows to datum_model
+    Imports absolute data from three column file, station g stdev.
+    Adds rows to datum_model
+
+    :param fname: filename to open
+    :return: a list of Datum objects
     """
     datums = list()
     with open(fname, 'r') as fh:

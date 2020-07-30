@@ -1,4 +1,5 @@
 import sys, os
+
 code_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, code_path + '/../gsadjust')
 sys.path.insert(0, code_path)
@@ -10,12 +11,14 @@ import pickle
 from PyQt5 import QtGui, QtCore
 from tab_drift import TabDrift
 
+
 @pytest.fixture
 def test_channellist_fixture(request):
     fname = request.param  #'channellist_testobj.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
+
 
 @pytest.fixture
 def list_of_deltas():
@@ -32,13 +35,14 @@ def list_of_deltas():
     ots, dms, _ = GSadjust.MainProg.obsTreeModel.load_workspace(fname)
     survey = ots[0]
     # survey = app.obsTreeModel.invisibleRootItem().child(0)
-    loop = survey.child(0,0)
+    loop = survey.child(0, 0)
     delta_model = loop.delta_model
     for i in range(delta_model.rowCount()):
-        idx = delta_model.index(i,0)
+        idx = delta_model.index(i, 0)
         delta_list.append(delta_model.data(idx, role=QtCore.Qt.UserRole))
     jeff = 1
     return delta_list
+
 
 @pytest.fixture
 def test_twostations_fixture(request):
@@ -54,6 +58,7 @@ def test_twostations_fixture(request):
     obstreesurvey.populate(cl, name='test')
     loop = obstreesurvey.child(0)
     return (loop.child(0), loop.child(1))
+
 
 @pytest.fixture
 def test_threestations_fixture(request):
@@ -71,6 +76,7 @@ def test_threestations_fixture(request):
     loop = obstreesurvey.child(0)
     return (loop.child(idxs[0]), loop.child(idxs[1]), loop.child(idxs[2]))
 
+
 @pytest.fixture
 def channellist():
     fname = './tests/channellist_burris.p'
@@ -78,10 +84,12 @@ def channellist():
         cl = pickle.load(f)
     return cl
 
+
 @pytest.fixture
 def obstreestation():
-    a = pyqt_models.ObsTreeStation(channellist(),'jeff',1)
+    a = pyqt_models.ObsTreeStation(channellist(), 'jeff', 1)
     return a
+
 
 @pytest.fixture
 def obstreesurvey():
@@ -93,9 +101,11 @@ def obstreesurvey():
     survey.populate(data)
     return survey
 
+
 @pytest.fixture
 def obstreesurvey_with_results(obstreesurvey):
     from data_objects import Datum
+
     obstreeloop = obstreesurvey.child(0)
     data = obstreeloop.checked_stations()
     model = TabDrift.calc_none_dg(data, 'test')
@@ -107,6 +117,7 @@ def obstreesurvey_with_results(obstreesurvey):
     survey.run_inversion()
     return survey
 
+
 @pytest.fixture
 def obstreemodel(obstreesurvey):
     model = pyqt_models.ObsTreeModel()
@@ -114,12 +125,16 @@ def obstreemodel(obstreesurvey):
     assert type(model) is pyqt_models.ObsTreeModel
     return model
 
+
 @pytest.fixture
 def obstreemodel_with_results(obstreesurvey_with_results):
     model = pyqt_models.ObsTreeModel()
-    model.appendRow([obstreesurvey_with_results, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
+    model.appendRow(
+        [obstreesurvey_with_results, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')]
+    )
     assert type(model) is pyqt_models.ObsTreeModel
     return model
+
 
 @pytest.fixture
 def mainprog():

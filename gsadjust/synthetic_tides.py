@@ -7,10 +7,12 @@ sythetic_tides.py
 Module for tides calculations functions (solid-earth and ocean loading).
 ------------------------------------------------------------------------
 
-Written by B. Hector as part of PyGrav. Adapted from Matlab(TM) codes by R. Cattin:
+Written by B. Hector as part of PyGrav.
+Adapted from Matlab(TM) codes by R. Cattin:
 
-Cattin, R., Mazzotti, S., and Baratin, L.-M., 2015, GravProcess: An easy-to-use MATLAB software to process campaign
-gravity data and evaluate the associated uncertainties: Computers & Geosciences, v. 81, p. 20–27,
+Cattin, R., Mazzotti, S., and Baratin, L.-M., 2015, GravProcess: An easy-to-use
+MATLAB software to process campaign gravity data and evaluate the associated
+uncertainties: Computers & Geosciences, v. 81, p. 20–27,
 doi: 10.1016/j.cageo.2015.04.005.
 
 to be modified or checked:
@@ -19,12 +21,15 @@ to be modified or checked:
 - beware, in the Matlab code, gl is never assigned which makes the code to fail
   in the detail, we find somewhere g1=g; which should (certainly) be gl
 
-Except for minor formatting changes, this software is provided as written by B. Hector. It should be considered
-preliminary or provisional and is subject to revision. It is being provided to meet the need for timely best science.
-The software has not received final approval by the U.S. Geological Survey (USGS). No warranty, expressed or implied,
-is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the
-fact of release constitute any such warranty. The software is provided on the condition that neither the USGS nor the
-U.S. Government shall be held liable for any damages resulting from the authorized or unauthorized use of the
+Except for minor formatting changes, this software is provided as written by
+B. Hector. It should be considered preliminary or provisional and is subject to
+revision. It is being provided to meet the need for timely best science.
+The software has not received final approval by the U.S. Geological Survey
+(USGS). No warranty, expressed or implied, is made by the USGS or the U.S.
+Government as to the functionality of the software and related material nor
+shall the fact of release constitute any such warranty. The software is provided
+on the condition that neither the USGS nor the U.S. Government shall be held
+liable for any damages resulting from the authorized or unauthorized use of the
 software.
 """
 import math
@@ -111,7 +116,7 @@ def earth_tide(theta, lamda, gtime):
     HH = temp_time.hour
     MM = temp_time.minute
     SS = temp_time.second
-    # Initialize variables          
+    # Initialize variables
     irl = 1
     iflag = 0
     ntotl = 1
@@ -120,20 +125,29 @@ def earth_tide(theta, lamda, gtime):
     ntw = [1, 0, 0]  # ' !!!
     ioptn = 't'
     ielement = 0
-    #	data statements for input and output unit numbers (on terminal I/O)
+    # 	data statements for input and output unit numbers (on terminal I/O)
     inun = 5
     ioun = 6
     nptpb = 6
 
     yr1 = YY - 1900
     day1 = date2num(datetime(YY, MO, DD))
-    #	find times in hours from 0 hr, 1 jan 1900
+    # 	find times in hours from 0 hr, 1 jan 1900
     # matlab:
-    ts = SS / 3600 + MM / 60 + HH + 24 * (day1 - 1) + 8760 * yr1 + 24 * np.fix((yr1 - 1) / 4)
+    ts = (
+        SS / 3600
+        + MM / 60
+        + HH
+        + 24 * (day1 - 1)
+        + 8760 * yr1
+        + 24 * np.fix((yr1 - 1) / 4)
+    )
     # python:
     dj = date_to_julian_day(datetime(YY, MO, DD))
     djref = date_to_julian_day(datetime(1899, 12, 31, 0, 0, 0))
-    delta_dj = dj - djref  # difference in days from current date (0hr) to 0hr, 1 jan 1900
+    delta_dj = (
+        dj - djref
+    )  # difference in days from current date (0hr) to 0hr, 1 jan 1900
     delta_djhr = float(delta_dj) * 24.0 + HH - 12.0 + MM / 60.0 + SS / 3600.0
     te = ts + (NPT - 1) * deltat / 3600
     d = deltat / 3600
@@ -154,7 +168,7 @@ def earth_tide(theta, lamda, gtime):
     # calculate normalized gravity tides
     [grav, tilt, strain, gdc] = elastd(ntw)
 
-    gravtide = 1.e5 * grav
+    gravtide = 1.0e5 * grav
     # convert m/s² to mgal: 1m/s² = 100 gal = 100 000 mgal
 
     iflag = 1
@@ -166,33 +180,41 @@ def earth_tide(theta, lamda, gtime):
 
 def sph(grlat, elong, ht):
     """
-    for a point at geographical north latitude grlat, east longitude elong (in degrees), and height ht (in meters),
-    finds geocentric position and local g using formulae for a spheroid
+    for a point at geographical north latitude grlat, east longitude elong 
+    (in degrees), and height ht (in meters), finds geocentric position and local 
+    g using formulae for a spheroid
     """
 
-    # Initialize Variables 
+    # Initialize Variables
     global cth, sth, clg, slg, dif, radn, gl  # common/obs/
     gn = 9.798277692
-    ae = 6378140.
+    ae = 6378140.0
     f = 0.00335281
     rm = 0.00344978
     dr = 0.01745329252
 
     clong = np.cos(elong * dr)
     slong = np.sin(elong * dr)
-    # latitude difference 
-    dvert = f * (1. + .5 * f) * np.sin(2. * grlat * dr) - .5 * f * f * np.sin(4. * grlat * dr)
-    gcclat = (3.1415926535898 / 2.) - (grlat * dr - dvert)
+    # latitude difference
+    dvert = f * (1.0 + 0.5 * f) * np.sin(2.0 * grlat * dr) - 0.5 * f * f * np.sin(
+        4.0 * grlat * dr
+    )
+    gcclat = (3.1415926535898 / 2.0) - (grlat * dr - dvert)
     cthet = np.cos(gcclat)
     sthet = np.sin(gcclat)
-    # geocentric radius   
+    # geocentric radius
     radn = 1 - f * (cthet ** 2) * (1 + 1.5 * f * (sthet ** 2))
-    # formulae for g are from jeffreys, 4.022 and 4.023      
-    g = gn * (1 + f - 1.5 * rm + f * (f - (27 / 14) * rm) + (2.5 * rm - f - f * (f - \
-                                                                                 (39 / 14) * rm)) * (cthet ** 2) - (
-                          f / 2) * (7 * f - 15. * rm) * ((cthet * sthet) ** 2))
-    # free air correction 
-    g = g - g * (2. * ht * (1. + f + rm - 2. * f * (cthet ** 2)) / ae)
+    # formulae for g are from jeffreys, 4.022 and 4.023
+    g = gn * (
+        1
+        + f
+        - 1.5 * rm
+        + f * (f - (27 / 14) * rm)
+        + (2.5 * rm - f - f * (f - (39 / 14) * rm)) * (cthet ** 2)
+        - (f / 2) * (7 * f - 15.0 * rm) * ((cthet * sthet) ** 2)
+    )
+    # free air correction
+    g = g - g * (2.0 * ht * (1.0 + f + rm - 2.0 * f * (cthet ** 2)) / ae)
 
     # Conversion Here for Globals
     cth = cthet
@@ -244,25 +266,25 @@ def ephem(t):
     ts = 876600 * t - 12 - (etmut / 3600)
     hr = np.mod(ts, 24)
     #   compute obliquity of the ecliptic
-    w = .409319747 - .0002271107 * t
+    w = 0.409319747 - 0.0002271107 * t
     cosw = np.cos(w)
     sinw = np.sin(w)
     t2 = t * t
-    if (moon != 1):
+    if moon != 1:
         # compute solar constants for given t
         hs = 4.881627982482 + 628.3319508731 * t + 0.523598775578 * 10 ** (-5) * t2
         hs = np.mod(np.mod(hs, pi20) + pi20, pi20)
         ps = 4.908229466993 + 0.03000526416690 * t + 0.790246300201 * 10 ** (-5) * t2
         es = 0.01675104 - 0.00004180 * t - 0.000000126 * t2
-        psig = 0.2617993877971 * (hr - 12.) + hs
+        psig = 0.2617993877971 * (hr - 12.0) + hs
         chmp = np.cos(hs - ps)
         shmp = np.sin(hs - ps)
-        ls = hs + shmp * es * (2. + 2.5 * es * chmp)
+        ls = hs + shmp * es * (2.0 + 2.5 * es * chmp)
         sls = np.sin(ls)
         cz = sinw * sls
-        sz = np.sqrt(1. - cz ** 2)
+        sz = np.sqrt(1.0 - cz ** 2)
         psis = math.atan2(cosw * sls, np.cos(ls))
-        rbarr = 1. + es * (chmp + es * (chmp - shmp) * (chmp + shmp))
+        rbarr = 1.0 + es * (chmp + es * (chmp - shmp) * (chmp + shmp))
         ll = psis - psig
         scz = cz
         ssz = sz
@@ -272,11 +294,11 @@ def ephem(t):
 
     # compute lunar constants for given t
 
-    if (moon == 2):
+    if moon == 2:
         return
-    hm = 4.7199666 + 8399.7091449 * t - .0000198 * t2
-    pm = 5.83515154 + 71.01804120839 * t - .180205 * 10 ** (-3) * t2
-    nm = 4.523601515 - 33.75714624 * t + .3626406335 * 10 ** (-4) * t2
+    hm = 4.7199666 + 8399.7091449 * t - 0.0000198 * t2
+    pm = 5.83515154 + 71.01804120839 * t - 0.180205 * 10 ** (-3) * t2
+    nm = 4.523601515 - 33.75714624 * t + 0.3626406335 * 10 ** (-4) * t2
     #   bl bls bf bd are the fundamental arguments of browns theory
     bl = hm - pm
     bls = hs - ps
@@ -284,20 +306,47 @@ def ephem(t):
     bd = hm - hs
     #   lunar lat long and parallax from brown.  latter two from
     #   improved lunar ephemeris, latitude from ras paper of 1908...
-    tlongm = hm + .10976 * np.sin(bl) - .02224 * np.sin(bl - 2. * bd) + 0.01149 * np.sin(2. * bd) + \
-             0.00373 * np.sin(2. * bl) - .00324 * np.sin(bls) - .00200 * np.sin(2. * bf) - 0.00103 * \
-             np.sin(2. * bl - 2. * bd) - .00100 * np.sin(bl + bls - 2. * bd) + 0.00093 * np.sin(bl + 2. * bd) \
-             - .00080 * np.sin(bls - 2. * bd) + .00072 * np.sin(bl - bls) - .00061 * np.sin(bd) - \
-             .00053 * np.sin(bl + bls)
-    tlatm = .08950 * np.sin(bf) + .00490 * np.sin(bl + bf) - .00485 * np.sin(bf - bl) - .00303 * \
-            np.sin(bf - 2. * bd) + .00097 * np.sin(2. * bd + bf - bl) - .00081 * np.sin(bl + bf - 2. * bd) + \
-            .00057 * np.sin(bf + 2. * bd)
-    plx = (3422.45 + 186.54 * np.cos(bl) + 34.31 * np.cos(bl - 2. * bd) + 28.23 * np.cos(2. * bd \
-                                                                                         ) + 10.17 * np.cos(
-        2. * bl) + 3.09 * np.cos(bl + 2. * bd) + 1.92 * np.cos(bls - 2. * bd) + 1.44 * \
-           np.cos(bl + bls - 2. * bd) + 1.15 * np.cos(bl - bls) - 0.98 * np.cos(bd) - 0.95 * np.cos(bl + \
-                                                                                                    bls) - 0.71 * np.cos(
-                bl - 2. * bf) + 0.62 * np.cos(3. * bl) + 0.60 * np.cos(bl - 4. * bd))
+    tlongm = (
+        hm
+        + 0.10976 * np.sin(bl)
+        - 0.02224 * np.sin(bl - 2.0 * bd)
+        + 0.01149 * np.sin(2.0 * bd)
+        + 0.00373 * np.sin(2.0 * bl)
+        - 0.00324 * np.sin(bls)
+        - 0.00200 * np.sin(2.0 * bf)
+        - 0.00103 * np.sin(2.0 * bl - 2.0 * bd)
+        - 0.00100 * np.sin(bl + bls - 2.0 * bd)
+        + 0.00093 * np.sin(bl + 2.0 * bd)
+        - 0.00080 * np.sin(bls - 2.0 * bd)
+        + 0.00072 * np.sin(bl - bls)
+        - 0.00061 * np.sin(bd)
+        - 0.00053 * np.sin(bl + bls)
+    )
+    tlatm = (
+        0.08950 * np.sin(bf)
+        + 0.00490 * np.sin(bl + bf)
+        - 0.00485 * np.sin(bf - bl)
+        - 0.00303 * np.sin(bf - 2.0 * bd)
+        + 0.00097 * np.sin(2.0 * bd + bf - bl)
+        - 0.00081 * np.sin(bl + bf - 2.0 * bd)
+        + 0.00057 * np.sin(bf + 2.0 * bd)
+    )
+    plx = (
+        3422.45
+        + 186.54 * np.cos(bl)
+        + 34.31 * np.cos(bl - 2.0 * bd)
+        + 28.23 * np.cos(2.0 * bd)
+        + 10.17 * np.cos(2.0 * bl)
+        + 3.09 * np.cos(bl + 2.0 * bd)
+        + 1.92 * np.cos(bls - 2.0 * bd)
+        + 1.44 * np.cos(bl + bls - 2.0 * bd)
+        + 1.15 * np.cos(bl - bls)
+        - 0.98 * np.cos(bd)
+        - 0.95 * np.cos(bl + bls)
+        - 0.71 * np.cos(bl - 2.0 * bf)
+        + 0.62 * np.cos(3.0 * bl)
+        + 0.60 * np.cos(bl - 4.0 * bd)
+    )
     sinmla = np.sin(tlatm)
     cosmla = np.cos(tlatm)
     sinmln = np.sin(tlongm)
@@ -305,7 +354,7 @@ def ephem(t):
     # ...convert from celestial lat and long according to explan suppl of
     # ......na and le page 26
     cz = cosmla * sinmln * sinw + sinmla * cosw
-    sz = np.sqrt(1. - cz ** 2)
+    sz = np.sqrt(1.0 - cz ** 2)
     at1 = cosmla * sinmln * cosw - sinmla * sinw
     at2 = cosmla * cosmln
     ram = math.atan2(at1, at2)
@@ -345,7 +394,7 @@ def elastd(ntw):
     """
     # Simulated common block obs with observatory information
     global cth, sth, clg, slg, dif, radn, gl
-    # Simulated common block love with love numbers 
+    # Simulated common block love with love numbers
     global h, k, l
     # Simulated common block azimut with strainmeter and tiltmeter azimuths
     global azt, azs
@@ -368,21 +417,23 @@ def elastd(ntw):
     dim = [0, 0, 0]
     # On first call compute factors for gravity and tilt, and dc tides
     # at the given latitude.
-    if (iflag != 1):
+    if iflag != 1:
         iflag = 1
         for i in range(3):
             # browse 0,1,2
-            dele[i] = 1. + (2. / (i + 2.)) * h[i] - ((i + 3.) / (i + 2.)) * k[i]
-            dim[i] = 1. + k[i] - h[i]
+            dele[i] = 1.0 + (2.0 / (i + 2.0)) * h[i] - ((i + 3.0) / (i + 2.0)) * k[i]
+            dim[i] = 1.0 + k[i] - h[i]
         #  dc gravity tide is also known as the Honkasalo correction
         #  **note that the love numbers for an elastic earth are used
         #  in computing the dc tide as well.eq
-        gdc = -3.0481e-7 * (3 * cth ** 2 - 1.) * dele[0] * radn
+        gdc = -3.0481e-7 * (3 * cth ** 2 - 1.0) * dele[0] * radn
         tnsdc = -9.1445e-7 * cth * sth * dim[0] * radn / gl
-        etdc = -1.555e-8 * (h[0] * (3. * cth ** 2 - 1.) - 6. * l[0] * (2. * cth ** 2 - 1.))
-        eldc = -1.555e-8 * (h[0] * (3. * cth ** 2 - 1.) - 6. * l[0] * cth ** 2)
-        potdc = .0992064 * (1. - 3 * cth ** 2)
-        re = 1. / (radn * a)
+        etdc = -1.555e-8 * (
+            h[0] * (3.0 * cth ** 2 - 1.0) - 6.0 * l[0] * (2.0 * cth ** 2 - 1.0)
+        )
+        eldc = -1.555e-8 * (h[0] * (3.0 * cth ** 2 - 1.0) - 6.0 * l[0] * cth ** 2)
+        potdc = 0.0992064 * (1.0 - 3 * cth ** 2)
+        re = 1.0 / (radn * a)
 
     # zero out arrays
     tilt = [0, 0]
@@ -396,7 +447,7 @@ def elastd(ntw):
     # in outer loop, ii = 0 for moon, 1 for sun (basile)
     for ii in [0, 1]:
         id = 3
-        if (ii == 1):
+        if ii == 1:
             id = 1
         ir = 4 * (ii)
         # find cosine of zenith angle, potential constants, legendre polynomials
@@ -412,15 +463,15 @@ def elastd(ntw):
         rkr[1] = rkr[0] * xi
         rkr[2] = rkr[1] * xi
 
-        p = [0.5 * (3 * cu * cu - 1.), 0, 0]
+        p = [0.5 * (3 * cu * cu - 1.0), 0, 0]
         pp = [3 * cu, 0, 0]
-        if (ii != 1):
-            p[1] = .5 * cu * (5. * cu * cu - 3.)
-            p[2] = .25 * (7. * cu * p[1] - 3. * p[0])
-            pp[1] = 1.5 * (5. * cu * cu - 1.)
-            pp[2] = .25 * (7. * p[1] + cu * pp[1]) - 3. * pp[0]
-            ppp[1] = 15. * cu
-            ppp[2] = 7.5 * (7. * cu * cu - 1.)
+        if ii != 1:
+            p[1] = 0.5 * cu * (5.0 * cu * cu - 3.0)
+            p[2] = 0.25 * (7.0 * cu * p[1] - 3.0 * p[0])
+            pp[1] = 1.5 * (5.0 * cu * cu - 1.0)
+            pp[2] = 0.25 * (7.0 * p[1] + cu * pp[1]) - 3.0 * pp[0]
+            ppp[1] = 15.0 * cu
+            ppp[2] = 7.5 * (7.0 * cu * cu - 1.0)
 
         cut = -sth * cz + cth * sz * cll
         cutt = -cu
@@ -429,11 +480,11 @@ def elastd(ntw):
         cutl = -cth * sz * sll
         # for j = 1:id:
         for j in range(id):
-            if (ntw[0] == 1):
+            if ntw[0] == 1:
                 grav = grav + dele[j] * (j + 2) * rkr[j] * p[j] * g1 * re
         gnth = gnth - dim[0] * rkr[0] * pp[0] * g1 * cut * re
     # ellipticity corrections, convert strains to strainmeter
-    if (ntw[0] == 1):
+    if ntw[0] == 1:
         grav = grav + gnth * dif - gdc
 
     return [grav, tilt, strain, gdc]
@@ -448,7 +499,15 @@ def date_to_julian_day(my_date):
     a = (14 - my_date.month) // 12
     y = my_date.year + 4800 - a
     m = my_date.month + 12 * a - 3
-    return my_date.day + ((153 * m + 2) // 5) + 365 * y + y // 4 - y // 100 + y // 400 - 32045
+    return (
+        my_date.day
+        + ((153 * m + 2) // 5)
+        + 365 * y
+        + y // 4
+        - y // 100
+        + y // 400
+        - 32045
+    )
 
 
 def ocean_loading(time, amp, phases, lon):
@@ -472,7 +531,9 @@ def ocean_loading(time, amp, phases, lon):
     # ctime should be current time (in hours from Jan 1, 1900)
     djref = date_to_julian_day(datetime(1900, 1, 1, 0, 0, 0))
     dj = date_to_julian_day(datetime(time.year, time.month, time.day))
-    ctime = float(dj - djref) * 24.0 + time.hour + time.minute / 60.0 + time.second / 3600.0
+    ctime = (
+        float(dj - djref) * 24.0 + time.hour + time.minute / 60.0 + time.second / 3600.0
+    )
 
     dtor = np.pi / 180
     TL = 64.184  # time shift ET-UT = 41.184+yr-1970 seconds
@@ -500,7 +561,12 @@ def lunarperigee(time):
     t1 = 1 + time
     t2 = t1 * t1
     t3 = t2 * t1
-    perigee = 334.329653 * dtor + 4069.0340329575 * dtor * t1 - 0.010325 * dtor * t2 - 1.2e-5 * dtor * t3
+    perigee = (
+        334.329653 * dtor
+        + 4069.0340329575 * dtor * t1
+        - 0.010325 * dtor * t2
+        - 1.2e-5 * dtor * t3
+    )
     return perigee
 
 
@@ -513,6 +579,7 @@ def sunlongitude(time):
     """
     B0 = 36000.7695
     C0 = 280.4659
+    # fmt: off
     A = np.array([19147e-4, 200e-4, 48e-4, 20e-4, 18e-4, 18e-4, \
                   15e-4, 13e-4, 7e-4, 7e-4, 7e-4, 6e-4, \
                   5e-4, 5e-4, 4e-4, 4e-4])
@@ -523,6 +590,7 @@ def sunlongitude(time):
     C = np.array([267.520, 265.1, 145, 158, 159, 208, \
                   254., 352, 45, 110, 64, 316, \
                   118., 221, 48, 161])
+    # fmt: on
     RAD = 0.0174532925199433
     A[0] = 1.9147 - 0.0048 * time
     tempb = (B * time + C) * RAD
@@ -540,6 +608,7 @@ def moonlongitude(time):
     """
     B0 = 481267.8809
     C0 = 218.3162
+    # fmt: off
     A = np.array([62888.e-4, 12740.e-4, 6583.e-4, 2136.e-4, 1851.e-4, \
                   1144.e-4, 588.e-4, 571.e-4, 533.e-4, 458.e-4, 409.e-4, \
                   347.e-4, 304.e-4, 154.e-4, 125.e-4, 110.e-4, 107.e-4, \
@@ -572,6 +641,7 @@ def moonlongitude(time):
                   129, 98, 114, 50, 186, 127, 38, \
                   156, 90, 24, 242, 223, 187, 340, \
                   354, 337, 58, 220, 70, 191])
+    # fmt: on
     RAD = 0.0174532925199433
     tempb = (B * time + C) * RAD
     amp = A * np.cos(tempb)
@@ -605,5 +675,7 @@ def gravityeffect(h0, s0, p0, tl, amp, phases):
     arg[8] = 2 * s0  # Mf
     arg[9] = s0 - p0  # Mm
     arg[10] = 2 * h0  # Ssa
-    totaleffect = np.sum([amp[i] * np.cos(arg[i] - phases[i] * dtor) for i in range(len(arg))])
+    totaleffect = np.sum(
+        [amp[i] * np.cos(arg[i] - phases[i] * dtor) for i in range(len(arg))]
+    )
     return totaleffect

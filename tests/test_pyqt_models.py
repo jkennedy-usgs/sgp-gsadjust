@@ -2,9 +2,16 @@ import pytest
 import pytestqt
 import pyqt_models
 import GSadjust
-from test_fixture_pyqt import channellist, obstreesurvey, list_of_deltas, obstreemodel, mainprog
+from test_fixture_pyqt import (
+    channellist,
+    obstreesurvey,
+    list_of_deltas,
+    obstreemodel,
+    mainprog,
+)
 from PyQt5 import QtGui
 from utils import *
+
 
 def test_ObsTreeSurvey(obstreesurvey):
     assert obstreesurvey.rowCount() == 1
@@ -13,9 +20,11 @@ def test_ObsTreeSurvey(obstreesurvey):
     assert obstreesurvey.child(0).rowCount() == 46
     assert obstreesurvey.populate_delta_model() is True
 
+
 def test_create_ObsTreeStation(channellist):
     a = pyqt_models.ObsTreeStation(channellist, 'teststa', '1')
     assert a.station_name == 'teststa'
+
 
 def test_obstreemodel(qtmodeltester, channellist):
     model = pyqt_models.ObsTreeModel()
@@ -32,6 +41,7 @@ def test_obstreemodel(qtmodeltester, channellist):
 
     qtmodeltester.check(model)
 
+
 def test_deltatablemodel(qtmodeltester, list_of_deltas):
     model = pyqt_models.DeltaTableModel()
     for delta in list_of_deltas:
@@ -39,10 +49,12 @@ def test_deltatablemodel(qtmodeltester, list_of_deltas):
 
     qtmodeltester.check(model)
 
+
 def test_initcalcoeffdict(obstreemodel):
     cal_dict = init_cal_coeff_dict(obstreemodel)
     assert type(cal_dict) is dict
     assert cal_dict['B44'] == 1.0
+
 
 def test_init_coords(obstreemodel):
     coords = init_station_coords_dict(obstreemodel)

@@ -5,7 +5,10 @@ from PyQt5 import QtCore
 from test_fixture_pyqt import mainprog, obstreesurvey_with_results, obstreesurvey
 from gsa_plots import (
     PlotGravityChange,
-    PlotDatumCompare, PlotDgResidualHistogram, PlotNetworkGraph, PlotLoopAnimation
+    PlotDatumCompare,
+    PlotDgResidualHistogram,
+    PlotNetworkGraph,
+    PlotLoopAnimation,
 )
 
 
@@ -24,6 +27,7 @@ def test_PlotLoopAnimation(mainprog):
     assert len(test_plot.figure.n) == 86
     assert test_plot.figure.ax1 is not None
 
+
 def test_PlotDatumCompare(obstreesurvey_with_results):
     test_plot = PlotDatumCompare(obstreesurvey_with_results)
     assert test_plot.figure is not None
@@ -41,19 +45,22 @@ def test_PlotDgResidualHistogram(obstreesurvey_with_results):
 
 
 def test_PlotNetworkGraph(mainprog):
-    test_plot = PlotNetworkGraph(mainprog.obsTreeModel.invisibleRootItem().child(0),
-                                 mainprog.obsTreeModel.station_coords,
-                                 shape='circular', parent=None)
+    test_plot = PlotNetworkGraph(
+        mainprog.obsTreeModel.invisibleRootItem().child(0),
+        mainprog.obsTreeModel.station_coords,
+        shape='circular',
+        parent=None,
+    )
     assert test_plot.figure is not None
     assert len(test_plot.get_data()) == 4
     assert len(test_plot.get_data()[0]) == 31
-    test_plot = PlotNetworkGraph(mainprog.obsTreeModel.invisibleRootItem().child(0),
-                                 mainprog.obsTreeModel.station_coords,
-                                 shape='map', parent=None)
+    test_plot = PlotNetworkGraph(
+        mainprog.obsTreeModel.invisibleRootItem().child(0),
+        mainprog.obsTreeModel.station_coords,
+        shape='map',
+        parent=None,
+    )
     assert test_plot.figure is not None
     assert np.abs(test_plot.figure.axes[0].get_xlim()[0] + 115.05) < 0.01
     assert len(test_plot.get_data()) == 4
     assert len(test_plot.get_data()[0]) == 31
-
-
-

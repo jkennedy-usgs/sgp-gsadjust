@@ -21,6 +21,7 @@ def test_readfile_exceptions():
     with pytest.raises(ValueError) as excinfo:
         data = GSadjust.MainProg.read_raw_data_file(bad_valuedata_filename, meter_type)
 
+
 def test_read_Burris():
     filename = './tests/test_BurrisData.txt'
     meter_type = 'Burris'
@@ -35,6 +36,7 @@ def test_read_Burris():
     mean = sum(first_station_data) / len(first_station_data)
     # This value calculated independently in Excel
     assert abs(mean - 2775777) < 0.1
+
 
 def test_read_ScintrexCG6():
     filename = './tests/test_ScintrexCG5Data.txt'
@@ -52,6 +54,7 @@ def test_read_ScintrexCG6():
     # This value calculated independently in Excel
     assert abs(mean - 2639256.214) < 0.1
 
+
 def testreadabsgcomplete():
     filename = './tests/test_Absg_complete.txt'
     datums = import_abs_g_complete(filename)
@@ -59,7 +62,8 @@ def testreadabsgcomplete():
     assert len(datums) == 5
     assert datums[0].sd == 13.44
     assert type(datums[1].date) == str
-    assert 1==1
+    assert 1 == 1
+
 
 def test_importabsgsimple():
     filename = './tests/test_Absg_simple.txt'

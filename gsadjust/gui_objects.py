@@ -27,20 +27,18 @@ import os
 
 import matplotlib
 import numpy as np
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
+
 # import matplotlib.pyplot as plt
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 import a10
 import data_analysis
 from data_objects import Datum
-from pyqt_models import (DatumTableModel, GravityChangeModel,
-                         MeterCalibrationModel)
+from pyqt_models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from utils import *
 
 matplotlib.use('qt5agg')
@@ -339,9 +337,7 @@ class AdjustOptions(QtWidgets.QDialog):
         self.ao = options
         self.surveys_to_update = ''
         self.update_options = []
-        self.drift_temp_chk = QtWidgets.QCheckBox(
-            'Model temperature drift, polynomial degree:'
-        )
+        # self.drift_temp_chk = QtWidgets.QCheckBox('Model temperature drift, polynomial degree:')
         self.sigma_prefactor_chk = QtWidgets.QCheckBox(
             'Standard deviation multiplier: pre-minimum'
         )
@@ -378,7 +374,7 @@ class AdjustOptions(QtWidgets.QDialog):
 
         self.cal_coeff_table = QtWidgets.QTableView()
 
-        self.drift_temp_edit = QtWidgets.QLineEdit(str(self.ao.model_temp_degree))
+        # self.drift_temp_edit = QtWidgets.QLineEdit(str(self.ao.model_temp_degree))
         self.sigma_prefactor_edit = QtWidgets.QLineEdit(
             "{:.4f}".format(self.ao.sigma_prefactor)
         )
@@ -525,7 +521,6 @@ class AdjustOptions(QtWidgets.QDialog):
         # else:
         #     self.ao.use_model_temp = False
         try:
-            self.ao.use_model_temp = False
             self.ao.use_sigma_prefactor = self.sigma_prefactor_chk.isChecked()
             self.ao.use_sigma_postfactor = self.sigma_postfactor_chk.isChecked()
             self.ao.sigma_prefactor = float(self.sigma_prefactor_edit.text())
@@ -671,17 +666,14 @@ class AboutDialog(QtWidgets.QDialog):
 class VerticalGradientDialog(QtWidgets.QInputDialog):
     def __init__(self, default_interval):
         super(VerticalGradientDialog, self).__init__()
-        self.show_dialog(default_interval)
-
-    def show_dialog(self, default_interval):
-        text, ok = self.getDouble(
+        self.text, self.ok = self.getDouble(
             None,
             "Vertical-gradient interval",
             "Interval, in cm:",
             default_interval,
             0,
             200,
-            1,
+            3,
         )
 
 

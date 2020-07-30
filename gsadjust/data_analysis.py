@@ -20,7 +20,6 @@ resulting from the authorized or unauthorized use of the software.
 
 import datetime as dt
 import logging
-import os
 
 import numpy as np
 from PyQt5.QtCore import Qt
@@ -54,13 +53,12 @@ def numpy_inversion(
 
     n_meters = adjustment.n_meters
 
-    # number of unknowns:
     # TODO: temperature drift function
     drift_time = 0  # adjustment.adjustmentoptions.drift_time
-    if adjustment.adjustmentoptions.use_model_temp:
-        drift_temp = adjustment.adjustmentoptions.model_temp_degree
-    else:
-        drift_temp = 0
+    # if adjustment.adjustmentoptions.use_model_temp:
+    #     drift_temp = adjustment.adjustmentoptions.model_temp_degree
+    # else:
+    #     drift_temp = 0
 
     ndrift = adjustment.ndrift
 
@@ -69,8 +67,8 @@ def numpy_inversion(
     netadj_loop_keys = adjustment.netadj_loop_keys
 
     # Initialize least squares matrices
-    # number of unknowns
-    nb_x = len(sta_dic_ls) + ndrift + drift_temp * nloops + n_meters
+    # number of unknowns                                                                   #
+    nb_x = len(sta_dic_ls) + ndrift + n_meters
     adjustment.adjustmentresults.n_unknowns = nb_x
     # model matrix:
     A = np.zeros((n_rel_obs + n_abs_obs, nb_x))

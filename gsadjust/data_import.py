@@ -22,14 +22,6 @@ from matplotlib.dates import date2num
 from data_objects import ChannelList, Datum
 from utils import index_or_none
 
-READ_HANDLERS = {
-    'csv': read_csv,
-    'CG5': read_cg5,
-    'Burris': read_burris,
-    'CG6': read_cg6,
-    'CG6Tsoft': read_cg6tsoft,
-}
-
 
 class InvalidMeterException(Exception):
     """
@@ -48,7 +40,13 @@ def file_reader(meter_type, fh):
     :param fh: open file handle to the file to load.
     :return: ChannelList
     """
-    read_fn = READ_HANDLERS.get(meter_type)
+    read_fn = {
+        'csv': read_csv,
+        'CG5': read_cg5,
+        'Burris': read_burris,
+        'CG6': read_cg6,
+        'CG6Tsoft': read_cg6tsoft,
+    }.get(meter_type)
     if read_fn is None:
         raise InvalidMeterException
 

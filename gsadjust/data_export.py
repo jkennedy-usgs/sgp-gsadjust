@@ -179,21 +179,24 @@ def export_summary(obsTreeModel, data_path):
     # Write header info
     with open(fn, 'w') as fid:
         fid.write(
-            '# GSadjust processing summary, {}\n#\n'.format(
-                time.strftime("%Y-%m-%d-%H:%M")
+            '# GSadjust processing summary, {}\n'.format(
+                time.strftime("%Y-%m-%d %H:%M")
             )
         )
         fid.write('# Station data\n')
         for survey in obsTreeModel.surveys():
             for loop in survey.loops():
                 fid.write(
-                    'Survey {}, Loop {}, Source file: {}\n'.format(
+                    '# Survey {}, Loop {}, Source file: {}\n'.format(
                         survey.name, loop.name, loop.source
                     )
                 )
                 for iii in range(loop.rowCount()):
                     station = loop.child(iii)
-                    fid.write(station.summary_str)
+                    fid.write('# ' + station.summary_str)
+                    fid.write(
+                        '# Checked | Station | Raw gravity | ET correction | Corr. gravity | Std. dev.\n'
+                    )
                     for sample_str in station.iter_samples():
                         fid.write(sample_str)
         fid.write('# Loop data\n')
@@ -201,13 +204,27 @@ def export_summary(obsTreeModel, data_path):
             for ii in range(survey.rowCount()):
                 loop = survey.child(ii)
                 fid.write(
-                    'Survey {}, Loop {}, Source file: {}\n'.format(
+                    '# Survey {}, Loop {}, Source file: {}\n# '.format(
                         survey.name, loop.name, loop.source
                     )
                 )
                 fid.write(str(loop))
+                fid.write(
+                    '# Checked | Station1 | Station2 | Date | Time (UTC) | delta-g | Std. dev. | Drift '
+                    'correction\n'
+                )
                 for delta in loop.deltas():
-                    fid.write('{}\n'.format(delta))
+                    fid.write(
+                        '{} {} {} {} {:.2f} {:.2f} {:.2f}\n'.format(
+                            int(delta.checked / 2),
+                            delta.sta1,
+                            delta.sta2,
+                            delta.time_string(),
+                            delta.dg(),
+                            delta.sd,
+                            delta.driftcorr,
+                        )
+                    )
         fid.write('# Adjustment data\n')
         for survey in obsTreeModel.surveys():
             if survey.checkState() == 0:
@@ -222,20 +239,24 @@ def export_summary(obsTreeModel, data_path):
                 fid.write(
                     '# Deltas in the adjustment, survey: {}\n'.format(survey.name)
                 )
+                fid.write(
+                    '# Checked | Station1 | Station2 | Date | Time (UTC) | delta-g | Std. dev. | Std. dev. for '
+                    'adj. | Residual\n'
+                )
                 for delta in survey.adjustment.deltas:
                     fid.write('{}\n'.format(delta))
                 fid.write(
                     '# Datums in the adjustment, survey: {}\n'.format(survey.name)
                 )
+                fid.write(
+                    '# Checked | Station | Date | Gravity | Std. dev. | Residual\n'
+                )
                 for datum in survey.adjustment.datums:
                     fid.write('{}\n'.format(datum))
                 fid.write('# Adjustment results, survey: {}\n'.format(survey.name))
                 fid.writelines(survey.adjustment.results_string())
-                fid.write(
-                    '# Adjusted station values and std. dev., survey: {}\n'.format(
-                        survey.name
-                    )
-                )
+                fid.write('# Adjusted station values, survey: {}\n'.format(survey.name))
+                fid.write('# Station | Gravity | Std. dev.\n')
                 for ii in range(survey.results_model.rowCount()):
                     adj_sta = survey.results_model.data(
                         survey.results_model.index(ii, 0), role=Qt.UserRole

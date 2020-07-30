@@ -39,6 +39,8 @@ class MENU_STATE:
     OBS_TREE_LOOP = 10
     OBS_TREE_SURVEY = 13
     DELTA_MODEL = 11
+    MULTIPLE_STATION = 14
+    UNENABLE_ALL = 15
 
 
 _ENABLED_MENUS = {
@@ -109,10 +111,15 @@ _ENABLED_MENUS = {
     ],
     MENU_STATE.ACTIVE_WORKSPACE: [('mnFileSaveWorkspace', True),],
     MENU_STATE.NO_ACTIVE_WORKSPACE: [('mnFileSaveWorkspace', False),],
-    MENU_STATE.SURVEY_HAS_DELTAS: [('mnToolsNGCircular', True), ('mnToolsNGMap', True)],
+    MENU_STATE.SURVEY_HAS_DELTAS: [
+        ('mnToolsNGCircular', True),
+        ('mnToolsNGMap', True),
+        ('mnToolsComputeGravityChangeAction', True),
+    ],
     MENU_STATE.SURVEY_HAS_NO_DELTAS: [
         ('mnToolsNGCircular', False),
         ('mnToolsNGMap', False),
+        ('mnToolsComputeGravityChangeAction', False),
     ],
     MENU_STATE.SURVEY_HAS_RESULTS: [
         ('mnAdjPlotHist', True),
@@ -149,37 +156,63 @@ _ENABLED_MENUS = {
     MENU_STATE.MORE_THAN_ONE_SURVEY: [
         ('mnAdjPlotObservedAdjustedAbs', True),
         ('mnAdjPlotCompareDatum', True),
+        ('mnEditVerticalGradientWriteAction', False),
     ],
     # Right-click context menus below here
     MENU_STATE.OBS_TREE_STATION: [
         ('mnDeleteSurvey', False),
         ('mnDeleteLoop', False),
         ('mnLoopProperties', False),
-        ('mnStationDelete', True),
+        ('mnDeleteStation', True),
         ('mnStationDuplicate', True),
-        ('mnStationRename', True),
+        ('mnRename', True),
         ('mnDataNewLoop', True),
         ('mnLoopAnimate', False),
+        ('mnVerticalGradientWriteAction', False),
     ],
     MENU_STATE.OBS_TREE_LOOP: [
         ('mnDeleteSurvey', False),
         ('mnDeleteLoop', True),
         ('mnLoopProperties', True),
-        ('mnStationDelete', False),
+        ('mnDeleteStation', False),
         ('mnStationDuplicate', False),
-        ('mnStationRename', False),
+        ('mnRename', True),
         ('mnDataNewLoop', False),
         ('mnLoopAnimate', True),
+        ('mnVerticalGradientWriteAction', True),
     ],
     MENU_STATE.OBS_TREE_SURVEY: [
         ('mnDeleteSurvey', True),
         ('mnDeleteLoop', False),
         ('mnLoopProperties', False),
-        ('mnStationDelete', False),
+        ('mnDeleteStation', False),
         ('mnStationDuplicate', False),
-        ('mnStationRename', False),
+        ('mnRename', True),
         ('mnDataNewLoop', False),
         ('mnLoopAnimate', False),
+        ('mnVerticalGradientWriteAction', False),
+    ],
+    MENU_STATE.UNENABLE_ALL: [
+        ('mnDeleteSurvey', False),
+        ('mnDeleteLoop', False),
+        ('mnLoopProperties', False),
+        ('mnDeleteStation', False),
+        ('mnStationDuplicate', False),
+        ('mnRename', False),
+        ('mnDataNewLoop', False),
+        ('mnLoopAnimate', False),
+        ('mnVerticalGradientWriteAction', False),
+    ],
+    MENU_STATE.MULTIPLE_STATION: [
+        ('mnDeleteSurvey', False),
+        ('mnDeleteLoop', False),
+        ('mnLoopProperties', False),
+        ('mnDeleteStation', True),
+        ('mnStationDuplicate', False),
+        ('mnRename', False),
+        ('mnDataNewLoop', True),
+        ('mnLoopAnimate', False),
+        ('mnVerticalGradientWriteAction', False),
     ],
     MENU_STATE.DELTA_MODEL: [
         ('mnAdjClearDeltaTable', True),
@@ -291,7 +324,6 @@ class Menus:
                 self.mnFileSaveWorkspace,
                 self.mnFileSaveWorkspaceAs,
                 self.mnFileLoadJSONAction,
-                self.mnFileLoadWorkspaceAction,
                 self.mnFileClearWorkspace,
                 None,
                 self.mnFileExitAction,
@@ -377,7 +409,6 @@ class Menus:
                 self.mnEditAddTareDialog,
                 None,
                 self.mnEditVerticalGradientIntervalAction,
-                self.mnEditVerticalGradientWriteAction,
             ),
         )
 

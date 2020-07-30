@@ -108,6 +108,7 @@ Survey.
 import copy
 import logging
 import os
+
 # Standard library modules
 import sys
 import time
@@ -124,31 +125,63 @@ import resources
 from data_analysis import compute_gravity_change
 from data_correction import time_correction
 from data_export import export_data, export_metadata, export_summary
+
 # GSadjust modules
-from data_import import (InvalidMeterException, file_reader,
-                         import_abs_g_complete, import_abs_g_simple)
+from data_import import (
+    InvalidMeterException,
+    file_reader,
+    import_abs_g_complete,
+    import_abs_g_simple,
+)
 from data_objects import ChannelList, Datum, Delta, Tare
-from gsa_plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
-                       PlotDgResidualHistogram, PlotGravityChange,
-                       PlotLoopAnimation, PlotNetworkGraph)
-from gui_objects import (AboutDialog, AddDatumFromList, AddTareDialog,
-                         AdjustOptions, CoordinatesTable,
-                         DialogApplyTimeCorrection, DialogLoopProperties,
-                         DialogMeterType, DialogOverwrite, GravityChangeTable,
-                         LoopTimeThresholdDialog, ProgressBar, SelectAbsg,
-                         ShowCalCoeffs, TideCoordinatesDialog,
-                         TideCorrectionDialog, VerticalGradientDialog,
-                         show_message)
+from gsa_plots import (
+    PlotDatumCompare,
+    PlotDatumComparisonTimeSeries,
+    PlotDgResidualHistogram,
+    PlotGravityChange,
+    PlotLoopAnimation,
+    PlotNetworkGraph,
+)
+from gui_objects import (
+    AboutDialog,
+    AddDatumFromList,
+    AddTareDialog,
+    AdjustOptions,
+    CoordinatesTable,
+    DialogApplyTimeCorrection,
+    DialogLoopProperties,
+    DialogMeterType,
+    DialogOverwrite,
+    GravityChangeTable,
+    LoopTimeThresholdDialog,
+    ProgressBar,
+    SelectAbsg,
+    ShowCalCoeffs,
+    TideCoordinatesDialog,
+    TideCorrectionDialog,
+    VerticalGradientDialog,
+    show_message,
+)
 from menus import MENU_STATE, Menus
-from pyqt_models import (BurrisTableModel, ObsTreeLoop, ObsTreeModel,
-                         ObsTreeStation, ObsTreeSurvey, ScintrexTableModel,
-                         TareTableModel)
+from pyqt_models import (
+    BurrisTableModel,
+    ObsTreeLoop,
+    ObsTreeModel,
+    ObsTreeStation,
+    ObsTreeSurvey,
+    ScintrexTableModel,
+    TareTableModel,
+)
 from tab_data import TabData
 from tab_drift import TabDrift
 from tab_network import TabAdjust
 from tide_correction import tide_correction_agnew, tide_correction_meter
-from utils import (assemble_all_deltas, init_cal_coeff_dict,
-                   init_station_coords_dict, return_delta_given_key)
+from utils import (
+    assemble_all_deltas,
+    init_cal_coeff_dict,
+    init_station_coords_dict,
+    return_delta_given_key,
+)
 
 DOWN = 1
 UP = -1
@@ -289,12 +322,10 @@ class MainProg(QtWidgets.QMainWindow):
             'Delete loop', slot=self.delete_loop
         )
         self.menus.mnLoopProperties = self.menus.create_action(
-            'Loop properties', slot=self.properties_loop
+            'Loop properties...', slot=self.properties_loop
         )
-        self.menus.mnStationRename = self.menus.create_action(
-            'Rename station', slot=self.rename_station
-        )
-        self.menus.mnStationDelete = self.menus.create_action(
+        self.menus.mnRename = self.menus.create_action('Rename', slot=self.rename)
+        self.menus.mnDeleteStation = self.menus.create_action(
             'Delete station(s)', slot=self.delete_station
         )
         self.menus.mnStationDuplicate = self.menus.create_action(
@@ -302,6 +333,9 @@ class MainProg(QtWidgets.QMainWindow):
         )
         self.menus.mnDataNewLoop = self.menus.create_action(
             'Move stations to new loop', slot=self.new_loop
+        )
+        self.menus.mnVerticalGradientWriteAction = self.menus.create_action(
+            "Write vertical gradient file...", slot=self.vertical_gradient_write
         )
         self.menus.mnLoopAnimate = self.menus.create_action(
             'Animate loop', slot=self.animate_loop
@@ -766,7 +800,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         if not fname or fname[-2:] != '.p':
             self.msg = show_message(
-                'Saved workspaces should have a .p or .gsa extension. '
+                'Saved workspaces should have a .gsa extension. '
                 'Please use "Open workspace..." to load a .gsa file, or '
                 '"Open raw...data" to load a data file.',
                 'File load error',
@@ -797,9 +831,7 @@ class MainProg(QtWidgets.QMainWindow):
         elif fname[-4:] != '.gsa':
             self.msg = show_message(
                 'Saved workspaces should have a .gsa extension. '
-                'Please use "Open raw...data" to load a data file'
-                ' or "Open workspace (.p format)" to open a workspace'
-                ' with .p extension.',
+                'Please use "Open raw...data" to load a data file',
                 'File load error',
             )
             return
@@ -1382,40 +1414,83 @@ class MainProg(QtWidgets.QMainWindow):
         is measured.
         """
         interval = VerticalGradientDialog(self.vertical_gradient_interval)
-        self.vertical_gradient_interval = interval
+        if interval.ok:
+            self.vertical_gradient_interval = interval.text
 
     def vertical_gradient_write(self):
         """
         Writes a .grd file with two values: gradient and standard deviation. 
         Only works when Roman drift method is used.
         """
-        deltamodel = self.tab_drift.delta_view.model()
-        if deltamodel.rowCount() == 1:
+        # Already verified that only a single loop is selected
+        # Want to get the selected loop, not the self.index_current_loop (former is highlighted, latter is bold)
+        current_loop_index = self.gui_data_treeview.selectedIndexes()[0]
+        current_loop = self.obsTreeModel.itemFromIndex(current_loop_index)
+        deltamodel = current_loop.delta_model
+        n_stations = current_loop.n_unique_stations()
+
+        dg, sd = None, None
+        if n_stations == 2:
             stationname = (
-                self.obsTreeModel.itemFromIndex(self.index_current_loop).child(0).name
+                self.obsTreeModel.itemFromIndex(self.index_current_loop)
+                .child(0)
+                .station_name
             )
             defaultfile = os.path.join(
                 self.settings.value('current_dir'), stationname + '.grd'
             )
-            file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
-                None, 'Vertical gradient file to write', defaultfile
-            )
-            if file_name:
-                delta = deltamodel.data(deltamodel.index(0, 0), role=Qt.UserRole)
-                with open(file_name, 'w') as fid:
-                    fid.write(
-                        '{:0.2f}'.format(
-                            -1 * delta.dg / self.vertical_gradient_interval
-                        )
+            try:
+                if current_loop.drift_method == 'roman':
+                    filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                        None, 'Vertical gradient file to write', defaultfile
                     )
-                    fid.write(
-                        ' +/- {:0.2f}'.format(
-                            delta.sd / self.vertical_gradient_interval
+                    if filename:
+                        delta = deltamodel.data(
+                            deltamodel.index(0, 0), role=QtCore.Qt.UserRole
                         )
+                        dg = delta.dg()
+                        sd = delta.sd
+                elif (
+                    current_loop.drift_method == 'none'
+                    or current_loop.drift_method == 'continuous'
+                ):
+                    filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                        None, 'Vertical gradient file to write', defaultfile
                     )
+                    if filename:
+                        dg_list, sd_list = [], []
+                        for i in range(deltamodel.rowCount()):
+                            idx = deltamodel.index(i, 0)
+                            delta = deltamodel.data(idx, QtCore.Qt.UserRole)
+                            dg_list.append(delta.dg())
+                            sd_list.append(delta.sd)
+                        dg = np.mean(dg_list)
+                        sd = np.mean(sd_list)
+                else:
+                    self.msg = show_message(
+                        'When writing a vertical gradient the drift correction method must be '
+                        '"None", "Roman", or "Continuous"'
+                    )
+                if dg:
+                    with open(filename, 'w') as fid:
+                        fid.write(
+                            '{:0.2f}'.format(-1 * dg / self.vertical_gradient_interval)
+                        )
+                        fid.write(
+                            ' +/- {:0.2f}'.format(sd / self.vertical_gradient_interval)
+                        )
+            except:
+                self.msg = show_message(
+                    'Error writing gradient file (try visiting the Drift tab then re-running this '
+                    'command).',
+                    'Vertical gradient error',
+                )
         else:
             self.msg = show_message(
-                "Incorrect number of delta-g's (should be 1; try the Roman method)",
+                'Writing a vertical gradient file requires that the respective loop has only '
+                'two stations. The gradient interval is set '
+                'by the "Vertical gradient interval..." menu command (instrument height in the '
+                'meter file is ignored).',
                 "Vertical gradient error",
             )
 
@@ -1521,13 +1596,15 @@ class MainProg(QtWidgets.QMainWindow):
             # for loop in self.loops:
 
             for loop in loops:
-                loop.oper = loop_options.operator_edit.text()
-                loop.meter = loop_options.meter_edit.text()
                 loop.comment = loop_options.comment_edit.toPlainText()
                 for i in range(loop.rowCount()):
                     obstreestation = loop.child(i)
-                    obstreestation.meter = [loop.meter] * len(obstreestation.meter)
-                    obstreestation.oper = [loop.oper] * len(obstreestation.oper)
+                    obstreestation.meter = [loop_options.meter_edit.text()] * len(
+                        obstreestation.meter
+                    )
+                    obstreestation.oper = [loop_options.operator_edit.text()] * len(
+                        obstreestation.oper
+                    )
             self.set_window_title_asterisk()
         self.update_data_tab()
 
@@ -1620,15 +1697,15 @@ class MainProg(QtWidgets.QMainWindow):
         self.set_window_title_asterisk()
         self.update_menus()
 
-    def rename_station(self):
+    def rename(self):
         """
         Rename station; same as F2.
         """
         indexes = self.gui_data_treeview.selectedIndexes()
-        if len(indexes) > 3 or len(indexes) == 0:
-            return
-        # Because each tree item has three columns, len(indexes) equals the
-        # number of items selected * 3. The next line takes every 3rd index.
+        # if len(indexes) > 3 or len(indexes) == 0:
+        #     return
+        # Because each tree item has three columns, len(indexes) equals the number of items selected * 3. The next
+        # line takes every 3rd index.
         index = indexes[0]
         trigger = self.gui_data_treeview.EditKeyPressed
         event = None
@@ -1924,7 +2001,7 @@ class MainProg(QtWidgets.QMainWindow):
                             QtGui.QStandardItem('a'),
                         ]
                     )
-            copy_fields = ['meter', 'oper', 'source']
+            copy_fields = ['source']
             for field in copy_fields:
                 try:
                     setattr(new_obstreeloop, field, getattr(obstreeloop, field))
@@ -1950,20 +2027,24 @@ class MainProg(QtWidgets.QMainWindow):
         Right-click context menu on tree view
         """
         self.gui_data_treeview_popup_menu = QtWidgets.QMenu("Menu", self)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnRename)
+        self.gui_data_treeview_popup_menu.addSeparator()
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
+        self.gui_data_treeview_popup_menu.addSeparator()
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
-        self.gui_data_treeview_popup_menu.addSeparator()
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
+        self.gui_data_treeview_popup_menu.addAction(
+            self.menus.mnVerticalGradientWriteAction
+        )
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
         self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationRename)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDelete)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteStation)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
         # enable as appropriate
         indexes = self.gui_data_treeview.selectedIndexes()
-        if indexes:
+
+        if len(indexes) == 3:  # One item is selected
             index = indexes[0]
             item = index.model().itemFromIndex(index)
             if type(item) is ObsTreeStation:
@@ -1972,10 +2053,19 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.set_state(MENU_STATE.OBS_TREE_LOOP)
             elif type(item) is ObsTreeSurvey:
                 self.menus.set_state(MENU_STATE.OBS_TREE_SURVEY)
-
-            self.gui_data_treeview_popup_menu.exec_(
-                self.gui_data_treeview.mapToGlobal(point)
-            )
+        elif len(indexes) > 3:
+            index_types = [
+                type(index.model().itemFromIndex(index)) for index in indexes[0::3]
+            ]
+            if all([it == ObsTreeStation for it in index_types]):
+                self.menus.set_state(MENU_STATE.MULTIPLE_STATION)
+            else:
+                self.menus.set_state(MENU_STATE.UNENABLE_ALL)
+        else:
+            self.menus.set_state(MENU_STATE.UNENABLE_ALL)
+        self.gui_data_treeview_popup_menu.exec_(
+            self.gui_data_treeview.mapToGlobal(point)
+        )
 
     def adjust_network(self, how_many='all'):
         """

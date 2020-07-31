@@ -47,7 +47,7 @@ def init_cal_coeff_dict(obstreemodel):
 
 def return_delta_given_key(key, deltas):
     """
-    Return a delta based on the station name and station count of the 
+    Return a delta based on the station name and station count of the
     comprising stations.
 
     DEPRECATED, ONLY NEEDED TO OPEN OLD .P FILES

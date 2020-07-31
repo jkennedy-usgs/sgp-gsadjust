@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-tide_corretion.py
+tides/correction.py
 =================
 
-Module to calculate tide corrections for GSadjust, a graphical user interface 
+Module to calculate tide corrections for GSadjust, a graphical user interface
 for interactive network adjustmnent of relative-gravity surveys.
 --------------------------------------------------------------------------------
 
 Actual tide computations are carried out in synthetic_tides.py.
 
-Except for minor changes, this software is provided as written by B. Hector. It 
-should be considered preliminary or provisional and is subject to revision. It 
+Except for minor changes, this software is provided as written by B. Hector. It
+should be considered preliminary or provisional and is subject to revision. It
 is being provided to meet the need for timely best science. The software has not
-received final approval by the U.S. Geological Survey (USGS). No warranty, 
+received final approval by the U.S. Geological Survey (USGS). No warranty,
 expressed or implied, is made by the USGS or the U.S. Government as to the
 functionality of the software and related material nor shall the fact of release
 constitute any such warranty. The software is provided on the condition that
@@ -28,8 +28,8 @@ import subprocess
 import numpy as np
 from PyQt5 import QtWidgets
 
-from data_objects import TimeSeries
-from synthetic_tides import earth_tide, ocean_loading
+from ..data import TimeSeries
+from .synthetic import earth_tide, ocean_loading
 
 # TODO: Only Agnew is tested
 
@@ -44,8 +44,8 @@ def use_meter_tide_correction(MainProg):
 
 def use_tide_time_series(MainProg):
     """
-    Load time series, and apply the correction to all the data. time series 
-    should be either a .TSF (Tsoft) or an eterna formatted file It is assumed 
+    Load time series, and apply the correction to all the data. time series
+    should be either a .TSF (Tsoft) or an eterna formatted file It is assumed
     that the synthetic tide is stored in the first data column.
     """
     fname, _ = QtWidgets.QFileDialog.getOpenFileName(None, 'Open file', 'home')
@@ -65,7 +65,7 @@ def use_tide_time_series(MainProg):
 
 def use_predict_tides():
     """
-    Generate synthetic tides from a list of gravimetric factors for 
+    Generate synthetic tides from a list of gravimetric factors for
     tide corrections
     """
 
@@ -108,7 +108,7 @@ def launch_predict(self, cwin, option):
     """
     Launch predict program: write a standard project file.
     IMPORTANT: the format of the tide groups definition in the
-    .ini is very important; specifications can be found in the Eterna doc 
+    .ini is very important; specifications can be found in the Eterna doc
     if problems are encountered here.
     """
     self.lat = float(cwin.latEdit.text())
@@ -253,7 +253,7 @@ def launch_agnew(cwin, MainProg):
 
 def tide_correction_ts(campaigndata, tide_in):
     """
-    Apply tide correction from previously-loaded Tsoft file. Assume that units 
+    Apply tide correction from previously-loaded Tsoft file. Assume that units
     are mGal (already converted from nanogal when the file was loaded). The sign
     of the correction is opposite that of Agnew.
     :param campaigndata: data
@@ -345,9 +345,7 @@ def tide_correction_agnew(MainProg, lat, lon, alt):
     - Agnew, D.C., 2012, SPOTL: Some Programs for Ocean-Tide Loading
 
     """
-    logging.info(
-        'New tide correction, Lat: %f Long: %f Elevation: %f ' % (lat, lon, alt)
-    )
+    logging.info('New tide correction, Lat: %f Long: %f Elevation: %f ', lat, lon, alt)
     for i in range(MainProg.obsTreeModel.invisibleRootItem().rowCount()):
         survey = MainProg.obsTreeModel.invisibleRootItem().child(i)
         for ii in range(survey.rowCount()):
@@ -368,7 +366,7 @@ def ocean_correction_agnew(self, amp, phases, lon):
     """
     compute and apply ocean loading correction to the dataset:
 
-    update the gravity field but not the etc field for avoiding possible later 
+    update the gravity field but not the etc field for avoiding possible later
     conflict with earth tide correction
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 """
-sythetic_tides.py
+tides/synthetic.py
 =================
 
 Module for tides calculations functions (solid-earth and ocean loading).
@@ -47,14 +47,14 @@ def earth_tide(theta, lamda, gtime):
     gtime - a single time in the datetime python format
     output:
     computes the tidal correction in microgals.
-    it should be added to your measurements. 
-    
-    
+    it should be added to your measurements.
+
+
     GDC returns the constant tide (Honkasalo term) as well.  The
-    constant tide is included in TIDE. 
-    In order to correct surface gravity records for tides, ADD this 
+    constant tide is included in TIDE.
+    In order to correct surface gravity records for tides, ADD this
     tide output to gravity records
-    
+
     BOMM subroutine written by Jon Berger  November 1969
     astronomy revised by Judah Levine (after J C Harrison) Sept 1973
     updated by Karen Young  March 1977, for PDP 11
@@ -66,22 +66,22 @@ def earth_tide(theta, lamda, gtime):
     uly 1982
     This version rewritten for export, using F77 calls for I/O,
     by Duncan Agnew Mar 1987
-    
+
     This version stripped down to theoretical gravity tide and
     called as a subroutine.  Output is in a passed vector.
-    By Glenn Sasagawa, June 1988 
-     
+    By Glenn Sasagawa, June 1988
+
     Code modified to Matlab(tm) by R. Cattin in 2015
 
-    The present version has been translated from Matlab to Python 
-    by B. Hector in 2015.    
-    
+    The present version has been translated from Matlab to Python
+    by B. Hector in 2015.
+
     tides are calculated from harmonics 2 through 3 for
     the lunar terms, 2 for the solar terms.
     love numbers h(n), k(n), and l(n) are set by data statements.
-     
+
     gravity tide is in microgals, plus for up acceleration
-     
+
     Arguments
     yr1,day1,zhr	Start year, day and hour
     yr2,day2,yhr	Start year, day and hour
@@ -90,8 +90,8 @@ def earth_tide(theta, lamda, gtime):
     theta		North latitude
     lamda		East longitude
     iterms		Number of output tide terms
-    gravtide		Output gravity tide    
-    
+    gravtide		Output gravity tide
+
     """
 
     global dsz, dcz, dsl, dcl, ssz, scz, ssl, scl, dpar, sdist  # bpos common block
@@ -180,8 +180,8 @@ def earth_tide(theta, lamda, gtime):
 
 def sph(grlat, elong, ht):
     """
-    for a point at geographical north latitude grlat, east longitude elong 
-    (in degrees), and height ht (in meters), finds geocentric position and local 
+    for a point at geographical north latitude grlat, east longitude elong
+    (in degrees), and height ht (in meters), finds geocentric position and local
     g using formulae for a spheroid
     """
 
@@ -238,7 +238,6 @@ def ephem(t):
     of an earthtide program by J. Berger and W. E. farrell, with small
     alterations by D. C. Agnew, partly after M. Wimbush. present
     subroutine version by d. c. agnew.
-     
     common block bpos contains, in order:
     sine and cosine of colatitude of sublunar point
     sine and cosine of east longitude of sublunar point
@@ -513,19 +512,19 @@ def date_to_julian_day(my_date):
 def ocean_loading(time, amp, phases, lon):
     """
     time is in hours from Jan 1, 1900, stationlongitude is longitude
-    
+
         purpose:  To assess the ocean loading/gravity effect due to the
                   separate tidal primary components derived from the Agnew
                   program ( LOADF ).
     produce the ocean loading correction in µgal (?)
-    
+
     Arguments:
     - time                 current time (datetime object)
     - amplitudes & phases: lists with amplitudes and phases. List order is:
-        M2,S2,K1,O1,N2,P1,K2,Q1,Mf,Mm,Ssa      
+        M2,S2,K1,O1,N2,P1,K2,Q1,Mf,Mm,Ssa
         (amp,phases)
-    - lon:     site longitude                          
-       
+    - lon:     site longitude
+
     From R. Cattin, translated from MATLAB(TM) to Python by B. Hector
     """
     # ctime should be current time (in hours from Jan 1, 1900)
@@ -552,7 +551,7 @@ def ocean_loading(time, amp, phases, lon):
 
 def lunarperigee(time):
     """
-    LONGITUDE OF LUNAR PERIGEE IN RADIANS    
+    LONGITUDE OF LUNAR PERIGEE IN RADIANS
     TIME:  (JED-2451545.0)/36525             EPOCH = J2000.0
     ets is the Julian centuries since Jan 1.5 2000.
     t1 is the Julian centuries since Jan 0.5 1900.
@@ -571,7 +570,7 @@ def lunarperigee(time):
 
 
 def sunlongitude(time):
-    """    
+    """
     LONGITUDE OF THE SUN IN RADIANS ( NUTATION IS TAKEN INTO ACCOUNT )
     GRAVITY IS FREE FROM ABERRATION  (-0.0057 DEG.)
 
@@ -603,7 +602,7 @@ def sunlongitude(time):
 def moonlongitude(time):
     """
     APPARENT LONGITUDE OF THE MOON IN RADIANS
-    
+
     TIME : (JEe-2451545.0)/36525          EPOCH = J2000.0
     """
     B0 = 481267.8809
@@ -652,7 +651,7 @@ def moonlongitude(time):
 
 def gravityeffect(h0, s0, p0, tl, amp, phases):
     """
-    purpose:  To compute the gravity effect due to each        
+    purpose:  To compute the gravity effect due to each
     tidal component.
     """
     dtor = np.pi / 180

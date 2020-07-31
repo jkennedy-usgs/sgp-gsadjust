@@ -1,5 +1,5 @@
 """
-drift_continuous.py
+drift/continuous.py
 ===================
 
 GSadjust code for calculating continuous-model drift correction.
@@ -19,7 +19,7 @@ import logging
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
-from data_objects import Delta
+from ..data import DeltaNormal
 
 
 def drift_continuous(
@@ -36,7 +36,7 @@ def drift_continuous(
     loop_name,
 ):
     """
-    Interpolate drift model: polynomial, spline, etc. at xp number of points. 
+    Interpolate drift model: polynomial, spline, etc. at xp number of points.
     xp needs to remain relatively low to maintain performance.
     """
     N_PTS_IN_INTERPOLATION = 300
@@ -104,7 +104,7 @@ def drift_continuous(
                 logging.info(
                     'Spline drift correction, tension={}'.format(tension_slider_value)
                 )
-            except Exception as e:
+            except Exception:
                 raise IndexError
         else:
             # Polynomial interpolation. Degree is one less than the method key, e.g.,
@@ -192,7 +192,9 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
         drift1 = yp[drift1_idx]
         drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean()))
         drift2 = yp[drift2_idx]
-        delta = Delta(prev_station, station, driftcorr=drift2 - drift1, loop=loop_name)
+        delta = DeltaNormal(
+            prev_station, station, driftcorr=drift2 - drift1, loop=loop_name
+        )
         delta_list.append(delta)
         # delta_model.insertRows(delta, 0)
         prev_station = station

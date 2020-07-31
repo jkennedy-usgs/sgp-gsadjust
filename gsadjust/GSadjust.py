@@ -95,11 +95,11 @@ from QStandardItem:
              +--+ g, lat, long, etc. |
                 +--------------------+
 
-The Adjustment object in each ObsTreeSurvey holds the network adjustment input, 
+The Adjustment object in each ObsTreeSurvey holds the network adjustment input,
 output, and options. There is one Adjustment per Survey.
 
-The datum_model, delta_model, results_model, and tare_model are PyQt models. 
-The gui is update with the respective model when a new Survey or Loop is 
+The datum_model, delta_model, results_model, and tare_model are PyQt models.
+The gui is update with the respective model when a new Survey or Loop is
 selected (by double-clicking in the tree view). There is one of each table per
 Survey.
 
@@ -108,80 +108,52 @@ Survey.
 import copy
 import logging
 import os
-
 # Standard library modules
 import sys
 import time
 import traceback
 import webbrowser
+# GSadjust modules
+from io import (InvalidMeterException, export_data, export_metadata,
+                export_summary, file_reader, import_abs_g_complete,
+                import_abs_g_simple)
 
+import matplotlib
 # Modules that must be installed
 import numpy as np
 from matplotlib.dates import num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 
-import resources
-from data_analysis import compute_gravity_change
-from data_correction import time_correction
-from data_export import export_data, export_metadata, export_summary
+from gsa_plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
+                       PlotDgResidualHistogram, PlotGravityChange,
+                       PlotLoopAnimation, PlotNetworkGraph)
 
-# GSadjust modules
-from data_import import (
-    InvalidMeterException,
-    file_reader,
-    import_abs_g_complete,
-    import_abs_g_simple,
-)
-from data_objects import ChannelList, Datum, DeltaList, Delta3Point, Tare
-from gsa_plots import (
-    PlotDatumCompare,
-    PlotDatumComparisonTimeSeries,
-    PlotDgResidualHistogram,
-    PlotGravityChange,
-    PlotLoopAnimation,
-    PlotNetworkGraph,
-)
-from gui_objects import (
-    AboutDialog,
-    AddDatumFromList,
-    AddTareDialog,
-    AdjustOptions,
-    CoordinatesTable,
-    DialogApplyTimeCorrection,
-    DialogLoopProperties,
-    DialogMeterType,
-    DialogOverwrite,
-    GravityChangeTable,
-    LoopTimeThresholdDialog,
-    ProgressBar,
-    SelectAbsg,
-    ShowCalCoeffs,
-    TideCoordinatesDialog,
-    TideCorrectionDialog,
-    VerticalGradientDialog,
-    show_message,
-)
-from menus import MENU_STATE, Menus
-from pyqt_models import (
-    BurrisTableModel,
-    ObsTreeLoop,
-    ObsTreeModel,
-    ObsTreeStation,
-    ObsTreeSurvey,
-    ScintrexTableModel,
-    TareTableModel,
-)
-from tab_data import TabData
-from tab_drift import TabDrift
-from tab_network import TabAdjust
-from tide_correction import tide_correction_agnew, tide_correction_meter
-from utils import (
-    assemble_all_deltas,
-    init_cal_coeff_dict,
-    init_station_coords_dict,
-    return_delta_given_key,
-)
+from . import resources
+from .data import (ChannelList, Datum, Delta3Point, DeltaList, Tare,
+                   create_delta_by_type)
+from .data.analysis import compute_gravity_change
+from .data.correction import time_correction
+from .gui.dialogs import (AboutDialog, AddDatumFromList, AddTareDialog,
+                          AdjustOptions, CoordinatesTable,
+                          DialogApplyTimeCorrection, DialogLoopProperties,
+                          DialogMeterType, DialogOverwrite, GravityChangeTable,
+                          LoopTimeThresholdDialog, SelectAbsg, ShowCalCoeffs,
+                          TideCoordinatesDialog, TideCorrectionDialog,
+                          VerticalGradientDialog)
+from .gui.menus import MENU_STATE, Menus
+from .gui.messages import show_message
+from .gui.tabs import TabAdjust, TabData, TabDrift
+from .gui.widgets import ProgressBar
+from .models import (BurrisTableModel, ObsTreeLoop, ObsTreeModel,
+                     ObsTreeStation, ObsTreeSurvey, ScintrexTableModel,
+                     TareTableModel)
+from .tides import tide_correction_agnew, tide_correction_meter
+from .utils import (assemble_all_deltas, init_cal_coeff_dict,
+                    init_station_coords_dict, return_delta_given_key)
+
+matplotlib.use('qt5agg')
+
 
 DOWN = 1
 UP = -1
@@ -450,7 +422,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def tab_changed(self, new_idx):
         """
-        Updates tab plots/tables as needed. These typically aren't updated 
+        Updates tab plots/tables as needed. These typically aren't updated
         unless they're visible.
         :param new_idx: Index of newly-selected tab.
         """
@@ -530,9 +502,9 @@ class MainProg(QtWidgets.QMainWindow):
         """
         - Display a file opening window
         - Populate obsTreeModel
-        :param open_type: 
+        :param open_type:
             'choose' - Choose meter-style data format
-            'loop' - if appending loop to survey, otherwise assume appending 
+            'loop' - if appending loop to survey, otherwise assume appending
             survey to campaign (can be both choose and loop, e.g. 'chooseloop')
             'CG-6', 'Burris', or 'CG-5' - reading a raw data file, no appending
         """
@@ -634,7 +606,7 @@ class MainProg(QtWidgets.QMainWindow):
     @staticmethod
     def read_raw_data_file(filename, meter_type):
         """
-        Read raw relative-gravity text file in the format exported from meter 
+        Read raw relative-gravity text file in the format exported from meter
         (Scintrex or Burris). Data are returned to the calling function.
         :param filename: Full path to import file
         :param meter_type: 'Burris', 'CG-5', 'CG-6'
@@ -963,9 +935,9 @@ class MainProg(QtWidgets.QMainWindow):
 
     def populate_survey_deltatable_from_simpledeltas(self, delta_models, surveys):
         """
-        When workspaces are saved/loaded as json (.gsa files), there are 2 sets 
-        of deltas: those based on the data (drift-tab deltas), and those that 
-        might have edits (network-adjustment-tab deltas). The former we don't 
+        When workspaces are saved/loaded as json (.gsa files), there are 2 sets
+        of deltas: those based on the data (drift-tab deltas), and those that
+        might have edits (network-adjustment-tab deltas). The former we don't
         bother saving, the latter we do save. Deltas from the net adj tab are in
         turn based on other deltas (Roman method), and/or from stations directly
         ('normal' deltas). This function recreates the scheme from saved json by
@@ -998,7 +970,8 @@ class MainProg(QtWidgets.QMainWindow):
                                     simpledelta.sta2
                                 )
                                 if station1 is not None and station2 is not None:
-                                    d = Delta.from_type(simpledelta.type,
+                                    d = create_delta_by_type(
+                                        simpledelta.type,
                                         station1,
                                         station2,
                                         adj_sd=simpledelta.adj_sd,
@@ -1074,11 +1047,11 @@ class MainProg(QtWidgets.QMainWindow):
 
     def populate_station_coords(self):
         """
-        Stores a single set of coordinates for each station with the 
-        obsTreeModel object. The coordinates of the last Station in the 
+        Stores a single set of coordinates for each station with the
+        obsTreeModel object. The coordinates of the last Station in the
         Survey > Loop > Station hierarchy are used.
 
-        Used as a slot for the self.station_model.signal_update_coordinates 
+        Used as a slot for the self.station_model.signal_update_coordinates
         signal (thus init_station_coords can't be called directly)
         """
         self.obsTreeModel.station_coords = init_station_coords_dict(self.obsTreeModel)
@@ -1145,7 +1118,7 @@ class MainProg(QtWidgets.QMainWindow):
     def activate_survey_or_loop(self, index):
         """
         Highlights active survey or loop in tree view.
-        :param index: PyQt index of newly-highlighted tree item, sent by 
+        :param index: PyQt index of newly-highlighted tree item, sent by
             doubleClicked event
         """
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -1254,7 +1227,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def update_adjust_tables(self):
         """
-        Update delta-g and datum tables after selecting a new survey in the tree 
+        Update delta-g and datum tables after selecting a new survey in the tree
         view, or after a network adjustment
         """
 
@@ -1322,9 +1295,9 @@ class MainProg(QtWidgets.QMainWindow):
 
     def update_drift_tables_and_plots(self, update=True):
         """
-        First updates the drift_method combobox, then calls set_drift_method 
+        First updates the drift_method combobox, then calls set_drift_method
         to update plots.
-        :param update: Plots are only updated if True. Saves time when 
+        :param update: Plots are only updated if True. Saves time when
             loading a workspace.
         """
 
@@ -1338,8 +1311,8 @@ class MainProg(QtWidgets.QMainWindow):
 
     def on_obs_checked_change(self, selected):
         """
-        Called when a checkbox state is changed, but not when a new item 
-        selected. Should update drift plots if on drift tab, but otherwise 
+        Called when a checkbox state is changed, but not when a new item
+        selected. Should update drift plots if on drift tab, but otherwise
         do nothing.
         :param selected: Selected indexes
         """
@@ -1384,7 +1357,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def correct_recorded_time(self):
         """
-        Correct all times from an offset: when GMT time entered in relative 
+        Correct all times from an offset: when GMT time entered in relative
         gravimeter is bad.
         """
         # ask for time difference to apply
@@ -1408,7 +1381,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def set_vertical_gradient_interval(self):
         """
-        Dialog that queries user for the distance over which vertical gradient 
+        Dialog that queries user for the distance over which vertical gradient
         is measured.
         """
         interval = VerticalGradientDialog(self.vertical_gradient_interval)
@@ -1417,7 +1390,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def vertical_gradient_write(self):
         """
-        Writes a .grd file with two values: gradient and standard deviation. 
+        Writes a .grd file with two values: gradient and standard deviation.
         Only works when Roman drift method is used.
         """
         # Already verified that only a single loop is selected
@@ -1783,9 +1756,9 @@ class MainProg(QtWidgets.QMainWindow):
 
     def divide_by_height(self):
         """
-        Called from "Divide loop..." menu command. Shows a dialog to specify a 
-        time interval, then scans the current loop and divides station 
-        occupations separated by the time interval (or greater) into a loop. 
+        Called from "Divide loop..." menu command. Shows a dialog to specify a
+        time interval, then scans the current loop and divides station
+        occupations separated by the time interval (or greater) into a loop.
         Useful primarily when several day's data is in a single file.
         """
         # Clear survey delta table, it causes problems otherwise
@@ -1852,8 +1825,8 @@ class MainProg(QtWidgets.QMainWindow):
 
     def divide_survey(self, loop_thresh):
         """
-        Called from "Divide loop..." menu command. Shows a dialog to specify a 
-        time interval, then scans the current loop and divides station occupations 
+        Called from "Divide loop..." menu command. Shows a dialog to specify a
+        time interval, then scans the current loop and divides station occupations
         separated by the time interval (or greater) into a loop. Useful primarily
         when several day's data is in a single file.
         """
@@ -1895,8 +1868,8 @@ class MainProg(QtWidgets.QMainWindow):
 
     def duplicate_station(self):
         """
-        Create a duplicate of a station in the tree view. Useful when the same 
-        station is observed at the end of one day and the start of the next day: 
+        Create a duplicate of a station in the tree view. Useful when the same
+        station is observed at the end of one day and the start of the next day:
         when imported, it will appear as one station, but it should be two.
         """
         indexes = self.gui_data_treeview.selectedIndexes()
@@ -2291,7 +2264,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def write_summary_text(self):
         """
-        Write complete summary of data and adjustment, with the intent that the 
+        Write complete summary of data and adjustment, with the intent that the
         processing can be re-created later
         """
         fn = export_summary(self.obsTreeModel, self.settings.value('current_dir'))
@@ -2466,7 +2439,7 @@ class MainProg(QtWidgets.QMainWindow):
         Parameters
         ----------
         e : qt event
-        parent: Splash screen. Using this as the QMessageBox parent shows the MB 
+        parent: Splash screen. Using this as the QMessageBox parent shows the MB
             centered over the splash screen.
         show_uptodate_msg : bool
            Whether to display a msg if no updates found
@@ -2555,7 +2528,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def init_settings(self):
         """
-        If it's the first time a user has opened ingestor, populate the 
+        If it's the first time a user has opened ingestor, populate the
         directories/files
 
         :return: None
@@ -2597,7 +2570,7 @@ class BoldDelegate(QtWidgets.QStyledItemDelegate):
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
-    """ 
+    """
     Sends exceptions to log file
     """
     # KeyboardInterrupt is a special case, don't raise the error dialog when it occurs.

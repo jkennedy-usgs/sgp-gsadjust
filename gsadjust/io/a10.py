@@ -20,7 +20,7 @@ resulting from the authorized or unauthorized use of the software.
 import re
 
 
-class A10(object):
+class A10:
     """
     GSadjust object for absolute gravity observation
     """

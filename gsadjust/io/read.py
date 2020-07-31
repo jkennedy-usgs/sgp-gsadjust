@@ -1,5 +1,5 @@
 """
-data_import.py
+io/read.py
 ==============
 
 GSadjust code for importing relative-gravity meter data.
@@ -19,16 +19,14 @@ import datetime as dt
 
 from matplotlib.dates import date2num
 
-from data_objects import ChannelList, Datum
-from utils import index_or_none
+from ..data import ChannelList, Datum
+from ..utils import index_or_none
 
 
 class InvalidMeterException(Exception):
     """
     A loader for an unknown meter type was requested.
     """
-
-    pass
 
 
 def file_reader(meter_type, fh):
@@ -491,7 +489,7 @@ def read_cg6tsoft(fh):
 
 def import_abs_g_complete(fname):
     """
-    Imports absolute gravity data as output by A10_parse.py. 
+    Imports absolute gravity data as output by A10_parse.py.
     Adds rows to datum_model
 
     :param fname: filename to open

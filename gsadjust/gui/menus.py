@@ -18,8 +18,6 @@ resulting from the authorized or unauthorized use of the software.
 """
 from PyQt5 import QtGui, QtWidgets
 
-import resources
-
 
 class MENU_STATE:
     UNINIT = -2

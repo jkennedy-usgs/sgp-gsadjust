@@ -24,6 +24,9 @@ import logging
 import numpy as np
 from PyQt5.QtCore import Qt
 
+from ..gui.messages import show_message
+from .adjustment import AdjustedStation
+
 
 def numpy_inversion(
     adjustment, results_model, output_root_dir, write_out_files='n', survey_name='test'
@@ -36,8 +39,6 @@ def numpy_inversion(
                         (similar to MCGravi output files)
     output_root_dir     directory for writing output files
     """
-    from gui_objects import show_message
-    from data_objects import AdjustedStation
 
     adjustment.adjustmentresults.text = []
 
@@ -67,7 +68,7 @@ def numpy_inversion(
     netadj_loop_keys = adjustment.netadj_loop_keys
 
     # Initialize least squares matrices
-    # number of unknowns                                                                   #
+    # number of unknowns
     nb_x = len(sta_dic_ls) + ndrift + n_meters
     adjustment.adjustmentresults.n_unknowns = nb_x
     # model matrix:
@@ -148,7 +149,7 @@ def numpy_inversion(
                     adjustment.sd_dic[key] = sd
                     sd_all.append(sd)
                 except Exception:
-                    msg = show_message("Bad variance in results", "Inversion error")
+                    show_message("Bad variance in results", "Inversion error")
     adjustment.adjustmentresults.avg_stdev = np.mean(sd_all)
 
     # Retrieve calibration coefficient(s)

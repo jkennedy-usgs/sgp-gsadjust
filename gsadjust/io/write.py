@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 """
-data_export.py
+io/write.py
 ===============
 
 Data export code for GSadjust.
@@ -23,7 +23,8 @@ import time
 
 from PyQt5.QtCore import Qt
 
-from data_analysis import compute_gravity_change
+from ..data.analysis import compute_gravity_change
+from ..gui.messages import show_message
 
 
 def export_metadata(obsTreeModel, data_path):
@@ -152,7 +153,6 @@ def export_metadata(obsTreeModel, data_path):
                     logging.info('Metadata text written to file')
 
     if not results_written:
-        from gui_objects import show_message
 
         show_message('No network adjustment results', 'Write error')
         os.remove(fn)

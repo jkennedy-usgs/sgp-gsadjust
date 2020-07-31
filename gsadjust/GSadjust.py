@@ -108,49 +108,82 @@ Survey.
 import copy
 import logging
 import os
+
 # Standard library modules
 import sys
 import time
 import traceback
 import webbrowser
-# GSadjust modules
-from io import (InvalidMeterException, export_data, export_metadata,
-                export_summary, file_reader, import_abs_g_complete,
-                import_abs_g_simple)
 
 import matplotlib
+
 # Modules that must be installed
 import numpy as np
 from matplotlib.dates import num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 
-from gsa_plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
-                       PlotDgResidualHistogram, PlotGravityChange,
-                       PlotLoopAnimation, PlotNetworkGraph)
-
 from . import resources
-from .data import (ChannelList, Datum, Delta3Point, DeltaList, Tare,
-                   create_delta_by_type)
+from .data import ChannelList, Datum, Delta3Point, DeltaList, Tare, create_delta_by_type
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
-from .gui.dialogs import (AboutDialog, AddDatumFromList, AddTareDialog,
-                          AdjustOptions, CoordinatesTable,
-                          DialogApplyTimeCorrection, DialogLoopProperties,
-                          DialogMeterType, DialogOverwrite, GravityChangeTable,
-                          LoopTimeThresholdDialog, SelectAbsg, ShowCalCoeffs,
-                          TideCoordinatesDialog, TideCorrectionDialog,
-                          VerticalGradientDialog)
+from .gui.dialogs import (
+    AboutDialog,
+    AddDatumFromList,
+    AddTareDialog,
+    AdjustOptions,
+    CoordinatesTable,
+    DialogApplyTimeCorrection,
+    DialogLoopProperties,
+    DialogMeterType,
+    DialogOverwrite,
+    GravityChangeTable,
+    LoopTimeThresholdDialog,
+    SelectAbsg,
+    ShowCalCoeffs,
+    TideCoordinatesDialog,
+    TideCorrectionDialog,
+    VerticalGradientDialog,
+)
 from .gui.menus import MENU_STATE, Menus
 from .gui.messages import show_message
 from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
-from .models import (BurrisTableModel, ObsTreeLoop, ObsTreeModel,
-                     ObsTreeStation, ObsTreeSurvey, ScintrexTableModel,
-                     TareTableModel)
+
+# GSadjust modules
+from .io import (
+    InvalidMeterException,
+    export_data,
+    export_metadata,
+    export_summary,
+    file_reader,
+    import_abs_g_complete,
+    import_abs_g_simple,
+)
+from .models import (
+    BurrisTableModel,
+    ObsTreeLoop,
+    ObsTreeModel,
+    ObsTreeStation,
+    ObsTreeSurvey,
+    ScintrexTableModel,
+    TareTableModel,
+)
+from .plots import (
+    PlotDatumCompare,
+    PlotDatumComparisonTimeSeries,
+    PlotDgResidualHistogram,
+    PlotGravityChange,
+    PlotLoopAnimation,
+    PlotNetworkGraph,
+)
 from .tides import tide_correction_agnew, tide_correction_meter
-from .utils import (assemble_all_deltas, init_cal_coeff_dict,
-                    init_station_coords_dict, return_delta_given_key)
+from .utils import (
+    assemble_all_deltas,
+    init_cal_coeff_dict,
+    init_station_coords_dict,
+    return_delta_given_key,
+)
 
 matplotlib.use('qt5agg')
 

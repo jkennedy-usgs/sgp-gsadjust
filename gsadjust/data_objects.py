@@ -120,7 +120,26 @@ class ChannelList:
 
 
 ###############################################################################
-class Delta:
+
+
+def create_delta_by_type(delta_type, *args, **kwargs):
+    """
+    Create a new Delta subclass of the given type, passing in provided arguments.
+
+    :returns: an instance of the Delta subclass.
+    """
+    cls = {
+        'normal': DeltaNormal,
+        'manual': DeltaManual,
+        'three_point': Delta3Point,
+        'list': DeltaList,
+    }.get(delta_type)
+    if cls is None:
+        raise TypeError
+    return cls(*args, **kwargs)
+
+
+class DeltaBase:
     """
     Object to store relative-gravity difference
     
@@ -129,15 +148,15 @@ class Delta:
     adjustment is done, there is no residual and the default value of -999 is
     assigned.
 
-    Four types of deltas (self.type):
-    'normal': calculated between two stations (g2 - g1)
-    'three_point': calculated between one station, and an interpolated value
+    Four types of deltas implemented as subclasses.
+    DeltaNormal ('normal'): calculated between two stations (g2 - g1)
+    Delta3Point ('three_point'): calculated between one station, and an interpolated value
         betweeen two stations (Roman method).  self.station2 is a tuple with two
         stations, self.station1 is a single station.
-    'list': a delta is calculated from a list of deltas. Used with the Roman
+    DeltaList ('list'): a delta is calculated from a list of deltas. Used with the Roman
         method to average three-point deltas. self.station2 is a list.
         self.station1 is None.
-    'assigned': delta-g is manually assigned. Created automatically when a
+    DeltaManual ('assigned'): delta-g is manually assigned. Created automatically when a
         'normal' delta is edited on the network adjustment tab. Roman
         ('three_point' and 'list') deltas can't be converted to 'assigned'.
 
@@ -150,13 +169,14 @@ class Delta:
     assigned_sd: Manually-edited std. dev.
     """
 
+    editable = False  # Only Normal deltas are editable.
+
     def __init__(
         self,
         sta1,
         sta2,
         driftcorr=0.0,
         ls_drift=None,
-        delta_type='normal',
         checked=2,
         adj_sd=999,
         cal_coeff=1,
@@ -166,15 +186,6 @@ class Delta:
         self.station2 = sta2
         self.checked = checked
         self.adj_sd = adj_sd
-        self.type = delta_type
-        if self.type in ['normal', 'assigned']:
-            self.meter = sta2.meter[0]
-        # Roman correction: list of deltas
-        elif self.type == 'list':
-            self.meter = sta2[0].meter
-        # Roman correction: single dg
-        elif self.type == 'three_point':
-            self.meter = sta2[1].meter[0]
         self.residual = -999.0
         self.driftcorr = driftcorr
         self.ls_drift = ls_drift  # degree of drift, if included in network adjustment
@@ -182,32 +193,7 @@ class Delta:
         self.loop = loop
         self.assigned_dg = None
 
-    @classmethod
-    def from_list(cls, list_of_deltas):
-        """
-        Used when repopulating deltas from a workspace
-        :param list_of_deltas:
-        :return: Delta
-        """
-        return cls(None, list_of_deltas, delta_type='list')
-
-    @property
-    def key(self):
-        """
-        Used to match up adjustment results with observations, and to store 
-        simple Deltas
-        :return: str
-        """
-        if self.type == 'list':
-            return self.type + self.sta1 + self.sta2 + str(self.dg())
-        elif self.type == 'normal':
-            return (
-                self.type
-                + self.station1.station_name
-                + self.station1.station_count
-                + self.station2.station_name
-                + self.station2.station_count
-            )
+    # General methods, used on all subclasses.
 
     @property
     def sd_for_adjustment(self):
@@ -226,121 +212,6 @@ class Delta:
         else:
             return self.adj_sd
 
-    @property
-    def sd(self):
-        """
-        Standard deviation determined from drift correction. Default value for
-        network adjustment.
-        :return: float
-        """
-        try:
-            if self.type == 'list':
-                if len(self.station2) > 1:
-                    s = [np.abs(delta.dg()) for delta in self.station2]
-                    return np.std(s)
-                else:
-                    return 3.0
-            elif self.type in ['normal', 'assigned']:
-                if hasattr(self.station1, 'asd'):
-                    if self.station1.assigned_sd:
-                        s = np.sqrt(
-                            self.station2.assigned_sd ** 2
-                            + self.station1.assigned_sd ** 2
-                        )
-                    else:
-                        s = np.sqrt(
-                            self.station2.stdev() ** 2 + self.station1.stdev() ** 2
-                        )
-                else:
-                    s = np.sqrt(self.station2.stdev() ** 2 + self.station1.stdev() ** 2)
-                return s
-            elif self.type == 'three_point':
-                return 3.0
-        except:
-            return -999
-
-    @property
-    def sta1(self):
-        if self.type == 'list':
-            if self.station2[0].dg() > 0:
-                return self.station2[0].station1.station_name
-            else:
-                return self.station2[0].station2[1].station_name
-        elif self.type == 'three_point':
-            return self.station1.station_name
-        else:
-            return self.station1.station_name
-
-    @property
-    def sta2(self):
-        if self.type == 'list':
-            if self.station2[0].dg() > 0:
-                return self.station2[0].station2[1].station_name
-            else:
-                return self.station2[0].station1.station_name
-        elif self.type == 'three_point':
-            return self.station2[1].station_name
-        else:
-            return self.station2.station_name
-
-    def dg(self):
-        # Roman correction: dg requires three station-observations
-
-        if self.type == 'three_point':
-            gm1, gm2a, gm2b, = (
-                self.station1.gmean(),
-                self.station2[1].gmean(),
-                self.station2[0].gmean(),
-            )
-            tm1, tm2a, tm2b = (
-                self.station1.tmean(),
-                self.station2[0].tmean(),
-                self.station2[1].tmean(),
-            )
-
-            sta2_dg = gm2a - gm2b
-            time_prorate = (tm1 - tm2a) / (tm2b - tm2a)
-            dg = (gm2b + sta2_dg * time_prorate) - gm1
-        # Roman correction: return average of individual deltas
-        elif self.type == 'list':
-            dg_all = [np.abs(delta.dg()) for delta in self.station2]
-            dg = np.mean(dg_all)
-        # Normal delta
-        elif self.type == 'normal':
-            gm1, gm2, = self.station1.gmean(), self.station2.gmean()
-            dg = gm2 - gm1 - self.driftcorr
-        elif self.type == 'assigned':
-            dg = self.assigned_dg
-        else:
-            dg = -999
-        return dg
-
-    def sta1_t(self):
-        if self.type == 'three_point':
-            return self.station1.tmean()
-        elif self.type == 'list':
-            return self.station2[0].station1.tmean()
-        else:
-            return self.station1.tmean()
-
-    def sta2_t(self):
-        if self.type == 'three_point':
-            return self.station2[0].tmean()
-        elif self.type == 'list':
-            return self.station2[0].station1.tmean()
-        else:
-            return self.station2.tmean()
-
-    @property
-    def duration(self):
-        if type(self.station2) is tuple:
-            return self.station2[1].tmean() - self.station2[0].tmean()
-        elif type(self.station2) is list:
-            dgs = [delta.dg() for delta in self.station2]
-            return np.mean(dgs)
-        else:
-            return self.sta2_t() - self.sta1_t()
-
     def __str__(self):
         # if self.checked == 2:
         #     in_use = '1'
@@ -356,12 +227,36 @@ class Delta:
             self.sta1,
             self.sta2,
             self.time_string(),
-            self.dg(),
+            self.dg,
             self.sd,
             self.sd_for_adjustment,
             self.residual,
         )
         return return_str
+
+    @property
+    def sta1(self):
+        raise NotImplementedError
+
+    @property
+    def sta2(self):
+        raise NotImplementedError
+
+    @property
+    def sta1_t(self):
+        raise NotImplementedError
+
+    @property
+    def sta2_t(self):
+        raise NotImplementedError
+
+    @property
+    def dg(self):
+        raise NotImplementedError
+
+    @property
+    def sd(self):
+        raise NotImplementedError
 
     def time(self):
         if type(self.station2) is pyqt_models.ObsTreeStation:
@@ -375,8 +270,242 @@ class Delta:
     def time_string(self):
         try:
             return num2date(self.time()).strftime('%Y-%m-%d %H:%M:%S')
-        except:
+        except Exception:
             return '-999'
+
+    @property
+    def dg(self):
+        return -999
+
+    @property
+    def duration(self):
+        if type(self.station2) is tuple:
+            return self.station2[1].tmean() - self.station2[0].tmean()
+        elif type(self.station2) is list:
+            dgs = [delta.dg for delta in self.station2]
+            return np.mean(dgs)
+        else:
+            return self.sta2_t() - self.sta1_t()
+
+
+class DeltaNormal(DeltaBase):
+    """
+    'normal': calculated between two stations (g2 - g1)
+    """
+
+    type = 'normal'
+
+    @property
+    def meter(self):
+        return self.sta2.meter[0]
+
+    @property
+    def sd(self):
+        """
+        Standard deviation determined from drift correction. Default value for
+        network adjustment.
+        :return: float
+        """
+        try:
+            if hasattr(self.station1, 'asd'):
+                if self.station1.assigned_sd:
+                    s = np.sqrt(
+                        self.station2.assigned_sd ** 2 + self.station1.assigned_sd ** 2
+                    )
+                else:
+                    s = np.sqrt(self.station2.stdev() ** 2 + self.station1.stdev() ** 2)
+            else:
+                s = np.sqrt(self.station2.stdev() ** 2 + self.station1.stdev() ** 2)
+            return s
+        except:
+            return -999
+
+    @property
+    def key(self):
+        """
+        Used to match up adjustment results with observations, and to store 
+        simple Deltas
+        :return: str
+        """
+        return (
+            f"{self.type}"
+            f"{self.station1.station_name}"
+            f"{self.station1.station_count"
+            f"{self.station2.station_name}"
+            f"{self.station2.station_count}"
+        )
+
+    @property
+    def sta1(self):
+        return self.station1.station_name
+
+    @property
+    def sta2(self):
+        return self.station2.station_name
+
+    def dg(self):
+        # Roman correction: dg requires three station-observations
+        gm1, gm2, = self.station1.gmean(), self.station2.gmean()
+        dg = gm2 - gm1 - self.driftcorr
+
+    def sta1_t(self):
+        return self.station1.tmean()
+
+    def sta2_t(self):
+        return self.station2.tmean()
+
+    @property
+    def duration(self):
+        if type(self.station2) is tuple:
+            return self.station2[1].tmean() - self.station2[0].tmean()
+        elif type(self.station2) is list:
+            dgs = [delta.dg for delta in self.station2]
+            return np.mean(dgs)
+        else:
+            return self.sta2_t() - self.sta1_t()
+
+
+class DeltaManual(DeltaNormal):
+    """
+        'assigned': delta-g is manually assigned. Created automatically when a
+            'normal' delta is edited on the network adjustment tab. Roman
+            ('three_point' and 'list') deltas can't be converted to 'assigned'.
+    """
+
+    type = 'manual'
+
+    @property
+    def dg(self):
+        return self.assigned_dg
+
+
+class Delta3Point(DeltaBase):
+    """
+    'three_point': calculated between one station, and an interpolated value
+        betweeen two stations (Roman method).  self.station2 is a tuple with two
+        stations, self.station1 is a single station.
+    """
+
+    type = 'three_point'
+
+    @property
+    def meter(self):
+        return sta2[1].meter[0]
+
+    @property
+    def sd(self):
+        """
+        Standard deviation determined from drift correction. Default value for
+        network adjustment.
+        :return: float
+        """
+        return 3.0
+
+    @property
+    def sta1(self):
+        return self.station1.station_name
+
+    @property
+    def sta2(self):
+        return self.station2[1].station_name
+
+    @property
+    def dg(self):
+        # Roman correction: dg requires three station-observations
+        gm1, gm2a, gm2b, = (
+            self.station1.gmean(),
+            self.station2[1].gmean(),
+            self.station2[0].gmean(),
+        )
+        tm1, tm2a, tm2b = (
+            self.station1.tmean(),
+            self.station2[0].tmean(),
+            self.station2[1].tmean(),
+        )
+
+        sta2_dg = gm2a - gm2b
+        time_prorate = (tm1 - tm2a) / (tm2b - tm2a)
+        dg = (gm2b + sta2_dg * time_prorate) - gm1
+
+    def sta1_t(self):
+        return self.station1.tmean()
+
+    def sta2_t(self):
+        return self.station2[0].tmean()
+
+
+class DeltaList(DeltaBase):
+    """
+    'list': a delta is calculated from a list of deltas. Used with the Roman
+        method to average three-point deltas. self.station2 is a list.
+        self.station1 is None.
+    """
+
+    type = 'list'
+
+    @property
+    def meter(self):
+        return self.sta2.meter[0]
+
+    @property
+    def sd(self):
+        """
+        Standard deviation determined from drift correction. Default value for
+        network adjustment.
+        :return: float
+        """
+        try:
+            if len(self.station2) > 1:
+                s = [np.abs(delta.dg) for delta in self.station2]
+                return np.std(s)
+            else:
+                return 3.0
+        except:
+            return -999
+
+    @property
+    def key(self):
+        """
+        Used to match up adjustment results with observations, and to store 
+        simple Deltas
+        :return: str
+        """
+        return f"{self.type}{self.sta1}{self.sta2}{self.dg}"
+
+    @property
+    def sta1(self):
+        if self.station2[0].dg > 0:
+            return self.station2[0].station1.station_name
+        else:
+            return self.station2[0].station2[1].station_name
+
+    @property
+    def sta2(self):
+        if self.station2[0].dg > 0:
+            return self.station2[0].station2[1].station_name
+        else:
+            return self.station2[0].station1.station_name
+
+    def dg(self):
+        # Roman correction: return average of individual deltas
+        dg_all = [np.abs(delta.dg for delta in self.station2]
+        dg = np.mean(dg_all)
+
+    def sta1_t(self):
+        return self.station2[0].station1.tmean()
+
+    def sta2_t(self):
+        return self.station2[0].station1.tmean()
+
+    @property
+    def duration(self):
+        if type(self.station2) is tuple:
+            return self.station2[1].tmean() - self.station2[0].tmean()
+        elif type(self.station2) is list:
+            dgs = [delta.dg for delta in self.station2]
+            return np.mean(dgs)
+        else:
+            return self.sta2_t() - self.sta1_t()
 
 
 ###############################################################################
@@ -406,7 +535,7 @@ class Tare:
             in_use = 'x'
         else:
             in_use = 'o'
-        return ' '.join([in_use, self.date, self.time, str(self.tare)])
+        return f"{in_use} {self.date} {self.time} {self.tare}"
 
     @property
     def datetime(self):

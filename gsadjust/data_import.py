@@ -425,7 +425,6 @@ def read_cg6tsoft(fh):
             vals_temp = line.split()
 
             if line[0] == '/':
-                vals_temp = line.split()
                 if len(vals_temp) > 1:
                     if vals_temp[1] == 'Instrument':
                         meter = vals_temp[-1]

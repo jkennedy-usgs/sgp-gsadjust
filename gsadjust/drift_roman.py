@@ -39,7 +39,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-from data_objects import Delta
+from data_objects import Delta3Point
 
 
 def drift_roman(data, loop_name, time_threshold=None):
@@ -104,11 +104,8 @@ def drift_roman(data, loop_name, time_threshold=None):
                                 or (other2.tmean() - other1.tmean()) * 1440
                                 < time_threshold
                             ):
-                                delta = Delta(
-                                    station,
-                                    (other1, other2),
-                                    delta_type='three_point',
-                                    loop=loop_name,
+                                delta = Delta3Point(
+                                    station, (other1, other2), loop=loop_name,
                                 )
                                 sta2_dg = other2.gmean() - other1.gmean()
                                 # this is the drift correction

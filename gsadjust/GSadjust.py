@@ -133,7 +133,7 @@ from data_import import (
     import_abs_g_complete,
     import_abs_g_simple,
 )
-from data_objects import ChannelList, Datum, Delta, Tare
+from data_objects import ChannelList, Datum, DeltaList, Delta3Point, Tare
 from gsa_plots import (
     PlotDatumCompare,
     PlotDatumComparisonTimeSeries,
@@ -998,13 +998,12 @@ class MainProg(QtWidgets.QMainWindow):
                                     simpledelta.sta2
                                 )
                                 if station1 is not None and station2 is not None:
-                                    d = Delta(
+                                    d = Delta.from_type(simpledelta.type,
                                         station1,
                                         station2,
                                         adj_sd=simpledelta.adj_sd,
                                         driftcorr=simpledelta.driftcorr,
                                         ls_drift=simpledelta.ls_drift,
-                                        delta_type=simpledelta.type,
                                         checked=simpledelta.checked,
                                         loop=simpledelta.loop,
                                     )
@@ -1023,18 +1022,17 @@ class MainProg(QtWidgets.QMainWindow):
                                     surveys[idx].return_obstreestation(delta[1]),
                                     surveys[idx].return_obstreestation(delta[2]),
                                 )
-                                tpd = Delta(
+                                tpd = Delta3Point(
                                     station1,
                                     station2,
                                     adj_sd=simpledelta.adj_sd,
                                     driftcorr=simpledelta.driftcorr,
                                     ls_drift=simpledelta.ls_drift,
-                                    delta_type='three_point',
                                     checked=simpledelta.checked,
                                     loop=simpledelta.loop,
                                 )
                                 list_of_deltas.append(tpd)
-                            d = Delta.from_list(list_of_deltas)
+                            d = DeltaList(None, list_of_deltas)
                             if simpledelta.adj_sd < 998:
                                 d.adj_sd = simpledelta.adj_sd
                             # for sg, the 'list'-type delta returns the mean of all dg's, the user can't check/uncheck

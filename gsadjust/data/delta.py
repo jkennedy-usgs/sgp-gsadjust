@@ -194,7 +194,7 @@ class DeltaNormal(DeltaBase):
 
     @property
     def meter(self):
-        return self.sta2.meter[0]
+        return self.station2.meter[0]
 
     @property
     def sd(self):
@@ -290,7 +290,7 @@ class Delta3Point(DeltaBase):
 
     @property
     def meter(self):
-        return self.sta2[1].meter[0]
+        return self.station2[1].meter[0]
 
     @property
     def sd(self):
@@ -347,7 +347,7 @@ class DeltaList(DeltaBase):
 
     @property
     def meter(self):
-        return self.sta2.meter[0]
+        return self.station2.meter[0]
 
     @property
     def sd(self):

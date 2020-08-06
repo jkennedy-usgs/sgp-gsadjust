@@ -543,8 +543,8 @@ class GravityChangeTable(QtWidgets.QDialog):
         hbox.addWidget(QtWidgets.QLabel('Table type:'))
         hbox.addWidget(self.type_comboBox)
         if self.dates:
-            hbox.addWidget(btnPlot)
-            hbox.addWidget(btnMap)
+            hbox.addWidget(btn_plot)
+            hbox.addWidget(btn_map)
         hbox.addWidget(btn1)
         hbox_widget.setLayout(hbox)
         layout.addWidget(hbox_widget)

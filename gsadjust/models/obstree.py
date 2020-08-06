@@ -32,11 +32,21 @@ from matplotlib.dates import date2num, num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QVariant
 
-from ..data import (AdjustedStation, Adjustment, AdjustmentOptions,
-                    AdjustmentResults, Datum, DeltaList, DeltaNormal, Tare)
+from ..data import (
+    AdjustedStation,
+    Adjustment,
+    AdjustmentOptions,
+    AdjustmentResults,
+    Datum,
+    DeltaList,
+    DeltaNormal,
+    Tare,
+)
 from ..data.analysis import InversionError, numpy_inversion
 from ..gui.messages import show_message
+from .datum import DatumTableModel
 from .delta import DeltaTableModel
+from .result import ResultsTableModel
 from .tare import TareTableModel
 from .utils import format_numeric_column
 
@@ -1045,8 +1055,8 @@ class ObsTreeSurvey(ObsTreeItem):
                         delta.sta1[:6],
                         delta.sta2[:6],
                         delta.dg() / 1000.0 * delta.cal_coeff,
-                        delta.sta1_t(),
-                        delta.sta2_t(),
+                        delta.sta1_t,
+                        delta.sta2_t,
                         delta.dg() / 1000,
                         '0',
                         delta.sd_for_adjustment / 1000.0,
@@ -1191,7 +1201,6 @@ class ObsTreeSurvey(ObsTreeItem):
         output_root_dir     directory for writing output files
         """
 
-
         self.adjustment.adjustmentresults.text = []
 
         # sta_dic_LS is a dictionary, key: station name, value: column for A matrix
@@ -1261,7 +1270,10 @@ class ObsTreeSurvey(ObsTreeItem):
 
         try:
             cal_dic = numpy_inversion(
-                self.adjustment, self.results_model, output_root_dir, write_out_files='n'
+                self.adjustment,
+                self.results_model,
+                output_root_dir,
+                write_out_files='n',
             )
         except InversionError:
             show_message(InversionError.message, "Inversion Error")

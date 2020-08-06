@@ -113,7 +113,7 @@ def numpy_inversion(
                             + n_meters
                             + netadj_loop_keys[loop_name][0]
                             + i,
-                        ] = (delta.sta2_t() - delta.sta1_t()) ** (i + 1)
+                        ] = (delta.sta2_t - delta.sta1_t) ** (i + 1)
 
         S[sta_dic_ls[delta.sta1]] = 1
         S[sta_dic_ls[delta.sta2]] = 1

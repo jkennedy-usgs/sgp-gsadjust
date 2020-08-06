@@ -154,7 +154,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_STATION2: (str, delta.sta2),
                     LOOP: (str, delta_station_loop()),
                     DELTA_TIME: (format_datetime, delta.time()),
-                    DELTA_G: (format, delta.dg(), "0.1f"),
+                    DELTA_G: (format, delta.dg, "0.1f"),
                     DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
                     DELTA_SD: (format, delta.sd, "0.1f"),
                     DELTA_ADJ_SD: (format, delta.sd_for_adjustment, "0.1f"),

@@ -154,15 +154,15 @@ class DeltaBase:
 
     def time(self):
         if isinstance(self.station2, tuple):
-            return self.sta1_t()
+            return self.sta1_t
         elif isinstance(self.station2, list):
-            t = [delta.sta1_t() for delta in self.station2]
+            t = [delta.sta1_t for delta in self.station2]
             return np.mean(t)
         else:
             # FIXME: Default to ObsTreeStation so we don't need the import.
             # Should generally avoid type checks, may be able to remove
             # these remaining two.
-            return (self.sta1_t() + self.sta2_t()) / 2
+            return (self.sta1_t + self.sta2_t) / 2
 
     def time_string(self):
         try:
@@ -182,7 +182,7 @@ class DeltaBase:
             dgs = [delta.dg for delta in self.station2]
             return np.mean(dgs)
         else:
-            return self.sta2_t() - self.sta1_t()
+            return self.sta2_t - self.sta1_t
 
 
 class DeltaNormal(DeltaBase):
@@ -240,14 +240,17 @@ class DeltaNormal(DeltaBase):
     def sta2(self):
         return self.station2.station_name
 
+    @property
     def dg(self):
         # Roman correction: dg requires three station-observations
         gm1, gm2, = self.station1.gmean(), self.station2.gmean()
-        dg = gm2 - gm1 - self.driftcorr
+        return gm2 - gm1 - self.driftcorr
 
+    @property
     def sta1_t(self):
         return self.station1.tmean()
 
+    @property
     def sta2_t(self):
         return self.station2.tmean()
 
@@ -259,7 +262,7 @@ class DeltaNormal(DeltaBase):
             dgs = [delta.dg for delta in self.station2]
             return np.mean(dgs)
         else:
-            return self.sta2_t() - self.sta1_t()
+            return self.sta2_t - self.sta1_t
 
 
 class DeltaAssigned(DeltaNormal):
@@ -322,11 +325,13 @@ class Delta3Point(DeltaBase):
 
         sta2_dg = gm2a - gm2b
         time_prorate = (tm1 - tm2a) / (tm2b - tm2a)
-        dg = (gm2b + sta2_dg * time_prorate) - gm1
+        return (gm2b + sta2_dg * time_prorate) - gm1
 
+    @property
     def sta1_t(self):
         return self.station1.tmean()
 
+    @property
     def sta2_t(self):
         return self.station2[0].tmean()
 
@@ -383,14 +388,17 @@ class DeltaList(DeltaBase):
         else:
             return self.station2[0].station1.station_name
 
+    @property
     def dg(self):
         # Roman correction: return average of individual deltas
         dg_all = [np.abs(delta.dg) for delta in self.station2]
-        dg = np.mean(dg_all)
+        return np.mean(dg_all)
 
+    @property
     def sta1_t(self):
         return self.station2[0].station1.tmean()
 
+    @property
     def sta2_t(self):
         return self.station2[0].station1.tmean()
 
@@ -402,4 +410,4 @@ class DeltaList(DeltaBase):
             dgs = [delta.dg for delta in self.station2]
             return np.mean(dgs)
         else:
-            return self.sta2_t() - self.sta1_t()
+            return self.sta2_t - self.sta1_t

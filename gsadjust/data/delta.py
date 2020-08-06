@@ -347,7 +347,7 @@ class DeltaList(DeltaBase):
 
     @property
     def meter(self):
-        return self.station2.meter[0]
+        return self.station2[0].meter
 
     @property
     def sd(self):

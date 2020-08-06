@@ -32,10 +32,10 @@ from ...drift import drift_continuous, drift_roman
 from ...models import (
     DeltaTableModel,
     NoCheckDeltaTableModel,
-    ObsTreeLoop,
     RomanTableModel,
     TareTableModel,
 )
+from ...obstree import ObsTreeLoop
 from ..messages import show_message
 from ..widgets import IncrMinuteTimeEdit
 

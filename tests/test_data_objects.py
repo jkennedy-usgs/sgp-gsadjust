@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from data_objects import Delta
+from data import Delta
 from test_fixture_pyqt import (
     test_channellist_fixture,
     test_threestations_fixture,

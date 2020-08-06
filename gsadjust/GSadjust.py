@@ -141,9 +141,8 @@ from .gui.widgets import ProgressBar
 from .io import (InvalidMeterException, export_data, export_metadata,
                  export_summary, file_reader, import_abs_g_complete,
                  import_abs_g_simple)
-from .models import (BurrisTableModel, ObsTreeLoop, ObsTreeModel,
-                     ObsTreeStation, ObsTreeSurvey, ScintrexTableModel,
-                     TareTableModel)
+from .models import BurrisTableModel, ScintrexTableModel, TareTableModel
+from .obstree import ObsTreeLoop, ObsTreeModel, ObsTreeStation, ObsTreeSurvey
 from .plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
                     PlotDgResidualHistogram, PlotGravityChange,
                     PlotLoopAnimation, PlotNetworkGraph)

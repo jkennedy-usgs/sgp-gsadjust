@@ -1385,30 +1385,6 @@ class SelectAbsg(QtWidgets.QDialog):
         return files_found
 
 
-def rename_dialog(old_name, new_name):
-    """
-    Dialog called after renaming station in treeview.
-
-    Gives the option to rename stations in the current loop, survey, or
-    throughout the campaign.
-    :param old_name: string, old station name
-    :param new_name: string, new station name
-    :return: integer indicating extent of station rename.
-    """
-    msg = QtWidgets.QMessageBox()
-    q_string = 'Rename all stations from {} to {} in...'.format(old_name, new_name)
-    msg.setText(q_string)
-    msg.addButton(QtWidgets.QPushButton('Campaign'), 0)
-    msg.addButton(QtWidgets.QPushButton('Survey'), 0)
-    msg.addButton(QtWidgets.QPushButton('Loop'), 0)
-    msg.addButton(QtWidgets.QPushButton('Just this station'), 0)
-    msg.addButton(QtWidgets.QPushButton('Cancel'), 1)
-    method = msg.exec_()
-    methods = {0: 'Campaign', 1: 'Survey', 2: 'Loop', 3: 'Station', 4: 'Cancel'}
-
-    return methods[method]
-
-
 class AboutDialog(QtWidgets.QDialog):
     def __init__(self, version):
         super(AboutDialog, self).__init__()

@@ -50,8 +50,8 @@ from .channel import ChannelList
 from .datum import Datum
 from .delta import (
     Delta3Point,
+    DeltaAssigned,
     DeltaList,
-    DeltaManual,
     DeltaNormal,
     create_delta_by_type,
 )

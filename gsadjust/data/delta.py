@@ -28,7 +28,7 @@ def create_delta_by_type(delta_type, *args, **kwargs):
     """
     cls = {
         'normal': DeltaNormal,
-        'manual': DeltaManual,
+        'assigned': DeltaAssigned,
         'three_point': Delta3Point,
         'list': DeltaList,
     }.get(delta_type)
@@ -54,7 +54,7 @@ class DeltaBase:
     DeltaList ('list'): a delta is calculated from a list of deltas. Used with the Roman
         method to average three-point deltas. self.station2 is a list.
         self.station1 is None.
-    DeltaManual ('assigned'): delta-g is manually assigned. Created automatically when a
+    DeltaAssigned ('assigned'): delta-g is manually assigned. Created automatically when a
         'normal' delta is edited on the network adjustment tab. Roman
         ('three_point' and 'list') deltas can't be converted to 'assigned'.
 
@@ -262,14 +262,14 @@ class DeltaNormal(DeltaBase):
             return self.sta2_t() - self.sta1_t()
 
 
-class DeltaManual(DeltaNormal):
+class DeltaAssigned(DeltaNormal):
     """
         'assigned': delta-g is manually assigned. Created automatically when a
             'normal' delta is edited on the network adjustment tab. Roman
             ('three_point' and 'list') deltas can't be converted to 'assigned'.
     """
 
-    type = 'manual'
+    type = 'assigned'
 
     @property
     def dg(self):

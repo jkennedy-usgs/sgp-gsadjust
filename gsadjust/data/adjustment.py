@@ -43,6 +43,39 @@ class AdjustmentResults:
             return_str += line
         return return_str
 
+    def get_report(self):
+        chi_result = self.adjustmentresults.chi2 < self.adjustmentresults.chi2c
+        text = [
+            f"Number of unknowns:                  {self.n_unknowns:d}",
+            f"Number of relative observations:     {self.n_deltas:d}",
+            f"Number of absolute observations:     {self.n_datums:d}",
+            f"Degrees of freedom (nobs-nunknowns): {self.dof:d}",
+            f"SD a posteriori:                     {self.VtPV / self.dof:4f}",
+            f"chi square value:                  {self.chi2:6.2f}",
+            f"critical chi square value:         {self.chi2c:6.2f}",
+            f"Chi-test {chi_result}",
+            f"Average standard deviation:          {self.avg_stdev:.2f}",
+            f"Maximum delta residual:              {self.max_dg_residual:.2f}",
+            f"Maximum absolute datum residual:     {self.max_datum_residual:.2f}",
+            f"Minimum absolute datum residual:     {self.min_datum_residual:.2f}",
+        ]
+
+        if self.cal_coeff:
+            for k, v in self.cal_dic.items():
+                text.append(
+                    "Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".format(
+                        k, v[0], v[1]
+                    )
+                )
+        elif self.specify_cal_coeff:
+            for k, v in self.meter_cal_dict.items():
+                text.append(
+                    "Specified calibration coefficient for meter {}: {:.6f}".format(
+                        k, v
+                    )
+                )
+        return text
+
 
 class AdjustedStation:
     """
@@ -137,93 +170,18 @@ class Adjustment:
             if self.adjustmentresults.text:  # Gravnet results
                 return [x + '\n' for x in self.adjustmentresults.text]
             elif self.adjustmentresults.n_unknowns > 0:
-                text_out = list()
                 # text_out.append("Number of stations:                 {:d}\n".format(len(sta_dic_ls)))
                 # text_out.append("Number of loops:                    {:d}\n".format(nloops))
                 # text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
-                text_out.append(
-                    "Number of unknowns:                  {:d}\n".format(
-                        self.adjustmentresults.n_unknowns
-                    )
-                )
-                text_out.append(
-                    "Number of relative observations:     {:d}\n".format(
-                        self.adjustmentresults.n_deltas
-                    )
-                )
-                text_out.append(
-                    "Number of absolute observations:     {:d}\n".format(
-                        self.adjustmentresults.n_datums
-                    )
-                )
-                text_out.append(
-                    "Degrees of freedom (nobs-nunknowns): {:d}\n".format(self.dof)
-                )
-                text_out.append(
-                    "SD a posteriori:                     {:4f}\n".format(
-                        float(np.sqrt(self.VtPV / self.dof))
-                    )
-                )
-                text_out.append(
-                    "chi square value:                  {:6.2f}\n".format(
-                        float(self.adjustmentresults.chi2)
-                    )
-                )
-                text_out.append(
-                    "critical chi square value:         {:6.2f}\n".format(
-                        float(self.adjustmentresults.chi2c)
-                    )
-                )
-                if float(self.adjustmentresults.chi2) < float(
-                    self.adjustmentresults.chi2c
-                ):
-                    text_out.append("Chi-test accepted\n")
-                else:
-                    text_out.append("Chi-test rejected\n")
+                text_out = self.adjustmentresults.get_report()
 
-                text_out.append(
-                    "Average standard deviation:          {:.2f}\n".format(
-                        self.adjustmentresults.avg_stdev
-                    )
-                )
-                text_out.append(
-                    "Maximum delta residual:              {:.2f}\n".format(
-                        self.adjustmentresults.max_dg_residual
-                    )
-                )
-                text_out.append(
-                    "Maximum absolute datum residual:     {:.2f}\n".format(
-                        self.adjustmentresults.max_datum_residual
-                    )
-                )
-                text_out.append(
-                    "Minimum absolute datum residual:     {:.2f}\n".format(
-                        self.adjustmentresults.min_datum_residual
-                    )
-                )
-                if self.adjustmentoptions.cal_coeff:
-                    for k, v in self.adjustmentresults.cal_dic.items():
-                        text_out.append(
-                            "Calibration coefficient for meter {}: {:.6f} +/- {:.6f}\n".format(
-                                k, v[0], v[1]
-                            )
-                        )
-                elif self.adjustmentoptions.specify_cal_coeff:
-                    for k, v in self.adjustmentoptions.meter_cal_dict.items():
-                        text_out.append(
-                            "Specified calibration coefficient for meter {}: {:.6f}\n".format(
-                                k, v
-                            )
-                        )
                 if self.netadj_loop_keys:
-                    text_out.append("Network adjustment drift coefficient(s):\n")
-                    for (
-                        loop
-                    ) in (
-                        self.netadj_loop_keys.items()
-                    ):  # this dict only has loops with netadj option
+                    text_out.append("Network adjustment drift coefficient(s):")
+                    for loop in self.netadj_loop_keys.items():
+                        # this dict only has loops with netadj option
                         text_out.append("Loop " + loop[0] + ": ")
-                        for i in range(loop[1][1]):  # degree of polynomial
+                        for i in range(loop[1][1]):
+                            # degree of polynomial
                             degree = self.X[
                                 len(self.sta_dic_ls) + self.n_meters + loop[1][0] + i
                             ][0]

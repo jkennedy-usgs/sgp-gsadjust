@@ -27,6 +27,11 @@ from ..data.analysis import compute_gravity_change
 from ..gui.messages import show_message
 
 
+def line_generator(lines):
+    for line in lines:
+        yield line + '\n'
+
+
 def export_metadata(obsTreeModel, data_path):
     """
     Write metadata text to file. Useful for USGS data releases.
@@ -43,45 +48,43 @@ def export_metadata(obsTreeModel, data_path):
         )
         if output_format == 'table':
             table = [
-                "\nSurvey | Max. delta residual | Max. datum residual | Mean SD | Deltas | Deltas not used | "
+                "Survey | Max. delta residual | Max. datum residual | Mean SD | Deltas | Deltas not used | "
                 "Datums "
-                "| Datums not used\n"
+                "| Datums not used"
             ]
             for survey in obsTreeModel.checked_surveys():
                 if survey.adjustment.adjustmentresults.n_datums > 0:
                     results_written = True
                     table.append(
-                        "{} {:>5.1f}  {:>5.1f}  {:>5.1f}  {:>4}  {:>3}  {:>3}  {:>3}\n".format(
-                            survey.name,
-                            survey.adjustment.adjustmentresults.max_dg_residual,
-                            survey.adjustment.adjustmentresults.max_datum_residual,
-                            survey.adjustment.adjustmentresults.avg_stdev,
-                            survey.adjustment.adjustmentresults.n_deltas,
-                            survey.adjustment.adjustmentresults.n_deltas_notused,
-                            survey.adjustment.adjustmentresults.n_datums,
-                            survey.adjustment.adjustmentresults.n_datums_notused,
-                        )
+                        f"{survey.name} "
+                        f"{survey.adjustment.adjustmentresults.max_dg_residual:>5.1f} "
+                        f"{survey.adjustment.adjustmentresults.max_datum_residual:>5.1f} "
+                        f"{survey.adjustment.adjustmentresults.avg_stdev:>5.1f} "
+                        f"{survey.adjustment.adjustmentresults.n_deltas:>4} "
+                        f"{survey.adjustment.adjustmentresults.n_deltas_notused:>3} "
+                        f"{survey.adjustment.adjustmentresults.n_datums:>3} "
+                        f"{survey.adjustment.adjustmentresults.n_datums_notused:>3}"
                     )
             for survey in obsTreeModel.checked_surveys():
                 if survey.adjustment.adjustmentresults.n_datums > 0:
                     if len(survey.adjustment.adjustmentresults.cal_dic) > 0:
                         if not sf_header_written:
-                            table.append("Relative gravimeter scale factor(s)\n")
+                            table.append("Relative gravimeter scale factor(s)")
                             table.append(
-                                "Survey | Meter | Scale factor | Scale factor S.D. (0 = specified S.F.)\n"
+                                "Survey | Meter | Scale factor | Scale factor S.D. (0 = specified S.F.)"
                             )
                             sf_header_written = True
                         for k, v in survey.adjustment.adjustmentresults.cal_dic.items():
                             table.append(
-                                "{} {:>6} {:>10.6f} {:>10.6f}\n".format(
+                                "{} {:>6} {:>10.6f} {:>10.6f}".format(
                                     survey.name, k, v[0], v[1]
                                 )
                             )
                     elif survey.adjustment.adjustmentoptions.specify_cal_coeff:
                         if not sf_header_written:
-                            table.append("Relative gravimeter scale factor(s)\n")
+                            table.append("Relative gravimeter scale factor(s)")
                             table.append(
-                                "Survey | Meter | Scale factor | Scale factor S.D.\n"
+                                "Survey | Meter | Scale factor | Scale factor S.D."
                             )
                             sf_header_written = True
                         for (
@@ -89,10 +92,10 @@ def export_metadata(obsTreeModel, data_path):
                             v,
                         ) in survey.adjustment.adjustmentoptions.meter_cal_dict.items():
                             table.append(
-                                "{} {:>6} {:>10.6f} 0\n".format(survey.name, k, v)
+                                "{} {:>6} {:>10.6f} 0".format(survey.name, k, v)
                             )
-
-            fid.writelines(table)
+            lines = line_generator(table)
+            fid.writelines(lines)
         else:
             for survey in obsTreeModel.checked_surveys():
                 if (
@@ -153,8 +156,6 @@ def export_metadata(obsTreeModel, data_path):
                     logging.info('Metadata text written to file')
 
     if not results_written:
-
-        show_message('No network adjustment results', 'Write error')
         os.remove(fn)
         return False
     else:
@@ -254,7 +255,11 @@ def export_summary(obsTreeModel, data_path):
                 for datum in survey.adjustment.datums:
                     fid.write('{}\n'.format(datum))
                 fid.write('# Adjustment results, survey: {}\n'.format(survey.name))
-                fid.writelines(survey.adjustment.results_string())
+                # This previously returned a list of lines appended with \n, but we can use a generator to
+                # keep the source data clean. Any list of strings can be written the same way.
+                lines = line_generator(survey.adjustment.results_string())
+                fid.writelines(lines)
+
                 fid.write('# Adjusted station values, survey: {}\n'.format(survey.name))
                 fid.write('# Station | Gravity | Std. dev.\n')
                 for ii in range(survey.results_model.rowCount()):

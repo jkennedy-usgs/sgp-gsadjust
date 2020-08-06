@@ -24,8 +24,11 @@ import logging
 import numpy as np
 from PyQt5.QtCore import Qt
 
-from ..gui.messages import show_message
 from .adjustment import AdjustedStation
+
+
+class InversionError(Exception):
+    pass
 
 
 def numpy_inversion(
@@ -149,7 +152,7 @@ def numpy_inversion(
                     adjustment.sd_dic[key] = sd
                     sd_all.append(sd)
                 except Exception:
-                    show_message("Bad variance in results", "Inversion error")
+                    raise InversionError("Bad variance in results.")
     adjustment.adjustmentresults.avg_stdev = np.mean(sd_all)
 
     # Retrieve calibration coefficient(s)

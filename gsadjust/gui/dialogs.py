@@ -94,10 +94,10 @@ class CoordinatesTable(QtWidgets.QDialog):
 
         vlayout.addWidget(button_box)
         self.setLayout(vlayout)
-        sizePolicy = QtWidgets.QSizePolicy(
+        policy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
-        self.setSizePolicy(sizePolicy)
+        self.setSizePolicy(policy)
 
     def keyPressEvent(self, e):
         """
@@ -166,9 +166,9 @@ class DialogLoopProperties(QtWidgets.QDialog):
         self.ok_button = QtWidgets.QPushButton('OK')
         self.ok_button.clicked.connect(self.set_loop_options)
 
-        buttonBox = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
-        buttonBox.addButton(self.cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
-        buttonBox.addButton(self.ok_button, QtWidgets.QDialogButtonBox.ActionRole)
+        button_box = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
+        button_box.addButton(self.cancel_button, QtWidgets.QDialogButtonBox.ActionRole)
+        button_box.addButton(self.ok_button, QtWidgets.QDialogButtonBox.ActionRole)
         # Sometimes these are undefined:
         try:
             self.operator_edit = QtWidgets.QLineEdit(self.loops[0].oper)
@@ -190,7 +190,7 @@ class DialogLoopProperties(QtWidgets.QDialog):
         grid.addWidget(self.meter_edit, 2, 1)
         grid.addWidget(QtWidgets.QLabel('Comment'), 3, 0)
         grid.addWidget(self.comment_edit, 4, 0, 1, 2)
-        grid.addWidget(buttonBox, 5, 0, 1, 2)
+        grid.addWidget(button_box, 5, 0, 1, 2)
         self.setLayout(grid)
 
         self.setWindowModality(QtCore.Qt.ApplicationModal)
@@ -270,7 +270,7 @@ class AdjustOptions(QtWidgets.QDialog):
             self.cal_coeff_chk.setChecked(self.ao.cal_coeff)
             try:
                 self.cal_coeff_specify_chk.setChecked(self.ao.specify_cal_coeff)
-            except:
+            except Exception:
                 self.ao.specify_cal_coeff = False
             if not hasattr(self.ao, 'meter_cal_dict'):
                 self.ao.meter_cal_dict = init_cal_coeff_dict(self.parent().obsTreeModel)
@@ -419,7 +419,7 @@ class AdjustOptions(QtWidgets.QDialog):
             # else:
             #     self.ao.woutfiles = False
         except ValueError as e:  # caught if invalid number is entered in any box
-            logging.error('Error setting adjustment options: {}'.format(e))
+            logging.error('Error setting adjustment options: %s', e)
 
     def apply_current(self):
         self.set_adjust_options()
@@ -429,6 +429,60 @@ class AdjustOptions(QtWidgets.QDialog):
     def apply_all(self):
         self.set_adjust_options()
         self.surveys_to_update = 'all'
+        self.accept()
+
+
+class DialogMeterType(QtWidgets.QMessageBox):
+    def __init__(self):
+        super(DialogMeterType, self).__init__()
+        self.setText("Choose meter file to import")
+        self.addButton(
+            QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole
+        )
+        self.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(
+            QtWidgets.QPushButton(' CG-6 Tsoft '), QtWidgets.QMessageBox.YesRole
+        )
+        self.addButton(QtWidgets.QPushButton(' Burris '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(' CSV '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(
+            QtWidgets.QPushButton(' Cancel '), QtWidgets.QMessageBox.RejectRole
+        )
+        self.buttonClicked.connect(self.onClicked)
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def onClicked(self, btn):
+        meter = {
+            ' CG-3, CG-5 ': 'CG5',
+            ' CG-6 ': 'CG6',
+            ' CG-6 Tsoft ': 'CG6Tsoft',
+            ' Burris ': 'Burris',
+            ' CSV ': 'csv',
+            ' Cancel ': 'Cancel',
+        }
+        self.meter_type = meter[btn.text()]
+        if self.meter_type == 'Cancel':
+            self.reject()
+        else:
+            self.accept()
+
+
+class DialogOverwrite(QtWidgets.QMessageBox):
+    def __init__(self):
+        super(DialogOverwrite, self).__init__()
+        self.overwrite = False
+        self.setText("Overwrite existing data?")
+        self.setWindowTitle("GSadjust")
+        ow_button = QtWidgets.QPushButton('Overwrite')
+        ow_button.clicked.connect(self.onClicked)
+
+        cancel_button = QtWidgets.QPushButton('Cancel')
+        cancel_button.clicked.connect(self.close)
+        self.addButton(cancel_button, 0)
+        self.addButton(ow_button, 1)
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def onClicked(self, btn):
         self.accept()
 
 
@@ -470,10 +524,10 @@ class GravityChangeTable(QtWidgets.QDialog):
         self.type_comboBox.addItem('full dg')
         self.type_comboBox.addItem('list')
         self.type_comboBox.activated.connect(self.table_changed)
-        btnMap = QtWidgets.QPushButton('Map')
-        btnMap.clicked.connect(self.map_change_window)
-        btnPlot = QtWidgets.QPushButton('Plot')
-        btnPlot.clicked.connect(
+        btn_map = QtWidgets.QPushButton('Map')
+        btn_map.clicked.connect(self.map_change_window)
+        btn_plot = QtWidgets.QPushButton('Plot')
+        btn_plot.clicked.connect(
             lambda state, x=(self.dates, self.table): MainProg.plot_gravity_change(
                 x[0], x[1], self
             )

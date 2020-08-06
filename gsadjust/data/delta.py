@@ -19,8 +19,6 @@ resulting from the authorized or unauthorized use of the software.
 import numpy as np
 from matplotlib.dates import num2date
 
-from ..models import ObsTreeStation
-
 
 def create_delta_by_type(delta_type, *args, **kwargs):
     """
@@ -155,13 +153,16 @@ class DeltaBase:
         raise NotImplementedError
 
     def time(self):
-        if isinstance(self.station2, ObsTreeStation):
-            return (self.sta1_t() + self.sta2_t()) / 2
-        elif isinstance(self.station2, tuple):
+        if isinstance(self.station2, tuple):
             return self.sta1_t()
         elif isinstance(self.station2, list):
             t = [delta.sta1_t() for delta in self.station2]
             return np.mean(t)
+        else:
+            # FIXME: Default to ObsTreeStation so we don't need the import.
+            # Should generally avoid type checks, may be able to remove
+            # these remaining two.
+            return (self.sta1_t() + self.sta2_t()) / 2
 
     def time_string(self):
         try:

@@ -415,9 +415,7 @@ class Menus:
         #######################################################################
         self.mnAdj = self.mainProg.menuBar().addMenu("&Adjustment")
         self.mnAdjtype = self.mnAdj.addMenu('Adjustment type')
-        actiongroup_adjustmenttype = QtWidgets.QActionGroup(
-            self.mainProg, exclusive=True
-        )
+        actiongroup_adjustmenttype = QtWidgets.QActionGroup(self.mainProg)
 
         self.mnAdjPyLSQ = actiongroup_adjustmenttype.addAction(
             self.create_action('Numpy least squares', checkable=True)

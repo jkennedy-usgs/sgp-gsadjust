@@ -32,16 +32,10 @@ from matplotlib.dates import date2num, num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QVariant
 
-from ..data import (
-    AdjustedStation,
-    Adjustment,
-    AdjustmentOptions,
-    AdjustmentResults,
-    Datum,
-    DeltaList,
-    DeltaNormal,
-    Tare,
-)
+from ..data import (AdjustedStation, Adjustment, AdjustmentOptions,
+                    AdjustmentResults, Datum, DeltaList, DeltaNormal, Tare)
+from ..data.analysis import InversionError, numpy_inversion
+from ..gui.messages import show_message
 from .delta import DeltaTableModel
 from .tare import TareTableModel
 from .utils import format_numeric_column
@@ -868,7 +862,6 @@ class ObsTreeSurvey(ObsTreeItem):
         :param write_out_files: Write output files, 'y' or 'n'
         :param output_root_dir: Where to write output files
         """
-        from gui_objects import show_message
 
         if self.data(role=Qt.CheckStateRole) == 2:
             deltas = []
@@ -979,7 +972,6 @@ class ObsTreeSurvey(ObsTreeItem):
         Writes input files for Gravnet.exe, runs the executable, and reads in the results
         """
         # TODO: method could probably be made static
-        from gui_objects import show_message
 
         dir_changed1, dir_changed2 = False, False
         # Check that executable exists in current directory (it should, if run as compiled .exe
@@ -1198,7 +1190,7 @@ class ObsTreeSurvey(ObsTreeItem):
                             (similar to MCGravi output files)
         output_root_dir     directory for writing output files
         """
-        from gui_objects import show_message
+
 
         self.adjustment.adjustmentresults.text = []
 
@@ -1266,9 +1258,13 @@ class ObsTreeSurvey(ObsTreeItem):
         self.adjustment.ndrift = ndrift
         self.adjustment.netadj_loop_keys = netadj_loop_keys
         self.adjustment.adjustmentresults.text = ''
-        cal_dic = numpy_inversion(
-            self.adjustment, self.results_model, output_root_dir, write_out_files='n'
-        )
+
+        try:
+            cal_dic = numpy_inversion(
+                self.adjustment, self.results_model, output_root_dir, write_out_files='n'
+            )
+        except InversionError:
+            show_message(InversionError.message, "Inversion Error")
         self.match_inversion_results('numpy', cal_dic)
 
     def match_inversion_results(self, inversion_type, cal_dic=None):
@@ -1279,8 +1275,6 @@ class ObsTreeSurvey(ObsTreeItem):
             calculated. Different than
             delta.cal_coeff, which is an a priori specified coefficient.
         """
-        from gui_objects import show_message
-
         datum_residuals, dg_residuals = [], []
         g_dic = self.adjustment.g_dic
         # Reset residuals to all -999's
@@ -1430,7 +1424,6 @@ class ObsTreeSurvey(ObsTreeItem):
                     except Exception as e:
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded
-                        from gui_objects import show_message
 
                         self.msg = show_message(
                             "Error populating delta table. Please check the drift correction "

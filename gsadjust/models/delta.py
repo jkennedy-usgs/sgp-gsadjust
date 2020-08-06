@@ -66,6 +66,8 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         DELTA_RESIDUAL: 'Residual',
     }
 
+    _is_checkable = True
+
     def __init__(self):
         super(DeltaTableModel, self).__init__(parent=None)
         self._deltas = []
@@ -164,8 +166,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 return fn(*args)
 
             elif role == Qt.CheckStateRole:
-                if index.column() == 0:
+                if self._is_checkable and index.column() == 0:
                     return self.checkState(delta)
+                # fall out, return None for all other cases.
 
             elif role == Qt.UserRole:
                 return delta
@@ -332,76 +335,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
 
 class NoCheckDeltaTableModel(DeltaTableModel):
-    def __init__(self):
-        super(NoCheckDeltaTableModel, self).__init__()
-
-    def data(self, index, role):
-        if index.isValid():
-            delta = self._deltas[index.row()]
-            column = index.column()
-            if role == Qt.ForegroundRole:
-                brush = QtGui.QBrush(Qt.black)
-                if delta.type == 'normal':
-                    try:
-                        if (
-                            delta.station1.data(role=Qt.CheckStateRole) == 2
-                            and delta.station2.data(role=Qt.CheckStateRole) == 2
-                        ):
-                            brush = QtGui.QBrush(Qt.black)
-                        else:
-                            if delta.station1.data(role=Qt.CheckStateRole) == 2:
-                                if column == 0:
-                                    brush = QtGui.QBrush(Qt.darkGray)
-                                else:
-                                    brush = QtGui.QBrush(Qt.lightGray)
-                            elif delta.station2.data(role=Qt.CheckStateRole) == 2:
-                                if column == 1:
-                                    brush = QtGui.QBrush(Qt.darkGray)
-                                else:
-                                    brush = QtGui.QBrush(Qt.lightGray)
-                            else:
-                                brush = QtGui.QBrush(Qt.lightGray)
-                    except:
-                        catch = 1
-                elif delta.type == 'assigned':
-                    if column == DELTA_G:
-                        brush = QtGui.QBrush(Qt.red)
-                return brush
-            if role == Qt.DisplayRole:
-
-                def delta_station_loop():
-                    if delta.loop is None:
-                        if type(delta.station2) == list:
-                            return delta.station2[0].loop
-                        else:
-                            return "NA"
-                    else:
-                        return delta.loop
-
-                def format_datetime(date):
-                    return dt.datetime.utcfromtimestamp(
-                        (date - 719163) * 86400.0
-                    ).strftime('%Y-%m-%d %H:%M:%S')
-
-                fn, *args = {
-                    DELTA_STATION1: (str, delta.sta1),
-                    DELTA_STATION2: (str, delta.sta2),
-                    LOOP: (str, delta_station_loop()),
-                    DELTA_TIME: (format_datetime, delta.time()),
-                    DELTA_G: (format, delta.dg(), "0.1f"),
-                    DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
-                    DELTA_SD: (format, delta.sd, "0.1f"),
-                    DELTA_ADJ_SD: (format, delta.sd_for_adjustment, "0.1f"),
-                    DELTA_RESIDUAL: (format, delta.residual, "0.1f"),
-                }.get(column, (str, "NA"))
-
-                return fn(*args)
-
-            elif role == Qt.CheckStateRole:
-                return None
-
-            elif role == Qt.UserRole:
-                return delta
+    _is_checkable = False
 
 
 def delta_serializer(obj, cls, **kwargs):

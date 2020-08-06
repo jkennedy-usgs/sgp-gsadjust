@@ -1,10 +1,12 @@
-import pytest
-import pytestqt
-import GSadjust
 import os
+
 import numpy as np
+import pytest
+from PyQt5 import Qt, QtCore
+
+import GSadjust
 import gui_objects
-from PyQt5 import QtCore, Qt
+import pytestqt
 from tide_correction import tide_correction_agnew
 
 
@@ -98,7 +100,7 @@ def test_gui(qtbot, monkeypatch):
     first_drift_tab_delta = drift_tab_model.data(
         drift_tab_model.index(0, 4), QtCore.Qt.UserRole
     )
-    assert first_adj_tab_delta.dg() == first_drift_tab_delta.dg()
+    assert first_adj_tab_delta.dg == first_drift_tab_delta.dg
     assert first_adj_tab_delta.driftcorr == first_drift_tab_delta.driftcorr
     qtbot.keyClick(window, 'd', modifier=QtCore.Qt.ControlModifier)
     window.adjust_network()

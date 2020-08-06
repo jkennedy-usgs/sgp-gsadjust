@@ -89,7 +89,7 @@ def numpy_inversion(
     # Populate least squares matrices
     for delta in adjustment.deltas:
         delta_keys.append(delta.__hash__())
-        Obs[row] = delta.dg() * delta.cal_coeff
+        Obs[row] = delta.dg * delta.cal_coeff
         P[row, row] = 1.0 / (delta.sd_for_adjustment ** 2)
         A[row, sta_dic_ls[delta.sta1]] = -1
         A[row, sta_dic_ls[delta.sta2]] = 1
@@ -97,7 +97,7 @@ def numpy_inversion(
         # Populate 1 column per gravimeter for calibration coefficient
         if adjustment.adjustmentoptions.cal_coeff:
             meter = delta.meter
-            A[row, adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg()
+            A[row, adjustment.meter_dic[meter] + len(sta_dic_ls)] = delta.dg
 
         # Populate column(s) for drift, if included in network adjustment
         if delta.ls_drift is not None:

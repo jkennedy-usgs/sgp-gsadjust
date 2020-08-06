@@ -221,7 +221,7 @@ def export_summary(obsTreeModel, data_path):
                             delta.sta1,
                             delta.sta2,
                             delta.time_string(),
-                            delta.dg(),
+                            delta.dg,
                             delta.sd,
                             delta.driftcorr,
                         )

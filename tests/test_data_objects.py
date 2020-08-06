@@ -1,17 +1,19 @@
-import sys, os
+import os
+import sys
+
+import pytest
+
+from data_objects import Delta
+from test_fixture_pyqt import (
+    test_channellist_fixture,
+    test_threestations_fixture,
+    test_twostations_fixture,
+)
 
 print(os.getcwd())
 code_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, code_path + '/../gsadjust')
 sys.path.insert(0, code_path)
-
-from test_fixture_pyqt import (
-    test_channellist_fixture,
-    test_twostations_fixture,
-    test_threestations_fixture,
-)
-from data_objects import Delta
-import pytest
 
 
 @pytest.mark.parametrize(
@@ -55,7 +57,7 @@ def test_delta_normal(test_twostations_fixture, true_delta_g, true_sd):
     )
     d2 = Delta(sta1, sta2)
     assert d1.__dict__ == d2.__dict__
-    assert abs(d1.dg() - true_delta_g) < 0.001
+    assert abs(d1.dg - true_delta_g) < 0.001
     assert abs(d1.sd - true_sd) < 0.001
 
 
@@ -82,6 +84,6 @@ def test_delta_threepoint(
         checked=2,
         adj_sd=999,
     )
-    assert abs(d1.dg() - true_delta_g) < 0.001
+    assert abs(d1.dg - true_delta_g) < 0.001
     assert abs(d1.sd - true_sd) < 0.001
-    assert abs(d1.sta1_t() - true_sta1_t) < 0.001
+    assert abs(d1.sta1_t - true_sta1_t) < 0.001

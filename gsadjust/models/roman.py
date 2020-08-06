@@ -83,7 +83,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
                 fn, *args = {
                     ROMAN_FROM: (str, delta.sta1),
                     ROMAN_TO: (str, delta.sta2),
-                    ROMAN_DELTA: (format, delta.dg(), "0.1f"),
+                    ROMAN_DELTA: (format, delta.dg, "0.1f"),
                 }.get(column)
                 return fn(*args)
 

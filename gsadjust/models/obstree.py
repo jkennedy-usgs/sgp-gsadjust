@@ -1054,10 +1054,10 @@ class ObsTreeSurvey(ObsTreeItem):
                     '{} {} {:0.6f} {} {} {:0.6f} {} {:0.6f}\n'.format(
                         delta.sta1[:6],
                         delta.sta2[:6],
-                        delta.dg() / 1000.0 * delta.cal_coeff,
+                        delta.dg / 1000.0 * delta.cal_coeff,
                         delta.sta1_t,
                         delta.sta2_t,
-                        delta.dg() / 1000,
+                        delta.dg / 1000,
                         '0',
                         delta.sd_for_adjustment / 1000.0,
                     )
@@ -1311,12 +1311,12 @@ class ObsTreeSurvey(ObsTreeItem):
                         station2_name = tempdelta.sta2
                     if tempdelta.meter in cal_dic:
                         cal_adj_dg = (
-                            tempdelta.dg()
+                            tempdelta.dg
                             * cal_dic[tempdelta.meter][0]
                             * tempdelta.cal_coeff
                         )
                     else:
-                        cal_adj_dg = tempdelta.dg() * tempdelta.cal_coeff
+                        cal_adj_dg = tempdelta.dg * tempdelta.cal_coeff
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1

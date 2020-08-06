@@ -108,7 +108,6 @@ Survey.
 import copy
 import logging
 import os
-
 # Standard library modules
 import sys
 import time
@@ -116,7 +115,6 @@ import traceback
 import webbrowser
 
 import matplotlib
-
 # Modules that must be installed
 import numpy as np
 from matplotlib.dates import num2date
@@ -124,66 +122,34 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 
 from . import resources
-from .data import ChannelList, Datum, Delta3Point, DeltaList, Tare, create_delta_by_type
+from .data import (ChannelList, Datum, Delta3Point, DeltaList, Tare,
+                   create_delta_by_type)
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
-from .gui.dialogs import (
-    AboutDialog,
-    AddDatumFromList,
-    AddTareDialog,
-    AdjustOptions,
-    CoordinatesTable,
-    DialogApplyTimeCorrection,
-    DialogLoopProperties,
-    DialogMeterType,
-    DialogOverwrite,
-    GravityChangeTable,
-    LoopTimeThresholdDialog,
-    SelectAbsg,
-    ShowCalCoeffs,
-    TideCoordinatesDialog,
-    TideCorrectionDialog,
-    VerticalGradientDialog,
-)
+from .gui.dialogs import (AboutDialog, AddDatumFromList, AddTareDialog,
+                          AdjustOptions, CoordinatesTable,
+                          DialogApplyTimeCorrection, DialogLoopProperties,
+                          DialogMeterType, DialogOverwrite, GravityChangeTable,
+                          LoopTimeThresholdDialog, SelectAbsg, ShowCalCoeffs,
+                          TideCoordinatesDialog, TideCorrectionDialog,
+                          VerticalGradientDialog)
 from .gui.menus import MENU_STATE, Menus
 from .gui.messages import show_message
 from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
-
 # GSadjust modules
-from .io import (
-    InvalidMeterException,
-    export_data,
-    export_metadata,
-    export_summary,
-    file_reader,
-    import_abs_g_complete,
-    import_abs_g_simple,
-)
-from .models import (
-    BurrisTableModel,
-    ObsTreeLoop,
-    ObsTreeModel,
-    ObsTreeStation,
-    ObsTreeSurvey,
-    ScintrexTableModel,
-    TareTableModel,
-)
-from .plots import (
-    PlotDatumCompare,
-    PlotDatumComparisonTimeSeries,
-    PlotDgResidualHistogram,
-    PlotGravityChange,
-    PlotLoopAnimation,
-    PlotNetworkGraph,
-)
+from .io import (InvalidMeterException, export_data, export_metadata,
+                 export_summary, file_reader, import_abs_g_complete,
+                 import_abs_g_simple)
+from .models import (BurrisTableModel, ObsTreeLoop, ObsTreeModel,
+                     ObsTreeStation, ObsTreeSurvey, ScintrexTableModel,
+                     TareTableModel)
+from .plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
+                    PlotDgResidualHistogram, PlotGravityChange,
+                    PlotLoopAnimation, PlotNetworkGraph)
 from .tides import tide_correction_agnew, tide_correction_meter
-from .utils import (
-    assemble_all_deltas,
-    init_cal_coeff_dict,
-    init_station_coords_dict,
-    return_delta_given_key,
-)
+from .utils import (assemble_all_deltas, init_cal_coeff_dict,
+                    init_station_coords_dict, return_delta_given_key)
 
 matplotlib.use('qt5agg')
 
@@ -1452,7 +1418,7 @@ class MainProg(QtWidgets.QMainWindow):
                         delta = deltamodel.data(
                             deltamodel.index(0, 0), role=QtCore.Qt.UserRole
                         )
-                        dg = delta.dg()
+                        dg = delta.dg
                         sd = delta.sd
                 elif (
                     current_loop.drift_method == 'none'
@@ -1466,7 +1432,7 @@ class MainProg(QtWidgets.QMainWindow):
                         for i in range(deltamodel.rowCount()):
                             idx = deltamodel.index(i, 0)
                             delta = deltamodel.data(idx, QtCore.Qt.UserRole)
-                            dg_list.append(delta.dg())
+                            dg_list.append(delta.dg)
                             sd_list.append(delta.sd)
                         dg = np.mean(dg_list)
                         sd = np.mean(sd_list)
@@ -2294,6 +2260,8 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.information(
                 self, "Data export", "Metadata written to {}".format(fn)
             )
+        else:
+            show_message('No network adjustment results', 'Write error')
 
     def write_summary_text(self):
         """

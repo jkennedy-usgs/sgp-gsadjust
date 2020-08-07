@@ -20,12 +20,14 @@ import time
 import matplotlib
 import numpy as np
 from matplotlib.animation import TimedAnimation
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import num2date
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSlot
+
+from ..threads import ThreadBase
 
 ############################################################################
 # Loop animation
@@ -34,38 +36,26 @@ from PyQt5 import QtCore, QtWidgets
 # - appears in a separate pop-up window
 ############################################################################
 
-# You need to setup a signal slot mechanism, to
-# send data to your GUI in a thread-safe way.
-# Believe me, if you don't do this right, things
-# go very very wrong..
-class Communicate(QtCore.QObject):
-    data_signal = QtCore.pyqtSignal(float, float, float)
 
+class AnimationThread(ThreadBase):
+    @pyqtSlot()
+    def run(self):
+        data = self.args[0]
+        # Simulate some data
+        n = data[0]
+        y = data[1]
+        dates = data[2]
+        i = 0
 
-def dataSendLoop(addData_callbackFunc, data):
-    # Setup the signal-slot mechanism.
-    mySrc = Communicate()
-    mySrc.data_signal.connect(addData_callbackFunc)
-
-    # Simulate some data
-    n = data[0]
-    y = data[1]
-    dates = data[2]
-    i = 0
-
-    while True:
-        if i > len(data[0]) - 1:
-            time.sleep(2)
-            mySrc.data_signal.emit(
-                float(y[0]), n[0], dates[0]
-            )  # <- Here you emit a signal!
-            i = 0
-        else:
-            time.sleep(0.4)
-            mySrc.data_signal.emit(
-                float(y[i]), n[i], dates[i]
-            )  # <- Here you emit a signal!
-            i += 1
+        while not self.is_killed:
+            if i > len(data[0]) - 1:
+                time.sleep(2)
+                self.signals.data.emit((float(y[0]), n[0], dates[0]))
+                i = 0
+            else:
+                time.sleep(0.4)
+                self.signals.data.emit((float(y[i]), n[i], dates[i]))
+                i += 1
 
 
 class PlotLoopAnimation(QtWidgets.QMainWindow):
@@ -90,21 +80,22 @@ class PlotLoopAnimation(QtWidgets.QMainWindow):
         # Place the matplotlib figure
         self.figure = CustomFigCanvas(xlim, ylim, len(data[0]))
         self.LAYOUT_A.addWidget(self.figure, *(0, 1))
-        myDataLoop = threading.Thread(
-            name='myDataLoop',
-            target=dataSendLoop,
-            daemon=True,
-            args=(self.addData_callbackFunc, data),
-        )
-        myDataLoop.start()
 
-    def addData_callbackFunc(self, x, value, date):
+        self.animate = AnimationThread(data)
+        self.animate.signals.data.connect(self.addData_callbackFunc)
+        self.animate.start()
+
+    def addData_callbackFunc(self, data):
+        x, value, date = data
         # print("Add data: " + str(value))
         if x > -900:
             self.figure.addData(x, value, date)
         else:
-            time.sleep(1)
             self.figure.__init__(self.figure.xlim, self.figure.ylim, len(self.figure.n))
+
+    def closeEvent(self, e):
+        self.animate.kill()
+        super().closeEvent(e)
 
 
 class CustomFigCanvas(FigureCanvas, TimedAnimation):

@@ -108,6 +108,7 @@ Survey.
 import copy
 import logging
 import os
+
 # Standard library modules
 import sys
 import time
@@ -115,6 +116,7 @@ import traceback
 import webbrowser
 
 import matplotlib
+
 # Modules that must be installed
 import numpy as np
 from matplotlib.dates import num2date
@@ -122,33 +124,59 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 
 from . import resources
-from .data import (ChannelList, Datum, Delta3Point, DeltaList, Tare,
-                   create_delta_by_type)
+from .data import ChannelList, Datum, Delta3Point, DeltaList, Tare, create_delta_by_type
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
-from .gui.dialogs import (AboutDialog, AddDatumFromList, AddTareDialog,
-                          AdjustOptions, CoordinatesTable,
-                          DialogApplyTimeCorrection, DialogLoopProperties,
-                          DialogMeterType, DialogOverwrite, GravityChangeTable,
-                          LoopTimeThresholdDialog, SelectAbsg, ShowCalCoeffs,
-                          TideCoordinatesDialog, TideCorrectionDialog,
-                          VerticalGradientDialog)
+from .gui.dialogs import (
+    AboutDialog,
+    AddDatumFromList,
+    AddTareDialog,
+    AdjustOptions,
+    CoordinatesTable,
+    DialogApplyTimeCorrection,
+    DialogLoopProperties,
+    DialogMeterType,
+    DialogOverwrite,
+    GravityChangeTable,
+    LoopTimeThresholdDialog,
+    SelectAbsg,
+    ShowCalCoeffs,
+    TideCoordinatesDialog,
+    TideCorrectionDialog,
+    VerticalGradientDialog,
+)
 from .gui.menus import MENU_STATE, Menus
 from .gui.messages import show_message
 from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
+
 # GSadjust modules
-from .io import (InvalidMeterException, export_data, export_metadata,
-                 export_summary, file_reader, import_abs_g_complete,
-                 import_abs_g_simple)
+from .io import (
+    InvalidMeterException,
+    export_data,
+    export_metadata,
+    export_summary,
+    file_reader,
+    import_abs_g_complete,
+    import_abs_g_simple,
+)
 from .models import BurrisTableModel, ScintrexTableModel, TareTableModel
 from .obstree import ObsTreeLoop, ObsTreeModel, ObsTreeStation, ObsTreeSurvey
-from .plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
-                    PlotDgResidualHistogram, PlotGravityChange,
-                    PlotLoopAnimation, PlotNetworkGraph)
+from .plots import (
+    PlotDatumCompare,
+    PlotDatumComparisonTimeSeries,
+    PlotDgResidualHistogram,
+    PlotGravityChange,
+    PlotLoopAnimation,
+    PlotNetworkGraph,
+)
 from .tides import tide_correction_agnew, tide_correction_meter
-from .utils import (assemble_all_deltas, init_cal_coeff_dict,
-                    init_station_coords_dict, return_delta_given_key)
+from .utils import (
+    assemble_all_deltas,
+    init_cal_coeff_dict,
+    init_station_coords_dict,
+    return_delta_given_key,
+)
 
 matplotlib.use('qt5agg')
 
@@ -759,35 +787,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.workspace_savename = fname
             self.update_menus()
 
-    def workspace_open_getfile(self):
-        """
-        Gets filename to open and asks whether to  append or overwrite, if applicable.
-        :return:
-        """
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open File', self.settings.value('current_dir')
-        )
-
-        if not fname or fname[-2:] != '.p':
-            self.msg = show_message(
-                'Saved workspaces should have a .gsa extension. '
-                'Please use "Open workspace..." to load a .gsa file, or '
-                '"Open raw...data" to load a data file.',
-                'File load error',
-            )
-            return
-
-        self.settings.setValue('current_dir', os.path.dirname(fname))
-        if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
-            overwrite_tree_dialog = DialogOverwrite()
-            if overwrite_tree_dialog.exec_():
-                self.workspace_clear()
-                self.workspace_open(fname)
-            else:
-                return
-        else:
-            self.workspace_open(fname)
-
     def workspace_open_getjson(self):
         """
         Gets filename to open and asks whether to  append or overwrite, if applicable.
@@ -830,26 +829,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
             self.adjust_update_required()
-            self.set_window_title(fname)
-        if coords:
-            self.obsTreeModel.station_coords = coords
-        self.update_menus()
-
-    def workspace_open(self, fname):
-        """
-        Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
-        pickled and are removed in workspace_save).
-        DEPRECATED, WILL REMOVE EVENTUALLY (REPLACED WITH JSON)
-        """
-        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
-        # Returns list of survey delta tables so they can be passed to
-        # populate_survey_deltatable_from_simpledeltas()
-        # try:
-        QtWidgets.QApplication.processEvents()
-        obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace_p(fname)
-        if obstreesurveys:
-            self.workspace_savename = fname
-            self.populate_obstreemodel(obstreesurveys, delta_models)
             self.set_window_title(fname)
         if coords:
             self.obsTreeModel.station_coords = coords

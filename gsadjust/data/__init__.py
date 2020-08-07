@@ -24,7 +24,7 @@ May or may not include drift correction.
 SimpleLoop | SimpleStation: This is a simplified representation of the main
 ObsTreeSurvey | ObsTreeLoop | ObstreeStation PyQt datastore. The Simple...
 objects exist because PyQt objects can't be serialized, which is mandatory for
-saving the workspace using pickle (or json).
+saving the workspace using json.
 
 Tare: Represents an offset applied to the data
 

@@ -80,7 +80,7 @@ class DatumTableModel(QAbstractTableModel):
 
     def __init__(self):
         super(DatumTableModel, self).__init__()
-        self.datums = []
+        self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -93,26 +93,26 @@ class DatumTableModel(QAbstractTableModel):
 
     def insertRows(self, datum, position, rows=1, index=QModelIndex()):
         self.beginInsertRows(QModelIndex(), position, position + rows - 1)
-        self.datums.append(datum)
+        self._data.append(datum)
         self.endInsertRows()
 
     def removeRow(self, index):
         datum = self.data(index, role=Qt.UserRole)
         self.beginRemoveRows(index, index.row(), 1)
-        self.datums.remove(datum)
+        self._data.remove(datum)
         self.endRemoveRows()
         self.beginResetModel()
         self.endResetModel()
 
     def rowCount(self, parent=None):
-        return len(self.datums)
+        return len(self._data)
 
     def columnCount(self, parent=None):
         return 8
 
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():
-            datum = self.datums[index.row()]
+            datum = self._data[index.row()]
             column = index.column()
             if role == Qt.DisplayRole:
                 # To accommodate old save files
@@ -163,7 +163,7 @@ class DatumTableModel(QAbstractTableModel):
         when role is acting value is Qt.Checked or Qt.Unchecked
         """
         if role == Qt.CheckStateRole and index.column() == 0:
-            datum = self.datums[index.row()]
+            datum = self._data[index.row()]
             if value == Qt.Checked:
                 datum.checked = 2
             elif value == Qt.Unchecked:
@@ -175,7 +175,7 @@ class DatumTableModel(QAbstractTableModel):
         if role == Qt.EditRole:
             if index.isValid() and 0 <= index.row():
                 if value:
-                    datum = self.datums[index.row()]
+                    datum = self._data[index.row()]
                     column = index.column()
                     attr, vartype = self._attrs.get(column, (None, None))
                     if attr:
@@ -185,7 +185,7 @@ class DatumTableModel(QAbstractTableModel):
             return True
 
         if role == Qt.UserRole:
-            self.datums[index.row()] = value
+            self._data[index.row()] = value
             self.dataChanged.emit(index, index)
 
     def flags(self, index):
@@ -198,7 +198,7 @@ class DatumTableModel(QAbstractTableModel):
 
     def clearDatums(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
-        self.datums = []
+        self._data = []
         self.endRemoveRows()
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
@@ -207,6 +207,9 @@ class DatumTableModel(QAbstractTableModel):
 
     def datum_names(self):
         dn = []
-        for datum in self.datums:
+        for datum in self._data:
             dn.append(datum.station)
         return dn
+
+    def init_data(self, data):
+        self._data = data

@@ -32,7 +32,7 @@ class InversionError(Exception):
 
 
 def numpy_inversion(
-    adjustment, results_model, output_root_dir, write_out_files='n', survey_name='test'
+    adjustment, results, output_root_dir, write_out_files='n', survey_name='test'
 ):
     """
     Least-squares network adjustment using numpy
@@ -147,7 +147,7 @@ def numpy_inversion(
                     g = float(adjustment.X[i])
                     sd = float(np.sqrt(adjustment.var[i]))
                     t = AdjustedStation(key, g, sd)
-                    results_model.insertRows(t, 0)
+                    results.insert(t, 0)
                     adjustment.g_dic[key] = g
                     adjustment.sd_dic[key] = sd
                     sd_all.append(sd)
@@ -195,7 +195,8 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
     Shows PyQt table of gravity change.
 
     :param table_type: if True, entire tabular output file for data release is
-    shown. Includes station coordinates, g, standard deviation, and gravity change.
+    shown. Includes station coordinates, g, standa
+    rd deviation, and gravity change.
     """
 
     # Check that all values are positive (it should work either way, but it avoids confusion)
@@ -236,10 +237,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
         for survey in obstreemodel.checked_surveys():
             dates.append(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
             header = ['Station', 'Date', 'g', 'Std. dev.']
-            for ii in range(survey.results_model.rowCount()):
-                adj_station = survey.results_model.data(
-                    survey.results_model.index(ii, 0), role=256
-                )  # 256=Qt.UserRole
+            for adj_station in survey.results:
                 station_col.append(adj_station.station)
                 date_col.append(survey.name)
                 all_g.append(adj_station.g)
@@ -265,10 +263,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                 # survey = obstreemodel.invisibleRootItem().child(i)
                 g_header.append(survey.name + '_g')
                 g_header.append(survey.name + '_sd')
-                for ii in range(survey.results_model.rowCount()):
-                    adj_station = survey.results_model.data(
-                        survey.results_model.index(ii, 0), role=256
-                    )  # 256=Qt.UserRole
+                for adj_station in survey.results:
                     if adj_station.station[:6] == station[:6]:
                         station_g.append('{:0.1f}'.format(adj_station.g))
                         station_g.append('{:0.1f}'.format(adj_station.sd))
@@ -286,7 +281,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
             diff_cumulative_sd, diff_iteration_sd = [], []
         if first:
             # Calculate both the between-survey change and the change from the initial survey
-            initial_survey = survey.results_model
+            initial_survey = survey.results
             iteration_reference = initial_survey
             reference_name = survey.name
             iteration_name = reference_name
@@ -301,13 +296,11 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                 header2.append('dH2O_{}_to_{}'.format(reference_name, survey.name))
                 header2.append('dH2O_sd_{}_to_{}'.format(reference_name, survey.name))
 
-            compare_survey = survey.results_model
+            compare_survey = survey.results
             for station_name in unique_station_names:
 
                 for ii in range(initial_survey.rowCount()):
-                    initial_station = initial_survey.data(
-                        initial_survey.index(ii, 0), role=256
-                    )  # 256=Qt.UserRole
+                    initial_station = initial_survey[ii]
                     # Iterate through, look for matching station. 'if' statements deal with Gravnet, which truncates
                     # station names to 6 characters
                     if (
@@ -491,11 +484,7 @@ def adjusted_vs_observed_datum_analysis(self):
                     obstreesurvey.datum_model.setData(
                         idx, checkstate, Qt.CheckStateRole
                     )
-                    for iii in range(obstreesurvey.results_model.rowCount()):
-                        idx = obstreesurvey.results_model.index(iii, 0)
-                        adj_station = obstreesurvey.results_model.data(
-                            idx, role=Qt.UserRole
-                        )
+                    for adj_station in obstreesurvey.results:
 
                         if adj_station.station == station:
                             adj_g = adj_station.g + (datum.gradient * datum.meas_height)

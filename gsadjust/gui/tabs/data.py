@@ -18,10 +18,8 @@ resulting from the authorized or unauthorized use of the software.
 
 # import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import DateFormatter
 from matplotlib.figure import Figure
 from PyQt5 import QtWidgets
@@ -181,7 +179,7 @@ class TabData(QtWidgets.QWidget):
         t_selec = [t[i] for i in range(len(t)) if keepdata[i] == 1]
         # gravity channel (convert to microgals for display)
         series = np.array(station.grav())
-        series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+        series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
         if meter_type == 'CG5' or meter_type == 'CG6' or meter_type == 'csv':
             self.set_plot(
                 self.axes_data_UL,
@@ -195,7 +193,7 @@ class TabData(QtWidgets.QWidget):
             )
             # tiltx channel
             series = np.array(station.tiltx)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_UR,
                 t,
@@ -208,7 +206,7 @@ class TabData(QtWidgets.QWidget):
             )
             # tilty channel
             series = np.array(station.tilty)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_LR,
                 t,
@@ -221,7 +219,7 @@ class TabData(QtWidgets.QWidget):
             )
             # SD channel
             series = np.array(station.sd)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_LL,
                 t,
@@ -246,7 +244,7 @@ class TabData(QtWidgets.QWidget):
             )
             # tiltx channel
             series = np.array(station.tiltx)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_UR,
                 t,
@@ -259,7 +257,7 @@ class TabData(QtWidgets.QWidget):
             )
             # tilty channel
             series = np.array(station.tilty)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_LR,
                 t,
@@ -272,7 +270,7 @@ class TabData(QtWidgets.QWidget):
             )
             # SD channel
             series = np.array(station.etc)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_LL,
                 t,
@@ -297,7 +295,7 @@ class TabData(QtWidgets.QWidget):
             )
             # tiltx channel
             series = np.array(station.feedback)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_UR,
                 t,
@@ -310,7 +308,7 @@ class TabData(QtWidgets.QWidget):
             )
             # tilty channel
             series = np.array(station.etc)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_LR,
                 t,
@@ -323,7 +321,7 @@ class TabData(QtWidgets.QWidget):
             )
             # SD channel
             series = np.array(station.tiltx)
-            series_selec = [series[i] for i in range(len(series)) if keepdata[i] == 1]
+            series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
             self.set_plot(
                 self.axes_data_LL,
                 t,

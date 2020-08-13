@@ -44,21 +44,30 @@ class ObsTreeLoop(ObsTreeItemBase):
 
     def __init__(self, name):
         super(ObsTreeLoop, self).__init__()
-        self.delta_model = DeltaTableModel()
-        self.tare_model = TareTableModel()
+
+        self.delta = []
+        self.tare = []
+
+        # self.delta_model = DeltaTableModel()
+        # self.tare_model = TareTableModel()
+
         self.name = name
         self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'
-        self.drift_cont_method = (
-            0  # If continuous model, also need to keep track of which type of model
-        )
-        self.drift_cont_startend = (
-            0  # behavior at start/end. 0: extrapolate, 1: constant
-        )
-        self.drift_cont_weighting = 0  # check box check state
-        self.drift_netadj_method = (
-            2  # If netadj method, keep track of polynomial degree
-        )
+
+        # If continuous model, also need to keep track of which type of model
+        self.drift_cont_method = 0
+
+        # behavior at start/end. 0: extrapolate, 1: constant
+        self.drift_cont_startend = 0
+
+        # check box check state
+        self.drift_cont_weighting = 0
+
+        # If netadj method, keep track of polynomial degree
+        self.drift_netadj_method = 2
+
         self.comment = ''  # String that can be specified from GUI
+
         # TODO: Import comment from Burris file?
         self.source = ''  # Filename of raw input file
 
@@ -153,22 +162,21 @@ class ObsTreeLoop(ObsTreeItemBase):
     @classmethod
     def from_json(cls, data):
         temp = cls(data['name'])
-        temp.__dict__ = data
+        temp.__dict__.update(data)
         potential_missing_fields = {
             'comment': '',
             'oper': '',
             'source': '',
             'drift_cont_weighting': 0,
         }
-        temp.delta_model = DeltaTableModel()
-        temp.tare_model = TareTableModel()
+
         for tare_dict in data['tares']:
             tare_object = Tare(
                 tare_dict['datetime'].date(),
                 tare_dict['datetime'].time(),
                 tare_dict['tare'],
             )
-            temp.tare_model.insertRows(tare_object, 0)
+            temp.tare.insert(0, tare_object)
         if 'checked' in data:
             temp.setCheckState(data['checked'])
         for k, v in potential_missing_fields.items():
@@ -309,8 +317,8 @@ class ObsTreeLoop(ObsTreeItemBase):
         return stations
 
     def n_unique_stations(self):
-        sn = [s.station_name for s in self.stations()]
-        return len(set(sn))
+        sn = set(s.station_name for s in self.stations())
+        return len(sn)
 
     def deltas(self):
         """
@@ -318,34 +326,28 @@ class ObsTreeLoop(ObsTreeItemBase):
         settings in options.
         """
         deltas = []
-        table = self.delta_model
-        for i in range(table.rowCount()):
-            delta = table.data(table.index(i, 0), role=Qt.UserRole)
-            deltas.append(delta)
+        for delta in self.delta:
             if self.parent().adjustment.adjustmentoptions.use_sigma_min:
                 delta.adj_sd = max(
                     self.parent().adjustment.adjustmentoptions.sigma_min, delta.sd
                 )
+            deltas.append(delta)
         return deltas
 
     def to_json(self):
-        # Copy tares and stations from PyQt models to lists
-        tares = []
-        if self.tare_model is not None:
-            for i in range(self.tare_model.rowCount()):
-                ind = self.tare_model.createIndex(i, 0)
-                tares.append(self.tare_model.data(ind, Qt.UserRole))
+        # Copy stations from PyQt models to lists
         stations_json = [s.to_json() for s in self.stations()]
 
-        self.delta_model = None
-        self.tare_model = None
+        # FIXME: Why empty these?
+        self.delta = []
+        self.tare = []
 
         return {
             'checked': self.checkState(),
             'delta_model': None,
             'tare_model': None,
             'stations': stations_json,
-            'tares': tares,
+            'tares': self.tare,
             'name': self.name,
             'drift_method': self.drift_method,
             'drift_cont_method': self.drift_cont_method,

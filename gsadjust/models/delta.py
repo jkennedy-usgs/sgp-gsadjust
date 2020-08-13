@@ -70,7 +70,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def __init__(self):
         super(DeltaTableModel, self).__init__(parent=None)
-        self._deltas = []
+        self._data = []
 
     tried_to_update_list_delta = QtCore.pyqtSignal()
     signal_adjust_update_required = QtCore.pyqtSignal()
@@ -86,15 +86,15 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def insertRows(self, delta, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
-        self._deltas.append(delta)
+        self._data.append(delta)
         self.endInsertRows()
 
     def rowCount(self, parent=None):
         if parent is None:
-            return len(self._deltas)
+            return len(self._data)
         elif parent.isValid():
             return 0
-        return len(self._deltas)
+        return len(self._data)
 
     def columnCount(self, parent=None):
         if parent is None:
@@ -105,7 +105,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role):
         if index.isValid():
-            delta = self._deltas[index.row()]
+            delta = self._data[index.row()]
             column = index.column()
             if role == Qt.ForegroundRole:
                 brush = QtGui.QBrush(Qt.black)
@@ -180,7 +180,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         """
         # self.layoutAboutToBeChanged.emit()
         if role == Qt.CheckStateRole and index.column() == 0:
-            delta = self._deltas[index.row()]
+            delta = self._data[index.row()]
             if value == Qt.Checked:
                 delta.checked = 2
             elif value == Qt.Unchecked:
@@ -189,7 +189,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             return True
         if role == Qt.EditRole:
             if index.isValid() and 0 <= index.row():
-                delta = self._deltas[index.row()]
+                delta = self._data[index.row()]
                 column = index.column()
                 if len(str(value)) > 0:
                     if column == DELTA_ADJ_SD:
@@ -205,15 +205,15 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     self.signal_adjust_update_required.emit()
                 return True
         if role == Qt.UserRole:
-            self._deltas[index.row()] = value
+            self._data[index.row()] = value
 
         # self.layoutChanged.emit()
 
     def clearDeltas(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
-        for delta in self._deltas:
+        for delta in self._data:
             delta.residual = -999
-        self._deltas = []
+        self._data = []
         self.endRemoveRows()
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
@@ -293,8 +293,8 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def to_json(self):
         # Normal delta
-        json_deltas = []
-        for delta in self._deltas:
+        json_data = []
+        for delta in self._data:
             if delta.type == 'normal' or delta.type == 'assigned':
                 sta1 = delta.station1.key
                 sta2 = delta.station2.key
@@ -330,8 +330,11 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 'loop': loop,
                 'type': delta_type,
             }
-            json_deltas.append(temp_delta)
-        return json_deltas
+            json_data.append(temp_delta)
+        return json_data
+
+    def init_data(self, data):
+        self._data = data
 
 
 class NoCheckDeltaTableModel(DeltaTableModel):

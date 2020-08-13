@@ -52,7 +52,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
 
     def __init__(self):
         super(RomanTableModel, self).__init__()
-        self.dgs = []
+        self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -65,18 +65,18 @@ class RomanTableModel(QtCore.QAbstractTableModel):
 
     def insertRows(self, delta, position, rows=1, index=QtCore.QModelIndex()):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
-        self.dgs.append(delta)
+        self._data.append(delta)
         self.endInsertRows()
 
     def rowCount(self, parent=None):
-        return len(self.dgs)
+        return len(self._data)
 
     def columnCount(self, parent=None):
         return 3
 
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():
-            delta = self.dgs[index.row()]
+            delta = self._data[index.row()]
 
             if role == Qt.DisplayRole:
                 column = index.column()
@@ -121,3 +121,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+
+    def init_data(self, data):
+        self._data = data
+

@@ -107,7 +107,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         if role == Qt.CheckStateRole and index.column() == 0:
             m = index.model().itemFromIndex(index)
             m.setCheckState(value)
-            if type(m) is ObsTreeLoop:
+            if isinstance(m, ObsTreeLoop):
                 self.signal_delta_update_required.emit()
             self.dataChanged.emit(index, index)
             # # self.layoutChanged.emit()

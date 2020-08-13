@@ -141,7 +141,8 @@ from .gui.widgets import ProgressBar
 from .io import (InvalidMeterException, export_data, export_metadata,
                  export_summary, file_reader, import_abs_g_complete,
                  import_abs_g_simple)
-from .models import BurrisTableModel, ScintrexTableModel, TareTableModel
+from .models import (BurrisTableModel, DatumTableModel, DeltaTableModel,
+                     ResultsTableModel, ScintrexTableModel, TareTableModel)
 from .obstree import ObsTreeLoop, ObsTreeModel, ObsTreeStation, ObsTreeSurvey
 from .plots import (PlotDatumCompare, PlotDatumComparisonTimeSeries,
                     PlotDgResidualHistogram, PlotGravityChange,
@@ -201,11 +202,32 @@ class MainProg(QtWidgets.QMainWindow):
         # self.setGeometry(50, 50, 350, 300)
         self.setWindowTitle('GSadjust')
 
+        # Create model objects for main views.
+        self.delta_model = DeltaTableModel()
+        self.datum_model = DatumTableModel()
+        self.results_model = ResultsTableModel()
+
         # tab_....s are populated with GUI elements in the tab_...() functions
         self.tab_data = TabData(self)
         self.tab_drift = TabDrift(self)
         self.tab_adjust = TabAdjust(self)
         self.tab_widget = QtWidgets.QTabWidget()
+
+        # Set models for the tab views.
+        self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
+        self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
+        self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
+
+        # Connect signals.
+        self.delta_model.signal_adjust_update_required.connect(
+            self.adjust_update_required
+        )
+        self.delta_model.tried_to_update_list_delta.connect(
+            self.show_delta_update_message
+        )
+        self.datum_model.signal_adjust_update_required.connect(
+            self.adjust_update_required
+        )
 
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.addTab(self.tab_data, 'Data')
@@ -825,12 +847,15 @@ class MainProg(QtWidgets.QMainWindow):
         # Returns list of survey delta tables so they can be passed to populate_survey_deltatable_from_simpledeltas()
         # try:
         QtWidgets.QApplication.processEvents()
+        start = time.time()
         obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(fname)
         if obstreesurveys:
             self.workspace_savename = fname
             self.populate_obstreemodel(obstreesurveys, delta_models)
             self.adjust_update_required()
             self.set_window_title(fname)
+        end = time.time()
+        print("Load duration %s: %.2f secs" % (fname, end - start))
         if coords:
             self.obsTreeModel.station_coords = coords
         self.update_menus()
@@ -1033,7 +1058,7 @@ class MainProg(QtWidgets.QMainWindow):
                         d.assigned_dg = simpledelta.assigned_dg
                     if d:
                         i += 1
-                        surveys[idx].delta_model.insertRows(d, 0)
+                        surveys[idx].delta.insert(0, d)
                     else:  # unable to create delta
                         self.msg = show_message(
                             'Import error',
@@ -1177,12 +1202,12 @@ class MainProg(QtWidgets.QMainWindow):
                 current_survey = self.obsTreeModel.itemFromIndex(
                     self.index_current_survey
                 )
-                if current_survey.delta_model.rowCount() > 0:
+                if len(current_survey.delta) > 0:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_DELTAS)
                 else:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
                 if (
-                    current_survey.results_model.rowCount() > 0
+                    len(current_survey.results) > 0
                     and not self.label_adjust_update_required_set
                 ):
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_RESULTS)
@@ -1229,30 +1254,21 @@ class MainProg(QtWidgets.QMainWindow):
         view, or after a network adjustment
         """
 
+        self.delta_model.layoutAboutToBeChanged.emit()
+        self.datum_model.layoutAboutToBeChanged.emit()
+        self.results_model.layoutAboutToBeChanged.emit()
+
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
-        survey.delta_model.layoutAboutToBeChanged.emit()
-        survey.datum_model.layoutAboutToBeChanged.emit()
-        survey.results_model.layoutAboutToBeChanged.emit()
+        # FIXME: Update the model data.
+        self.delta_model.init_data(survey.delta)
+        self.datum_model.init_data(survey.datum)
+        self.results_model.init_data(survey.results)
 
-        try:
-            survey.delta_model.signal_adjust_update_required.connect(
-                self.adjust_update_required
-            )
-            survey.delta_model.tried_to_update_list_delta.connect(
-                self.show_delta_update_message
-            )
-            survey.datum_model.signal_adjust_update_required.connect(
-                self.adjust_update_required
-            )
-            self.tab_adjust.delta_proxy_model.setSourceModel(survey.delta_model)
-            self.tab_adjust.datum_proxy_model.setSourceModel(survey.datum_model)
-            self.tab_adjust.results_proxy_model.setSourceModel(survey.results_model)
-        except:
-            pass
         self.tab_adjust.delta_proxy_model.invalidate()
         self.tab_adjust.datum_proxy_model.invalidate()
         self.tab_adjust.results_proxy_model.invalidate()
+
         self.tab_adjust.results_view.setModel(self.tab_adjust.results_proxy_model)
         self.tab_adjust.results_view.setSortingEnabled(True)
         self.tab_adjust.delta_view.setModel(self.tab_adjust.delta_proxy_model)
@@ -1337,7 +1353,7 @@ class MainProg(QtWidgets.QMainWindow):
         if indexes:
             item = self.obsTreeModel.itemFromIndex(indexes[0])
             if item:
-                if type(item) is ObsTreeStation:
+                if isinstance(item, ObsTreeStation):
                     self.index_current_station = indexes[0]
                     if self.tab_widget.currentIndex() == 0:
                         self.update_data_tab()
@@ -1395,7 +1411,7 @@ class MainProg(QtWidgets.QMainWindow):
         # Want to get the selected loop, not the self.index_current_loop (former is highlighted, latter is bold)
         current_loop_index = self.gui_data_treeview.selectedIndexes()[0]
         current_loop = self.obsTreeModel.itemFromIndex(current_loop_index)
-        deltamodel = current_loop.delta_model
+        deltas = current_loop.delta
         n_stations = current_loop.n_unique_stations()
 
         dg, sd = None, None
@@ -1414,9 +1430,7 @@ class MainProg(QtWidgets.QMainWindow):
                         None, 'Vertical gradient file to write', defaultfile
                     )
                     if filename:
-                        delta = deltamodel.data(
-                            deltamodel.index(0, 0), role=QtCore.Qt.UserRole
-                        )
+                        delta = deltas[0]
                         dg = delta.dg
                         sd = delta.sd
                 elif (
@@ -1429,8 +1443,7 @@ class MainProg(QtWidgets.QMainWindow):
                     if filename:
                         dg_list, sd_list = [], []
                         for i in range(deltamodel.rowCount()):
-                            idx = deltamodel.index(i, 0)
-                            delta = deltamodel.data(idx, QtCore.Qt.UserRole)
+                            delta = deltas[i]
                             dg_list.append(delta.dg)
                             sd_list.append(delta.sd)
                         dg = np.mean(dg_list)
@@ -1490,12 +1503,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Remove all deltas from survey delta model shown on network adjustment tab.
         """
-        self.obsTreeModel.itemFromIndex(
-            self.index_current_survey
-        ).delta_model.clearDeltas()
-        self.obsTreeModel.itemFromIndex(
-            self.index_current_survey
-        ).results_model.clearResults()
+        self.delta_model.clearDeltas()
+        self.results_model.clearResults()
         self.clear_adjustment_text()
         self.deltas_update_required()
         self.update_adjust_tables()
@@ -1513,12 +1522,8 @@ class MainProg(QtWidgets.QMainWindow):
         Remove all datums from datum model shown on network adjustment tab.
         :return:
         """
-        self.obsTreeModel.itemFromIndex(
-            self.index_current_survey
-        ).datum_model.clearDatums()
-        self.obsTreeModel.itemFromIndex(
-            self.index_current_survey
-        ).results_model.clearResults()
+        self.datum_model.clearDatums()
+        self.results_model.clearResults()
         self.clear_adjustment_text()
         self.update_adjust_tables()
         self.set_window_title_asterisk()
@@ -1527,9 +1532,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Remove all results from results model shown on network adjustment tab.
         """
-        self.obsTreeModel.itemFromIndex(
-            self.index_current_survey
-        ).results_model.clearResults()
+        self.results_model.clearResults()
         self.update_adjust_tables()
 
     def animate_loop(self):
@@ -1630,10 +1633,8 @@ class MainProg(QtWidgets.QMainWindow):
         index = self.gui_data_treeview.selectedIndexes()
         obstreesurvey = self.obsTreeModel.itemFromIndex(index[0]).parent()
 
-        if index[0] == self.index_current_station_loop:
-            update_selected_station = True
-        else:
-            update_selected_station = False
+        # store bool True / False.
+        update_selected_station = index[0] == self.index_current_station_loop
 
         if index[0] == self.index_current_loop:
             update_selected_loop = True
@@ -2146,11 +2147,13 @@ class MainProg(QtWidgets.QMainWindow):
         :param survey: For which to set delta-g sd
         :param ao: AdjustmentOptions object
         """
-        for i in range(survey.delta_model.rowCount()):
-            ind = survey.delta_model.createIndex(
-                i, 7
-            )  # Column 7: minimum standard deviation
-            delta = survey.delta_model.data(ind, role=Qt.UserRole)
+        for delta in survey.delta:
+            # Column 7: minimum standard deviation
+            # ind = survey.delta_model.createIndex(i, 7)
+            # delta = survey.delta_model.data(ind, role=Qt.UserRole)
+            # FIXME: Is this correct? Seems odd for it to be called `delta`
+            # delta = delta.sd
+
             additive = 0
             factor = 1
             if ao.use_sigma_add:
@@ -2163,7 +2166,8 @@ class MainProg(QtWidgets.QMainWindow):
                     sigma *= ao.sigma_postfactor
             else:
                 sigma = delta.sd * factor + additive
-            survey.delta_model.setData(ind, sigma, role=Qt.EditRole)
+            # survey.delta_model.setData(ind, sigma, role=Qt.EditRole)
+            delta.sd = sigma
         self.update_adjust_tables()
 
     def menu_import_abs_g_simple(self):

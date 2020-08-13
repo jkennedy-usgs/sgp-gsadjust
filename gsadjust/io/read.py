@@ -516,10 +516,7 @@ def import_abs_g_complete(fname):
             # FIXME: This looks like it might be incorrectly indented? If not
             # the index_or_none part above it can be moved in here, since we
             # do nothing if there is no Gradient in parts.
-            while True:
-                line = fh.readline()
-                if not line:
-                    break
+            for line in fh:
                 try:
                     if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
                         parts = line.split("\t")

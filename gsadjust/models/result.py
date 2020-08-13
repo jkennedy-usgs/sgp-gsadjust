@@ -32,13 +32,15 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
     Model to store network-adjusted gravity values.
 
     There is one ResultsTableModel per survey.
+
+    Data stored in .adjusted_stations
     """
 
     _headers = {ADJSTA_STATION: 'Station', ADJSTA_G: 'g', ADJSTA_SD: 'Std. dev.'}
 
     def __init__(self):
         super(ResultsTableModel, self).__init__()
-        self.adjusted_stations = []
+        self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -53,18 +55,18 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
         self, adjusted_station, position, rows=1, index=QtCore.QModelIndex()
     ):
         self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
-        self.adjusted_stations.append(adjusted_station)
+        self._data.append(adjusted_station)
         self.endInsertRows()
 
     def rowCount(self, parent=None):
-        return len(self.adjusted_stations)
+        return len(self._data)
 
     def columnCount(self, parent=None):
         return 3
 
     def data(self, index, role):
         if index.isValid():
-            sta = self.adjusted_stations[index.row()]
+            sta = self._data[index.row()]
 
             if role == Qt.DisplayRole:
                 column = index.column()
@@ -85,7 +87,7 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
         when role is acting value is Qt.Checked or Qt.Unchecked
         """
         if role == Qt.UserRole:
-            self.adjusted_stations = []
+            self._data = []
             return QVariant()
         # return QtCore.QAbstractTableModel.setData(self, index, value, role)
 
@@ -113,9 +115,14 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
 
     def clearResults(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
-        self.adjusted_stations = []
+        self._data = []
         self.endRemoveRows()
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
         self.endResetModel()
         return QVariant()
+
+    def init_data(self, data):
+        self._data = data
+
+

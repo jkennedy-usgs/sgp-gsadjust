@@ -47,7 +47,7 @@ class TareTableModel(QAbstractTableModel):
 
     def __init__(self):
         super(TareTableModel, self).__init__()
-        self.tares = []
+        self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -60,26 +60,26 @@ class TareTableModel(QAbstractTableModel):
 
     def insertRows(self, tare, position=0, rows=1, index=QModelIndex()):
         self.beginInsertRows(QModelIndex(), position, position + rows - 1)
-        self.tares.append(tare)
+        self._data.append(tare)
         self.endInsertRows()
 
     def removeRow(self, index):
         tare = self.data(index, role=Qt.UserRole)
         self.beginRemoveRows(index, index.row(), 1)
-        self.tares.remove(tare)
+        self._data.remove(tare)
         self.endRemoveRows()
         self.beginResetModel()
         self.endResetModel()
 
     def rowCount(self, parent=None):
-        return len(self.tares)
+        return len(self._data)
 
     def columnCount(self, parent=None):
         return 3
 
     def data(self, index, role):
         if index.isValid():
-            tare = self.tares[index.row()]
+            tare = self._data[index.row()]
 
             if role == Qt.DisplayRole:
                 column = index.column()
@@ -103,7 +103,7 @@ class TareTableModel(QAbstractTableModel):
         when role is acting value is Qt.Checked or Qt.Unchecked
         """
         if role == Qt.CheckStateRole and index.column() == 0:
-            tare = self.tares[index.row()]
+            tare = self._data[index.row()]
             if value == Qt.Checked:
                 tare.checked = 2
             elif value == Qt.Unchecked:
@@ -111,7 +111,7 @@ class TareTableModel(QAbstractTableModel):
             return True
         if role == Qt.EditRole:
             if index.isValid() and 0 <= index.row():
-                tare = self.tares[index.row()]
+                tare = self._data[index.row()]
                 column = index.column()
                 if len(str(value)) > 0:
                     if column == 0:
@@ -123,7 +123,7 @@ class TareTableModel(QAbstractTableModel):
                     self.dataChanged.emit(index, index)
                 return True
         if role == Qt.UserRole:
-            self.tares[index.row()] = value
+            self._data[index.row()] = value
 
     def deleteTare(self, idx):
         self.beginRemoveRows(idx, 0, 1)
@@ -131,7 +131,7 @@ class TareTableModel(QAbstractTableModel):
 
     def clearTares(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
-        self.tares = []
+        self._data = []
         self.endRemoveRows()
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
@@ -155,3 +155,6 @@ class TareTableModel(QAbstractTableModel):
             return Qt.Unchecked
         else:
             return Qt.Checked
+
+    def init_data(self, data):
+        self._data = data

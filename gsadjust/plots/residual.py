@@ -44,11 +44,10 @@ class PlotDgResidualHistogram(QtWidgets.QDialog):
     def get_data(self):
         survey = self.survey
         try:
-            nrows = survey.delta_model.rowCount()
+            nrows = len(survey.delta)
             rlist = []
             for i in range(nrows):
-                idx = survey.delta_model.index(i, 8)
-                results = survey.delta_model.data(idx, role=Qt.DisplayRole)
+                results = survey.delta[i].residual
                 d = float(results)
                 if d > -998:
                     rlist.append(float(results))

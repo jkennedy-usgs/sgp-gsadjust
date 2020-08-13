@@ -77,11 +77,8 @@ def assemble_all_deltas(obstreemodel):
         survey = obstreemodel.invisibleRootItem().child(i)
         for ii in range(survey.rowCount()):
             loop = survey.child(ii)
-            for iii in range(loop.delta_model.rowCount()):
-                delta = loop.delta_model.data(
-                    loop.delta_model.index(iii, 0), role=32
-                )  # 32=QtCore.Qt.UserRole
-                deltas.append(delta)
+            deltas.extend(loop.delta)
+
     return deltas
 
 
@@ -104,6 +101,6 @@ def init_station_coords_dict(obstreemodel):
                         station.lat[0],
                         station.elev[0],
                     )
-                except:
+                except Exception:
                     station_coords[station.station_name] = (0, 0, 0)
     return station_coords

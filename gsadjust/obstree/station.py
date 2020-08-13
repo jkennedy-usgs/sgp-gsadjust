@@ -133,6 +133,12 @@ class ObsTreeStation(ObsTreeItemBase):
     def tooltip(self):
         return None
 
+    def _filter(self, d):
+        """
+        Filter data by the .keepdata list.
+        """
+        return [v for i, v in enumerate(d) if self.keepdata[i] == 1]
+
     # @property
     def gmean(self):
         """
@@ -140,7 +146,7 @@ class ObsTreeStation(ObsTreeItemBase):
         """
         g = self.grav()
         try:
-            gtmp = [g[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
+            gtmp = self._filter(g)
             d = sum(self._weights_())
             w = self._weights_()
             wg = [g * w for (g, w) in zip(gtmp, w)]
@@ -155,7 +161,7 @@ class ObsTreeStation(ObsTreeItemBase):
         The try-except block handles errors when all keepdata == 0.
         """
         try:
-            ttmp = [self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
+            ttmp = self._filter(self.t)
             d = sum(self._weights_())
             w = self._weights_()
             wt = [g * w for (g, w) in zip(ttmp, w)]
@@ -170,9 +176,7 @@ class ObsTreeStation(ObsTreeItemBase):
             if self.sd[0] == -999:
                 return 1
             else:
-                ttmp = np.array(
-                    [self.t[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
-                )
+                ttmp = np.array(self._filter(self.t))
                 num = np.zeros(len(ttmp))
                 for i in range(len(ttmp)):
                     num[i] = self._weights_()[i] * ((ttmp[i] - np.mean(ttmp)) * 24) ** 2
@@ -188,10 +192,8 @@ class ObsTreeStation(ObsTreeItemBase):
     @property
     def original_sd(self):
         g = self.grav()
-        sdtmp = np.array(
-            [self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
-        )
-        gtmp = np.array([g[i] for i in range(len(self.t)) if self.keepdata[i] == 1])
+        sdtmp = np.array(self._filter(self.sd))
+        gtmp = np.array(self._filter(g))
         num = np.zeros(len(sdtmp))
         for i in range(len(sdtmp)):
             num[i] = self._weights_()[i] * (gtmp[i] - np.mean(gtmp)) ** 2
@@ -216,21 +218,15 @@ class ObsTreeStation(ObsTreeItemBase):
                     return self.assigned_sd
             if self.sd[0] == -999:
                 # Burris meter: return the S.D. calculated from all the samples at a station
-                gtmp = np.array(
-                    [g[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
-                )
+                gtmp = np.array(self._filter(g))
                 if len(gtmp) == 1:  # Can't take S.D. if there's only one sample
                     return 3.0
                 else:
                     return float(np.std(gtmp))
             else:  # Scintrex: return the average SD of the samples
-                sdtmp = np.array(
-                    [self.sd[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
-                )
+                sdtmp = np.array(self._filter(self.sd))
                 # sd = np.mean(sdtmp)  #
-                gtmp = np.array(
-                    [g[i] for i in range(len(self.t)) if self.keepdata[i] == 1]
-                )
+                gtmp = np.array(self._filter(g))
                 num = np.zeros(len(sdtmp))
 
                 for i in range(len(sdtmp)):

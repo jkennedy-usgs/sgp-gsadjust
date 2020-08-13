@@ -64,9 +64,16 @@ class ObsTreeSurvey(ObsTreeItemBase):
         # Both surveys and loops have delta models. The survey delta_model holds the observations used in an
         # adjustment, and may have deltas from one or more loops.
         self.name = name
-        self.delta_model = DeltaTableModel()
-        self.datum_model = DatumTableModel()
-        self.results_model = ResultsTableModel()
+
+        # Store related data.
+        self.delta = []
+        self.datum = []
+        self.results = []
+
+        # self.delta_model = DeltaTableModel()
+        # self.datum_model = DatumTableModel()
+        # self.results_model = ResultsTableModel()
+
         self.adjustment = Adjustment()
 
     def __str__(self):
@@ -118,12 +125,12 @@ class ObsTreeSurvey(ObsTreeItemBase):
 
         for datum in data['datums']:
             d = Datum(datum['station'])
-            d.__dict__ = datum
+            d.__dict__.update(datum)
             d.residual = -999
-            temp.datum_model.insertRows(d, 0)
+            temp.datum.insert(0, d)
 
         ao = AdjustmentOptions()
-        ao.__dict__ = data['adjoptions']
+        ao.__dict__.update(data['adjoptions'])
         if not hasattr(ao, 'use_sigma_prefactor') and hasattr(ao, 'sigma_factor'):
             ao.sigma_prefactor = ao.sigma_factor
             ao.use_sigma_prefactor = ao.use_sigma_factor
@@ -139,15 +146,12 @@ class ObsTreeSurvey(ObsTreeItemBase):
         loops, datums = [], []
         # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
         # loop delta_models; those are ignored and not save (they're recreated when the workspace is loaded).
-        for i in range(self.datum_model.rowCount()):
-            ind = self.datum_model.createIndex(i, 0)
-            datums.append(self.datum_model.data(ind, Qt.UserRole))
         for i in range(self.rowCount()):
             loops.append(self.child(i).to_json())
         return {
             'loops': loops,
-            'deltas': jsons.dump(self.delta_model),
-            'datums': jsons.dump(datums),
+            'deltas': jsons.dump(self.delta),
+            'datums': jsons.dump(self.datum),
             'checked': self.checkState(),
             'name': self.name,
             'adjoptions': jsons.dump(self.adjustment.adjustmentoptions),
@@ -177,20 +181,12 @@ class ObsTreeSurvey(ObsTreeItemBase):
         return [self.child(i) for i in range(self.rowCount())]
 
     def delta_list(self):
-        deltas = []
-        for i in range(self.delta_model.rowCount()):
-            ind = self.delta_model.createIndex(i, 0)
-            delta = self.delta_model.data(ind, Qt.UserRole)
-            deltas.append(delta)
-        return deltas
+        # FIXME: Can remove this.
+        return self.deltas
 
     @property
     def datums(self):
-        datums = []
-        for i in range(self.datum_model.rowCount()):
-            ind = self.datum_model.createIndex(i, 0)
-            datums.append(self.datum_model.data(ind, Qt.UserRole))
-        return datums
+        return self.datum[::]
 
     def _handler_edit_ObsTreeSurvey(self, item, value):
         """
@@ -283,11 +279,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if self.adjustment.adjustmentoptions.specify_cal_coeff:
                     specify_cal_coeff = True
                     cal_dic = self.adjustment.adjustmentoptions.meter_cal_dict
-            for ii in range(self.delta_model.rowCount()):
-                ind = self.delta_model.createIndex(ii, 0)
-                chk = self.delta_model.data(ind, Qt.CheckStateRole)
-                if chk == 2:  # Checkbox checked
-                    delta = self.delta_model.data(ind, Qt.UserRole)
+            for delta in self.delta:
+                if delta.checked:  # Checkbox checked
                     if specify_cal_coeff:
                         delta.cal_coeff = cal_dic[delta.meter]
                     else:
@@ -314,12 +307,10 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 else:
                     adjustmentresults.n_deltas_notused += 1
 
-            for ii in range(self.datum_model.rowCount()):
-                ind = self.datum_model.createIndex(ii, 0)
-                chk = self.datum_model.data(ind, Qt.CheckStateRole)
-                if chk == 2:  # Checkbox checked
+            for datum in self.datum:
+                if datum.checked:  # Checkbox checked
                     # account for vertical gradient
-                    datum = copy.copy(self.datum_model.data(ind, Qt.UserRole))
+                    datum = copy.copy(datum)
                     if hasattr(datum, 'gradient'):
                         datum.g = datum.g - datum.gradient * datum.meas_height
                     datums.append(datum)
@@ -332,8 +323,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
             self.adjustment.adjustmentresults = adjustmentresults
 
             try:
-                self.results_model.clearResults()
-                if len(self.adjustment.datums) == 0:
+                self.results = []
+                if not self.adjustment.datums:  # empty.
                     self.msg = show_message(
                         "Survey {}: At least one datum must be specified".format(
                             self.name
@@ -341,7 +332,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                         "Inversion error",
                     )
                     return
-                if len(self.adjustment.deltas) == 0:
+                if not self.adjustment.deltas:  # empty.
                     self.msg = show_message(
                         "Survey {}: At least one relative-gravity difference must be specified".format(
                             self.name
@@ -523,7 +514,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 for i in range(order):
                     meter_drift_params.append(fid.readline().split())
 
-        self.results_model.setData(0, 0, Qt.UserRole)  # clears results table
+        self.results = []
 
         # Read gravnet results
         g_dic, sd_dic = {}, {}
@@ -542,7 +533,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if len(parts) == 4:
                     g_dic[sta] = g
                     sd_dic[sta] = sd
-                    self.results_model.insertRows(AdjustedStation(sta, g, sd), 0)
+                    self.results.insert(0, AdjustedStation(sta, g, sd))
             self.adjustment.adjustmentresults.avg_stdev = np.mean(all_sd)
 
         # Match up residuals with input data
@@ -664,10 +655,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
 
         try:
             cal_dic = numpy_inversion(
-                self.adjustment,
-                self.results_model,
-                output_root_dir,
-                write_out_files='n',
+                self.adjustment, self.results, output_root_dir, write_out_files='n',
             )
         except InversionError:
             show_message(InversionError, "Inversion Error")
@@ -684,62 +672,48 @@ class ObsTreeSurvey(ObsTreeItemBase):
         datum_residuals, dg_residuals = [], []
         g_dic = self.adjustment.g_dic
         # Reset residuals to all -999's
-        for i in range(self.delta_model.rowCount()):
-            ind = self.delta_model.createIndex(i, 0)
-            tempdelta = self.delta_model.data(ind, Qt.UserRole)
-            tempdelta.residual = -999.0
-            self.delta_model.setData(ind, tempdelta, Qt.UserRole)
+        for delta in self.delta:
+            delta.residual = -999.0
 
         # Matchup adjustment residuals with observations
-        for i in range(self.delta_model.rowCount()):
-            ind = self.delta_model.createIndex(i, 0)
-            chk = self.delta_model.data(ind, Qt.CheckStateRole)
-            tempdelta = self.delta_model.data(ind, Qt.UserRole)
-            if chk == 2:
+        for delta in self.delta:
+            if delta.checked:
                 try:
                     if inversion_type == 'gravnet':
-                        station1_name = tempdelta.sta1[:6]
-                        station2_name = tempdelta.sta2[:6]
+                        station1_name = delta.sta1[:6]
+                        station2_name = delta.sta2[:6]
                     elif inversion_type == 'numpy':
-                        station1_name = tempdelta.sta1
-                        station2_name = tempdelta.sta2
-                    if tempdelta.meter in cal_dic:
+                        station1_name = delta.sta1
+                        station2_name = delta.sta2
+                    if delta.meter in cal_dic:
                         cal_adj_dg = (
-                            tempdelta.dg
-                            * cal_dic[tempdelta.meter][0]
-                            * tempdelta.cal_coeff
+                            delta.dg * cal_dic[delta.meter][0] * delta.cal_coeff
                         )
                     else:
-                        cal_adj_dg = tempdelta.dg * tempdelta.cal_coeff
+                        cal_adj_dg = delta.dg * delta.cal_coeff
                     adj_g1 = g_dic[station1_name]
                     adj_g2 = g_dic[station2_name]
                     adj_dg = adj_g2 - adj_g1
-                    tempdelta.residual = adj_dg - cal_adj_dg
-                    dg_residuals.append(tempdelta.residual)
+                    delta.residual = adj_dg - cal_adj_dg
+                    dg_residuals.append(delta.residual)
                 except KeyError:
                     self.msg = show_message("Key error", "Key error")
                     return
             else:
-                tempdelta.residual = -999.0
-            self.delta_model.setData(ind, tempdelta, Qt.UserRole)
+                delta.residual = -999.0
 
-        for i in range(self.datum_model.rowCount()):
-            ind = self.datum_model.createIndex(i, 0)
-            tempdatum = self.datum_model.data(ind, Qt.UserRole)
+        for datum in self.datum:
             if inversion_type == 'numpy':
-                station_name = tempdatum.station
+                station_name = datum.station
             elif inversion_type == 'gravnet':
-                station_name = tempdatum.station[0:6]
+                station_name = datum.station[0:6]
             if station_name in g_dic.keys():
                 adj_g1 = g_dic[station_name]
-                residual = adj_g1 - (
-                    tempdatum.g - tempdatum.meas_height * tempdatum.gradient
-                )
+                residual = adj_g1 - (datum.g - datum.meas_height * datum.gradient)
                 datum_residuals.append(residual)
             else:
                 residual = -999
-            tempdatum.residual = residual
-            self.datum_model.setData(ind, tempdatum, Qt.UserRole)
+            datum.residual = residual
 
         self.adjustment.adjustmentresults.min_dg_residual = np.min(np.abs(dg_residuals))
         self.adjustment.adjustmentresults.max_dg_residual = np.max(np.abs(dg_residuals))
@@ -761,8 +735,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
             station_list.append(delta.sta1)
             station_list.append(delta.sta2)
         station_list = list(set(station_list))
-        for i in range(len(station_list)):
-            sta_dic_ls[station_list[i]] = i
+
+        sta_dic_ls = {station: i for i, station in enumerate(station_list)}
         return sta_dic_ls
 
     def return_obstreestation(self, station_id):
@@ -787,16 +761,13 @@ class ObsTreeSurvey(ObsTreeItemBase):
         :return:
         """
         if clear:
-            self.delta_model.clearDeltas()
+            self.delta = []
         # If just a single loop
-        if type(loop) is ObsTreeLoop:
+        if isinstance(loop, ObsTreeLoop):
             try:
-                for ii in range(loop.delta_model.rowCount()):
+                for delta in loop.delta:
                     # if loop.delta_model.data(loop.delta_model.index(ii, 0), role=Qt.CheckStateRole) == 2:
-                    delta = loop.delta_model.data(
-                        loop.delta_model.index(ii, 0), role=Qt.UserRole
-                    )
-                    self.delta_model.insertRows(delta, 0)
+                    self.delta.insert(0, delta)
             except Exception as e:
                 self.msg = show_message(
                     "Error populating delta table. Please check the drift correction "
@@ -811,10 +782,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             for loop in self.loops():
                 if loop.checkState() == Qt.Checked:
                     try:
-                        for ii in range(loop.delta_model.rowCount()):
-                            delta = loop.delta_model.data(
-                                loop.delta_model.index(ii, 0), role=Qt.UserRole
-                            )
+                        for delta in loop.delta:
                             # Need to create a new delta here instead of just putting the original one, from the
                             # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
                             # overrides repopulating the delta table.
@@ -826,7 +794,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                             newdelta.driftcorr = delta.driftcorr
                             newdelta.type = delta.type
                             newdelta.loop = delta.loop
-                            self.delta_model.insertRows(newdelta, 0)
+                            self.delta.insert(0, newdelta)
                     except Exception as e:
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded

@@ -53,21 +53,20 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         disabled_edges = nx.MultiGraph()
         datum_nodelist, nondatum_nodelist = [], []
 
-        delta_model = self.survey.delta_model
-        if delta_model.rowCount() == 0:
+        deltas = self.survey.delta
+        if len(delta) == 0:
             msg = show_message(
                 'Delta table is empty. Unable to plot network graph', 'Plot error'
             )
         else:
-            for i in range(delta_model.rowCount()):
-                ind = delta_model.index(i, 0)
-                delta = delta_model.data(ind, role=Qt.UserRole)
-                chk = delta_model.data(ind, Qt.CheckStateRole)
-                if chk == 2:
-                    edges.add_edge(delta.sta1, delta.sta2, key=ind)
+            for i, delta in enumerate(deltas):
+                key = f'delta_{i}'
+                if delta.checked:
+                    edges.add_edge(delta.sta1, delta.sta2, key=key)
                 else:
-                    disabled_edges.add_edge(delta.sta1, delta.sta2, key=ind)
-                datum_names = self.survey.datum_model.datum_names()
+                    disabled_edges.add_edge(delta.sta1, delta.sta2, key=key)
+
+                datum_names = [datum.station for datum in self.survey.datum]
                 for station_name in [delta.sta1, delta.sta2]:
                     if station_name in datum_names:
                         if station_name not in datum_nodelist:

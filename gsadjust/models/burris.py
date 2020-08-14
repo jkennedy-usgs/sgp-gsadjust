@@ -223,4 +223,3 @@ class BurrisTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return self._headers.get(section, section + 1)
-

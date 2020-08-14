@@ -276,7 +276,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                 pass
             deltas.append(sd)
 
-        temp.deltas = deltas
+        temp.init_data(deltas)
 
         for datum in data['datums']:
             d = Datum(datum['station'])
@@ -335,6 +335,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
     def init_data(self, data):
         self._data = data
+        self.layoutChanged.emit()  # Refresh whole view.
 
 
 class NoCheckDeltaTableModel(DeltaTableModel):

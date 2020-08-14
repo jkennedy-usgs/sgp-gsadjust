@@ -63,25 +63,6 @@ def return_delta_given_key(key, deltas):
     return None
 
 
-def assemble_all_deltas(obstreemodel):
-    """
-    Get all deltas from loop delta models.
-
-    DEPRECATED, ONLY NEEDED TO OPEN OLD .P FILES
-
-
-    :return: One long list of all deltas in a campaign.
-    """
-    deltas = []
-    for i in range(obstreemodel.invisibleRootItem().rowCount()):
-        survey = obstreemodel.invisibleRootItem().child(i)
-        for ii in range(survey.rowCount()):
-            loop = survey.child(ii)
-            deltas.extend(loop.delta)
-
-    return deltas
-
-
 def init_station_coords_dict(obstreemodel):
     """
     Stores a single set of coordinates for each station with the obsTreeModel

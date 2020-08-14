@@ -21,14 +21,8 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-from PyQt5.QtCore import (
-    QAbstractTableModel,
-    QDate,
-    QModelIndex,
-    Qt,
-    QVariant,
-    pyqtSignal,
-)
+from PyQt5.QtCore import (QAbstractTableModel, QDate, QModelIndex, Qt,
+                          QVariant, pyqtSignal)
 
 from .utils import format_numeric_column
 
@@ -213,3 +207,4 @@ class DatumTableModel(QAbstractTableModel):
 
     def init_data(self, data):
         self._data = data
+        self.layoutChanged.emit()  # Refresh whole view.)

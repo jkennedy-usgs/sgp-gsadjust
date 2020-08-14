@@ -158,3 +158,4 @@ class TareTableModel(QAbstractTableModel):
 
     def init_data(self, data):
         self._data = data
+        self.layoutChanged.emit()  # Refresh whole view.

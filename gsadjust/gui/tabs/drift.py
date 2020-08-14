@@ -21,7 +21,8 @@ import datetime as dt
 import logging
 
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import DateFormatter, date2num
 from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -29,12 +30,8 @@ from PyQt5.QtCore import Qt
 
 from ...data import DeltaList, DeltaNormal
 from ...drift import drift_continuous, drift_roman
-from ...models import (
-    DeltaTableModel,
-    NoCheckDeltaTableModel,
-    RomanTableModel,
-    TareTableModel,
-)
+from ...models import (DeltaTableModel, NoCheckDeltaTableModel,
+                       RomanTableModel, TareTableModel)
 from ...obstree import ObsTreeLoop
 from ..messages import show_message
 from ..widgets import IncrMinuteTimeEdit
@@ -383,15 +380,15 @@ class TabDrift(QtWidgets.QWidget):
         :param data: list of stations from which to calculate delta-g
         :return: PyQt DeltaTableModel
         """
-        delta_model = DeltaTableModel()
+        deltas = []
         # Take the first station from the list, or None if there aren't any.
         prev_station = data.pop(0) if data else None
 
         for station in data:
             delta = DeltaNormal(prev_station, station, driftcorr=0.0, loop=loop_name)
-            delta_model.insertRows(delta, 0)
+            deltas.insert(0, delta)
             prev_station = station
-        return delta_model
+        return deltas
 
     def calc_netadj_dg(self, data, loop_name):
         """
@@ -400,7 +397,7 @@ class TabDrift(QtWidgets.QWidget):
         :param loop_name: stored with Delta object, used later in network adjustment
         :return: PyQt DeltaTableModel
         """
-        delta_model = DeltaTableModel()
+        deltas = []
         # Take the first station from the list, or None if there aren't any.
         prev_station = data.pop(0) if data else None
 
@@ -412,9 +409,9 @@ class TabDrift(QtWidgets.QWidget):
                 ls_drift=(loop_name, self.drift_polydegree_combobox.currentIndex() - 1),
                 loop=loop_name,
             )
-            delta_model.insertRows(delta, 0)
+            deltas.insert(0, delta)
             prev_station = station
-        return delta_model
+        return deltas
 
     @staticmethod
     def populate_continuous_deltamodel(deltas):
@@ -425,10 +422,7 @@ class TabDrift(QtWidgets.QWidget):
         :param data: plot_data list
         :return: PyQt DeltaTableModel
         """
-        delta_model = DeltaTableModel()
-        for delta in deltas:
-            delta_model.insertRows(delta, 0)
-        return delta_model
+        return deltas[::-1]
 
     @staticmethod
     def calc_roman_dg(data, loop_name, time_threshold=None):
@@ -555,7 +549,7 @@ class TabDrift(QtWidgets.QWidget):
         if drift_type == 'none' or drift_type == 'netadj':
             # none, netadj, and roman all use axes_drift_single
 
-            delta_model = None
+            deltas = None
             if update:
                 self.axes_drift_single.cla()
             logging.info('Plotting drift - no correction, Loop ' + obstreeloop.name)
@@ -592,11 +586,11 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_single_canvas.draw()
 
             if drift_type == 'none':
-                delta_model = self.calc_none_dg(data, obstreeloop.name)
+                delta = self.calc_none_dg(data, obstreeloop.name)
             elif drift_type == 'netadj':
-                delta_model = self.calc_netadj_dg(data, obstreeloop.name)
+                delta = self.calc_netadj_dg(data, obstreeloop.name)
             QtWidgets.QApplication.restoreOverrideCursor()
-            return delta_model
+            return deltas
 
         if drift_type == 'continuous':
             logging.info('Plotting continuous drift, Loop ' + obstreeloop.name)
@@ -690,7 +684,8 @@ class TabDrift(QtWidgets.QWidget):
                         max_time,
                         obstreeloop.name,
                     )
-                    delta_model = self.populate_continuous_deltamodel(deltas)
+                    # FIXME: This method just reverses the data.
+                    deltas = self.populate_continuous_deltamodel(deltas)
 
                     if update:
                         self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
@@ -763,7 +758,7 @@ class TabDrift(QtWidgets.QWidget):
                         self.drift_cont_canvasbot.draw()
                         self.drift_cont_canvastop.draw()
                     QtWidgets.QApplication.restoreOverrideCursor()
-                    return delta_model
+                    return deltas
                 except IndexError as e:
                     if self.drift_polydegree_combobox.currentIndex() == 1:
                         self.msg = show_message(

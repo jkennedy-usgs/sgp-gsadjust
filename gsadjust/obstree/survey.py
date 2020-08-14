@@ -761,7 +761,10 @@ class ObsTreeSurvey(ObsTreeItemBase):
         :return:
         """
         if clear:
-            self.delta = []
+            # Clear existing list object: do not reassign [], as this breaks the
+            # link to the model object.
+            self.delta.clear()
+
         # If just a single loop
         if isinstance(loop, ObsTreeLoop):
             try:

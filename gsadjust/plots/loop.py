@@ -20,8 +20,7 @@ import time
 import matplotlib
 import numpy as np
 from matplotlib.animation import TimedAnimation
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import num2date
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D

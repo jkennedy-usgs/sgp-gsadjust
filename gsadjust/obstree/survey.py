@@ -30,19 +30,10 @@ from matplotlib.dates import date2num, num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QVariant
 
-from ..data import (
-    AdjustedStation,
-    Adjustment,
-    AdjustmentOptions,
-    AdjustmentResults,
-    Datum,
-    DeltaList,
-    DeltaNormal,
-    Tare,
-)
+from ..data import (AdjustedStation, Adjustment, AdjustmentOptions,
+                    AdjustmentResults, Datum, DeltaList, DeltaNormal, Tare)
 from ..data.analysis import InversionError, numpy_inversion
 from ..gui.messages import show_message
-from ..models import DatumTableModel, DeltaTableModel, ResultsTableModel
 from .base import ObsTreeItemBase
 from .loop import ObsTreeLoop
 
@@ -69,10 +60,6 @@ class ObsTreeSurvey(ObsTreeItemBase):
         self.delta = []
         self.datum = []
         self.results = []
-
-        # self.delta_model = DeltaTableModel()
-        # self.datum_model = DatumTableModel()
-        # self.results_model = ResultsTableModel()
 
         self.adjustment = Adjustment()
 

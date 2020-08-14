@@ -26,8 +26,6 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
 
 from ..data import Tare
-from ..models.delta import DeltaTableModel
-from ..models.tare import TareTableModel
 from .base import ObsTreeItemBase
 from .station import ObsTreeStation
 
@@ -47,9 +45,6 @@ class ObsTreeLoop(ObsTreeItemBase):
 
         self.delta = []
         self.tare = []
-
-        # self.delta_model = DeltaTableModel()
-        # self.tare_model = TareTableModel()
 
         self.name = name
         self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'

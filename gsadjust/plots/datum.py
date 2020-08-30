@@ -109,26 +109,14 @@ class PlotDatumCompare(QtWidgets.QDialog):
 
     def get_data(self):
         survey = self.survey
-        results = survey.results_model
         diff, lbl = [], []
-        for i in range(survey.datum_model.rowCount()):
-            idx = survey.datum_model.index(i, 0)
-            input_datum = survey.datum_model.data(idx, role=Qt.UserRole)
-            input_name = input_datum.station
-            for ii in range(results.rowCount()):
-                if (
-                    results.data(results.index(ii, 0), role=Qt.DisplayRole)
-                    == input_name
-                ):
-                    adj_g = results.data(results.index(ii, 1), role=Qt.DisplayRole)
+        for datum in survey.datums:
+            for result in survey.results:
+                if result.station == datum.station:
                     diff.append(
-                        float(adj_g)
-                        - (
-                            input_datum.g
-                            - input_datum.meas_height * input_datum.gradient
+                        result.g - datum.g - datum.meas_height * datum.gradient
                         )
-                    )
-                    lbl.append(input_name)
+                    lbl.append(datum.station)
 
         return diff, lbl
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 """
-io/write.py
+file/write.py
 ===============
 
 Data export code for GSadjust.
@@ -214,7 +214,7 @@ def export_summary(obsTreeModel, data_path):
                     '# Checked | Station1 | Station2 | Date | Time (UTC) | delta-g | Std. dev. | Drift '
                     'correction\n'
                 )
-                for delta in loop.deltas():
+                for delta in loop.deltas:
                     fid.write(
                         '{} {} {} {} {:.2f} {:.2f} {:.2f}\n'.format(
                             int(delta.checked / 2),
@@ -262,10 +262,7 @@ def export_summary(obsTreeModel, data_path):
 
                 fid.write('# Adjusted station values, survey: {}\n'.format(survey.name))
                 fid.write('# Station | Gravity | Std. dev.\n')
-                for ii in range(survey.results_model.rowCount()):
-                    adj_sta = survey.results_model.data(
-                        survey.results_model.index(ii, 0), role=Qt.UserRole
-                    )
+                for adj_sta in survey.results:
                     fid.write('{}\n'.format(str(adj_sta)))
     return fn
 

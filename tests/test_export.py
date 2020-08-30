@@ -1,4 +1,6 @@
 import os
+import gsadjust
+
 import pytest
 
 from test_fixture_pyqt import (
@@ -7,7 +9,8 @@ from test_fixture_pyqt import (
     obstreemodel_with_results,
     obstreemodel,
 )
-from data_export import export_metadata, export_data, export_summary
+
+from gsadjust.file.write import export_metadata, export_data, export_summary
 
 
 def test_export_workspace(obstreemodel_with_results, obstreemodel):

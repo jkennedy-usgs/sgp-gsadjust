@@ -43,7 +43,7 @@ class ObsTreeLoop(ObsTreeItemBase):
     def __init__(self, name):
         super(ObsTreeLoop, self).__init__()
 
-        self.delta = []
+        self.deltas = []
         self.tare = []
 
         self.name = name
@@ -315,27 +315,12 @@ class ObsTreeLoop(ObsTreeItemBase):
         sn = set(s.station_name for s in self.stations())
         return len(sn)
 
-    def deltas(self):
-        """
-        Called when 'Populate delta table... menu item is selected. Applies SD
-        settings in options.
-        """
-        deltas = []
-        for delta in self.delta:
-            if self.parent().adjustment.adjustmentoptions.use_sigma_min:
-                delta.adj_sd = max(
-                    self.parent().adjustment.adjustmentoptions.sigma_min, delta.sd
-                )
-            deltas.append(delta)
-        return deltas
-
     def to_json(self):
         # Copy stations from PyQt models to lists
         stations_json = [s.to_json() for s in self.stations()]
 
         # FIXME: Why empty these?
-        self.delta = []
-        self.tare = []
+        self.deltas = []
 
         return {
             'checked': self.checkState(),

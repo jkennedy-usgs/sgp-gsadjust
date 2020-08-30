@@ -65,6 +65,18 @@ class DeltaBase:
         differ from the one initially associated
         with the delta.
     assigned_sd: Manually-edited std. dev.
+
+     3 standard deviation values are relevant:
+     1) sd: from the drift correction method. This value is always shown on the Drift tab
+     2) adj_sd: from a combination of the drift correction sd value and the options set under
+        adjustment options (e.g., additive and multiplicative factors)
+     3) assigned_sd: assigned by the user
+
+     Either (2) or (3) is used in the network adjustment (i.e., shown on the Network
+     Adjustment tab). If (3) is assigned, it overrides the value set by (2).
+
+     (1) is a property; (2) and (3) are attributes, although 2 could also possibly be
+     a property.
     """
 
     editable = False  # Only Normal deltas are editable.
@@ -188,6 +200,7 @@ class DeltaBase:
 class DeltaNormal(DeltaBase):
     """
     'normal': calculated between two stations (g2 - g1)
+
     """
 
     type = 'normal'

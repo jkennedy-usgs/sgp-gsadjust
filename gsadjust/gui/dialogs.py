@@ -36,12 +36,12 @@ from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ..data import Datum, analysis
-from ..io import a10
+from ..file import a10
 from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
 from .messages import show_message
 from .utils import copy_cells_to_clipboard
-
+from .widgets import  IncrMinuteTimeEdit
 
 class CoordinatesTable(QtWidgets.QDialog):
     """
@@ -125,7 +125,7 @@ class CoordinatesTable(QtWidgets.QDialog):
                 s = clipboard.text()
                 rows = s.split('\n')
                 for idx, r in enumerate(rows):
-                    if r is not '':
+                    if r != '':
                         elems = r.split('\t')
                         table_item_station = QtWidgets.QTableWidgetItem(elems[0])
                         table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
@@ -237,7 +237,6 @@ class AdjustOptions(QtWidgets.QDialog):
             self.calc_cal_coeff_checked_or_unchecked
         )
         self.alpha_text = QtWidgets.QLabel('Significance level for global model test')
-        self.woutfiles_chk = QtWidgets.QCheckBox('Write output files')
         self.cal_coeff_specify_chk = QtWidgets.QCheckBox(
             'Specify calibration coefficient'
         )
@@ -284,7 +283,6 @@ class AdjustOptions(QtWidgets.QDialog):
 
             self.cal_coeff_table.setModel(self.cal_coeff_model)
             self.cal_coeff_table.setFixedWidth(260)
-            self.woutfiles_chk.setChecked(self.ao.woutfiles)
 
             # create buttons and actions
             btn_restore_default = QtWidgets.QPushButton('Restore defaults')
@@ -329,8 +327,6 @@ class AdjustOptions(QtWidgets.QDialog):
             # This isn't working? Column 1 always seems to be stretching, regardless of the vales
             grid.setColumnStretch(0, 1)
             grid.setColumnStretch(1, 0)
-
-            # grid.addWidget(self.woutfiles_chk, 9, 0)
             gridwidget.setLayout(grid)
 
             vlayout.addWidget(buttonBox)
@@ -414,10 +410,7 @@ class AdjustOptions(QtWidgets.QDialog):
                     )
                     self.ao.meter_cal_dict[meter.text()] = float(calval.text())
             self.ao.alpha = float(self.alpha_edit.text())
-            # if self.woutfiles_chk.isChecked():
-            #     self.ao.woutfiles = True
-            # else:
-            #     self.ao.woutfiles = False
+
         except ValueError as e:  # caught if invalid number is entered in any box
             logging.error('Error setting adjustment options: %s', e)
 

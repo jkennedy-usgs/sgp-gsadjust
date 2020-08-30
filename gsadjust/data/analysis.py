@@ -147,7 +147,7 @@ def numpy_inversion(
                     g = float(adjustment.X[i])
                     sd = float(np.sqrt(adjustment.var[i]))
                     t = AdjustedStation(key, g, sd)
-                    results.insert(t, 0)
+                    results.insert(0, t)
                     adjustment.g_dic[key] = g
                     adjustment.sd_dic[key] = sd
                     sd_all.append(sd)
@@ -166,22 +166,6 @@ def numpy_inversion(
         adjustment.adjustmentresults.cal_dic = cal_dic
     # calculate and display statistics:
     adjustment.lsq_statistics()
-
-    # write output files
-
-    # Write output to     if write_out_files == 'y':
-    #     survdir = output_root_dir + os.sep + survey_name
-    #     if not os.path.exists(survdir):
-    #         os.makedirs(survdir)
-    #     tday = dt.datetime.now()
-    #
-    #     with open(survdir + os.sep +
-    #               "LSresults_{:4d}{:02d}{:02d}_{:02d}{:02d}.dat".format(tday.year, tday.month, tday.day,
-    #                                                                     tday.hour, tday.minute),
-    #               'w') as fid:
-    #         for line in text_out:
-    #             fid.write(line)
-    #     fid.close()
 
     return cal_dic
 
@@ -256,6 +240,10 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                 lat.append("{:.5f}".format(coords[1]))
                 elev.append("{:.5f}".format(coords[2]))
             except TypeError:
+                lat.append(-999)
+                lon.append(-999)
+                elev.append(-999)
+            except KeyError:
                 lat.append(-999)
                 lon.append(-999)
                 elev.append(-999)

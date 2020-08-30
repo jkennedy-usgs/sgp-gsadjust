@@ -148,7 +148,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
                 def format_datetime(date):
                     return dt.datetime.utcfromtimestamp(
-                        (date - 719163) * 86400.0
+                        date * 86400.0
                     ).strftime('%Y-%m-%d %H:%M:%S')
 
                 fn, *args = {
@@ -218,6 +218,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
         self.endResetModel()
+        self.layoutChanged.emit()
         return QVariant()
 
     def updateTable(self):

@@ -188,7 +188,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Gravity',
-                '$\mu$gal',
+                r'µgal',
                 '1',
             )
             # tiltx channel
@@ -227,7 +227,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Standard deviation',
-                '$\mu$gal',
+                r'µgal',
                 '4',
             )
 
@@ -239,7 +239,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Gravity',
-                '$\mu$gal',
+                r'µgal',
                 '1',
             )
             # tiltx channel
@@ -278,7 +278,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Earth Tide Correction',
-                '$\mu$gal',
+                r'µgal',
                 '4',
             )
 
@@ -290,7 +290,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Gravity',
-                '$\mu$gal',
+                r'µgal',
                 '1',
             )
             # tiltx channel
@@ -316,7 +316,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Earth Tide Correction',
-                '$\mu$Gal',
+                r'µgal',
                 '3',
             )
             # SD channel
@@ -329,7 +329,7 @@ class TabData(QtWidgets.QWidget):
                 t_selec,
                 series_selec,
                 'Tilt Correction',
-                '$\mu$Gal',
+                r'µgal',
                 '4',
             )
         self.data_canvas.draw()

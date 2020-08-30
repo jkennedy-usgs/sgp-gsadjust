@@ -120,6 +120,7 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
         # The ResetModel calls is necessary to remove blank rows from the table view.
         self.beginResetModel()
         self.endResetModel()
+        self.layoutChanged.emit()
         return QVariant()
 
     def init_data(self, data):

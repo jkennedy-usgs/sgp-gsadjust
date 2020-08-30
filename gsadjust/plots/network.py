@@ -46,15 +46,20 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
         edges, disabled_edge, datum_nodelist, nondatum_nodelist = self.get_data()
-        self.plot(edges, disabled_edge, datum_nodelist, nondatum_nodelist)
+        try:
+            self.plot(edges, disabled_edge, datum_nodelist, nondatum_nodelist)
+        except KeyError:
+            msg = show_message(
+                'Error plotting network graph (Key error)', 'Plot error'
+            )
 
     def get_data(self):
         edges = nx.MultiGraph()
         disabled_edges = nx.MultiGraph()
         datum_nodelist, nondatum_nodelist = [], []
 
-        deltas = self.survey.delta
-        if len(delta) == 0:
+        deltas = self.survey.deltas
+        if len(deltas) == 0:
             msg = show_message(
                 'Delta table is empty. Unable to plot network graph', 'Plot error'
             )
@@ -66,7 +71,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
                 else:
                     disabled_edges.add_edge(delta.sta1, delta.sta2, key=key)
 
-                datum_names = [datum.station for datum in self.survey.datum]
+                datum_names = [datum.station for datum in self.survey.datums]
                 for station_name in [delta.sta1, delta.sta2]:
                     if station_name in datum_names:
                         if station_name not in datum_nodelist:

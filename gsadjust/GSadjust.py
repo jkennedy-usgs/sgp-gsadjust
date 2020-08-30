@@ -151,7 +151,7 @@ from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
 
 # GSadjust modules
-from .io import (
+from .file import (
     InvalidMeterException,
     export_data,
     export_metadata,
@@ -638,7 +638,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             if self.obsTreeModel.rowCount() > 0:
                 self.init_gui()
-                if open_type is not 'CG5':
+                if open_type != 'CG5':
                     self.populate_station_coords()
                 self.workspace_loaded = True
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -683,7 +683,7 @@ class MainProg(QtWidgets.QMainWindow):
         )
         if fname:
             self.settings.setValue('current_dir', os.path.dirname(fname))
-            if fname[-1] is 'p':
+            if fname[-1] == 'p':
                 self.msg = show_message(
                     'If trying to append a .p file, please save it as a .gsa file first.',
                     'Import error',
@@ -1089,7 +1089,7 @@ class MainProg(QtWidgets.QMainWindow):
                         d.assigned_dg = simpledelta.assigned_dg
                     if d:
                         i += 1
-                        surveys[idx].delta.insert(0, d)
+                        surveys[idx].deltas.insert(0, d)
                     else:  # unable to create delta
                         self.msg = show_message(
                             'Import error',
@@ -1235,7 +1235,7 @@ class MainProg(QtWidgets.QMainWindow):
                 current_survey = self.obsTreeModel.itemFromIndex(
                     self.index_current_survey
                 )
-                if len(current_survey.delta) > 0:
+                if len(current_survey.deltas) > 0:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_DELTAS)
                 else:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
@@ -1293,8 +1293,8 @@ class MainProg(QtWidgets.QMainWindow):
 
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
-        self.delta_model.init_data(survey.delta)
-        self.datum_model.init_data(survey.datum)
+        self.delta_model.init_data(survey.deltas)
+        self.datum_model.init_data(survey.datums)
         self.results_model.init_data(survey.results)
 
         stats_model = QtGui.QStandardItemModel()
@@ -1776,6 +1776,7 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             return
         self.divide_survey(loop_thresh)
+        self.update_survey_drift_plots(self.obsTreeModel.itemFromIndex(self.index_current_survey))
 
     def divide_by_height(self):
         """
@@ -2171,7 +2172,7 @@ class MainProg(QtWidgets.QMainWindow):
         :param survey: For which to set delta-g sd
         :param ao: AdjustmentOptions object
         """
-        for delta in survey.delta:
+        for delta in survey.deltas:
             # Column 7: minimum standard deviation
             # ind = survey.delta_model.createIndex(i, 7)
             # delta = survey.delta_model.data(ind, role=Qt.UserRole)
@@ -2191,7 +2192,7 @@ class MainProg(QtWidgets.QMainWindow):
             else:
                 sigma = delta.sd * factor + additive
             # survey.delta_model.setData(ind, sigma, role=Qt.EditRole)
-            delta.sd = sigma
+            delta.adj_sd = sigma
         self.update_adjust_tables()
 
     def menu_import_abs_g_simple(self):
@@ -2317,8 +2318,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         stations = []
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
-            obstreesurvey = self.obsTreeModel.invisibleRootItem().child(i)
-            for d in obstreesurvey.delta_list():
+            survey = self.obsTreeModel.invisibleRootItem().child(i)
+            for d in survey.deltas:
                 stations.append(d.sta1)
                 stations.append(d.sta2)
         station_list = list(set(stations))
@@ -2326,11 +2327,14 @@ class MainProg(QtWidgets.QMainWindow):
         station = AddDatumFromList.add_datum(station_list)
         if station:
             d = Datum(str(station))
-            self.obsTreeModel.itemFromIndex(
-                self.index_current_survey
-            ).datum_model.insertRows(d, 0)
+            survey.datums.append(d)
+            self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
+            # self.obsTreeModel.itemFromIndex(
+            #     self.index_current_survey
+            # ).datum_model.insertRows(d, 0)
             logging.info('Datum station added: {}'.format(station))
             self.set_window_title_asterisk()
+        # self.tab_adjust.datum_view.model().layoutChanged.emit()
 
     def dialog_adjustment_properties(self):
         """
@@ -2622,10 +2626,10 @@ def main():
     # FIXME: Shouldn't need to change path here, you can
     # find the location of the current folder (see __file__ elsewhere) and
     # use relative paths from there for your project.
-    if sys.platform == 'darwin':
-        os.chdir('../')
-    else:
-        os.chdir('../sgp-gsadjust')
+    # if sys.platform == 'darwin':
+    #     os.chdir('../')
+    # else:
+    #     os.chdir('../sgp-gsadjust')
 
     # start log file
     fn = 'GSadjustLog_' + time.strftime("%Y%m%d-%H%M") + '.txt'
@@ -2635,7 +2639,7 @@ def main():
             filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO
         )
     except PermissionError:
-        self.msg = show_message(
+        msg = show_message(
             'Please install GSadjust somewhere where admin rights are not required.',
             'GSadjust error',
         )
@@ -2660,7 +2664,6 @@ def main():
         ex.showMaximized()
         app.processEvents()
         app.exec_()
-
 
 if __name__ == '__main__':
     main()

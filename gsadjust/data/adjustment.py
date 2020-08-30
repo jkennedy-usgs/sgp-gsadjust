@@ -44,13 +44,13 @@ class AdjustmentResults:
         return return_str
 
     def get_report(self):
-        chi_result = self.adjustmentresults.chi2 < self.adjustmentresults.chi2c
+        chi_result = "accepted" if self.chi2 < self.chi2c else "rejected"
         text = [
             f"Number of unknowns:                  {self.n_unknowns:d}",
             f"Number of relative observations:     {self.n_deltas:d}",
             f"Number of absolute observations:     {self.n_datums:d}",
             f"Degrees of freedom (nobs-nunknowns): {self.dof:d}",
-            f"SD a posteriori:                     {self.VtPV / self.dof:4f}",
+            f"SD a posteriori:                     {self.chi2 / self.dof:4f}",
             f"chi square value:                  {self.chi2:6.2f}",
             f"critical chi square value:         {self.chi2c:6.2f}",
             f"Chi-test {chi_result}",
@@ -60,20 +60,6 @@ class AdjustmentResults:
             f"Minimum absolute datum residual:     {self.min_datum_residual:.2f}",
         ]
 
-        if self.cal_coeff:
-            for k, v in self.cal_dic.items():
-                text.append(
-                    "Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".format(
-                        k, v[0], v[1]
-                    )
-                )
-        elif self.specify_cal_coeff:
-            for k, v in self.meter_cal_dict.items():
-                text.append(
-                    "Specified calibration coefficient for meter {}: {:.6f}".format(
-                        k, v
-                    )
-                )
         return text
 
 
@@ -174,7 +160,20 @@ class Adjustment:
                 # text_out.append("Number of loops:                    {:d}\n".format(nloops))
                 # text_out.append("Polynomial degree for time:         {:d}\n".format(drift_time))
                 text_out = self.adjustmentresults.get_report()
-
+                if self.adjustmentoptions.cal_coeff:
+                    for k, v in self.adjustmentresults.cal_dic.items():
+                        text_out.append(
+                            "Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".format(
+                                k, v[0], v[1]
+                            )
+                        )
+                elif self.adjustmentoptions.specify_cal_coeff:
+                    for k, v in self.adjustmentresults.meter_cal_dict.items():
+                        text_out.append(
+                            "Specified calibration coefficient for meter {}: {:.6f}".format(
+                                k, v
+                            )
+                        )
                 if self.netadj_loop_keys:
                     text_out.append("Network adjustment drift coefficient(s):")
                     for loop in self.netadj_loop_keys.items():
@@ -232,8 +231,8 @@ class Adjustment:
         a priori variance of unit weight = 1
         """
         alpha = self.adjustmentoptions.alpha
-        self.adjustmentresults.chi2 = self.VtPV
-
+        self.adjustmentresults.chi2 = self.VtPV[0][0]
+        self.adjustmentresults.dof = self.dof
         t = np.sqrt(2 * np.log(1 / alpha))
         chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (
             1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3

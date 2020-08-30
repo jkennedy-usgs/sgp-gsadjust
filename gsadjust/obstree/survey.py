@@ -57,8 +57,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
         self.name = name
 
         # Store related data.
-        self.delta = []
-        self.datum = []
+        self.deltas = []
+        self.datums = []
         self.results = []
 
         self.adjustment = Adjustment()
@@ -114,7 +114,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             d = Datum(datum['station'])
             d.__dict__.update(datum)
             d.residual = -999
-            temp.datum.insert(0, d)
+            temp.datums.insert(0, d)
 
         ao = AdjustmentOptions()
         ao.__dict__.update(data['adjoptions'])
@@ -137,8 +137,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
             loops.append(self.child(i).to_json())
         return {
             'loops': loops,
-            'deltas': jsons.dump(self.delta),
-            'datums': jsons.dump(self.datum),
+            'deltas': jsons.dump(self.deltas),
+            'datums': jsons.dump(self.datums),
             'checked': self.checkState(),
             'name': self.name,
             'adjoptions': jsons.dump(self.adjustment.adjustmentoptions),
@@ -167,13 +167,9 @@ class ObsTreeSurvey(ObsTreeItemBase):
     def loops(self):
         return [self.child(i) for i in range(self.rowCount())]
 
-    def delta_list(self):
-        # FIXME: Can remove this.
-        return self.deltas
-
-    @property
-    def datums(self):
-        return self.datum[::]
+    # @property
+    # def datums(self):
+    #     return self.datums[::]
 
     def _handler_edit_ObsTreeSurvey(self, item, value):
         """
@@ -266,7 +262,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if self.adjustment.adjustmentoptions.specify_cal_coeff:
                     specify_cal_coeff = True
                     cal_dic = self.adjustment.adjustmentoptions.meter_cal_dict
-            for delta in self.delta:
+            for delta in self.deltas:
                 if delta.checked:  # Checkbox checked
                     if specify_cal_coeff:
                         delta.cal_coeff = cal_dic[delta.meter]
@@ -294,7 +290,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 else:
                     adjustmentresults.n_deltas_notused += 1
 
-            for datum in self.datum:
+            for datum in self.datums:
                 if datum.checked:  # Checkbox checked
                     # account for vertical gradient
                     datum = copy.copy(datum)
@@ -659,11 +655,11 @@ class ObsTreeSurvey(ObsTreeItemBase):
         datum_residuals, dg_residuals = [], []
         g_dic = self.adjustment.g_dic
         # Reset residuals to all -999's
-        for delta in self.delta:
+        for delta in self.deltas:
             delta.residual = -999.0
 
         # Matchup adjustment residuals with observations
-        for delta in self.delta:
+        for delta in self.deltas:
             if delta.checked:
                 try:
                     if inversion_type == 'gravnet':
@@ -689,7 +685,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             else:
                 delta.residual = -999.0
 
-        for datum in self.datum:
+        for datum in self.datums:
             if inversion_type == 'numpy':
                 station_name = datum.station
             elif inversion_type == 'gravnet':
@@ -750,14 +746,14 @@ class ObsTreeSurvey(ObsTreeItemBase):
         if clear:
             # Clear existing list object: do not reassign [], as this breaks the
             # link to the model object.
-            self.delta.clear()
+            self.deltas.clear()
 
         # If just a single loop
         if isinstance(loop, ObsTreeLoop):
             try:
-                for delta in loop.delta:
+                for delta in loop.deltas:
                     # if loop.delta_model.data(loop.delta_model.index(ii, 0), role=Qt.CheckStateRole) == 2:
-                    self.delta.insert(0, delta)
+                    self.deltas.insert(0, delta)
             except Exception as e:
                 self.msg = show_message(
                     "Error populating delta table. Please check the drift correction "
@@ -772,19 +768,21 @@ class ObsTreeSurvey(ObsTreeItemBase):
             for loop in self.loops():
                 if loop.checkState() == Qt.Checked:
                     try:
-                        for delta in loop.delta:
-                            # Need to create a new delta here instead of just putting the original one, from the
-                            # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
-                            # overrides repopulating the delta table.
-                            if type(delta.station2) == list:
-                                newdelta = DeltaList(None, delta.station2)
-                            else:
-                                newdelta = DeltaNormal(delta.station1, delta.station2)
-                            newdelta.ls_drift = delta.ls_drift
-                            newdelta.driftcorr = delta.driftcorr
-                            newdelta.type = delta.type
-                            newdelta.loop = delta.loop
-                            self.delta.insert(0, newdelta)
+                        self.deltas += loop.deltas
+
+
+                            # # Need to create a new delta here instead of just putting the original one, from the
+                            # # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
+                            # # overrides repopulating the delta table.
+                            # if type(delta.station2) == list:
+                            #     newdelta = DeltaList(None, delta.station2)
+                            # else:
+                            #     newdelta = DeltaNormal(delta.station1, delta.station2)
+                            # newdelta.ls_drift = delta.ls_drift
+                            # newdelta.driftcorr = delta.driftcorr
+                            # newdelta.type = delta.type
+                            # newdelta.loop = delta.loop
+                            # self.delta.insert(0, newdelta)
                     except Exception as e:
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded

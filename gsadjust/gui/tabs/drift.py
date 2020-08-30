@@ -470,12 +470,14 @@ class TabDrift(QtWidgets.QWidget):
                         avg_dg[delta_key1].append(testdelta)
 
         roman_avg_dg_model = NoCheckDeltaTableModel()
+        avg_deltas = []
         for station_pair in avg_dg.items():
             # just send list of deltas, not key (station info is already in the deltas)
-            avg_delta = DeltaList(None, station_pair[1])
-            roman_avg_dg_model.insertRows(avg_delta, 0)
+            # avg_delta = DeltaList(None, station_pair[1])
+            # roman_avg_dg_model.insertRows(avg_delta, 0)
+            avg_deltas.append(DeltaList(None, station_pair[1]))
 
-        return roman_dg_model, roman_avg_dg_model, vert_lines
+        return roman_dg_model, avg_deltas, vert_lines
 
     @staticmethod
     def plot_tares(axes, obstreeloop):
@@ -483,7 +485,7 @@ class TabDrift(QtWidgets.QWidget):
         Plots a vertical line at the time of a tare
         """
         ylim = axes.get_ylim()
-        if obstreeloop.tare_model:
+        if len(obstreeloop.tare) > 0:
             for i in range(obstreeloop.tare_model.rowCount()):
                 idx = obstreeloop.tare_model.createIndex(i, 0)
                 tare = obstreeloop.tare_model.data(idx, role=Qt.UserRole)
@@ -586,9 +588,9 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_single_canvas.draw()
 
             if drift_type == 'none':
-                delta = self.calc_none_dg(data, obstreeloop.name)
+                deltas = self.calc_none_dg(data, obstreeloop.name)
             elif drift_type == 'netadj':
-                delta = self.calc_netadj_dg(data, obstreeloop.name)
+                deltas = self.calc_netadj_dg(data, obstreeloop.name)
             QtWidgets.QApplication.restoreOverrideCursor()
             return deltas
 
@@ -624,7 +626,7 @@ class TabDrift(QtWidgets.QWidget):
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
                             drift_time.append(
-                                dt.datetime.utcfromtimestamp((xmean - 719163) * 86400.0)
+                                dt.datetime.utcfromtimestamp(xmean * 86400.0)
                             )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
@@ -790,7 +792,7 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] for f in line[1]]
                     # TODO: store dates in station object in datetime format, to avoid this conversion?
                     x = [
-                        dt.datetime.utcfromtimestamp((f - 719163) * 86400.0)
+                        dt.datetime.utcfromtimestamp(f * 86400.0)
                         for f in line[0]
                     ]
                     a = self.axes_drift_single.plot(x, y, '.-', picker=5)
@@ -843,10 +845,9 @@ class TabDrift(QtWidgets.QWidget):
         )
         method_key = self.driftmethod_combobox.currentIndex()
 
-        tare_model = obstreeloop.tare_model
-        if tare_model:
-            tare_model.dataChanged.connect(self.update_tares)
-        self.tare_view.setModel(tare_model)
+        # if len(obstreeloop.tare) >= 0:
+        #     self.tare_view.model().dataChanged.connect(self.update_tares)
+        # self.tare_view.setModel(tare_model)
 
         inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
         method = inv_drift_lookup[method_key]
@@ -882,10 +883,11 @@ class TabDrift(QtWidgets.QWidget):
             self.set_width(width, method)
 
         model = self.plot_drift(update=update)
+
         if method == 'roman':
-            obstreeloop.delta_model = model[1]
+            obstreeloop.deltas = model[1]
         else:
-            obstreeloop.delta_model = model
+            obstreeloop.deltas = model
 
         if method != orig_method or self.parent.workspace_loaded:
             # Leave the status bar hollow if a workspace was loaded
@@ -924,23 +926,25 @@ class TabDrift(QtWidgets.QWidget):
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_loop
         )
-        if method == 'roman':
-            # Hide drift correction, std_for_adj, and residual columns
-            self.dg_samples_view.setModel(model[0])
-            self.delta_view.setModel(model[1])
-            self.show_all_columns(self.delta_view)
-            self.delta_view.hideColumn(2)
-            self.delta_view.hideColumn(5)
-            self.delta_view.hideColumn(7)
-            self.delta_view.hideColumn(8)
-        else:
-            obstreeloop.delta_model = model
-            self.delta_view.setModel(model)
-            # Hide std_for_adj and residual columns
-            self.show_all_columns(self.delta_view)
-            self.delta_view.hideColumn(2)
-            self.delta_view.hideColumn(7)
-            self.delta_view.hideColumn(8)
+        if model:
+            if method == 'roman':
+                # Hide drift correction, std_for_adj, and residual columns
+                obstreeloop.deltas = model[1]
+                self.dg_samples_view.setModel(model[0])
+                self.delta_view.model().init_data(model[1])
+                self.show_all_columns(self.delta_view)
+                self.delta_view.hideColumn(2)
+                self.delta_view.hideColumn(5)
+                self.delta_view.hideColumn(7)
+                self.delta_view.hideColumn(8)
+            else:
+                obstreeloop.deltas = model
+                self.delta_view.model().init_data(model)
+                # Hide std_for_adj and residual columns
+                # self.show_all_columns(self.delta_view)
+                self.delta_view.hideColumn(2)
+                self.delta_view.hideColumn(7)
+                self.delta_view.hideColumn(8)
 
     def tare_context_menu(self, point):
         """
@@ -1037,7 +1041,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_cont_plotpanel.setMinimumWidth(700)
         self.dg_samples_view.hide()
         # Hide std_for_adj and residual columns
-        self.show_all_columns(self.delta_view)
+#        self.show_all_columns(self.delta_view)
         self.delta_view.hideColumn(8)
         self.delta_view.hideColumn(9)
         self.cont_label_widget.show()

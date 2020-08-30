@@ -5,11 +5,11 @@ sys.path.insert(0, code_path + '/../gsadjust')
 sys.path.insert(0, code_path)
 
 import pytest
-import pyqt_models
-import GSadjust
+import gsadjust
+from gsadjust.obstree.survey import ObsTreeSurvey
 import pickle
 from PyQt5 import QtGui, QtCore
-from tab_drift import TabDrift
+from gsadjust.gui.tabs import drift
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def list_of_deltas():
     fname = './tests/test_workspace1.gsa'
     # app = GSadjust.MainProg()
     # app.workspace_open(fname)
-    ots, dms, _ = GSadjust.MainProg.obsTreeModel.load_workspace(fname)
+    ots, dms, _ = gsadjust.MainProg.obsTreeModel.load_workspace(fname)
     survey = ots[0]
     # survey = app.obsTreeModel.invisibleRootItem().child(0)
     loop = survey.child(0, 0)
@@ -40,7 +40,6 @@ def list_of_deltas():
     for i in range(delta_model.rowCount()):
         idx = delta_model.index(i, 0)
         delta_list.append(delta_model.data(idx, role=QtCore.Qt.UserRole))
-    jeff = 1
     return delta_list
 
 
@@ -54,8 +53,8 @@ def test_twostations_fixture(request):
     fname = request.param
     with open(fname, "rb") as f:
         cl = pickle.load(f)
-    obstreesurvey = pyqt_models.ObsTreeSurvey('test')
-    obstreesurvey.populate(cl, name='test')
+    obstreesurvey = ObsTreeSurvey('test')
+    obstreesurvey.populate(cl, name='0')
     loop = obstreesurvey.child(0)
     return (loop.child(0), loop.child(1))
 
@@ -71,15 +70,15 @@ def test_threestations_fixture(request):
     idxs = request.param[1]
     with open(fname, "rb") as f:
         cl = pickle.load(f)
-    obstreesurvey = pyqt_models.ObsTreeSurvey('test')
-    obstreesurvey.populate(cl, name='test')
+    obstreesurvey = ObsTreeSurvey('test')
+    obstreesurvey.populate(cl, name='0')
     loop = obstreesurvey.child(0)
     return (loop.child(idxs[0]), loop.child(idxs[1]), loop.child(idxs[2]))
 
 
 @pytest.fixture
 def channellist():
-    fname = './tests/channellist_burris.p'
+    fname = './channellist_burris_single.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -87,59 +86,59 @@ def channellist():
 
 @pytest.fixture
 def obstreestation():
-    a = pyqt_models.ObsTreeStation(channellist(), 'jeff', 1)
+    a = gsadjust.obstree.station(channellist(), 'jeff', 1)
     return a
 
 
 @pytest.fixture
 def obstreesurvey():
-    filename = './tests/test_BurrisData.txt'
+    filename = 'test_BurrisData.txt'
     meter_type = 'Burris'
-    survey = pyqt_models.ObsTreeSurvey('2020-05-11')
-    assert type(survey) is pyqt_models.ObsTreeSurvey
-    data = GSadjust.MainProg.read_raw_data_file(filename, meter_type)
+    survey = ObsTreeSurvey('2020-05-11')
+    assert type(survey) is ObsTreeSurvey
+    data = gsadjust.GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     survey.populate(data)
     return survey
 
 
 @pytest.fixture
 def obstreesurvey_with_results(obstreesurvey):
-    from data_objects import Datum
+    from gsadjust.data import Datum
 
     obstreeloop = obstreesurvey.child(0)
     data = obstreeloop.checked_stations()
-    model = TabDrift.calc_none_dg(data, 'test')
-    obstreeloop.delta_model = model
+    model = gsadjust.gui.tabs.TabDrift.calc_none_dg(data, 'test')
+    obstreeloop.deltas = model
     survey = obstreesurvey
     survey.populate_delta_model()
     d = Datum('rg37')
-    survey.datum_model.insertRows(d, 0)
+    survey.datums.append(d)
     survey.run_inversion()
     return survey
 
 
 @pytest.fixture
 def obstreemodel(obstreesurvey):
-    model = pyqt_models.ObsTreeModel()
+    model = gsadjust.GSadjust.ObsTreeModel()
     model.appendRow([obstreesurvey, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')])
-    assert type(model) is pyqt_models.ObsTreeModel
+    assert type(model) is gsadjust.GSadjust.ObsTreeModel
     return model
 
 
 @pytest.fixture
 def obstreemodel_with_results(obstreesurvey_with_results):
-    model = pyqt_models.ObsTreeModel()
+    model = gsadjust.GSadjust.ObsTreeModel()
     model.appendRow(
         [obstreesurvey_with_results, QtGui.QStandardItem('a'), QtGui.QStandardItem('a')]
     )
-    assert type(model) is pyqt_models.ObsTreeModel
+    assert type(model) is gsadjust.GSadjust.ObsTreeModel
     return model
 
 
 @pytest.fixture
 def mainprog():
-    fname = './tests/test_workspace1.gsa'
-    app = GSadjust.MainProg()
+    fname = './test_workspace1.gsa'
+    app = gsadjust.GSadjust.MainProg()
     app.workspace_clear(confirm=False)
     app.workspace_open_json(fname)
     return app

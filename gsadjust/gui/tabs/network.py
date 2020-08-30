@@ -62,6 +62,8 @@ class TabAdjust(QtWidgets.QWidget):
         self.results_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.results_view.customContextMenuRequested.connect(self.results_context_menu)
         self.results_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.results_view.setModel(self.results_proxy_model)
+        self.results_view.setSortingEnabled(True)
 
         # Main window
         layout_final = QtWidgets.QHBoxLayout()

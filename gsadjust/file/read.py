@@ -1,5 +1,5 @@
 """
-io/read.py
+file/read.py
 ==============
 
 GSadjust code for importing relative-gravity meter data.
@@ -59,9 +59,7 @@ def read_csv(fh):
     meter, oper = None, None
     all_survey_data = ChannelList()
 
-    # FIXME: Moved here from load method, assumed to skip first line, but there
-    # was already a readline here.
-    _ = fh.readline()
+    # Skip 1 header line
     _ = fh.readline()
     for orig_line in fh:
         try:
@@ -455,11 +453,10 @@ def read_cg6tsoft(fh):
                 all_survey_data.tiltx.append(float(vals_temp[c_tiltx]) * 1000.0)
                 all_survey_data.tilty.append(float(vals_temp[c_tilty]) * 1000.0)
                 all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.0)
+                # cols 0, 1, 2, 3, 4, 5 = year, month, day, hour, minute, second
+                temp_date_ints = (int(i) for i in vals_temp[:6])
                 all_survey_data.t.append(
-                    date2num(
-                        # cols 0, 1, 2, 3, 4, 5 = year, month, day, hour, minute, second
-                        dt.datetime(int(i) for i in vals_temp[:6])
-                    )
+                    date2num(dt.datetime(*temp_date_ints))
                 )
                 if meter:
                     all_survey_data.meter.append(meter)

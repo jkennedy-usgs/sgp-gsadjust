@@ -1,9 +1,10 @@
 import pytest
 import pytestqt
+import gsadjust
 import numpy as np
 from PyQt5 import QtCore
 from test_fixture_pyqt import mainprog, obstreesurvey_with_results, obstreesurvey
-from gsa_plots import (
+from gsadjust.plots import (
     PlotGravityChange,
     PlotDatumCompare,
     PlotDgResidualHistogram,

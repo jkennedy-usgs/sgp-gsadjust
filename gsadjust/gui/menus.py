@@ -295,9 +295,6 @@ class Menus:
             slot=self.mainProg.workspace_save_as,
             enabled=False,
         )
-        self.mnFileLoadWorkspaceAction = self.create_action(
-            "Open workspace (.p format)...", slot=self.mainProg.workspace_open_getfile
-        )
         self.mnFileLoadJSONAction = self.create_action(
             "Open workspace...", slot=self.mainProg.workspace_open_getjson
         )

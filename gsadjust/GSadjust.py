@@ -115,9 +115,8 @@ import time
 import traceback
 import webbrowser
 
-import matplotlib
-
 # Modules that must be installed
+import matplotlib
 import numpy as np
 from matplotlib.dates import num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -809,35 +808,6 @@ class MainProg(QtWidgets.QMainWindow):
             )
             self.workspace_savename = fname
             self.update_menus()
-
-    def workspace_open_getfile(self):
-        """
-        Gets filename to open and asks whether to  append or overwrite, if applicable.
-        :return:
-        """
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open File', self.settings.value('current_dir')
-        )
-
-        if not fname or fname[-2:] != '.p':
-            self.msg = show_message(
-                'Saved workspaces should have a .gsa extension. '
-                'Please use "Open workspace..." to load a .gsa file, or '
-                '"Open raw...data" to load a data file.',
-                'File load error',
-            )
-            return
-
-        self.settings.setValue('current_dir', os.path.dirname(fname))
-        if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
-            overwrite_tree_dialog = DialogOverwrite()
-            if overwrite_tree_dialog.exec_():
-                self.workspace_clear()
-                self.workspace_open(fname)
-            else:
-                return
-        else:
-            self.workspace_open(fname)
 
     def workspace_open_getjson(self):
         """

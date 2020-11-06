@@ -181,7 +181,6 @@ from .utils import init_cal_coeff_dict, init_station_coords_dict, return_delta_g
 
 matplotlib.use('qt5agg')
 
-
 DOWN = 1
 UP = -1
 DIRECTIONS = (UP, DOWN)
@@ -191,7 +190,6 @@ class MainProg(QtWidgets.QMainWindow):
     """
     GSadjust main routine
     """
-
     path_output = None
     drift_lookup = {'none': 0, 'netadj': 1, 'roman': 2, 'continuous': 3}
     obsTreeModel = ObsTreeModel()
@@ -367,9 +365,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.set_state(MENU_STATE.UNINIT)
 
     def init_gui(self):
-        """
-        Called after loading a data file.
-        """
+        """Called after loading a data file."""
+
         # Left panel: tree with data hierarchy (surveys, loops, stations)
         self.obsTreeModel.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
 
@@ -419,7 +416,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def adjust_update_required(self):
         """
-        Updates status bar icon
+        Updates status bar icon.
         """
         self.label_adjust_update_required_set = True
         self.label_adjust_update_required.setPixmap(self.update_adjust_icon)
@@ -429,7 +426,7 @@ class MainProg(QtWidgets.QMainWindow):
 
     def adjust_update_not_required(self):
         """
-        Updates status bar icon
+        Updates status bar icon.
         """
         self.label_adjust_update_required_set = False
         self.label_adjust_update_required.setPixmap(self.update_not_needed_icon)

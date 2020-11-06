@@ -79,8 +79,9 @@ class AdjustedStation:
 
 class AdjustmentOptions:
     """
-    Object that holds options for least-squares adjustment. Options are set
-    by gui_objects.AdjustOptions().
+    Object that holds options for least-squares adjustment.
+
+    Options are set by gui.dialogs.AdjustOptions().
     """
 
     def __init__(self):
@@ -109,12 +110,16 @@ class AdjustmentOptions:
 
 class Adjustment:
     """
-    Object that holds least-squares adjustment input matrices and results. There
-    is one Adjustment object per Survey().
+    Object that holds least-squares adjustment input matrices and results.
 
-    Properties:
-    A                   model matrix (Nobs rel + NobsAbs)*Nunknowns
-    P                   Weight matrix (Nobs rel + NobsAbs)*(Nobs rel + NobsAbs)
+    There is one Adjustment object per Survey.
+
+    Attributes
+    __________
+    A : ndarray
+        model matrix (Nobs rel + NobsAbs)*Nunknowns
+    P : ndarray
+        Weight matrix (Nobs rel + NobsAbs)*(Nobs rel + NobsAbs)
     Obs                 observation vector (Nobs rel + NobsAbs)
     S                   StX=0
     X                   Unknowns
@@ -125,7 +130,6 @@ class Adjustment:
     """
 
     def __init__(self):
-
         """
         Initializes
 
@@ -140,8 +144,6 @@ class Adjustment:
         self.VtPV = np.array([])
         self.SDaposteriori = 0
         self.dof = 0
-        self.adjustmentoptions = AdjustmentOptions()
-        self.adjustmentresults = AdjustmentResults()
         self.n_meters = 0
         self.meter_dic = dict()
         self.deltas = []
@@ -150,6 +152,8 @@ class Adjustment:
         self.sd_dic = dict()
         self.netadj_loop_keys = dict()
         self.sta_dic_ls = dict()
+        self.adjustmentoptions = AdjustmentOptions()
+        self.adjustmentresults = AdjustmentResults()
 
     def results_string(self):
         try:

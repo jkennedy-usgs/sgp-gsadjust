@@ -3,10 +3,11 @@ import pytestqt
 import os
 from PyQt5 import QtCore
 import numpy as np
+import gsadjust
 from test_fixture_pyqt import mainprog
 
-from data_analysis import compute_gravity_change
-from gui_objects import (
+from gsadjust.data.analysis import compute_gravity_change
+from gsadjust.gui.dialogs import (
     CoordinatesTable,
     AdjustOptions,
     SelectAbsg,
@@ -18,7 +19,7 @@ from gui_objects import (
     GravityChangeMap,
     LoopTimeThresholdDialog,
 )
-from gsa_plots import PlotGravityChange
+from gsadjust.plots import PlotGravityChange
 
 # def test_GravityChangeMap(qtbot):
 #

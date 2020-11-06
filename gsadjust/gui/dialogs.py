@@ -1328,6 +1328,7 @@ class SelectAbsg(QtWidgets.QDialog):
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         idxs = self.tree.selectedIndexes()
         self.table_model.clearDatums()
+        files_found = None
         for i in idxs:
             if i.model().isDir(i):
                 path = str(i.model().filePath(i))

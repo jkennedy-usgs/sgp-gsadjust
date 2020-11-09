@@ -209,7 +209,6 @@ class MainProg(QtWidgets.QMainWindow):
     index_current_station_survey = None
 
     label_adjust_update_required_set = False
-    label_deltas_update_required_set = False
 
     gui_obstreeview_popup_menu = None
     menus, selection_model = None, None
@@ -254,6 +253,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.datum_model.signal_adjust_update_required.connect(
             self.adjust_update_required
         )
+        self.tab_drift.drift_plot_weighted.update_drift_plots.connect(self.update_drift_tables_and_plots)
+        self.tab_drift.drift_screen_elapsed_time.update_drift_plots.connect(self.update_drift_tables_and_plots)
 
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.addTab(self.tab_data, 'Data')
@@ -313,24 +314,13 @@ class MainProg(QtWidgets.QMainWindow):
         self.setCentralWidget(self.gui_main_window_splitter)
 
         # Setup statusbar icons
-        self.update_deltas_text = QtWidgets.QLabel("Update delta table:", self)
         self.update_adjust_text = QtWidgets.QLabel("    Update adjustment:", self)
         self.update_not_needed_icon = QtGui.QPixmap(':/icons/ico3.png')
         self.update_adjust_icon = QtGui.QPixmap(':/icons/ico2.png')
-        self.update_deltas_icon = QtGui.QPixmap(':/icons/ico1.png')
         self.label_adjust_update_required = QtWidgets.QLabel()
-        self.label_deltas_update_required = QtWidgets.QLabel()
 
-        self.statusBar().addPermanentWidget(self.update_deltas_text)
-        self.statusBar().addPermanentWidget(self.label_deltas_update_required)
         self.statusBar().addPermanentWidget(self.update_adjust_text)
         self.statusBar().addPermanentWidget(self.label_adjust_update_required)
-
-        # Enabling these will show status indicators on startup. Leaving them
-        # out to avoid confusion; they will be
-        # set appropriately later
-        # self.adjust_update_required()
-        # self.deltas_update_required()
 
         # Right-click tree view context menu
         self.menus.mnDeleteSurvey = self.menus.create_action(
@@ -376,11 +366,7 @@ class MainProg(QtWidgets.QMainWindow):
         # Resize, expand tree view
         self.gui_data_treeview.setModel(self.obsTreeModel)
         self.obsTreeModel.dataChanged.connect(self.on_obs_checked_change)
-        # self.obsTreeModel.signal_refresh_view.connect(self.refresh_tables)
-        self.obsTreeModel.signal_name_changed.connect(self.deltas_update_required)
-        self.obsTreeModel.signal_delta_update_required.connect(
-            self.deltas_update_required
-        )
+
         self.selection_model = self.gui_data_treeview.selectionModel()
         self.selection_model.selectionChanged.connect(self.on_obs_tree_change)
         # self.data_treeview.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
@@ -432,24 +418,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_adjust_update_required.setPixmap(self.update_not_needed_icon)
         self.label_adjust_update_required.setToolTip('Network adjustment is up to date')
 
-    def deltas_update_required(self):
-        """
-        Updates status bar icon
-        """
-        self.label_deltas_update_required_set = True
-        self.label_deltas_update_required.setPixmap(self.update_deltas_icon)
-        self.label_deltas_update_required.setToolTip('Update delta table')
-        self.set_window_title_asterisk()
-        self.update_menus()
-
-    def deltas_update_not_required(self):
-        """
-        Updates status bar icon
-        """
-        self.label_deltas_update_required_set = False
-        self.label_deltas_update_required.setPixmap(self.update_not_needed_icon)
-        self.label_deltas_update_required.setToolTip('Delta table is up to date')
-
     def select_first_treeview_item(self):
         """
         Selects the first item in the treeview
@@ -475,9 +443,11 @@ class MainProg(QtWidgets.QMainWindow):
             if new_idx == 0:
                 if self.index_current_station is not None:
                     self.update_data_tab()
-            if new_idx == 1:
+            elif new_idx == 1:
                 if self.index_current_loop is not None:
                     self.update_drift_tables_and_plots()
+            elif new_idx == 2:
+                self.update_adjust_tables()
 
     def update_data_tab(self):
         """
@@ -725,11 +695,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.setModel(None)
         self.gui_data_treeview.update()
         self.tab_data.clear_axes()
-        self.tab_data.data_view.setModel(None)
+        self.tab_data.data_view.model().init_data([])
         self.tab_data.data_view.update()
-        self.tab_drift.delta_view.setModel(None)
+        self.tab_drift.delta_view.model().init_data([])
         self.tab_drift.delta_view.update()
-        self.tab_drift.dg_samples_view.setModel(None)
+        self.tab_drift.dg_samples_view.model().init_data([])
         self.tab_drift.dg_samples_view.update()
         self.tab_drift.clear_axes()
         self.tab_drift.drift_plot_weighted.setCheckState(0)
@@ -737,13 +707,13 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.drift_polydegree_combobox.setCurrentIndex(0)
         self.tab_drift.driftmethod_combobox.setCurrentIndex(0)
         self.tab_drift.tension_slider.setValue(1250)
-        self.tab_adjust.delta_view.setModel(None)
+        self.tab_adjust.delta_view.model().init_data([])
         self.tab_adjust.delta_view.update()
-        self.tab_adjust.datum_view.setModel(None)
+        self.tab_adjust.datum_view.model().init_data([])
         self.tab_adjust.datum_view.update()
-        self.tab_adjust.results_view.setModel(None)
+        self.tab_adjust.results_view.model().init_data([])
         self.tab_adjust.results_view.update()
-        self.tab_adjust.stats_view.setModel(None)
+        self.tab_adjust.stats_view.model().init_data([])
         self.tab_adjust.stats_view.update()
         self.setWindowTitle('GSadjust')
         self.update_menus()
@@ -752,13 +722,6 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Saves data if a workspace has already been saved
         """
-        if self.label_deltas_update_required_set is True:
-            self.msg = show_message(
-                'Workspace cannot be saved while the Relative-gravity differences table on the Network '
-                'Adjustment tab is not up to date.',
-                'Workspace save error',
-            )
-            return
         fname = self.obsTreeModel.save_workspace(self.workspace_savename)
         if not fname:
             self.msg = show_message("Workspace save error", "Error")
@@ -774,13 +737,6 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Saves data object using json.dump()
         """
-        if self.label_deltas_update_required_set is True:
-            self.msg = show_message(
-                'Workspace cannot be saved while the Relative-gravity differences table on the Network '
-                'Adjustment tab is not up to date.',
-                'Workspace save error',
-            )
-            return
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
             None, 'Save workspace as', self.settings.value('current_dir')
@@ -949,7 +905,6 @@ class MainProg(QtWidgets.QMainWindow):
             pbar.setLabelText('Initializing GUI')
             QtWidgets.QApplication.processEvents()
             self.init_gui()
-            self.deltas_update_not_required()
             QtWidgets.QApplication.restoreOverrideCursor()
             pbar.setValue(4)
             pbar.close()
@@ -1130,7 +1085,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
         if table_updated:
-            self.deltas_update_not_required()
             self.adjust_update_required()
             self.update_adjust_tables()
             self.tab_adjust.delta_proxy_model.sort(3)
@@ -1253,50 +1207,49 @@ class MainProg(QtWidgets.QMainWindow):
         Update delta-g and datum tables after selecting a new survey in the tree
         view, or after a network adjustment
         """
-
-        self.delta_model.layoutAboutToBeChanged.emit()
-        self.datum_model.layoutAboutToBeChanged.emit()
-        self.results_model.layoutAboutToBeChanged.emit()
-
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
-        self.delta_model.init_data(survey.deltas)
-        self.datum_model.init_data(survey.datums)
-        self.results_model.init_data(survey.results)
+        if survey:
+            self.delta_model.layoutAboutToBeChanged.emit()
+            self.datum_model.layoutAboutToBeChanged.emit()
+            self.results_model.layoutAboutToBeChanged.emit()
 
-        stats_model = QtGui.QStandardItemModel()
-        if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
+            self.delta_model.init_data(survey.deltas)
+            self.datum_model.init_data(survey.datums)
+            self.results_model.init_data(survey.results)
 
-            for line in survey.adjustment.results_string():
-                try:
-                    line_elems = line.split(':')
-                    if len(line_elems) == 2:  # normal line, stat: value
-                        stats_model.appendRow(
-                            [
-                                QtGui.QStandardItem(line_elems[0]),
-                                QtGui.QStandardItem(line_elems[1].strip()),
-                            ]
-                        )
-                    else:  # Chi test accepted or rejected. No ":"
-                        text = line_elems[0].strip()
-                        qt_item = QtGui.QStandardItem(text)
-                        if 'rejected' in text:
-                            qt_item.setForeground(Qt.red)
-                        stats_model.appendRow([qt_item, QtGui.QStandardItem('')])
-                except:
-                    pass
-        elif survey.adjustment.adjustmentresults.text:  # Gravnet adjustment
-            self.tab_adjust.stats_view.setColumnWidth(0, 600)
-            stats_model.setColumnCount(1)
-            stats_model.setHorizontalHeaderLabels([''])
-            for line in survey.adjustment.adjustmentresults.text:
-                stats_model.appendRow([QtGui.QStandardItem(line)])
-        self.tab_adjust.stats_view.setModel(stats_model)
-        stats_model.setColumnCount(2)
-        stats_model.setHorizontalHeaderLabels(['', ''])
-        self.tab_adjust.stats_view.setColumnWidth(0, 250)
-        self.tab_adjust.stats_view.setColumnWidth(1, 150)
-        self.tab_adjust.update_col_widths()
+            stats_model = QtGui.QStandardItemModel()
+            if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
+                for line in survey.adjustment.results_string():
+                    try:
+                        line_elems = line.split(':')
+                        if len(line_elems) == 2:  # normal line, stat: value
+                            stats_model.appendRow(
+                                [
+                                    QtGui.QStandardItem(line_elems[0]),
+                                    QtGui.QStandardItem(line_elems[1].strip()),
+                                ]
+                            )
+                        else:  # Chi test accepted or rejected. No ":"
+                            text = line_elems[0].strip()
+                            qt_item = QtGui.QStandardItem(text)
+                            if 'rejected' in text:
+                                qt_item.setForeground(Qt.red)
+                            stats_model.appendRow([qt_item, QtGui.QStandardItem('')])
+                    except:
+                        pass
+            elif survey.adjustment.adjustmentresults.text:  # Gravnet adjustment
+                self.tab_adjust.stats_view.setColumnWidth(0, 600)
+                stats_model.setColumnCount(1)
+                stats_model.setHorizontalHeaderLabels([''])
+                for line in survey.adjustment.adjustmentresults.text:
+                    stats_model.appendRow([QtGui.QStandardItem(line)])
+            self.tab_adjust.stats_view.setModel(stats_model)
+            stats_model.setColumnCount(2)
+            stats_model.setHorizontalHeaderLabels(['', ''])
+            self.tab_adjust.stats_view.setColumnWidth(0, 250)
+            self.tab_adjust.stats_view.setColumnWidth(1, 150)
+            self.tab_adjust.update_col_widths()
 
     def update_drift_tables_and_plots(self, update=True):
         """
@@ -1313,6 +1266,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.drift_lookup[drift_method]
         )
         self.tab_drift.set_drift_method(update)
+        self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
         """
@@ -1322,7 +1276,6 @@ class MainProg(QtWidgets.QMainWindow):
         :param selected: Selected indexes
         """
         if selected.model() is not None:
-            self.deltas_update_required()
             self.adjust_update_required()
             if self.tab_widget.currentIndex() == 0:
                 self.update_drift_tables_and_plots(update=False)
@@ -1497,7 +1450,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.delta_model.clearDeltas()
         self.results_model.clearResults()
         self.clear_adjustment_text()
-        self.deltas_update_required()
         self.update_adjust_tables()
         self.set_window_title_asterisk()
 
@@ -1809,7 +1761,6 @@ class MainProg(QtWidgets.QMainWindow):
         obstreeloop.removeRow(0)
         self.index_current_station = obstreeloop.child(0).index()
         self.update_drift_tables_and_plots()
-        self.deltas_update_required()
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
         self.set_window_title_asterisk()
@@ -1851,7 +1802,6 @@ class MainProg(QtWidgets.QMainWindow):
                 indexes = []
         self.index_current_loop = original_loop_index
         self.update_all_drift_plots()
-        self.deltas_update_required()
         pbar.close()
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
@@ -2040,23 +1990,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         # Collect checked items into adjustment object
-        if self.label_deltas_update_required_set is True:
-            reply = QtWidgets.QMessageBox.question(
-                self,
-                'Message',
-                'The relative-gravity differences table on the Network Adjustment '
-                + 'tab is out of date. Proceed anyway?',
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
-            )
-
-            if reply == QtWidgets.QMessageBox.No:
-                return
-
         obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-        # obstreesurvey.delta_model.layoutChanged.emit()
-        # obstreesurvey.datum_model.layoutChanged.emit()
-        # obstreesurvey.results_model.layoutChanged.emit()
 
         if how_many == 'all':
             for obstreesurvey in self.obsTreeModel.checked_surveys():
@@ -2374,7 +2308,6 @@ class MainProg(QtWidgets.QMainWindow):
                     float(tc.lon.text()),
                     float(tc.elev.text()),
                 )
-            self.deltas_update_required()
             self.adjust_update_required()
         self.update_data_tab()
 

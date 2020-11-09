@@ -167,6 +167,9 @@ class ObsTreeSurvey(ObsTreeItemBase):
     def loops(self):
         return [self.child(i) for i in range(self.rowCount())]
 
+    def loops_with_deltas(self):
+        return list(set([l.loop for l in self.deltas]))
+
     # @property
     # def datums(self):
     #     return self.datums[::]

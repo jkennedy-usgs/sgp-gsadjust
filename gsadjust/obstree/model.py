@@ -59,7 +59,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     #
     # signal_refresh_view = QtCore.pyqtSignal()
     signal_name_changed = QtCore.pyqtSignal()
-    signal_delta_update_required = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
@@ -107,11 +106,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         if role == Qt.CheckStateRole and index.column() == 0:
             m = index.model().itemFromIndex(index)
             m.setCheckState(value)
-            if isinstance(m, ObsTreeLoop):
-                self.signal_delta_update_required.emit()
             self.dataChanged.emit(index, index)
-            # # self.layoutChanged.emit()
-            # self.signal_refresh_view.emit()
             return True
 
         if role == Qt.EditRole:

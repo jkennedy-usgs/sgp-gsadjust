@@ -23,6 +23,7 @@ def test_gui(qtbot, monkeypatch):
 
     # Open data
     window.open_raw_data(r'.\test_BurrisData2.txt', 'Burris')
+    window.init_gui()
     assert window.obsTreeModel.rowCount() == 1
 
     # Update tide correction

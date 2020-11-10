@@ -881,6 +881,7 @@ class TabDrift(QtWidgets.QWidget):
             if update:
                 self.update_delta_model(method, model)
             self.update_deltas_on_adj_tab(obstreeloop)
+            self.parent.adjust_update_required()
             self.parent.update_adjust_tables()
             # Clear results table
             # survey.adjustment.adjustmentresults.n_unknowns

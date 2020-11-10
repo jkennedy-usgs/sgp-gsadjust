@@ -107,6 +107,9 @@ class TabAdjust(QtWidgets.QWidget):
         layout_final.addWidget(main_layout)
         self.setLayout(layout_final)
 
+    def invalidate_sort(self):
+        self.datum_proxy_model.invalidate()
+
     def save_delta_column_widths_to_settings(self):
         col_widths = []
         for i in range(self.delta_view.model().columnCount()):

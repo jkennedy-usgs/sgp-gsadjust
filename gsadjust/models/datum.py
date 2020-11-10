@@ -71,6 +71,7 @@ class DatumTableModel(QAbstractTableModel):
     }
 
     signal_adjust_update_required = pyqtSignal()
+    invalidate_proxy = pyqtSignal()
 
     def __init__(self):
         super(DatumTableModel, self).__init__()
@@ -162,25 +163,28 @@ class DatumTableModel(QAbstractTableModel):
                 datum.checked = 2
             elif value == Qt.Unchecked:
                 datum.checked = 0
-            self.dataChanged.emit(index, index)
+            self.dataChanged.emit(index, index, [])
             self.signal_adjust_update_required.emit()
             return True
 
         if role == Qt.EditRole:
             if index.isValid() and 0 <= index.row():
                 if value:
-                    datum = self._data[index.row()]
-                    column = index.column()
-                    attr, vartype = self._attrs.get(column, (None, None))
-                    if attr:
-                        setattr(datum, attr, vartype(value))
-                    self.dataChanged.emit(index, index)
-
+                    try:
+                        datum = self._data[index.row()]
+                        column = index.column()
+                        attr, vartype = self._attrs.get(column, (None, None))
+                        if attr:
+                            setattr(datum, attr, vartype(value))
+                        self.dataChanged.emit(index, index, [Qt.EditRole])
+                        self.invalidate_proxy.emit()
+                    except ValueError:
+                        pass
             return True
 
         if role == Qt.UserRole:
             self._data[index.row()] = value
-            self.dataChanged.emit(index, index)
+            self.dataChanged.emit(index, index, [])
 
     def flags(self, index):
         return (

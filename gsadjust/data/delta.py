@@ -284,6 +284,9 @@ class DeltaAssigned(DeltaNormal):
             'normal' delta is edited on the network adjustment tab. Roman
             ('three_point' and 'list') deltas can't be converted to 'assigned'.
     """
+    #
+    # def __init__(self, delta):
+    #     self.__dict__.update(delta.__dict__)
 
     type = 'assigned'
 

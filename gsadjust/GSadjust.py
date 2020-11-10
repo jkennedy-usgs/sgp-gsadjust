@@ -242,7 +242,9 @@ class MainProg(QtWidgets.QMainWindow):
 
         # Set models for the tab views.
         self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
-        self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
+        self.tab_adjust.datum_view.setModel(self.datum_model)
+        # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
+        self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
         self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
 
         # Connect signals.
@@ -713,7 +715,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.tension_slider.setValue(1250)
         self.tab_adjust.delta_view.model().sourceModel().init_data([])
         self.tab_adjust.delta_view.update()
-        self.tab_adjust.datum_view.model().sourceModel().init_data([])
+        self.tab_adjust.datum_view.model().init_data([])
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
         self.tab_adjust.results_view.setModel(None)
@@ -855,12 +857,7 @@ class MainProg(QtWidgets.QMainWindow):
             pbar.setValue(1)
             pbar.setLabelText('Updating drift plots')
             QtWidgets.QApplication.processEvents()
-            self.index_current_survey = firstsurvey.index()
-            self.index_current_loop = firstloop.index()
-            self.index_current_station = firststation.index()
-            self.index_current_loop_survey = firstsurvey.index()
-            self.index_current_station_loop = firstloop.index()
-            self.index_current_station_survey = firstsurvey.index()
+            self.select_first_treeview_item()
             try:
                 self.populate_station_coords()
             except Exception as e:
@@ -891,118 +888,6 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
             pbar.setValue(4)
             pbar.close()
-
-    # def populate_survey_deltatable_from_simpledeltas(self, delta_models, surveys):
-    #     """
-    #     When workspaces are saved/loaded as json (.gsa files), there are 2 sets
-    #     of deltas: those based on the data (drift-tab deltas), and those that
-    #     might have edits (network-adjustment-tab deltas). The former we don't
-    #     bother saving, the latter we do save. Deltas from the net adj tab are in
-    #     turn based on other deltas (Roman method), and/or from stations directly
-    #     ('normal' deltas). This function recreates the scheme from saved json by
-    #     matching up stations with deltas and deltas with deltas.
-    #     Parameters
-    #     ----------
-    #     delta_models: Python lists of deltas read from JSON file, one entry per survey
-    #     surveys: List of ObsTreeSurvey objects
-    #
-    #     Returns
-    #     -------
-    #
-    #     """
-    #     deltas = self.obsTreeModel.deltas()
-    #     for idx, delta_model in enumerate(delta_models):  # One delta_model per survey
-    #         for simpledelta in delta_model:
-    #             if not hasattr(simpledelta, 'loop'):
-    #                 simpledelta.loop = None
-    #             i = 0
-    #             try:
-    #                 if simpledelta.type == 'normal':
-    #                     try:
-    #                         if type(simpledelta) != Delta:
-    #                             # Should be SimpleNamespace
-    #                             # Lookup station based on hash
-    #                             station1 = surveys[idx].return_obstreestation(
-    #                                 simpledelta.sta1
-    #                             )
-    #                             station2 = surveys[idx].return_obstreestation(
-    #                                 simpledelta.sta2
-    #                             )
-    #                             if station1 is not None and station2 is not None:
-    #                                 d = create_delta_by_type(
-    #                                     simpledelta.type,
-    #                                     station1,
-    #                                     station2,
-    #                                     adj_sd=simpledelta.adj_sd,
-    #                                     driftcorr=simpledelta.driftcorr,
-    #                                     ls_drift=simpledelta.ls_drift,
-    #                                     checked=simpledelta.checked,
-    #                                     loop=simpledelta.loop,
-    #                                 )
-    #
-    #                         else:
-    #                             # For dealing with old-style .p workspaces
-    #                             d = simpledelta
-    #                     except NameError:
-    #                         logging.error('Delta re-creation error')
-    #                 elif simpledelta.type == 'list':
-    #                     if not hasattr(simpledelta, 'key'):
-    #                         list_of_deltas = []
-    #                         for delta in simpledelta.sta2:
-    #                             station1 = surveys[idx].return_obstreestation(delta[0])
-    #                             station2 = (
-    #                                 surveys[idx].return_obstreestation(delta[1]),
-    #                                 surveys[idx].return_obstreestation(delta[2]),
-    #                             )
-    #                             tpd = Delta3Point(
-    #                                 station1,
-    #                                 station2,
-    #                                 adj_sd=simpledelta.adj_sd,
-    #                                 driftcorr=simpledelta.driftcorr,
-    #                                 ls_drift=simpledelta.ls_drift,
-    #                                 checked=simpledelta.checked,
-    #                                 loop=simpledelta.loop,
-    #                             )
-    #                             list_of_deltas.append(tpd)
-    #                         d = DeltaList(None, list_of_deltas)
-    #                         if simpledelta.adj_sd < 998:
-    #                             d.adj_sd = simpledelta.adj_sd
-    #                         # for sg, the 'list'-type delta returns the mean of all dg's, the user can't check/uncheck
-    #                         # individual dg's. Therefore setting the check state when creating the three-point delta
-    #                         # ("tpd", above) is meaningless. What we want to do is set the check state of the list
-    #                         # delta.
-    #                         d.checked = simpledelta.checked
-    #                     # This section is necessary to load older .p versions. It's much slower than the above section.
-    #                     else:
-    #                         try:
-    #                             d = return_delta_given_key(simpledelta.key, deltas)
-    #                         except Exception:
-    #                             return
-    #                 elif simpledelta.type == 'assigned':
-    #                     station1 = surveys[idx].return_obstreestation(simpledelta.sta1)
-    #                     station2 = surveys[idx].return_obstreestation(simpledelta.sta2)
-    #                     d = Delta(
-    #                         station1,
-    #                         station2,
-    #                         adj_sd=simpledelta.adj_sd,
-    #                         driftcorr=simpledelta.driftcorr,
-    #                         ls_drift=simpledelta.ls_drift,
-    #                         delta_type=simpledelta.type,
-    #                         checked=simpledelta.checked,
-    #                         loop=simpledelta.loop,
-    #                     )
-    #                     d.assigned_dg = simpledelta.assigned_dg
-    #                 if d:
-    #                     i += 1
-    #                     surveys[idx].deltas.insert(0, d)
-    #                 else:  # unable to create delta
-    #                     self.msg = show_message(
-    #                         'Import error',
-    #                         'Error populating delta table. Please update delta '
-    #                         'table on Adjust tab',
-    #                     )
-    #             except:
-    #                 self.msg = show_message('Import error', 'Import error')
 
     def populate_station_coords(self):
         """
@@ -1188,7 +1073,7 @@ class MainProg(QtWidgets.QMainWindow):
     def update_adjust_tables(self):
         """
         Update delta-g and datum tables after selecting a new survey in the tree
-        view, or after a network adjustment
+        view, after a network adjustment, or after changing the drift-correction method
         """
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
@@ -1199,6 +1084,10 @@ class MainProg(QtWidgets.QMainWindow):
 
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
+                stats_model.setColumnCount(2)
+                stats_model.setHorizontalHeaderLabels(['', ''])
+                self.tab_adjust.stats_view.setColumnWidth(0, 350)
+                self.tab_adjust.stats_view.setColumnWidth(1, 150)
                 for line in survey.adjustment.results_string():
                     try:
                         line_elems = line.split(':')
@@ -1224,10 +1113,7 @@ class MainProg(QtWidgets.QMainWindow):
                 for line in survey.adjustment.adjustmentresults.text:
                     stats_model.appendRow([QtGui.QStandardItem(line)])
             self.tab_adjust.stats_view.setModel(stats_model)
-            stats_model.setColumnCount(2)
-            stats_model.setHorizontalHeaderLabels(['', ''])
-            self.tab_adjust.stats_view.setColumnWidth(0, 250)
-            self.tab_adjust.stats_view.setColumnWidth(1, 150)
+
             self.tab_adjust.update_col_widths()
 
     def update_drift_tables_and_plots(self, update=True):
@@ -2211,7 +2097,8 @@ class MainProg(QtWidgets.QMainWindow):
         if station:
             d = Datum(str(station))
             survey.datums.append(d)
-            self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
+            self.tab_adjust.datum_view.model().init_data(survey.datums)
+            # self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
             logging.info('Datum station added: {}'.format(station))
             self.set_window_title_asterisk()
 
@@ -2494,7 +2381,11 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     error = "{}: {}".format(exc_type.__name__, exc_value)
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
-DEBUG = False
+DEBUG = True
+
+def except_hook2(cls, exception, traceback):
+    print(cls, exception, traceback)
+    sys.__excepthook__(cls, exception, traceback)
 
 def main():
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
@@ -2544,9 +2435,15 @@ def main():
         else:
             ex.close()
     else:
+        sys.excepthook = except_hook2
         ex.showMaximized()
         app.processEvents()
-        app.exec_()
+        try:
+            sys.exit(
+                app.exec_()
+            )
+        except:
+            p =1
 
 if __name__ == '__main__':
     main()

@@ -89,7 +89,8 @@ def numpy_inversion(
     # Populate least squares matrices
     for delta in adjustment.deltas:
         delta_keys.append(delta.__hash__())
-        Obs[row] = delta.dg * delta.cal_coeff
+        dg = delta.dg if delta.type != 'assigned' else delta.assigned_dg
+        Obs[row] = dg * delta.cal_coeff
         P[row, row] = 1.0 / (delta.sd_for_adjustment ** 2)
         A[row, sta_dic_ls[delta.sta1]] = -1
         A[row, sta_dic_ls[delta.sta2]] = 1

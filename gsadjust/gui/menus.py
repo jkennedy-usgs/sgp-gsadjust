@@ -233,7 +233,7 @@ class Menus:
         # for file opening
         self.mnFileOpenScintrexFile = self.create_action(
             "&Load raw CG-3/CG-5 data...",
-            shortcut="Ctrl+o",
+            shortcut="Ctrl+5",
             slot=lambda meter='CG5': self.mainProg.open_file_dialog('CG5'),
             tip="Open data file",
             enabled=True,
@@ -296,7 +296,8 @@ class Menus:
             enabled=False,
         )
         self.mnFileLoadJSONAction = self.create_action(
-            "Open workspace...", slot=self.mainProg.workspace_open_getjson
+            "&Open workspace...", slot=self.mainProg.workspace_open_getjson,
+            shortcut="Ctrl+o"
         )
         self.mnFileExitAction = self.create_action(
             "&Exit", shortcut="Alt+F4", slot=self.mainProg.close, tip="Exit App"

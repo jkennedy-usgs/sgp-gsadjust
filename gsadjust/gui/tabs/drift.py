@@ -193,12 +193,14 @@ class TabDrift(QtWidgets.QWidget):
         drift_cont_control_layout.addWidget(control_subwidget)
         drift_cont_control_layout.addStretch()
         drift_controls.setLayout(drift_cont_control_layout)
-
+        drift_controls.setFixedWidth(500)
         self.drift_cont_plotpanel.addWidget(self.drift_cont_canvastop)
         self.drift_cont_plotpanel.addWidget(self.drift_cont_canvasbot)
         self.drift_window.addWidget(self.drift_single_canvas)
         self.drift_window.addWidget(self.drift_cont_plotpanel)
         self.drift_window.addWidget(drift_controls)
+
+        self.drift_window.addWidget(QtWidgets.QWidget())
         main_vsplitter_window.addWidget(self.drift_window)
         self.drift_single_canvas.hide()
 
@@ -465,8 +467,7 @@ class TabDrift(QtWidgets.QWidget):
             # just send list of deltas, not key (station info is already in the deltas)
             # avg_delta = DeltaList(None, station_pair[1])
             # roman_avg_dg_model.insertRows(avg_delta, 0)
-            avg_deltas.append(DeltaList(None, station_pair[1]))
-
+            avg_deltas.append(DeltaList(None, station_pair[1], loop=loop_name))
         return roman_dg_model, avg_deltas, vert_lines
 
     @staticmethod
@@ -552,7 +553,7 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] + offset for f in line[1]]
                     x = [f for f in line[0]]
                     if update:
-                        a = self.axes_drift_single.plot(x, y, '.-', picker=5)
+                        a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
 
@@ -623,7 +624,7 @@ class TabDrift(QtWidgets.QWidget):
                                     [x[idx], x[idx - 1]], [dr, dr], '-', color='0.5'
                                 )
                     if update:
-                        a = self.axes_drift_cont_upper.plot(x, y, '.-', picker=5)
+                        a = self.axes_drift_cont_upper.plot(x, y, '.-', pickradius=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
 
@@ -637,7 +638,7 @@ class TabDrift(QtWidgets.QWidget):
                         DateFormatter('%H:%M')
                     )
                     self.axes_drift_cont_lower.plot(
-                        drift_time, drift_rate, '.', picker=2
+                        drift_time, drift_rate, '.', pickradius=2
                     )
                     xticks = self.axes_drift_cont_upper.get_xticks()
                     self.axes_drift_cont_lower.set_xticks(xticks)
@@ -781,7 +782,7 @@ class TabDrift(QtWidgets.QWidget):
                         dt.datetime.utcfromtimestamp(f * 86400.0)
                         for f in line[0]
                     ]
-                    a = self.axes_drift_single.plot(x, y, '.-', picker=5)
+                    a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)
                     a[0].name = line[2]
 
             for line in deltas[2]:
@@ -827,58 +828,64 @@ class TabDrift(QtWidgets.QWidget):
 
         if type(update) is int:
             update = True
-        obstreeloop = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.index_current_loop
-        )
-        method_key = self.driftmethod_combobox.currentIndex()
+        if self.parent.index_current_loop is not None:  # Prevents crashing if no data are loaded
+            obstreeloop = self.parent.obsTreeModel.itemFromIndex(
+                self.parent.index_current_loop
+            )
+            method_key = self.driftmethod_combobox.currentIndex()
 
-        # if len(obstreeloop.tare) >= 0:
-        #     self.tare_view.model().dataChanged.connect(self.update_tares)
-        # self.tare_view.setModel(tare_model)
+            # if len(obstreeloop.tare) >= 0:
+            #     self.tare_view.model().dataChanged.connect(self.update_tares)
+            # self.tare_view.setModel(tare_model)
 
-        inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
-        method = inv_drift_lookup[method_key]
-        logging.info('Drift method set to ' + method)
-        orig_method = obstreeloop.drift_method
-        obstreeloop.drift_method = method
+            inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
+            method = inv_drift_lookup[method_key]
+            logging.info('Drift method set to ' + method)
+            orig_method = obstreeloop.drift_method
+            obstreeloop.drift_method = method
 
-        # These control the visibility of different tables
-        # update is an int (index of menu item) when this function is called from the
-        # menu-item callback
-        if update:
-            width = self.drift_window.sizes()
-            if method == 'none':
-                self.drift_none()
-            if method == 'netadj':
-                self.drift_polydegree_combobox.setCurrentIndex(
-                    obstreeloop.drift_netadj_method
-                )
-                self.drift_adjust()
+            # These control the visibility of different tables
+            # update is an int (index of menu item) when this function is called from the
+            # menu-item callback
+            if update:
+                width = self.drift_window.sizes()
+                if method == 'none':
+                    self.drift_none()
+                if method == 'netadj':
+                    self.drift_polydegree_combobox.setCurrentIndex(
+                        obstreeloop.drift_netadj_method
+                    )
+                    self.drift_adjust()
+                if method == 'roman':
+                    self.drift_roman()
+                if method == 'continuous':
+                    self.drift_polydegree_combobox.setCurrentIndex(
+                        obstreeloop.drift_cont_method
+                    )
+                    self.drift_cont_startendcombobox.setCurrentIndex(
+                        obstreeloop.drift_cont_startend
+                    )
+                    self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
+                    self.drift_continuous()
+                else:
+                    self.disable_weighted_checkbox()
+                self.set_width(width, method)
+
+            model = self.plot_drift(update=update)
+
             if method == 'roman':
-                self.drift_roman()
-            if method == 'continuous':
-                self.drift_polydegree_combobox.setCurrentIndex(
-                    obstreeloop.drift_cont_method
-                )
-                self.drift_cont_startendcombobox.setCurrentIndex(
-                    obstreeloop.drift_cont_startend
-                )
-                self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
-                self.drift_continuous()
+                obstreeloop.deltas = model[1]
             else:
-                self.disable_weighted_checkbox()
-            self.set_width(width, method)
+                obstreeloop.deltas = model
 
-        model = self.plot_drift(update=update)
-
-        if method == 'roman':
-            obstreeloop.deltas = model[1]
-        else:
-            obstreeloop.deltas = model
-
-        if update:
-            self.update_delta_model(method, model)
-        self.update_deltas_on_adj_tab(obstreeloop)
+            if update:
+                self.update_delta_model(method, model)
+            self.update_deltas_on_adj_tab(obstreeloop)
+            self.parent.update_adjust_tables()
+            # Clear results table
+            # survey.adjustment.adjustmentresults.n_unknowns
+            # survey.adjustment.adjustmentresults.text
+            # self.parent.update_adjust_tables()
 
     def update_deltas_on_adj_tab(self, obstreeloop):
         """
@@ -901,25 +908,23 @@ class TabDrift(QtWidgets.QWidget):
         except TypeError:  # No loops with deltas
             pass
 
-        # Clear results table
-        # survey.adjustment.adjustmentresults.n_unknowns
-        # survey.adjustment.adjustmentresults.text
-        # self.parent.update_adjust_tables()
 
     def set_width(self, width, method):
         """
         Maintains relative width of plot windows when switching between drift-correction methods.
         """
-        if method == 'none' or method == 'netadj' or method == 'roman':
+        if all(w == 0 for w in width): # default is [0, 0, 0]
+            self.drift_window.setSizes([900, 0, 500, 2000])
+        elif method == 'none' or method == 'netadj' or method == 'roman':
             if width[0] > width[1]:
-                self.drift_window.setSizes([width[0], width[1], width[2]])
+                self.drift_window.setSizes([width[0], width[1], width[2], width[3]])
             else:
-                self.drift_window.setSizes([width[1], width[0], width[2]])
+                self.drift_window.setSizes([width[1], width[0], width[2], width[3]])
         else:
             if width[0] > width[1]:
-                self.drift_window.setSizes([width[1], width[0], width[2]])
+                self.drift_window.setSizes([width[1], width[0], width[2], width[3]])
             else:
-                self.drift_window.setSizes([width[0], width[1], width[2]])
+                self.drift_window.setSizes([width[0], width[1], width[2], width[3]])
 
     def update_delta_model(self, method, model):
         """

@@ -222,6 +222,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             [obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
         )
         logging.info('Survey added')
+        return obstreeloop.index()
 
     def iter_stations(self):
         """

@@ -86,7 +86,7 @@ class InteractiveLegend(object):
 
     def _setup_connections(self):
         for artist in self.legend.texts + self.legend.legendHandles:
-            artist.set_picker(10)  # 10 points tolerance
+            artist.set_pickradius(10)  # 10 points tolerance
 
         self.fig.canvas.mpl_connect('pick_event', self.on_pick)
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)

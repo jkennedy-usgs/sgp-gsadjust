@@ -307,7 +307,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def deltas(self):
         delta_list = []
         for obstreesurvey in self.surveys():
-            delta_list += obstreesurvey.delta_list()
+            delta_list += obstreesurvey.deltas
         return delta_list
 
     def stations(self):

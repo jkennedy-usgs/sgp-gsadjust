@@ -813,26 +813,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.station_coords = coords
         self.update_menus()
 
-    def workspace_open(self, fname):
-        """
-        Loads data from pickle file. Restores PyQt tables to Survey object (PyQt tables can't be
-        pickled and are removed in workspace_save).
-        DEPRECATED, WILL REMOVE EVENTUALLY (REPLACED WITH JSON)
-        """
-        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
-        # Returns list of survey delta tables so they can be passed to
-        # populate_survey_deltatable_from_simpledeltas()
-        # try:
-        QtWidgets.QApplication.processEvents()
-        obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace_p(fname)
-        if obstreesurveys:
-            self.workspace_savename = fname
-            self.populate_obstreemodel(obstreesurveys, delta_models)
-            self.set_window_title(fname)
-        if coords:
-            self.obsTreeModel.station_coords = coords
-        self.update_menus()
-
     def populate_obstreemodel(self, obstreesurveys, delta_models):
         """
         Only called for loading workspace, not when loading raw data.
@@ -2544,6 +2524,7 @@ def main():
             'Please install GSadjust somewhere where admin rights are not required.',
             'GSadjust error',
         )
+    # TODO: Logging not working?
     logging.info("JEFF")
     splash_pix = QtGui.QPixmap(':/icons/Splash.png')
     splash = QtWidgets.QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)

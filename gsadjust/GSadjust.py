@@ -173,11 +173,13 @@ from .plots import (
     PlotDatumComparisonTimeSeries,
     PlotDgResidualHistogram,
     PlotGravityChange,
-    PlotLoopAnimation,
+    # PlotLoopAnimation,
     PlotNetworkGraph,
 )
 from .tides import tide_correction_agnew, tide_correction_meter
-from .utils import init_cal_coeff_dict, init_station_coords_dict, return_delta_given_key
+from .utils import (
+    init_station_coords_dict,
+)
 
 matplotlib.use('qt5agg')
 
@@ -1470,9 +1472,9 @@ class MainProg(QtWidgets.QMainWindow):
                     lat.append(coords[station.station_name][1])
                     lon.append(coords[station.station_name][0])
                     dates.append(station.tmean())
-                plt = PlotLoopAnimation([lat, lon, dates])
-                plt.show()
-            except:
+                self._plot_loop_animation = PlotLoopAnimation([lat, lon, dates])
+                self._plot_loop_animation.show()
+            except Exception:
                 self.msg = show_message('Unknown error', 'GSadjust error')
 
     def properties_loop(self):
@@ -2492,11 +2494,10 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     error = "{}: {}".format(exc_type.__name__, exc_value)
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
-
 DEBUG = False
 
-
 def main():
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
     # GSadjust starts in different directories on Mac and Windows
     # FIXME: Shouldn't need to change path here, you can

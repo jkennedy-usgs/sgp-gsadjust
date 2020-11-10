@@ -44,25 +44,6 @@ def init_cal_coeff_dict(obstreemodel):
     except Exception:
         return None
 
-
-def return_delta_given_key(key, deltas):
-    """
-    Return a delta based on the station name and station count of the
-    comprising stations.
-
-    DEPRECATED, ONLY NEEDED TO OPEN OLD .P FILES
-
-    :param keys: a tuple or list, depending on the type of delta
-    :param deltas: List of deltas, as returned from assemble_all_deltas()
-    :return:
-    """
-    for delta in deltas:
-        # Sometimes they differ by a little bit (1e-8)
-        if delta.key[0 : len(key) - 5] == key[0 : len(key) - 5]:
-            return delta
-    return None
-
-
 def init_station_coords_dict(obstreemodel):
     """
     Stores a single set of coordinates for each station with the obsTreeModel

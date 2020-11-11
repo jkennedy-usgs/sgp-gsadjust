@@ -1078,10 +1078,6 @@ class MainProg(QtWidgets.QMainWindow):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
         if survey:
-            self.delta_model.init_data(survey.deltas)
-            self.datum_model.init_data(survey.datums)
-            self.results_model.init_data(survey.results)
-
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
                 stats_model.setColumnCount(2)

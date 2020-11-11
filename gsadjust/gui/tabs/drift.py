@@ -779,7 +779,7 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] for f in line[1]]
                     # TODO: store dates in station object in datetime format, to avoid this conversion?
                     x = [
-                        dt.datetime.utcfromtimestamp(f * 86400.0)
+                        dt.datetime.utcfromtimestamp(f)  # FIXME:  * 86400.0 raises OS Error as outside range, f is unix timestamp?
                         for f in line[0]
                     ]
                     a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)

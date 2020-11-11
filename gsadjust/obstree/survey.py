@@ -30,7 +30,7 @@ from matplotlib.dates import date2num, num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QVariant
 
-from ..data import (AdjustedStation, Adjustment, AdjustmentOptions,
+from ..data import (AdjustedStation, Adjustment, AdjustmentOptions, create_delta_by_type,
                     AdjustmentResults, Datum, DeltaList, DeltaNormal, Tare)
 from ..data.analysis import InversionError, numpy_inversion
 from ..gui.messages import show_message
@@ -85,28 +85,21 @@ class ObsTreeSurvey(ObsTreeItemBase):
 
         deltas = []
         for delta in data['deltas']:
-            # Converting list of dicts to list of SimpleNamespace is to accommodate the loading routine,
-            # which expects a delta-like object, not a dict. Could probably keep change it to "temp.deltas = data[
-            # 'deltas'] if not for that.
-            from types import SimpleNamespace
-
-            sd = SimpleNamespace()
-            sd.adj_sd = delta['adj_sd']
-            sd.checked = delta['checked']
-            sd.driftcorr = delta['driftcorr']
-            sd.loop = delta['loop']
-            sd.ls_drift = delta['ls_drift']
-            sd.type = delta['type']
-            try:
-                sd.assigned_dg = delta['assigned_dg']
-            except Exception:
-                pass
-            try:
-                sd.sta1 = delta['sta1']
-                sd.sta2 = delta['sta2']
-            except KeyError as e:
-                # Raised if delta type is 'assigned'
-                pass
+            # Converting list of dicts to list of Delta objects, by defined type.
+            # Creation is handled by create_delta_by_type which discards empty keyword
+            # values (None), which are returned by .get() when missing.
+            sd = create_delta_by_type(
+                delta['type'],
+                # Kwargs will be included/ignored depending on type.
+                delta.get('sta1'),  # sta1
+                delta.get('sta2'),  # sta2
+                driftcorr=delta.get('driftcorr'),
+                ls_drift=delta.get('ls_drift'),
+                checked=delta.get('checked'),
+                adj_sd=delta.get('adj_sd'),
+                loop=delta.get('loop'),
+                assigned_dg=delta.get('assigned_dg'),
+            )
             deltas.append(sd)
         temp.deltas = deltas
 

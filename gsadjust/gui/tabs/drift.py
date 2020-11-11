@@ -616,7 +616,7 @@ class TabDrift(QtWidgets.QWidget):
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
                             drift_time.append(
-                                dt.datetime.utcfromtimestamp(xmean * 86400.0)
+                                dt.datetime.utcfromtimestamp(xmean) # FIXME:  * 86400.0 raises OS Error as outside range, xmean is unix timestamp?
                             )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:

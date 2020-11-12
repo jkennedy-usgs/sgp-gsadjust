@@ -755,7 +755,9 @@ class TabDrift(QtWidgets.QWidget):
                             'Insufficient drift observations for spline method',
                         )
                     else:
+                        # FIXME: Can we add more information for the user here (or to logs)?
                         MessageBox.warning(self, 'Unknown error', 'Unknown error')
+
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)

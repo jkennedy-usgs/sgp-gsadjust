@@ -102,7 +102,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
     def __init__(self, xlim, ylim, n):
         n_head = 10
         self.addedY, self.addedX = [], []
-        print('Matplotlib Version:', matplotlib.__version__)
+        logging.debug('Matplotlib Version:', matplotlib.__version__)
         self.xlim, self.ylim = xlim, ylim
         # The data
         self.n = np.linspace(0, n - 1, n)

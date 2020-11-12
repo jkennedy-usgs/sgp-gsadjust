@@ -599,13 +599,14 @@ class Menus:
         self.mnHelp = self.mainProg.menuBar().addMenu('&Help')
         self.mnHelpHelp = self.create_action('Help', slot=self.mainProg.show_help)
         self.mnHelpAbout = self.create_action('About', slot=self.mainProg.dialog_about)
+        self.mnHelpLog = self.create_action('Log window', slot=self.mainProg.toggle_logview)
         self.mnHelpCheckForUpdates = self.create_action(
             'Check for updates...', slot=lambda: self.mainProg.check_for_updates(True)
         )
 
         self.add_actions(
             self.mnHelp,
-            (self.mnHelpHelp, self.mnHelpAbout, None, self.mnHelpCheckForUpdates),
+            (self.mnHelpHelp, self.mnHelpAbout, self.mnHelpLog, None, self.mnHelpCheckForUpdates),
         )
 
     def create_action(

@@ -148,6 +148,7 @@ from .gui.menus import MENU_STATE, Menus
 from .gui.messages import show_message
 from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
+from .gui.logger import LoggerWidget
 
 # GSadjust modules
 from .file import (
@@ -228,6 +229,12 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus = Menus(self)
         # self.setGeometry(50, 50, 350, 300)
         self.setWindowTitle('GSadjust')
+
+        # Set up logging to use custom widget (no parent, so window).
+        self.logview = LoggerWidget()
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(self.logview.handler)
+        logging.info("Logger initialized.")
 
         # Create model objects for main views.
         self.delta_model = DeltaTableModel()
@@ -403,6 +410,12 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_data_tab()
         # self.selmodel.select(station.index(), QtCore.QItemSelectionModel.SelectCurrent)
         self.gui_data_treeview.setFocus()
+
+    def toggle_logview(self):
+        if self.logview.isVisible():
+            self.logview.hide()
+        else:
+            self.logview.show()
 
     def adjust_update_required(self):
         """
@@ -812,7 +825,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.adjust_update_required()
             self.set_window_title(fname)
         end = time.time()
-        print("Load duration %s: %.2f secs" % (fname, end - start))
+        logging.info("Load duration %s: %.2f secs", fname, end - start)
         if coords:
             self.obsTreeModel.station_coords = coords
         self.update_menus()
@@ -861,7 +874,7 @@ class MainProg(QtWidgets.QMainWindow):
             try:
                 self.populate_station_coords()
             except Exception as e:
-                logging.error(str(e))
+                logging.exception(str(e))
                 # sometimes coordinates aren't valid
                 pass
 
@@ -2380,7 +2393,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 DEBUG = True
 
 def except_hook2(cls, exception, traceback):
-    print(cls, exception, traceback)
+    logging.exception('%s %s', cls, exception, exc_info=True)
     sys.__excepthook__(cls, exception, traceback)
 
 def main():

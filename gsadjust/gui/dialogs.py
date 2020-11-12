@@ -39,7 +39,7 @@ from ..data import Datum, analysis
 from ..file import a10
 from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
-from .messages import show_message
+from .messages import MessageBox
 from .utils import copy_cells_to_clipboard
 from .widgets import  IncrMinuteTimeEdit
 
@@ -335,8 +335,9 @@ class AdjustOptions(QtWidgets.QDialog):
             self.setWindowTitle('Network adjustment options')
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
-            self.msg = show_message(
-                'Please load a survey first', 'Network adjustment options'
+            MessageBox.warning(
+                'Network adjustment options'
+                'Please load a survey first',
             )
 
     def restore_default(self):
@@ -580,11 +581,11 @@ class GravityChangeTable(QtWidgets.QDialog):
             self.win.show()
         except (OSError, ImportError) as e:
             logging.info('Cartopy import error')
-            self.msg = show_message(
-                'Map view plots on Mac or Linux platforms requires installation of the Geos'
-                + ' and Proj libraries. '
-                + 'Please install with homebrew ("brew install geos proj").',
+            MessageBox.warning(
                 'Import error',
+                'Map view plots on Mac or Linux platforms requires installation of the Geos'
+                ' and Proj libraries. '
+                'Please install with homebrew ("brew install geos proj").',
             )
 
 
@@ -1335,9 +1336,9 @@ class SelectAbsg(QtWidgets.QDialog):
                 files_found = self.append_datums(path)
         QtWidgets.QApplication.restoreOverrideCursor()
         if not files_found:
-            self.msg = show_message(
-                'No *.project.txt files found in the selected directories.',
+            MessageBox.warning(
                 'Import error',
+                'No *.project.txt files found in the selected directories.',
             )
 
     def append_datums(self, path):

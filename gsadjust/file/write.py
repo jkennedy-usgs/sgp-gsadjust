@@ -24,7 +24,7 @@ import time
 from PyQt5.QtCore import Qt
 
 from ..data.analysis import compute_gravity_change
-from ..gui.messages import show_message
+from ..gui.messages import MessageBox
 
 
 def line_generator(lines):

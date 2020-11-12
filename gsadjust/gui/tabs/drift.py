@@ -33,7 +33,7 @@ from ...drift import drift_continuous, drift_roman
 from ...models import (DeltaTableModel, NoCheckDeltaTableModel,
                        RomanTableModel, TareTableModel)
 from ...obstree import ObsTreeLoop
-from ..messages import show_message
+from ..messages import QMessageBox
 from ..widgets import IncrMinuteTimeEdit
 
 
@@ -750,21 +750,28 @@ class TabDrift(QtWidgets.QWidget):
                     QtWidgets.QApplication.restoreOverrideCursor()
                 except IndexError as e:
                     if self.drift_polydegree_combobox.currentIndex() == 1:
-                        self.msg = show_message(
-                            'Insufficient drift observations for spline method', 'Error'
+                        MessageBox.warning(self,
+                            'Error'
+                            'Insufficient drift observations for spline method',
                         )
-                    self.msg = show_message('Unknown error', 'Unknown error')
+                    else:
+                        MessageBox.warning(self, 'Unknown error', 'Unknown error')
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)
-                    self.msg = show_message(
-                        'Insufficient drift observations for ' 'polynomial method',
+                    MessageBox.warning(
+                        self,
                         'Error',
+                        'Insufficient drift observations for ' 'polynomial method',
                     )
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                     obstreeloop.drift_cont_method = 0
             else:
-                self.msg = show_message('No data available for plotting', 'Plot error')
+                MessageBox.warning(
+                    self,
+                    'No data available for plotting',
+                    'Plot error'
+                )
 
         # Plots vertical dashed lines showing delta-g's
         elif drift_type == 'roman':

@@ -33,7 +33,7 @@ from ...drift import drift_continuous, drift_roman
 from ...models import (DeltaTableModel, NoCheckDeltaTableModel,
                        RomanTableModel, TareTableModel)
 from ...obstree import ObsTreeLoop
-from ..messages import QMessageBox
+from ..messages import MessageBox
 from ..widgets import IncrMinuteTimeEdit
 
 

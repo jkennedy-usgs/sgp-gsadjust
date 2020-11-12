@@ -5,6 +5,7 @@ A simple logging window to show messages logged using Python logging.
 from PyQt5.QtWidgets import QTextEdit
 import logging
 from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtCore import QSize
 
 LEVEL_COLORS = {
     logging.DEBUG: QColor('grey'),
@@ -20,7 +21,7 @@ class LoggerWidget(QTextEdit):
 
         font = QFont('Courier New')
         self.setFont(font)
-
+        self.setMinimumSize(QSize(600, 400))
         self.setReadOnly(True)
         self.handler = CustomLogger(widget=self)
 

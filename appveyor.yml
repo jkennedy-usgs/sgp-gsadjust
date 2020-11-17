@@ -3,7 +3,7 @@ build: false
 environment:
   matrix: 
     - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6.x"
+      PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "64"
 
 init: 
@@ -29,12 +29,10 @@ install:
 
   - python -m pip install -r requirements_test.txt
   # shapely and cartopy are installed differently on windows vs linux
-  - curl -fsS -o Shapely-1.6.4.post1-cp36-cp36m-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Shapely-1.6.4.post1-cp36-cp36m-win_amd64.whl"
-  - curl -fsS -o Cartopy-0.17.0-cp36-cp36m-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Cartopy-0.17.0-cp36-cp36m-win_amd64.whl"
-  - pip install Shapely-1.6.4.post1-cp36-cp36m-win_amd64.whl
-  - pip install Cartopy-0.17.0-cp36-cp36m-win_amd64.whl
-  - pip install pytest
-  - pip install pytest-qt
+  - curl -fsS -o Shapely-1.7.1-cp38-cp38-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Shapely-1.7.1-cp38-cp38-win_amd64.whl"
+  - curl -fsS -o Cartopy-0.18.0-cp38-cp38-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Cartopy-0.18.0-cp38-cp38-win_amd64.whl"
+  - pip install Shapely-1.7.1-cp38-cp38-win_amd64.whl
+  - pip install Cartopy-0.18.0-cp38-cp38-win_amd64.whl
   - pwd
 
 test_script: 

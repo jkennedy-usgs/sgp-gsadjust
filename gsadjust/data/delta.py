@@ -34,6 +34,8 @@ def create_delta_by_type(delta_type, *args, **kwargs):
     }.get(delta_type)
     if cls is None:
         raise TypeError
+    # Filter kwargs; remove any None values:
+    kwargs = {k:v for k,v in kwargs.items() if v is not None}
     return cls(*args, **kwargs)
 
 
@@ -91,7 +93,7 @@ class DeltaBase:
         adj_sd=777,
         cal_coeff=1,
         loop=None,
-        assigned_dg=None,
+        **kwargs # discard
     ):
         self.station1 = sta1
         self.station2 = sta2
@@ -317,6 +319,11 @@ class DeltaAssigned(DeltaNormal):
     #     self.__dict__.update(delta.__dict__)
 
     type = 'assigned'
+
+    def __init__(self, *args, assigned_dg=None, **kwargs):
+        self.assigned_dg = assigned_dg
+        super().__init__(*args, **kwargs)
+
 
     @property
     def dg(self):

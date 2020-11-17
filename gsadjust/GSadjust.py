@@ -144,10 +144,11 @@ from .gui.dialogs import (
     TideCorrectionDialog,
     VerticalGradientDialog,
 )
+from .gui.messages import MessageBox
 from .gui.menus import MENU_STATE, Menus
-from .gui.messages import show_message
 from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
+from .gui.logger import LoggerWidget
 
 # GSadjust modules
 from .file import (
@@ -228,6 +229,12 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus = Menus(self)
         # self.setGeometry(50, 50, 350, 300)
         self.setWindowTitle('GSadjust')
+
+        # Set up logging to use custom widget (no parent, so window).
+        self.logview = LoggerWidget()
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(self.logview.handler)
+        logging.info("Logger initialized.")
 
         # Create model objects for main views.
         self.delta_model = DeltaTableModel()
@@ -405,6 +412,12 @@ class MainProg(QtWidgets.QMainWindow):
         # self.selmodel.select(station.index(), QtCore.QItemSelectionModel.SelectCurrent)
         self.gui_data_treeview.setFocus()
 
+    def toggle_logview(self):
+        if self.logview.isVisible():
+            self.logview.hide()
+        else:
+            self.logview.show()
+
     def adjust_update_required(self):
         """
         Updates status bar icon.
@@ -511,9 +524,9 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue('current_dir', os.path.dirname(fname))
             _, ext = os.path.splitext(fname)
             if ext in ['.p', '.gsa']:
-                self.msg = show_message(
-                    'Please use "Open workspace... " to load a .p or .gsa file',
+                MessageBox.warning(
                     'File load error',
+                    'Please use "Open workspace... " to load a .p or .gsa file',
                 )
                 return
             self.open_raw_data(fname, open_type)
@@ -588,7 +601,8 @@ class MainProg(QtWidgets.QMainWindow):
                 self.activate_survey_or_loop(new_loop_idx)
             except IOError as err:
                 e = err
-                self.msg = show_message('No file : {}'.format(fname), 'File error')
+                MessageBox.warning('File error', 'No file : {}'.format(fname))
+
             except (IndexError, ValueError) as err:
                 stream = QtCore.QFile(":/text/err_{}.txt".format(meter_type))
                 stream.open(QtCore.QIODevice.ReadOnly)
@@ -596,15 +610,16 @@ class MainProg(QtWidgets.QMainWindow):
                 stream.close()
                 if hasattr(err, 'i') and hasattr(err, 'line'):
                     help_message = text.format(err.i, err.line)
-                    self.msg = show_message(
-                        'Error reading file at line {:d}'.format(err.i),
+                    logging.warning(help_message)
+                    MessageBox.warning(
                         'File error',
-                        helptext=help_message,
+                        f'Error reading file at line {err.i} ({help_message})',
                     )
                 else:
                     help_message = text.format("NA", "NA")
-                    self.msg = show_message(
-                        'Error reading file', 'File error', helptext=help_message
+                    MessageBox.warning(
+                        'File error',
+                        f'Error reading file ({help_message})'
                     )
                 e = err
             if e:
@@ -621,7 +636,7 @@ class MainProg(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.restoreOverrideCursor()
             else:
                 QtWidgets.QApplication.restoreOverrideCursor()
-                self.msg = show_message('Unknown import error', 'File error')
+                MessageBox.warning(self,'Unknown import error', 'File error')
         else:
             QtWidgets.QApplication.restoreOverrideCursor()
             return False
@@ -658,9 +673,10 @@ class MainProg(QtWidgets.QMainWindow):
         if fname:
             self.settings.setValue('current_dir', os.path.dirname(fname))
             if fname[-1] == 'p':
-                self.msg = show_message(
-                    'If trying to append a .p file, please save it as a .gsa file first.',
+                MessageBox.warning(
+                    self,
                     'Import error',
+                    'If trying to append a .p file, please save it as a .gsa file first.',
                 )
                 return
             obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(
@@ -688,12 +704,9 @@ class MainProg(QtWidgets.QMainWindow):
         if confirm:
             if self.windowTitle()[-1] == '*':
                 quit_msg = "The workspace isn't saved. Are you sure you want to clear all data?"
-                reply = QtWidgets.QMessageBox.question(
-                    self,
+                reply = MessageBox.question(
                     'Message',
                     quit_msg,
-                    QtWidgets.QMessageBox.Yes,
-                    QtWidgets.QMessageBox.No,
                 )
                 if reply == QtWidgets.QMessageBox.No:
                     return
@@ -730,11 +743,14 @@ class MainProg(QtWidgets.QMainWindow):
         """
         fname = self.obsTreeModel.save_workspace(self.workspace_savename)
         if not fname:
-            self.msg = show_message("Workspace save error", "Error")
+            logging.info("Workspace save error.")
+            MessageBox.warning("Error", "Workspace save error")
             return
 
-        self.msg = show_message(
-            'Workspace saved', 'GSadjust', icon=QtWidgets.QMessageBox.Information
+        logging.info(f"Workspace saved: {fname}.")
+        MessageBox.information(
+            'GSadjust'
+            'Workspace saved',
         )
         self.set_window_title(fname)
         return True
@@ -751,19 +767,21 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue('current_dir', os.path.dirname(fname))
             try:
                 save_name = self.obsTreeModel.save_workspace(fname)
+
             except Exception as e:
-                self.msg = show_message("Workspace save error", "Error")
                 logging.exception(e, exc_info=True)
+
+            else:
                 self.menus.mnFileSaveWorkspace.setEnabled(False)
-                return
 
             if not save_name:
-                self.msg = show_message("Workspace save error", "Error")
+                MessageBox.warning("Error", "Workspace save error")
                 return
 
             self.set_window_title(fname)
-            self.msg = show_message(
-                'Workspace saved', 'GSadjust', icon=QtWidgets.QMessageBox.Information
+            MessageBox.information(
+                'GSadjust',
+                'Workspace saved',
             )
             self.workspace_savename = fname
             self.update_menus()
@@ -779,10 +797,10 @@ class MainProg(QtWidgets.QMainWindow):
         if not fname:
             return
         elif fname[-4:] != '.gsa':
-            self.msg = show_message(
+            MessageBox.warning(
+                'File load error',
                 'Saved workspaces should have a .gsa extension. '
                 'Please use "Open raw...data" to load a data file',
-                'File load error',
             )
             return
 
@@ -813,7 +831,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.adjust_update_required()
             self.set_window_title(fname)
         end = time.time()
-        print("Load duration %s: %.2f secs" % (fname, end - start))
+        logging.info("Load duration %s: %.2f secs", fname, end - start)
         if coords:
             self.obsTreeModel.station_coords = coords
         self.update_menus()
@@ -867,7 +885,7 @@ class MainProg(QtWidgets.QMainWindow):
             try:
                 self.populate_station_coords()
             except Exception as e:
-                logging.error(str(e))
+                logging.exception(str(e))
                 # sometimes coordinates aren't valid
                 pass
 
@@ -1083,10 +1101,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_drift_tables_and_plots(update=False)
 
     def show_delta_update_message(self):
-        self.msg = show_message(
+        MessageBox.warning(
+            'Delta error',
             'The Delta-g value can only be edited if the drift-correction method for the '
             'respective loop is a method other than the Roman method.',
-            'Delta error',
         )
 
     def update_adjust_tables(self):
@@ -1097,10 +1115,6 @@ class MainProg(QtWidgets.QMainWindow):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
         if survey:
-            self.delta_model.init_data(survey.deltas)
-            self.datum_model.init_data(survey.datums)
-            self.results_model.init_data(survey.results)
-
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
                 stats_model.setColumnCount(2)
@@ -1192,10 +1206,10 @@ class MainProg(QtWidgets.QMainWindow):
         return
 
     def correction_ocean_loading(self):
-        self.msg = show_message('Not implemented', 'Error')
+        MessageBox.warning('Error', 'Not implemented')
 
     def correction_atmospheric(self):
-        self.msg = show_message('Not implemented', 'Error')
+        MessageBox.warning('Error', 'Not implemented')
 
     def correct_recorded_time(self):
         """
@@ -1277,9 +1291,10 @@ class MainProg(QtWidgets.QMainWindow):
                         dg = np.mean(dg_list)
                         sd = np.mean(sd_list)
                 else:
-                    self.msg = show_message(
+                    MessageBox.warning(
+                        'Vertical gradient error',
                         'When writing a vertical gradient the drift correction method must be '
-                        '"None", "Roman", or "Continuous"'
+                        '"None", "Roman", or "Continuous"',
                     )
                 if dg:
                     with open(filename, 'w') as fid:
@@ -1290,18 +1305,18 @@ class MainProg(QtWidgets.QMainWindow):
                             ' +/- {:0.2f}'.format(sd / self.vertical_gradient_interval)
                         )
             except:
-                self.msg = show_message(
+                MessageBox.warning(
+                    'Vertical gradient error',
                     'Error writing gradient file (try visiting the Drift tab then re-running this '
                     'command).',
-                    'Vertical gradient error',
                 )
         else:
-            self.msg = show_message(
+            MessageBox.warning(
+                "Vertical gradient error",
                 'Writing a vertical gradient file requires that the respective loop has only '
                 'two stations. The gradient interval is set '
                 'by the "Vertical gradient interval..." menu command (instrument height in the '
                 'meter file is ignored).',
-                "Vertical gradient error",
             )
 
     def add_tare(self):
@@ -1371,7 +1386,7 @@ class MainProg(QtWidgets.QMainWindow):
         loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
         coords = self.obsTreeModel.station_coords
         if not coords:
-            self.msg = show_message('No station coordinates', 'GSadjust error')
+            MessageBox.warning('GSadjust error', 'No station coordinates')
         else:
             lat, lon, dates = [], [], []
             try:
@@ -1382,7 +1397,8 @@ class MainProg(QtWidgets.QMainWindow):
                 self._plot_loop_animation = PlotLoopAnimation([lat, lon, dates])
                 self._plot_loop_animation.show()
             except Exception:
-                self.msg = show_message('Unknown error', 'GSadjust error')
+                # FIXME: Can we add more information for the user here (or to logs)?
+                MessageBox.warning('GSadjust error', 'Unknown error')
 
     def properties_loop(self):
         """
@@ -1601,8 +1617,9 @@ class MainProg(QtWidgets.QMainWindow):
         obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
 
         if obstreeloop.rowCount() > 1:
-            self.msg = show_message(
-                "Loop must have a single station to divide by height.", "GSadjust error"
+            MessageBox.warning(
+                "GSadjust error"
+                "Loop must have a single station to divide by height.",
             )
             return
 
@@ -1705,8 +1722,9 @@ class MainProg(QtWidgets.QMainWindow):
         """
         indexes = self.gui_data_treeview.selectedIndexes()
         if len(indexes) > 3:
-            self.msg = show_message(
-                "Please select a single station when duplicating.", "GSadjust error"
+            MessageBox.warning(
+                "GSadjust error",
+                "Please select a single station when duplicating."
             )
             return
         index = indexes[0]
@@ -2011,10 +2029,10 @@ class MainProg(QtWidgets.QMainWindow):
             try:
                 datums = import_abs_g_simple(fname)
             except IndexError:
-                self.msg = show_message(
-                    'Error reading absolute gravity file. Is it three columns (station, g, std. dev.), '
-                    + 'space delimited',
+                MessageBox.warning(
                     'File read error',
+                    'Error reading absolute gravity file. Is it three columns (station, g, std. dev.), '
+                    'space delimited',
                 )
             for datum in datums:
                 self.obsTreeModel.itemFromIndex(
@@ -2052,9 +2070,9 @@ class MainProg(QtWidgets.QMainWindow):
         Opens a PyQt dialog to select a directory with .project.txt files.
         """
         if self.obsTreeModel.rowCount() == 0:
-            self.msg = show_message(
-                'Please load a survey before loading absolute-gravity data.',
+            MessageBox(
                 'Import error',
+                'Please load a survey before loading absolute-gravity data.',
             )
             return
         if hasattr(self, 'abs_import_table_model'):
@@ -2090,11 +2108,11 @@ class MainProg(QtWidgets.QMainWindow):
         """
         fn = export_metadata(self.obsTreeModel, self.settings.value('current_dir'))
         if fn:
-            QtWidgets.QMessageBox.information(
-                self, "Data export", "Metadata written to {}".format(fn)
+            MessageBox.information(
+                "Data export", "Metadata written to {}".format(fn)
             )
         else:
-            show_message('No network adjustment results', 'Write error')
+            MessageBox.warning('Write error', 'No network adjustment results')
 
     def write_summary_text(self):
         """
@@ -2103,8 +2121,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         fn = export_summary(self.obsTreeModel, self.settings.value('current_dir'))
         if fn:
-            QtWidgets.QMessageBox.information(
-                self, "Data export", "Text summary written to {}".format(fn)
+            MessageBox.information(
+                "Data export", "Text summary written to {}".format(fn)
             )
 
     def write_tabular_data(self):
@@ -2113,8 +2131,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         fn = export_data(self.obsTreeModel, self.settings.value('current_dir'))
         if fn:
-            QtWidgets.QMessageBox.information(
-                self, "Data export", "Tabular data written to {}".format(fn)
+            MessageBox.information(
+                "Data export", "Tabular data written to {}".format(fn)
             )
 
     def dialog_add_datum(self):
@@ -2238,12 +2256,9 @@ class MainProg(QtWidgets.QMainWindow):
             quit_msg = (
                 "The workspace isn't saved. Are you sure you want to exit the program?"
             )
-            reply = QtWidgets.QMessageBox.question(
-                self,
+            reply = MessageBox.question(
                 'Message',
-                quit_msg,
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                quit_msg
             )
 
             if reply == QtWidgets.QMessageBox.Yes:
@@ -2298,18 +2313,16 @@ class MainProg(QtWidgets.QMainWindow):
             self.commit = str(repo.head.commit)[:5]
             if repo.head.commit != master.commit:
                 msg = "An update is available for GSadjust.\nWould you like to install now?"
-                confirm = QtWidgets.QMessageBox.question(
-                    parent,
+                confirm = MessageBox.question(
                     "Update Available",
                     msg,
-                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
                 )
                 if confirm == QtWidgets.QMessageBox.Yes:
                     return self.update_from_github()
             elif show_uptodate_msg:
                 logging.info('Git checked, GSadjust is up to date.')
                 msg = "GSadjust is up to date."
-                QtWidgets.QMessageBox.information(self, "No Update Needed", msg)
+                MessageBox.information(self, "No Update Needed", msg)
                 return True
             return True
 
@@ -2318,7 +2331,7 @@ class MainProg(QtWidgets.QMainWindow):
             if show_uptodate_msg:
                 msg = 'Problem Encountered Updating from GitHub\n\nError Message:\n'
                 msg += str(e)
-                QtWidgets.QMessageBox.information(self, "Update results", msg)
+                MessageBox.information("Update results", msg)
             return True  # Update didn't work, start GSadjust anyway
 
     def update_from_github(self):
@@ -2343,7 +2356,7 @@ class MainProg(QtWidgets.QMainWindow):
                 'Updated successfully downloaded from GitHub. Please\n'
                 'restart GSadjust.'
             )
-            QtWidgets.QMessageBox.information(self, "Update results", msg)
+            MessageBox.information("Update results", msg)
             return False  # Don't launch GSadjust, need to restart to install updates
 
         except BaseException as e:
@@ -2356,7 +2369,7 @@ class MainProg(QtWidgets.QMainWindow):
                 'Error Message:\n'
             )
             msg += str(e)
-            QtWidgets.QMessageBox.information(self, "Update results", msg)
+            MessageBox.information("Update results", msg)
             return True  # Update didn't work, launch anyway
 
     def init_settings(self):
@@ -2420,7 +2433,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 DEBUG = True
 
 def except_hook2(cls, exception, traceback):
-    print(cls, exception, traceback)
+    logging.exception('%s %s', cls, exception, exc_info=True)
     sys.__excepthook__(cls, exception, traceback)
 
 def main():
@@ -2448,9 +2461,9 @@ def main():
             filename=fn, format='%(levelname)s:%(message)s', level=logging.INFO
         )
     except PermissionError:
-        msg = show_message(
-            'Please install GSadjust somewhere where admin rights are not required.',
+        MessageBox.warning(
             'GSadjust error',
+            'Please install GSadjust somewhere where admin rights are not required.',
         )
     # TODO: Logging not working?
     logging.info("JEFF")

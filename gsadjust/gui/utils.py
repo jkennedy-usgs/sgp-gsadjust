@@ -25,7 +25,7 @@ resulting from the authorized or unauthorized use of the software.
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
-from .messages import show_message
+from .messages import MessageBox
 
 
 def copy_cells_to_clipboard(table):
@@ -64,4 +64,4 @@ def copy_cells_to_clipboard(table):
         sys_clip = QtWidgets.QApplication.clipboard()
         sys_clip.setText(clipboard)
     else:
-        msg = show_message('No rows selected (Ctrl-a to select all)', 'Copy warning')
+        MessageBox.warning('Copy warning', 'No rows selected (Ctrl-a to select all)')

@@ -25,7 +25,7 @@ from matplotlib.figure import Figure
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
-from ..messages import show_message
+from ..messages import QMessageBox
 
 
 ###########################################################################
@@ -424,8 +424,9 @@ class TabData(QtWidgets.QWidget):
             self.parent.currentStationIndex
         )
         if obstreestation.meter_type == 'Burris':
-            self.msg = show_message(
-                'Not implemented for Burris data', 'Data selection error'
+            MessageBox.warning(
+                'Data selection error',
+                'Not implemented for Burris data',
             )
             return
         tilt_column1 = 4
@@ -453,8 +454,9 @@ class TabData(QtWidgets.QWidget):
             self.parent.currentStationIndex
         )
         if obstreestation.meter_type == 'Burris':
-            self.msg = show_message(
-                'Not implemented for Burris data', 'Data selection error'
+            QMessageBox.warning(
+                'Data selection error',
+                'Not implemented for Burris data',
             )
             return
         sd_column = 3
@@ -479,8 +481,9 @@ class TabData(QtWidgets.QWidget):
             self.parent.currentStationIndex
         )
         if obstreestation.meter_type == 'Burris':
-            self.msg = show_message(
-                'Not implemented for Burris data', 'Data selection error'
+            QMessageBox.warning(
+                'Data selection error',
+                'Not implemented for Burris data',
             )
             return
         dur_column = 7

@@ -19,28 +19,34 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMessageBox
+
+import logging
 
 from .widgets import helpButton
 
 
-def show_message(message, title, icon=QtWidgets.QMessageBox.Warning, helptext=None):
-    """
-    Generic dialog to show a message, with a single 'OK' button.
-    :param message: string shown in dialog
-    :param title:  string shown in dialog title bar.
-    :param icon: Qt icon
-    """
-    msg = QtWidgets.QMessageBox()
-    msg.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-    msg.setIcon(icon)
-    msg.setText(message)
-    msg.setWindowTitle(title)
-    if helptext:
-        a = helpButton(QtGui.QPixmap('./gsadjust/resources/icons8-help-30.png'))
-        a.blockSignals(True)
-        a.setToolTip(helptext)
-        msg.addButton(a, QtWidgets.QMessageBox.AcceptRole)
-    msg.addButton(QtWidgets.QPushButton("OK"), QtWidgets.QMessageBox.RejectRole)
-    msg.show()
-    return msg
+class MessageBox:
+
+    @staticmethod
+    def critical(title, message, **kwargs):
+        logging.exception('%s: %s', title, message, exc_info=True)
+        return QMessageBox.critical(None, message, **kwargs)
+
+    @staticmethod
+    def information(title, message, **kwargs):
+        logging.info('%s: %s', title, message)
+        return QMessageBox.information(None, title, message, **kwargs)
+
+    @staticmethod
+    def question(title, message, **kwargs):
+        logging.info('%s: %s', title, message)
+        result = QMessageBox.question(None, title, message, **kwargs)
+        logging.info('[User answered] - %s', result)
+        return result
+
+    @staticmethod
+    def warning(title, message, **kwargs):
+        logging.warn('%s: %s', title, message, exc_info=True)
+        return QMessageBox.warning(None, title, message, **kwargs)
+

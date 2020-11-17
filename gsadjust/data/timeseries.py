@@ -13,6 +13,7 @@ constitute any such warranty. The software is provided on the condition tha
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
+import logging
 import datetime as dt
 
 from matplotlib.dates import date2num
@@ -78,13 +79,11 @@ class TimeSeries:
                         test = 1
         except IOError:
             # si ça ne marche pas, affiche ce message et continue le prog
-            print('No file : {}'.format(filename))
+            logging.error('No file : %s', filename)
         except ValueError:
-            print('pb at line {:d} : Is it really .tsf (or .TSF) format? '.format(i))
+            logging.error('pb at line %d: Is it really .tsf (or .TSF) format? ', i)
         except IndexError:
-            print(
-                'pb at line {:d} : check raw data file: possibly last line?'.format(i)
-            )
+            logging.error('pb at line %d: check raw data file: possibly last line?', i)
 
     def populate_from_eterna_file(self, filename, channel):
         """
@@ -130,13 +129,11 @@ class TimeSeries:
                         test = 1
         except IOError:
             # si ça ne marche pas, affiche ce message et continue le prog
-            print('No file : {}'.format(filename))
+            logging.error('No file : %s', filename)
         except ValueError:
-            print('pb at line {:d} : Is it really eterna format? '.format(i))
+            logging.error('pb at line %d: Is it really eterna format? ', i)
         except IndexError:
-            print(
-                'pb at line {:d} : check raw data file: possibly last line?'.format(i)
-            )
+            logging.error('pb at line %s: check raw data file: possibly last line?', i)
 
     def interpolate_on_given_times(self, t):
         """

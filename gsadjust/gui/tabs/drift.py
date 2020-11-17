@@ -33,7 +33,7 @@ from ...drift import drift_continuous, drift_roman
 from ...models import (DeltaTableModel, NoCheckDeltaTableModel,
                        RomanTableModel, TareTableModel)
 from ...obstree import ObsTreeLoop
-from ..messages import show_message
+from ..messages import MessageBox
 from ..widgets import IncrMinuteTimeEdit
 
 
@@ -616,7 +616,7 @@ class TabDrift(QtWidgets.QWidget):
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
                             drift_time.append(
-                                dt.datetime.utcfromtimestamp(xmean * 86400.0)
+                                dt.datetime.utcfromtimestamp(xmean) # FIXME:  * 86400.0 raises OS Error as outside range, xmean is unix timestamp?
                             )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
@@ -750,21 +750,30 @@ class TabDrift(QtWidgets.QWidget):
                     QtWidgets.QApplication.restoreOverrideCursor()
                 except IndexError as e:
                     if self.drift_polydegree_combobox.currentIndex() == 1:
-                        self.msg = show_message(
-                            'Insufficient drift observations for spline method', 'Error'
+                        MessageBox.warning(self,
+                            'Error'
+                            'Insufficient drift observations for spline method',
                         )
-                    self.msg = show_message('Unknown error', 'Unknown error')
+                    else:
+                        # FIXME: Can we add more information for the user here (or to logs)?
+                        MessageBox.warning(self, 'Unknown error', 'Unknown error')
+
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)
-                    self.msg = show_message(
-                        'Insufficient drift observations for ' 'polynomial method',
+                    MessageBox.warning(
+                        self,
                         'Error',
+                        'Insufficient drift observations for ' 'polynomial method',
                     )
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                     obstreeloop.drift_cont_method = 0
             else:
-                self.msg = show_message('No data available for plotting', 'Plot error')
+                MessageBox.warning(
+                    self,
+                    'No data available for plotting',
+                    'Plot error'
+                )
 
         # Plots vertical dashed lines showing delta-g's
         elif drift_type == 'roman':
@@ -779,7 +788,7 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] for f in line[1]]
                     # TODO: store dates in station object in datetime format, to avoid this conversion?
                     x = [
-                        dt.datetime.utcfromtimestamp(f * 86400.0)
+                        dt.datetime.utcfromtimestamp(f)  # FIXME:  * 86400.0 raises OS Error as outside range, f is unix timestamp?
                         for f in line[0]
                     ]
                     a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)

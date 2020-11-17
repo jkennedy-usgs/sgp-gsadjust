@@ -22,7 +22,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
-from ..gui.messages import show_message
+from ..gui.messages import MessageBox
 
 
 class PlotNetworkGraph(QtWidgets.QDialog):
@@ -49,8 +49,9 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         try:
             self.plot(edges, disabled_edge, datum_nodelist, nondatum_nodelist)
         except KeyError:
-            msg = show_message(
-                'Error plotting network graph (Key error)', 'Plot error'
+            MessageBox.warning(
+                'Plot error'
+                'Error plotting network graph (Key error)',
             )
 
     def get_data(self):
@@ -60,8 +61,9 @@ class PlotNetworkGraph(QtWidgets.QDialog):
 
         deltas = self.survey.deltas
         if len(deltas) == 0:
-            msg = show_message(
-                'Delta table is empty. Unable to plot network graph', 'Plot error'
+            MessageBox.warning(
+                'Plot error'
+                'Delta table is empty. Unable to plot network graph',
             )
         else:
             for i, delta in enumerate(deltas):

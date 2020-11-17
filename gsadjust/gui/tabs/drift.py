@@ -616,7 +616,7 @@ class TabDrift(QtWidgets.QWidget):
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
                             drift_time.append(
-                                dt.datetime.utcfromtimestamp(xmean) # FIXME:  * 86400.0 raises OS Error as outside range, xmean is unix timestamp?
+                                dt.datetime.utcfromtimestamp(xmean * 86400.0)  # raises OS Error as outside range, xmean is unix timestamp?
                             )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
@@ -788,7 +788,7 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] for f in line[1]]
                     # TODO: store dates in station object in datetime format, to avoid this conversion?
                     x = [
-                        dt.datetime.utcfromtimestamp(f)  # FIXME:  * 86400.0 raises OS Error as outside range, f is unix timestamp?
+                        dt.datetime.utcfromtimestamp(f * 86400.0) # raises OS Error as outside range, f is unix timestamp?
                         for f in line[0]
                     ]
                     a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)

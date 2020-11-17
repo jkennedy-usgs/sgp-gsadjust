@@ -482,10 +482,10 @@ class TabDrift(QtWidgets.QWidget):
                 tare = obstreeloop.tare_model.data(idx, role=Qt.UserRole)
                 tm = tare.datetime.time()
                 x_time = (
-                    tare.datetime.toordinal()
-                    + tm.hour / 24
-                    + tm.minute / 1440
-                    + tm.second / 86400
+                        tare.datetime.toordinal()
+                        + tm.hour / 24
+                        + tm.minute / 1440
+                        + tm.second / 86400
                 )
                 axes.plot([x_time, x_time], [ylim[0], ylim[1]], 'gray')
                 axes.set_ylim(ylim)
@@ -610,7 +610,7 @@ class TabDrift(QtWidgets.QWidget):
                         # get drift rate for bottom plot
                         if idx >= 1:
                             dr = (y[idx] - y[idx - 1]) / (
-                                (x[idx] - x[idx - 1]) * 24
+                                    (x[idx] - x[idx - 1]) * 24
                             )  # drift rate
                             drift_rate.append(dr)
                             xmean = np.mean([x[idx], x[idx - 1]])
@@ -688,7 +688,7 @@ class TabDrift(QtWidgets.QWidget):
                                     mean_drift, sigma = z[0][0], z[0][1]
                                     tstat = mean_drift / sigma
                                     if (
-                                        np.abs(tstat) > 4.303
+                                            np.abs(tstat) > 4.303
                                     ):  # Critical value for 95% CI, 2 DOF, 2-tailed t-test
                                         textcolor = 'r'
                                     z = [mean_drift]
@@ -818,7 +818,7 @@ class TabDrift(QtWidgets.QWidget):
         for i in range(model.columnCount()):
             delta_view.showColumn(i)
 
-    def set_drift_method(self, update=True):
+    def set_drift_method(self, update=True, update_adjust_tables=True):
         """
         Called from update_drift_tables_and_plots + callback from GUI.
         Initiates plotting on drift tab.
@@ -880,9 +880,20 @@ class TabDrift(QtWidgets.QWidget):
 
             if update:
                 self.update_delta_model(method, model)
-            self.update_deltas_on_adj_tab(obstreeloop)
+            # Don't want to update if only switching between loops
+            if update_adjust_tables:
+                self.update_deltas_on_adj_tab(obstreeloop)
             self.parent.adjust_update_required()
-            self.parent.update_adjust_tables()
+            # When loading a workspace, deltas[0] will be a dict, meaning
+            # we don't want to update the adjust tables at this point.
+            try:
+                if type(self.parent.obsTreeModel.itemFromIndex(
+                        self.parent.index_current_survey
+                ).deltas[0]) != dict:
+                    self.parent.update_adjust_tables()
+            except IndexError:
+                pass
+
             # Clear results table
             # survey.adjustment.adjustmentresults.n_unknowns
             # survey.adjustment.adjustmentresults.text
@@ -904,17 +915,25 @@ class TabDrift(QtWidgets.QWidget):
         try:
             loop_present = obstreeloop.name in survey.loops_with_deltas()
             if loop_present:
-                survey.deltas = [d for d in survey.deltas if d.loop != obstreeloop.name]
+                # Remove the old deltas that correspond to this loop
+                for delta in reversed(survey.deltas):
+                    try:
+                        if delta['loop'] == obstreeloop.name:
+                            survey.deltas.remove(delta)
+                    except TypeError:
+                        if delta.loop == obstreeloop.name:
+                            survey.deltas.remove(delta)
+                    # survey.deltas = [d for d in survey.deltas if d.loop != obstreeloop.name]
                 survey.deltas += obstreeloop.deltas
+                self.parent.set_adj_sd(survey, survey.adjustment.adjustmentoptions, loop=obstreeloop.name)
         except TypeError:  # No loops with deltas
             pass
-
 
     def set_width(self, width, method):
         """
         Maintains relative width of plot windows when switching between drift-correction methods.
         """
-        if all(w == 0 for w in width): # default is [0, 0, 0]
+        if all(w == 0 for w in width):  # default is [0, 0, 0]
             self.drift_window.setSizes([900, 0, 500, 2000])
         elif method == 'none' or method == 'netadj' or method == 'roman':
             if width[0] > width[1]:
@@ -1055,7 +1074,7 @@ class TabDrift(QtWidgets.QWidget):
         self.drift_cont_plotpanel.setMinimumWidth(700)
         self.dg_samples_view.hide()
         # Hide std_for_adj and residual columns
-#        self.show_all_columns(self.delta_view)
+        self.show_all_columns(self.delta_view)
         self.delta_view.hideColumn(8)
         self.delta_view.hideColumn(9)
         self.cont_label_widget.show()
@@ -1138,11 +1157,13 @@ class TabDrift(QtWidgets.QWidget):
         # model = self.plot_drift()
         # self.update_delta_model(drift_method, model)
 
+
 class CustomCheckBox(QtWidgets.QCheckBox):
     def __init__(self, *args, **kwargs):
         super(CustomCheckBox, self).__init__(*args, **kwargs)
 
     update_drift_plots = QtCore.pyqtSignal()
+
 
 class CustomComboBox(QtWidgets.QComboBox):
     def __init__(self, *args, **kwargs):

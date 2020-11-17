@@ -91,7 +91,7 @@ def numpy_inversion(
         delta_keys.append(delta.__hash__())
         dg = delta.dg if delta.type != 'assigned' else delta.assigned_dg
         Obs[row] = dg * delta.cal_coeff
-        P[row, row] = 1.0 / (delta.sd_for_adjustment ** 2)
+        P[row, row] = 1.0 / (delta.adj_sd ** 2)
         A[row, sta_dic_ls[delta.sta1]] = -1
         A[row, sta_dic_ls[delta.sta2]] = 1
 

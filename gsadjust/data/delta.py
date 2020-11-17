@@ -88,9 +88,10 @@ class DeltaBase:
         driftcorr=0.0,
         ls_drift=None,
         checked=2,
-        adj_sd=999,
+        adj_sd=777,
         cal_coeff=1,
         loop=None,
+        assigned_dg=None,
     ):
         self.station1 = sta1
         self.station2 = sta2
@@ -101,26 +102,26 @@ class DeltaBase:
         self.ls_drift = ls_drift  # degree of drift, if included in network adjustment
         self.cal_coeff = cal_coeff
         self.loop = loop
-        self.assigned_dg = None
+        self.assigned_dg = assigned_dg
 
     # General methods, used on all subclasses.
 
-    @property
-    def sd_for_adjustment(self):
-        """
-        Standard deviation used in the network adjustment.
-
-        If the standard deviation hasn't changed (e.g., it's the default
-        value 999), return the standard deviation initially associated with
-        the delta.
-
-        Default value (i.e., if not set in adjustment options) is self.sd.
-        :return: float
-        """
-        if self.adj_sd == 999:
-            return self.sd
-        else:
-            return self.adj_sd
+    # @property
+    # def sd_for_adjustment(self):
+    #     """
+    #     Standard deviation used in the network adjustment.
+    #
+    #     If the standard deviation hasn't changed (e.g., it's the default
+    #     value 999), return the standard deviation initially associated with
+    #     the delta.
+    #
+    #     Default value (i.e., if not set in adjustment options) is self.sd.
+    #     :return: float
+    #     """
+    #     if self.adj_sd == 999:
+    #         return self.sd
+    #     else:
+    #         return self.adj_sd
 
     def __str__(self):
         # if self.checked == 2:
@@ -139,10 +140,20 @@ class DeltaBase:
             self.time_string(),
             self.dg,
             self.sd,
-            self.sd_for_adjustment,
+            self.adj_sd,
             self.residual,
         )
         return return_str
+
+    def to_json(self):
+        return {
+            'checked': self.checked,
+            'type': self.type,
+            'adj_sd': self.adj_sd,
+            'assigned_dg': self.assigned_dg,
+            'key': self.key,
+            'loop': self.loop
+        }
 
     @property
     def sta1(self):
@@ -163,6 +174,23 @@ class DeltaBase:
     @property
     def sd(self):
         raise NotImplementedError
+
+    @property
+    def key(self):
+        # d = {"sta1":self.sta1, "sta2":self.sta2, "date":self.time()}
+        #
+        # def c_mul(a, b):
+        #     return ctypes.c_int64((a * b) & 0xffffffffffffffff).value
+        #
+        # value = 0x345678
+        # for k,v in d.items():
+        #     value = c_mul(1000003, value) ^ hash(v)
+        # value = value ^ len(d)
+        # if value == -1:
+        #     value = -2
+        # return value
+        return self.sta1 + self.sta2 + self.time_string()
+
 
     def time(self):
         if isinstance(self.station2, tuple):
@@ -230,20 +258,20 @@ class DeltaNormal(DeltaBase):
         except:
             return -999
 
-    @property
-    def key(self):
-        """
-        Used to match up adjustment results with observations, and to store
-        simple Deltas
-        :return: str
-        """
-        return (
-            f"{self.type}"
-            f"{self.station1.station_name}"
-            f"{self.station1.station_count}"
-            f"{self.station2.station_name}"
-            f"{self.station2.station_count}"
-        )
+    # @property
+    # def key(self):
+    #     """
+    #     Used to match up adjustment results with observations, and to store
+    #     simple Deltas
+    #     :return: str
+    #     """
+    #     return (
+    #         f"{self.type}"
+    #         f"{self.station1.station_name}"
+    #         f"{self.station1.station_count}"
+    #         f"{self.station2.station_name}"
+    #         f"{self.station2.station_count}"
+    #     )
 
     @property
     def sta1(self):
@@ -380,15 +408,6 @@ class DeltaList(DeltaBase):
                 return 3.0
         except:
             return -999
-
-    @property
-    def key(self):
-        """
-        Used to match up adjustment results with observations, and to store
-        simple Deltas
-        :return: str
-        """
-        return f"{self.type}{self.sta1}{self.sta2}{self.dg}"
 
     @property
     def sta1(self):

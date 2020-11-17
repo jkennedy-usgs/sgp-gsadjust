@@ -161,7 +161,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_G: (format, get_g(), "0.1f"),
                     DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
                     DELTA_SD: (format, delta.sd, "0.1f"),
-                    DELTA_ADJ_SD: (format, delta.sd_for_adjustment, "0.1f"),
+                    DELTA_ADJ_SD: (format, delta.adj_sd, "0.1f"),
                     DELTA_RESIDUAL: (format, delta.residual, "0.1f"),
                 }.get(column, (str, "NA"))
 

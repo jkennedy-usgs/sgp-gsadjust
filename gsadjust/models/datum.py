@@ -121,7 +121,7 @@ class DatumTableModel(QAbstractTableModel):
                     DATUM_SD: (format, datum.sd, '0.2f'),
                     DATUM_G: (format, datum.g, '8.1f'),
                     DATUM_STATION: (str, datum.station),
-                    DATUM_DATE: (QDate.fromString, datum.date, 'yyyy-MM-dd'),
+                    DATUM_DATE: (str, datum.date),
                     MEAS_HEIGHT: (format, datum.meas_height, '0.2f'),
                     GRADIENT: (format, datum.gradient, '0.2f'),
                     DATUM_RESIDUAL: (format, datum.residual, '0.1f'),

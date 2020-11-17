@@ -30,7 +30,7 @@ from matplotlib.dates import date2num, num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QVariant
 
-from ..data import (AdjustedStation, Adjustment, AdjustmentOptions,
+from ..data import (AdjustedStation, Adjustment, AdjustmentOptions, create_delta_by_type,
                     AdjustmentResults, Datum, DeltaList, DeltaNormal, Tare)
 from ..data.analysis import InversionError, numpy_inversion
 from ..gui.messages import show_message
@@ -83,33 +83,62 @@ class ObsTreeSurvey(ObsTreeItemBase):
         """
         temp = cls(data['name'])
 
-        deltas = []
-        for delta in data['deltas']:
-            # Converting list of dicts to list of SimpleNamespace is to accommodate the loading routine,
-            # which expects a delta-like object, not a dict. Could probably keep change it to "temp.deltas = data[
-            # 'deltas'] if not for that.
-            from types import SimpleNamespace
+        # REVISED 2020-11-16: No longer need to save/load deltas. Instead they are re-created from the station data -
+        # that's a consequence of the adj. tab deltas being force-synced with the drift tab deltas. All we need to do
+        # after recreating the deltas is re-apply the follwing, if they were set:
+        # type = assigned, assigned_dg, adj_sd
+        #
+        # That's handled in the populate_obstreemodel() routine.
 
-            sd = SimpleNamespace()
-            sd.adj_sd = delta['adj_sd']
-            sd.checked = delta['checked']
-            sd.driftcorr = delta['driftcorr']
-            sd.loop = delta['loop']
-            sd.ls_drift = delta['ls_drift']
-            sd.type = delta['type']
-            try:
-                sd.assigned_dg = delta['assigned_dg']
-            except Exception:
-                pass
-            try:
-                sd.sta1 = delta['sta1']
-                sd.sta2 = delta['sta2']
-            except KeyError as e:
-                # Raised if delta type is 'assigned'
-                pass
-            deltas.append(sd)
-        temp.deltas = deltas
 
+        # (
+        # deltas = []
+        # for delta in data['deltas']:
+        #     # Converting list of dicts to list of SimpleNamespace is to accommodate the loading routine,
+        #     # which expects a delta-like object, not a dict. Could probably keep change it to "temp.deltas = data[
+        #     # 'deltas'] if not for that.
+        #     from types import SimpleNamespace
+        #
+        #     sd = SimpleNamespace()
+        #     sd.adj_sd = delta['adj_sd']
+        #     sd.checked = delta['checked']
+        #     sd.driftcorr = delta['driftcorr']
+        #     sd.loop = delta['loop']
+        #     sd.ls_drift = delta['ls_drift']
+        #     sd.type = delta['type']
+        #     sd.key = delta['key']
+        #     try:
+        #         sd.assigned_dg = delta['assigned_dg']
+        #     except Exception:
+        #         pass
+        #     try:
+        #         sd.sta1 = delta['sta1']
+        #         sd.sta2 = delta['sta2']
+        #     except KeyError as e:
+        #         # Raised if delta type is 'assigned'
+        #         pass
+        #     # if delta['type']
+        #     deltas.append(sd)
+        # temp.deltas = deltas
+        temp.deltas = data['deltas']
+        # for delta in data['deltas']:
+        #     # Converting list of dicts to list of Delta objects, by defined type.
+        #     # Creation is handled by create_delta_by_type which discards empty keyword
+        #     # values (None), which are returned by .get() when missing.
+        #     sd = create_delta_by_type(
+        #         delta['type'],
+        #         # Kwargs will be included/ignored depending on type.
+        #         delta.get('sta1'),  # sta1
+        #         delta.get('sta2'),  # sta2
+        #         driftcorr=delta.get('driftcorr'),
+        #         ls_drift=delta.get('ls_drift'),
+        #         checked=delta.get('checked'),
+        #         adj_sd=delta.get('adj_sd'),
+        #         loop=delta.get('loop'),
+        #         assigned_dg=delta.get('assigned_dg'),
+        #     )
+        #     deltas.append(sd)
+        # temp.deltas = deltas
         for datum in data['datums']:
             d = Datum(datum['station'])
             d.__dict__.update(datum)
@@ -137,7 +166,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             loops.append(self.child(i).to_json())
         return {
             'loops': loops,
-            'deltas': jsons.dump(self.deltas),
+            'deltas': [d.to_json() for d in self.deltas],
             'datums': jsons.dump(self.datums),
             'checked': self.checkState(),
             'name': self.name,
@@ -168,7 +197,21 @@ class ObsTreeSurvey(ObsTreeItemBase):
         return [self.child(i) for i in range(self.rowCount())]
 
     def loops_with_deltas(self):
-        return list(set([l.loop for l in self.deltas]))
+        # When loading a workspace, self.deltas is a list of dicts, not a list of deltas.
+        # Can't predict which order they'll be in.
+        loops = []
+        if len(self.deltas) > 0:
+            for delta in self.deltas:
+                try:
+                    loops.append(delta['loop'])
+                except TypeError:
+                    loops.append(delta.loop)
+
+        return list(set(loops))
+            # if type(self.deltas[0]) == dict:
+            #     return list(set([l['loop'] for l in self.deltas]))
+            # else:
+            #     return list(set([l.loop for l in self.deltas]))
 
     # @property
     # def datums(self):
@@ -431,7 +474,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                         delta.sta2_t,
                         delta.dg / 1000,
                         '0',
-                        delta.sd_for_adjustment / 1000.0,
+                        delta.adj_sd / 1000.0,
                     )
                 )
         # Write absolute-g (aka datum, aka fix) file

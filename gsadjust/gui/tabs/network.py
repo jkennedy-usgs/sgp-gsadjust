@@ -30,8 +30,8 @@ class TabAdjust(QtWidgets.QWidget):
         # Delta table (top left)
         self.parent = parent
         self.delta_view = QtWidgets.QTableView()
-        self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
-        self.delta_view.setModel(self.delta_proxy_model)
+        # self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
+        # self.delta_view.setModel(self.delta_proxy_model)
         self.delta_view.setSortingEnabled(True)
 
         self.delta_view.setStyleSheet(

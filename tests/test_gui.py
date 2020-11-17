@@ -144,11 +144,7 @@ def test_gui(qtbot, monkeypatch):
     # Disable some observations, save workspace, clear and reload, verify that we get the same adjustment results
     rows = [1, 3, 5]
     for row in rows:
-        survey.delta_model.setData(
-            survey.delta_model.index(row, 0),
-            QtCore.Qt.Unchecked,
-            role=QtCore.Qt.CheckStateRole,
-        )
+        survey.deltas[row].checked = 0
 
     window.adjust_network()
     for line in survey.adjustment.results_string():
@@ -177,8 +173,8 @@ def test_gui(qtbot, monkeypatch):
     assert abs(sd1 - sd2) < 0.000001
     os.remove(test_workspace)
 
-    window.workspace_clear(confirm=False)
-    window.workspace_open_json('./tests/test_workspace1.gsa')
+    # window.workspace_clear(confirm=False)
+    # window.workspace_open_json('./tests/test_workspace1.gsa')
 
     # window.workspace_append()
     # qtbot.keyPress(window, QtCore.Qt.Key_Tab, QtCore.Qt.ControlModifier)

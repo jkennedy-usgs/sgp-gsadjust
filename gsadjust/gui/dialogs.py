@@ -41,7 +41,8 @@ from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
 from .messages import show_message
 from .utils import copy_cells_to_clipboard
-from .widgets import  IncrMinuteTimeEdit
+from .widgets import IncrMinuteTimeEdit, ProgressBar
+
 
 class CoordinatesTable(QtWidgets.QDialog):
     """

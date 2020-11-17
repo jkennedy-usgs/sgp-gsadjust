@@ -123,7 +123,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 
 from . import resources
-from .data import ChannelList, Datum, Delta3Point, DeltaList, Tare, create_delta_by_type
+from .data import ChannelList, Datum, Delta3Point, DeltaList, Tare, create_delta_by_type, DeltaAssigned
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
 from .gui.dialogs import (
@@ -241,7 +241,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_widget = QtWidgets.QTabWidget()
 
         # Set models for the tab views.
-        self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
+        self.tab_adjust.delta_view.setModel(self.delta_model)
+        # self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
         self.tab_adjust.datum_view.setModel(self.datum_model)
         # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
@@ -535,6 +536,7 @@ class MainProg(QtWidgets.QMainWindow):
         # When "append survey' or 'append loop' is called: accommodate the rare instance of combining meter
         # types on a single survey
         if open_type in ['loop', 'survey']:
+            QtWidgets.QApplication.restoreOverrideCursor()
             meter_type_dialog = DialogMeterType()
             test = meter_type_dialog.exec_()
             if test < 5:  # 5 = cancel  (accept/reject not working?)
@@ -713,12 +715,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.drift_polydegree_combobox.setCurrentIndex(0)
         self.tab_drift.driftmethod_combobox.setCurrentIndex(0)
         self.tab_drift.tension_slider.setValue(1250)
-        self.tab_adjust.delta_view.model().sourceModel().init_data([])
+        self.tab_adjust.delta_view.model().init_data([])
         self.tab_adjust.delta_view.update()
         self.tab_adjust.datum_view.model().init_data([])
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
-        self.tab_adjust.results_view.setModel(None)
         self.tab_adjust.stats_view.update()
         self.setWindowTitle('GSadjust')
         self.update_menus()
@@ -835,10 +836,15 @@ class MainProg(QtWidgets.QMainWindow):
         pbar.setWindowTitle('GSadjust')
         pbar.setLabelText('Building Observation Tree')
         pbar.show()
+        saved_deltas = []
         for survey in obstreesurveys:
             self.obsTreeModel.appendRow(
                 [survey, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
             )
+            saved_deltas += survey.deltas
+        saved_deltas_dict = {d['key']: (d['checked'], d['adj_sd'], d['assigned_dg']) for d in saved_deltas}
+        saved_assigned_deltas_dict = {d['key']: (d['checked'], d['adj_sd'], d['assigned_dg'])
+                                      for d in saved_deltas if d['type'] == 'assigned'}
         pbar.setLabelText('Building Observation Tree')
         QtWidgets.QApplication.processEvents()
 
@@ -866,20 +872,33 @@ class MainProg(QtWidgets.QMainWindow):
                 pass
 
             self.workspace_loaded = True
+
+            # This is going to create new deltas on the drift and adjust tabs:
             self.update_all_drift_plots()
+
+            # After creating the new deltas, we want to apply these attributes that might have been user-specified:
+            # - a delta was unchecked
+            # - the delta was type='assigned' and assigned_dg = float
+            # - the adj_sd was modified
+            #
+            # We do this by matching up the new delta with the
+            # corresponding old delta and copying over those items.
+            new_deltas = self.obsTreeModel.deltas()
+            new_deltas_dict = {d.key:d for d in new_deltas}
+
+            # Update adj_sd and checked
+            for key, delta in saved_deltas_dict.items():
+                new_deltas_dict[key].adj_sd = delta[1]
+                new_deltas_dict[key].checked = delta[0]
+
+            # Create type = 'assigned' deltas
+            for key, delta in saved_assigned_deltas_dict.items():
+                new_deltas_dict[key].type = 'assigned'
+                new_deltas_dict[key].assigned_dg = delta[2]
+
             pbar.setValue(2)
             pbar.setLabelText('Populating delta tables')
             QtWidgets.QApplication.processEvents()
-            # The deltas on the survey delta table (on the network adjustment tab)
-            # aren't saved. When loading a workspace, the loop deltas first have
-            # to be created by update_all_drift_plots(), then the survey delta
-            # table can be updated.
-            # self.populate_survey_deltatable_from_simpledeltas(
-            #     delta_models, obstreesurveys
-            # )
-            # for survey in obstreesurveys:
-            #     self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
-
             self.update_adjust_tables()
             pbar.setValue(3)
             pbar.setLabelText('Initializing GUI')
@@ -955,7 +974,7 @@ class MainProg(QtWidgets.QMainWindow):
         if table_updated:
             self.adjust_update_required()
             self.update_adjust_tables()
-            self.tab_adjust.delta_proxy_model.sort(3)
+            # self.tab_adjust.delta_proxy_model.sort(3)
             self.delta_model.layoutChanged.emit()
 
         self.menus.set_state(MENU_STATE.DELTA_MODEL)
@@ -979,7 +998,7 @@ class MainProg(QtWidgets.QMainWindow):
                 item.fontweight = QtGui.QFont.Bold
                 self.index_current_loop = index
                 # if self.tab_widget.currentIndex() == 1:
-                self.update_drift_tables_and_plots()
+                self.update_drift_tables_and_plots(update_adjust_tables=False)
 
             # If a survey
             elif type(item) == ObsTreeSurvey:
@@ -1116,7 +1135,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             self.tab_adjust.update_col_widths()
 
-    def update_drift_tables_and_plots(self, update=True):
+    def update_drift_tables_and_plots(self, update=True, update_adjust_tables=True):
         """
         First updates the drift_method combobox, then calls set_drift_method
         to update plots.
@@ -1130,7 +1149,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.driftmethod_combobox.setCurrentIndex(
             self.drift_lookup[drift_method]
         )
-        self.tab_drift.set_drift_method(update)
+        self.tab_drift.set_drift_method(update, update_adjust_tables)
         self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
@@ -1312,7 +1331,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Remove all deltas from survey delta model shown on network adjustment tab.
         """
-        self.tab_adjust.delta_view.model().sourceModel().init_data([])
+        self.tab_adjust.delta_view.model().init_data([])
         self.tab_adjust.delta_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
         self.tab_adjust.results_view.update()
@@ -1332,7 +1351,9 @@ class MainProg(QtWidgets.QMainWindow):
         Remove all datums from datum model shown on network adjustment tab.
         :return:
         """
-        self.tab_adjust.datum_view.model().sourceModel().init_data([])
+        survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        survey.datums = []
+        self.tab_adjust.datum_view.model().init_data([])
         self.tab_adjust.datum_view.update()
         self.results_model.clearResults()
         self.clear_adjustment_text()
@@ -1874,6 +1895,13 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_menus()
 
     def update_SD_and_run_adjustment(self):
+        """
+        Only called after an initial adjustment is run.
+
+        Returns
+        -------
+
+        """
         obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         ao = copy.deepcopy(obstreesurvey.adjustment.adjustmentoptions)
         if ao.use_sigma_min:
@@ -1935,35 +1963,35 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotGravityChange(dates, table, parent)
         plt.show()
 
-    def set_adj_sd(self, survey, ao):
+    def set_adj_sd(self, survey, ao, loop=None):
         """
         Update delta table based on parameters in net. adj. options
         :param survey: For which to set delta-g sd
         :param ao: AdjustmentOptions object
         """
         for delta in survey.deltas:
-            # Column 7: minimum standard deviation
-            # ind = survey.delta_model.createIndex(i, 7)
-            # delta = survey.delta_model.data(ind, role=Qt.UserRole)
-            # FIXME: Is this correct? Seems odd for it to be called `delta`
-            # delta = delta.sd
+            try:
+                if loop==None or delta.loop == loop:
+                    delta.adj_sd = self.calc_adj_sd(ao, delta.sd)
+            except AttributeError:
+                pass
 
-            additive = 0
-            factor = 1
-            if ao.use_sigma_add:
-                additive = ao.sigma_add
-            if ao.use_sigma_prefactor:
-                factor = ao.sigma_prefactor
-            if ao.use_sigma_min:
-                sigma = max(ao.sigma_min, delta.sd * factor + additive)
-                if ao.use_sigma_postfactor:
-                    sigma *= ao.sigma_postfactor
-            else:
-                sigma = delta.sd * factor + additive
-            # survey.delta_model.setData(ind, sigma, role=Qt.EditRole)
-            delta.adj_sd = sigma
         self.update_adjust_tables()
 
+    def calc_adj_sd(self, ao, sd):
+        additive = 0
+        factor = 1
+        if ao.use_sigma_add:
+            additive = ao.sigma_add
+        if ao.use_sigma_prefactor:
+            factor = ao.sigma_prefactor
+        if ao.use_sigma_min:
+            sigma = max(ao.sigma_min, sd * factor + additive)
+            if ao.use_sigma_postfactor:
+                sigma *= ao.sigma_postfactor
+        else:
+            sigma = sd * factor + additive
+        return sigma
     def menu_import_abs_g_simple(self):
         """
         Slot for mnAdjImportAbsSimple
@@ -2007,11 +2035,13 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue('abs_g_path', os.path.dirname(fname))
             logging.info('Importing absolute gravity data from {}'.format(fname))
             datums = import_abs_g_complete(fname)
+            survey = self.obsTreeModel.itemFromIndex(
+                self.index_current_survey
+            )
+            survey.datums += datums
             for datum in datums:
-                self.obsTreeModel.itemFromIndex(
-                    self.index_current_survey
-                ).datum_model.insertRows(datum, 0)
                 logging.info('Datum imported: {}'.format(datum.__str__()))
+            self.update_adjust_tables()
             self.set_window_title_asterisk()
         else:
             return
@@ -2038,14 +2068,19 @@ class MainProg(QtWidgets.QMainWindow):
             self.abs_import_table_model = selectabsg.table_model
             self.settings.setValue('abs_g_path', selectabsg.path)
             if nds:
-                for nd in nds:
-                    new_delta = copy.deepcopy(nd)
-                    self.obsTreeModel.itemFromIndex(
+                survey = self.obsTreeModel.itemFromIndex(
                         self.index_current_survey
-                    ).datum_model.insertRows(new_delta, 0)
+                    )
+                survey.datums += nds
+                # for nd in nds:
+                #     new_delta = copy.deepcopy(nd)
+                #     self.obsTreeModel.itemFromIndex(
+                #         self.index_current_survey
+                #     ).datum_model.insertRows(new_delta, 0)
                 self.set_window_title_asterisk()
         else:
             self.abs_import_table_model = selectabsg.table_model
+        self.update_adjust_tables()
         self.update_menus()
 
     def write_metadata_text(self):
@@ -2435,7 +2470,9 @@ def main():
         else:
             ex.close()
     else:
-        sys.excepthook = except_hook2
+        # Some weirdness I added to try to get exception messages. Having trouble with GUI
+        # crashing with no message.
+        # sys.excepthook = except_hook2
         ex.showMaximized()
         app.processEvents()
         try:

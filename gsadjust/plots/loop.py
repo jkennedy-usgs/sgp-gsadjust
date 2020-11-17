@@ -27,7 +27,7 @@ from matplotlib.lines import Line2D
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import pyqtSlot
 
-# from ..threads import ThreadBase
+from ..threads import ThreadBase
 
 ############################################################################
 # Loop animation

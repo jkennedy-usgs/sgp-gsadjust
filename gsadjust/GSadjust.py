@@ -173,7 +173,7 @@ from .plots import (
     PlotDatumComparisonTimeSeries,
     PlotDgResidualHistogram,
     PlotGravityChange,
-    # PlotLoopAnimation,
+    PlotLoopAnimation,
     PlotNetworkGraph,
 )
 from .tides import tide_correction_agnew, tide_correction_meter
@@ -1585,6 +1585,7 @@ class MainProg(QtWidgets.QMainWindow):
             return
         self.divide_survey(loop_thresh)
         self.update_survey_drift_plots(self.obsTreeModel.itemFromIndex(self.index_current_survey))
+        self.activate_survey_or_loop(self.index_current_loop)
 
     def divide_by_height(self):
         """

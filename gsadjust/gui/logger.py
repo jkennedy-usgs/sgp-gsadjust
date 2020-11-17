@@ -10,7 +10,7 @@ from PyQt5.QtCore import QSize
 LEVEL_COLORS = {
     logging.DEBUG: QColor('grey'),
     logging.INFO: QColor('black'),
-    logging.WARNING: QColor('yellow'),
+    logging.WARNING: QColor('green'),
     logging.ERROR: QColor('red'),
 }
 

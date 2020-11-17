@@ -408,7 +408,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             if os.path.exists('..\\dist\\gravnet.exe'):
                 os.chdir('..\\dist')
                 dir_changed1 = True
-            if os.path.exists('.\\dist\\gravnet.exe'):
+            elif os.path.exists('.\\dist\\gravnet.exe'):
                 os.chdir('.\\dist')
                 dir_changed2 = True
             # not found at all: error
@@ -454,7 +454,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             if len(delta.sta1) > 6 or len(delta.sta2) > 6:
                 truncate_warning = True
         if truncate_warning:
-            MessageBox.warning(
+            MessageBox.information(
                 'Inversion warning',
                 'One or more station names is longer than 6 characters. Names will be truncated to 6 '
                 'characters in the Gravnet input file. Please verify that names will still be unique '
@@ -609,6 +609,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             os.chdir('..\\gsadjust')
         elif dir_changed2:
             os.chdir('..')
+        return True
 
     def start_numpy_inversion(self, output_root_dir, write_out_files='n'):
         """

@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pytest
-from PyQt5 import Qt, QtCore
+from PyQt5 import Qt, QtCore, QtWidgets
 
 import gsadjust
 from gsadjust.gui.dialogs import (
@@ -22,7 +22,7 @@ def test_gui(qtbot, monkeypatch):
     qtbot.wait(1000)
 
     # Open data
-    window.open_raw_data(r'.\test_BurrisData2.txt', 'Burris')
+    window.open_raw_data(r'.\tests\test_BurrisData2.txt', 'Burris')
     window.init_gui()
     assert window.obsTreeModel.rowCount() == 1
 
@@ -131,7 +131,16 @@ def test_gui(qtbot, monkeypatch):
     assert survey.rowCount() == 3
 
     window.menus.mnAdjGravnet.setChecked(True)
+
+    qtbot.wait(2000)
+
+    def on_timeout():
+        messagebox = QtWidgets.QApplication.activeWindow()
+        qtbot.keyClick(messagebox, QtCore.Qt.Key_Enter)
+
+    QtCore.QTimer.singleShot(3000, on_timeout)
     window.adjust_network()
+    # qtbot.keyClick(messagebox, QtCore.Qt.Key_Enter)
 
     window.menus.mnAdjPyLSQ.setChecked(True)
     window.adjust_network()
@@ -154,9 +163,11 @@ def test_gui(qtbot, monkeypatch):
 
     # Adjustment results should be different with some observations disabled
     assert abs(sd0 - sd1) > 0.01
-
+    QtCore.QTimer.singleShot(1000, on_timeout)
     success = window.workspace_save()
     assert success == True
+
+
 
     qtbot.wait(2000)
     window.workspace_clear(confirm=False)

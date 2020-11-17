@@ -93,6 +93,7 @@ class DeltaBase:
         adj_sd=777,
         cal_coeff=1,
         loop=None,
+        assigned_dg=None,
         **kwargs # discard
     ):
         self.station1 = sta1

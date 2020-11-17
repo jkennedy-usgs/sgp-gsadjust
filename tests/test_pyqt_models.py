@@ -1,15 +1,5 @@
-import pytest
-import pytestqt
-import gsadjust
-from gsadjust.GSadjust import init_cal_coeff_dict, init_station_coords_dict
 from gsadjust.obstree import ObsTreeSurvey, ObsTreeLoop, ObsTreeStation, ObsTreeModel
-from test_fixture_pyqt import (
-    channellist,
-    obstreesurvey,
-    list_of_deltas,
-    obstreemodel,
-    mainprog,
-)
+
 from PyQt5 import QtGui
 from utils import *
 

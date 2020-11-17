@@ -3,13 +3,6 @@ import gsadjust
 
 import pytest
 
-from test_fixture_pyqt import (
-    obstreesurvey,
-    obstreesurvey_with_results,
-    obstreemodel_with_results,
-    obstreemodel,
-)
-
 from gsadjust.file.write import export_metadata, export_data, export_summary
 
 

@@ -19,6 +19,7 @@ import time
 
 import matplotlib
 import numpy as np
+import logging
 from matplotlib.animation import TimedAnimation
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import num2date
@@ -102,7 +103,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
     def __init__(self, xlim, ylim, n):
         n_head = 10
         self.addedY, self.addedX = [], []
-        logging.debug('Matplotlib Version:', matplotlib.__version__)
+        logging.debug('Matplotlib Version:' + matplotlib.__version__)
         self.xlim, self.ylim = xlim, ylim
         # The data
         self.n = np.linspace(0, n - 1, n)

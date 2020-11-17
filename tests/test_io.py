@@ -11,8 +11,8 @@ from gsadjust.GSadjust import import_abs_g_complete, import_abs_g_simple
 
 def test_readfile_exceptions():
     bad_filename = './test_doesnotexist.txt'
-    bad_indexdata_filename = './test_badindex_BurrisData.txt'
-    bad_valuedata_filename = './test_badvalue_BurrisData.txt'
+    bad_indexdata_filename = './tests/test_badindex_BurrisData.txt'
+    bad_valuedata_filename = './tests/test_badvalue_BurrisData.txt'
     meter_type = 'Burris'
     with pytest.raises(IOError) as excinfo:
         data = gsadjust.GSadjust.MainProg.read_raw_data_file(bad_filename, meter_type)
@@ -23,7 +23,7 @@ def test_readfile_exceptions():
 
 
 def test_read_Burris():
-    filename = './test_BurrisData.txt'
+    filename = './tests/test_BurrisData.txt'
     meter_type = 'Burris'
     data = gsadjust.GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     assert len(data.dial) == 497
@@ -39,7 +39,7 @@ def test_read_Burris():
 
 
 def test_read_ScintrexCG6():
-    filename = './test_ScintrexCG5Data.txt'
+    filename = './tests/test_ScintrexCG5Data.txt'
     meter_type = 'CG5'
     data = gsadjust.GSadjust.MainProg.read_raw_data_file(filename, meter_type)
     first_station = '1'
@@ -56,7 +56,7 @@ def test_read_ScintrexCG6():
 
 
 def testreadabsgcomplete():
-    filename = './test_Absg_complete.txt'
+    filename = './tests/test_Absg_complete.txt'
     datums = import_abs_g_complete(filename)
     assert type(datums) == list
     assert len(datums) == 5
@@ -66,7 +66,7 @@ def testreadabsgcomplete():
 
 
 def test_importabsgsimple():
-    filename = './test_Absg_simple.txt'
+    filename = './tests/test_Absg_simple.txt'
     datums = import_abs_g_simple(filename)
     assert type(datums) == list
     assert len(datums) == 5

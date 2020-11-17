@@ -1,24 +1,17 @@
-import pytest
-import pytestqt
 import os
 from PyQt5 import QtCore
-import numpy as np
-import gsadjust
-from test_fixture_pyqt import mainprog
 
-from gsadjust.data.analysis import compute_gravity_change
 from gsadjust.gui.dialogs import (
-    CoordinatesTable,
-    AdjustOptions,
-    SelectAbsg,
     DialogApplyTimeCorrection,
     DialogOverwrite,
-    DialogMeterType,
-    DialogLoopProperties,
-    GravityChangeTable,
-    GravityChangeMap,
     LoopTimeThresholdDialog,
+    SelectAbsg,
+    CoordinatesTable,
+    AdjustOptions,
+    DialogLoopProperties,
+    DialogMeterType,
 )
+
 from gsadjust.plots import PlotGravityChange
 
 # def test_GravityChangeMap(qtbot):
@@ -26,41 +19,41 @@ from gsadjust.plots import PlotGravityChange
 #     gravity_change_map = GravityChangeMap(table, header, coords, full_table, full_header)
 
 
-def test_PlotGravityChangeAndMap(qtbot, mainprog):
-    mainprog.workspace_clear()
-    mainprog.workspace_open_json(os.path.join('test_data', 'complete_example2.gsa'))
-    mainprog.adjust_network()
-    data = compute_gravity_change(mainprog.obsTreeModel)
-    change_table = GravityChangeTable(mainprog, data=data)
-    change_plot = PlotGravityChange(change_table.dates, change_table.table)
-    assert change_plot.figure is not None
-    assert len(change_plot.figure.axes[0].get_children()[0].get_xdata()) == 2
-    assert (
-        np.abs(change_plot.figure.axes[0].get_children()[0].get_ydata()[1] + 6.8) < 0.01
-    )
-
-    win = GravityChangeMap(
-        change_table.table,
-        change_table.header,
-        change_table.coords,
-        change_table.full_table,
-        change_table.full_header,
-    )
-    assert win.points.get_offsets().min() == -106.6763032
-    assert win.points.get_array().min() == -12.6
-    assert len(win.drpReference) == 2
-    win.btnReference.click()
-    win.plot()
-    # TODO: This test problem only was two surveys, i.e., 1 increment of gravity change. Can only do minimal testing,
-    #  can't test trend.
-    assert win.points.get_array().min() == 0
-    win.update_plot()
-    win.drpReference.setCurrentIndex(1)
-    win.plot()
-    assert np.abs(win.points.get_array().min() + 12.6) < 0.01
-    win.btnTrend.click()
-    win.plot()
-    assert len(win.points.get_array()) == 35
+# def test_PlotGravityChangeAndMap(qtbot, mainprog):
+#     mainprog.workspace_clear()
+#     mainprog.workspace_open_json(os.path.join('test_data', 'complete_example2.gsa'))
+#     mainprog.adjust_network()
+#     data = compute_gravity_change(mainprog.obsTreeModel)
+#     change_table = GravityChangeTable(mainprog, data=data)
+#     change_plot = PlotGravityChange(change_table.dates, change_table.table)
+#     assert change_plot.figure is not None
+#     assert len(change_plot.figure.axes[0].get_children()[0].get_xdata()) == 2
+#     assert (
+#         np.abs(change_plot.figure.axes[0].get_children()[0].get_ydata()[1] + 6.8) < 0.01
+#     )
+#
+#     win = GravityChangeMap(
+#         change_table.table,
+#         change_table.header,
+#         change_table.coords,
+#         change_table.full_table,
+#         change_table.full_header,
+#     )
+#     assert win.points.get_offsets().min() == -106.6763032
+#     assert win.points.get_array().min() == -12.6
+#     assert len(win.drpReference) == 2
+#     win.btnReference.click()
+#     win.plot()
+#     # TODO: This test problem only was two surveys, i.e., 1 increment of gravity change. Can only do minimal testing,
+#     #  can't test trend.
+#     assert win.points.get_array().min() == 0
+#     win.update_plot()
+#     win.drpReference.setCurrentIndex(1)
+#     win.plot()
+#     assert np.abs(win.points.get_array().min() + 12.6) < 0.01
+#     win.btnTrend.click()
+#     win.plot()
+#     assert len(win.points.get_array()) == 35
 
 
 def test_LoopTimeThresholdDialog(qtbot):
@@ -73,14 +66,13 @@ def test_LoopTimeThresholdDialog(qtbot):
     result = time_threshold_dialog.exec_()
     assert time_threshold_dialog.dt_edit.dateTime().time().hour() == 8
 
-
 def test_ApplyTimeCorrection(qtbot):
     time_correction_dialog = DialogApplyTimeCorrection()
 
     def on_timeout():
         qtbot.keyClick(time_correction_dialog.msg, QtCore.Qt.Key_Enter)
 
-    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(2000, on_timeout)
     time_correction_dialog.msg.exec_()
     correction_type = time_correction_dialog.time_correction_type
     assert correction_type == 'station'
@@ -96,7 +88,6 @@ def test_ApplyTimeCorrection(qtbot):
     time_correction_dialog.msg.exec_()
     correction_type = time_correction_dialog.time_correction_type
     assert correction_type == 'survey'
-
 
 def test_Overwrite(qtbot):
     overwrite_dialog = DialogOverwrite()
@@ -117,14 +108,13 @@ def test_Overwrite(qtbot):
     result = overwrite_dialog.exec_()
     assert result == 1
 
-
 def test_meter_type(qtbot, mainprog):
     meter_dialog = DialogMeterType()
 
     def on_timeout():
         qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter)
 
-    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(1500, on_timeout)
     meter_dialog.exec_()
     assert meter_dialog.meter_type == 'CG5'
     meter_dialog = DialogMeterType()
@@ -134,10 +124,10 @@ def test_meter_type(qtbot, mainprog):
         qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Tab, delay=50)
         qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter, delay=50)
 
-    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(1500, on_timeout)
     meter_dialog.exec_()
     assert meter_dialog.meter_type == 'CG6Tsoft'
-
+    qtbot.wait(1000)
 
 def test_loop_options(qtbot, mainprog):
     loops = [mainprog.obsTreeModel.invisibleRootItem().child(0).child(0)]
@@ -159,10 +149,9 @@ def test_loop_options(qtbot, mainprog):
             obstreestation.meter = [options_dialog.meter_edit.text()] * len(obstreestation.meter)
             obstreestation.oper = [options_dialog.operator_edit.text()] * len(obstreestation.oper)
 
-    assert loop.oper == 'USGS'
+    assert loop.oper == 'abc'
     assert loop.comment == 'USGS'
     assert loop.meter == 'B44'
-
 
 def test_coordinates_dialog(qtbot):
     coords = dict()
@@ -189,7 +178,6 @@ def test_coordinates_dialog(qtbot):
     assert ct.sys_clip.text()[0:10] == '1\t40.0\t-10'
     ct.close()
 
-
 def test_adjustmentoptions_dialog(qtbot, mainprog):
     obstreesurvey = mainprog.obsTreeModel.invisibleRootItem().child(0)
     ao = AdjustOptions(
@@ -207,9 +195,8 @@ def test_adjustmentoptions_dialog(qtbot, mainprog):
     assert ao.sigma_prefactor_edit.text() == "1.0"
     ao.apply_current()
 
-
-def test_selectabsg():
-    sa = SelectAbsg('./test_data/field/Absolute/')
+def test_selectabsg(qtbot, mainprog):
+    sa = SelectAbsg(os.path.join('test_data','field','Absolute'), parent=mainprog)
     sa.show()
     sa.load_button.click()
     assert (
@@ -222,4 +209,3 @@ def test_selectabsg():
         == 2
     )
     sa.export_and_close()
-    assert len(sa.new_datums) == 1

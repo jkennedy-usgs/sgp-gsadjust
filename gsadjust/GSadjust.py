@@ -232,7 +232,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         # Set up logging to use custom widget (no parent, so window).
         self.logview = LoggerWidget()
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.INFO)
         logging.getLogger().addHandler(self.logview.handler)
         logging.info("Logger initialized.")
 
@@ -749,7 +749,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         logging.info(f"Workspace saved: {fname}.")
         MessageBox.information(
-            'GSadjust'
+            'GSadjust',
             'Workspace saved',
         )
         self.set_window_title(fname)
@@ -1115,6 +1115,10 @@ class MainProg(QtWidgets.QMainWindow):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
         if survey:
+            self.delta_model.init_data(survey.deltas)
+            self.datum_model.init_data(survey.datums)
+            self.results_model.init_data(survey.results)
+
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
                 stats_model.setColumnCount(2)
@@ -2450,7 +2454,7 @@ def main():
 
     # Needed to show icon in Windows Taskbar (?)
     import ctypes
-    myappid = u'mycompany.myproduct.subproduct.version'  # arbitrary string
+    myappid = u'usgs.sgp.gsadjust.1.0'  # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     # start log file

@@ -62,7 +62,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         deltas = self.survey.deltas
         if len(deltas) == 0:
             MessageBox.warning(
-                'Plot error'
+                'Plot error',
                 'Delta table is empty. Unable to plot network graph',
             )
         else:

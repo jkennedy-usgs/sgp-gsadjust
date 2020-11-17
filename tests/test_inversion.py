@@ -1,7 +1,6 @@
 import sys, os
 
 import pytest
-from test_fixture_pyqt import obstreesurvey
 
 
 def test_numpy_inversion(obstreesurvey):

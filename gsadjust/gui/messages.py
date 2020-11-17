@@ -31,7 +31,7 @@ class MessageBox:
     @staticmethod
     def critical(title, message, **kwargs):
         logging.exception('%s: %s', title, message, exc_info=True)
-        return QMessageBox.critical(None, message, **kwargs)
+        return QMessageBox.critical(None, title, message, **kwargs)
 
     @staticmethod
     def information(title, message, **kwargs):
@@ -47,6 +47,6 @@ class MessageBox:
 
     @staticmethod
     def warning(title, message, **kwargs):
-        logging.warn('%s: %s', title, message, exc_info=True)
+        logging.warning('%s: %s', title, message, exc_info=True)
         return QMessageBox.warning(None, title, message, **kwargs)
 

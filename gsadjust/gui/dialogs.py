@@ -53,7 +53,7 @@ class CoordinatesTable(QtWidgets.QDialog):
     def __init__(self, coords):
         super(CoordinatesTable, self).__init__()
         vlayout = QtWidgets.QVBoxLayout()
-
+        self.sys_clip = QtWidgets.QApplication.clipboard()
         self.setWindowModality(QtCore.Qt.ApplicationModal)
         self.setWindowTitle('Station coordinates')
 
@@ -1204,8 +1204,8 @@ class SelectAbsg(QtWidgets.QDialog):
     can select the files to import as Datums.
     """
 
-    def __init__(self, path, datum_table_model=None):
-        super(SelectAbsg, self).__init__()
+    def __init__(self, path, datum_table_model=None, parent=None):
+        super(SelectAbsg, self).__init__(parent)
         self.title = 'Select directory with Abs. g files (.project.txt)'
         self.left = 100
         self.top = 100

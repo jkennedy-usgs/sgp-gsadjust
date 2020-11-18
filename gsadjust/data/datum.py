@@ -32,14 +32,7 @@ class Datum:
     """
 
     def __init__(
-        self,
-        station,
-        g=50000,
-        sd=5,
-        date='1/1/2000',
-        gradient=-3.0,
-        meas_height=0,
-        checked=2,
+        self, station, g=50000, sd=5, date='1/1/2000', gradient=-3.0, meas_height=0, checked=2,
     ):
         self.station = station
         self.g = g
@@ -59,6 +52,4 @@ class Datum:
             in_use = '1'
         else:
             in_use = '0'
-        return '{} {} {} {:.2f} {:.2f} {:.2f}'.format(
-            in_use, self.station, self.date, self.g, self.sd, self.residual
-        )
+        return f'{in_use} {self.station} {self.date} {self.g:.2f} {self.sd:.2f} {self.residual:.2f}'

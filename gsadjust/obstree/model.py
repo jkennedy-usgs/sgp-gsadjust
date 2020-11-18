@@ -25,6 +25,7 @@ resulting from the authorized or unauthorized use of the software.
 import datetime as dt
 import json
 import logging
+import os
 
 import jsons
 from matplotlib.dates import date2num
@@ -66,12 +67,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def flags(self, QModelIndex):
         if not QModelIndex.isValid():
             return Qt.NoItemFlags
-        return (
-            Qt.ItemIsEnabled
-            | Qt.ItemIsSelectable
-            | Qt.ItemIsEditable
-            | Qt.ItemIsUserCheckable
-        )
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
 
     def data(self, index, role=Qt.DisplayRole):
         if index.model() is not None:
@@ -84,9 +80,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index)
                 try:  # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
                     # after deleting a survey
-                    fn, *args = m.display_column_map.get(
-                        column, (format_numeric_column, column)
-                    )
+                    fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
                     return fn(*args)
                 except AttributeError:
                     return ''
@@ -147,9 +141,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     item.station[i] = new_name
 
             logging.info(
-                'Stations renamed from {} to {} in {}'.format(
-                    old_name, new_name, rename_type
-                )
+                'Stations renamed from {} to {} in {}'.format(old_name, new_name, rename_type)
             )
             self.signal_name_changed.emit()
         return True
@@ -245,18 +237,12 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     ):  # Sometimes blank stations are generated, not sure why?
                         temp_station = tempStation(station)
                         obstreestation = ObsTreeStation(
-                            temp_station,
-                            temp_station.station_name,
-                            temp_station.station_count,
+                            temp_station, temp_station.station_name, temp_station.station_count,
                         )
                         if type(obstreestation.t[0]) == dt.datetime:
                             obstreestation.t = [date2num(i) for i in obstreestation.t]
                         obstreeloop.appendRow(
-                            [
-                                obstreestation,
-                                QtGui.QStandardItem('0'),
-                                QtGui.QStandardItem('0'),
-                            ]
+                            [obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0'),]
                         )
                 # stations is provided by loop.stations(), it doesn't need to be stored separately in the ObsTreeLoop
                 # object
@@ -312,7 +298,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurvey = self.itemFromIndex(self.index(i, 0))
             surveys.append(obstreesurvey)
         workspace_data = [surveys, self.station_coords]
-        if fname[-4:] != '.gsa':
+        _, ext = os.path.splitext(fname)
+        if ext != '.gsa':
             fname += '.gsa'
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)

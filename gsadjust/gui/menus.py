@@ -571,11 +571,6 @@ class Menus:
             slot=self.mainProg.show_cal_coeff,
             enabled=False,
         )
-        self.mnToolsLOO = self.create_action(
-            "Adjusted vs. observed datum...",
-            slot=self.mainProg.adjusted_vs_observed_datum_analysis,
-            enabled=False,
-        )
 
         self.add_actions(
             self.mnTools,

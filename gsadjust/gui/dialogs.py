@@ -27,11 +27,12 @@ import os
 
 import matplotlib
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
-
 # import matplotlib.pyplot as plt
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -55,7 +56,7 @@ class CoordinatesTable(QtWidgets.QDialog):
         vlayout = QtWidgets.QVBoxLayout()
         self.sys_clip = QtWidgets.QApplication.clipboard()
         self.setWindowModality(QtCore.Qt.ApplicationModal)
-        self.setWindowTitle("Station coordinates")
+        self.setWindowTitle('Station coordinates')
 
         ok_button = QtWidgets.QPushButton("Ok")
         ok_button.clicked.connect(self.accept)
@@ -75,7 +76,7 @@ class CoordinatesTable(QtWidgets.QDialog):
         vlayout.addWidget(self.table)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
-            ["Station", "Latitude", "Longitude", "Elevation"]
+            ['Station', 'Latitude', 'Longitude', 'Elevation']
         )
         for k, v in coords.items():
             row = self.table.rowCount()
@@ -110,13 +111,13 @@ class CoordinatesTable(QtWidgets.QDialog):
         if e.modifiers() & QtCore.Qt.ControlModifier:
             selected = self.table.selectedRanges()
             if e.key() == QtCore.Qt.Key_C:  # copy
-                s = ""
+                s = ''
                 for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
-                    row_text = ""
+                    row_text = ''
                     for c in range(self.table.columnCount()):
-                        row_text += self.table.item(r, c).text() + "\t"
+                        row_text += self.table.item(r, c).text() + '\t'
                     rt = row_text[:-1]  # Remove trailing \t
-                    rt += "\n"
+                    rt += '\n'
                     s += rt
                 clipboard = QtWidgets.QApplication.clipboard()
                 clipboard.setText(s)
@@ -124,10 +125,10 @@ class CoordinatesTable(QtWidgets.QDialog):
             if e.key() == QtCore.Qt.Key_V:
                 clipboard = QtWidgets.QApplication.clipboard()
                 s = clipboard.text()
-                rows = s.split("\n")
+                rows = s.split('\n')
                 for idx, r in enumerate(rows):
-                    if r != "":
-                        elems = r.split("\t")
+                    if r != '':
+                        elems = r.split('\t')
                         table_item_station = QtWidgets.QTableWidgetItem(elems[0])
                         table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
                         table_item_long = QtWidgets.QTableWidgetItem(elems[2])
@@ -157,14 +158,14 @@ class DialogLoopProperties(QtWidgets.QDialog):
         super(DialogLoopProperties, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
         self.loops = loops
-        self.setWindowTitle("Loop properties")
+        self.setWindowTitle('Loop properties')
         self.init_ui()
 
     def init_ui(self):
         # create buttons and actions
-        self.cancel_button = QtWidgets.QPushButton("Cancel")
+        self.cancel_button = QtWidgets.QPushButton('Cancel')
         self.cancel_button.clicked.connect(self.close)
-        self.ok_button = QtWidgets.QPushButton("OK")
+        self.ok_button = QtWidgets.QPushButton('OK')
         self.ok_button.clicked.connect(self.set_loop_options)
 
         button_box = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
@@ -1410,8 +1411,8 @@ class ShowCalCoeffs(QtWidgets.QDialog):
                 cal_model.appendRow(
                     [
                         QtGui.QStandardItem(row[0]),
-                        QtGui.QStandardItem("{:.6f}".format(row[1])),
-                        QtGui.QStandardItem("{:.6f}".format(row[2])),
+                        QtGui.QStandardItem(f"{row[1]:.6f}"),
+                        QtGui.QStandardItem(f"{row[2]:.6f}"),
                     ]
                 )
                 h += 30

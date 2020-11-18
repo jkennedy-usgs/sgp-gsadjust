@@ -167,17 +167,12 @@ class Adjustment:
                 if self.adjustmentoptions.cal_coeff:
                     for k, v in self.adjustmentresults.cal_dic.items():
                         text_out.append(
-                            "Calibration coefficient for meter {}: {:.6f} +/- {:.6f}".format(
-                                k, v[0], v[1]
-                            )
+                            f"Calibration coefficient for meter {k}: {v[0]:.6f} +/- {v[1]:.6f}"
                         )
                 elif self.adjustmentoptions.specify_cal_coeff:
-                    for k, v in self.adjustmentoptions.meter_cal_dict.items():
-                        text_out.append(
-                            "Specified calibration coefficient for meter {}: {:.6f}".format(
-                                k, v
-                            )
-                        )
+                    for k, v in self.adjustmentresults.meter_cal_dict.items():
+                        text_out.append(f"Specified calibration coefficient for meter {k}: {v:.6f}")
+
                 if self.netadj_loop_keys:
                     text_out.append("Network adjustment drift coefficient(s):")
                     for loop in self.netadj_loop_keys.items():
@@ -185,20 +180,14 @@ class Adjustment:
                         text_out.append("Loop " + loop[0] + ": ")
                         for i in range(loop[1][1]):
                             # degree of polynomial
-                            degree = self.X[
-                                len(self.sta_dic_ls) + self.n_meters + loop[1][0] + i
-                            ][0]
+                            degree = self.X[len(self.sta_dic_ls) + self.n_meters + loop[1][0] + i][
+                                0
+                            ]
                             if degree == 1:
-                                text_out.append(
-                                    "Drift coefficient, degree {}: {:.3f}".format(
-                                        i + 1, degree
-                                    )
-                                )
+                                text_out.append(f"Drift coefficient, degree {i + 1}: {degree:.3f}")
                             else:
                                 text_out.append(
-                                    "Drift coefficient, degree {}: {:.3f} (µGal/day)".format(
-                                        i + 1, degree
-                                    )
+                                    f"Drift coefficient, degree { i + 1}: {degree:.3f} (µGal/day)"
                                 )
                 return text_out
         except (AttributeError, TypeError):

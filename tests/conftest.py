@@ -1,9 +1,8 @@
 import sys, os
 
 code_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, code_path + '..')
+sys.path.insert(0, os.path.join(code_path,'..'))
 sys.path.insert(0, code_path)
-os.chdir('..')
 
 import pytest
 import gsadjust

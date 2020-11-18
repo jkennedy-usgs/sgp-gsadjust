@@ -62,7 +62,7 @@ def test_LoopTimeThresholdDialog(qtbot):
     def on_timeout():
         qtbot.keyClick(time_threshold_dialog, QtCore.Qt.Key_Enter)
 
-    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(2000, on_timeout)
     result = time_threshold_dialog.exec_()
     assert time_threshold_dialog.dt_edit.dateTime().time().hour() == 8
 
@@ -72,11 +72,11 @@ def test_ApplyTimeCorrection(qtbot):
     def on_timeout():
         qtbot.keyClick(time_correction_dialog.msg, QtCore.Qt.Key_Enter)
 
-    QtCore.QTimer.singleShot(2000, on_timeout)
+    QtCore.QTimer.singleShot(1000, on_timeout)
     time_correction_dialog.msg.exec_()
     correction_type = time_correction_dialog.time_correction_type
     assert correction_type == 'station'
-
+    qtbot.wait(500)
     time_correction_dialog = DialogApplyTimeCorrection()
 
     def on_timeout():
@@ -95,7 +95,7 @@ def test_Overwrite(qtbot):
     def on_timeout():
         qtbot.keyClick(overwrite_dialog, QtCore.Qt.Key_Enter)
 
-    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(1500, on_timeout)
     result = overwrite_dialog.exec_()
     assert result == 0
     overwrite_dialog = DialogOverwrite()
@@ -104,7 +104,7 @@ def test_Overwrite(qtbot):
         qtbot.keyClick(overwrite_dialog, QtCore.Qt.Key_Tab, delay=50)
         qtbot.keyClick(overwrite_dialog, QtCore.Qt.Key_Enter, delay=50)
 
-    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(1500, on_timeout)
     result = overwrite_dialog.exec_()
     assert result == 1
 

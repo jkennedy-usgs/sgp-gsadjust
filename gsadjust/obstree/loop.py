@@ -21,6 +21,7 @@ resulting from the authorized or unauthorized use of the software.
 
 
 import logging
+from collections import defaultdict
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
@@ -96,10 +97,7 @@ class ObsTreeLoop(ObsTreeItemBase):
                 'Drift method: {}, '
                 'Meter type: {}, '
                 'Netadj method: {}\n'.format(
-                    self.name,
-                    self.drift_method,
-                    self.meter_type,
-                    self.drift_netadj_method,
+                    self.name, self.drift_method, self.meter_type, self.drift_netadj_method,
                 )
             )
 
@@ -167,9 +165,7 @@ class ObsTreeLoop(ObsTreeItemBase):
 
         for tare_dict in data['tares']:
             tare_object = Tare(
-                tare_dict['datetime'].date(),
-                tare_dict['datetime'].time(),
-                tare_dict['tare'],
+                tare_dict['datetime'].date(), tare_dict['datetime'].time(), tare_dict['tare'],
             )
             temp.tare.insert(0, tare_object)
         if 'checked' in data:
@@ -196,16 +192,15 @@ class ObsTreeLoop(ObsTreeItemBase):
         """
         prev_sta = data.station[0]
         ind_start = 0
-        station_count_dic = dict()
+
+        # Default dict, will default entries to zero when accessed.
+        station_count_dic = defaultdict(int)
 
         # loop over samples:
         for i in range(len(data.station)):
             curr_sta = data.station[i]
             if curr_sta != prev_sta:
-                if prev_sta not in station_count_dic.keys():
-                    station_count_dic[prev_sta] = 1
-                else:
-                    station_count_dic[prev_sta] += 1
+                station_count_dic[prev_sta] += 1
                 ind_end = i - 1
                 # create a new ChannelList object:
                 temp_sta = data.extract_subset_idx(ind_start, ind_end)
@@ -213,20 +208,13 @@ class ObsTreeLoop(ObsTreeItemBase):
                     temp_sta, prev_sta, str(station_count_dic[prev_sta])
                 )
                 obstreestation.meter_type = data.meter_type
-                logging.info(
-                    'Station added: ' + prev_sta + str(station_count_dic[prev_sta])
-                )
+                logging.info('Station added: ' + prev_sta + str(station_count_dic[prev_sta]))
                 ind_start = i
-                self.appendRow(
-                    [obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
-                )
+                self.appendRow([obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
             if i == len(data.station) - 1:
                 # enter last data line
                 ind_end = i
-                if curr_sta not in station_count_dic.keys():
-                    station_count_dic[curr_sta] = 1
-                else:
-                    station_count_dic[curr_sta] += 1
+                station_count_dic[prev_sta] += 1
 
                 # create a new Loop-type object:
                 temp_sta = data.extract_subset_idx(ind_start, ind_end)
@@ -235,15 +223,9 @@ class ObsTreeLoop(ObsTreeItemBase):
                 )
                 obstreestation.meter_type = data.meter_type
                 logging.info(
-                    'Station added: '
-                    + curr_sta
-                    + '('
-                    + str(station_count_dic[curr_sta])
-                    + ')'
+                    'Station added: ' + curr_sta + '(' + str(station_count_dic[curr_sta]) + ')'
                 )
-                self.appendRow(
-                    [obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
-                )
+                self.appendRow([obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
             prev_sta = curr_sta
 
     def get_data_for_plot(self):

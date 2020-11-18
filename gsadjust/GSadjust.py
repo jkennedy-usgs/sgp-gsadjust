@@ -777,7 +777,9 @@ class MainProg(QtWidgets.QMainWindow):
         )
         if not fname:
             return
-        elif fname[-4:] != '.gsa':
+
+        _, ext = os.path.splitext(fname)
+        if ext != '.gsa':
             self.msg = show_message(
                 'Saved workspaces should have a .gsa extension. '
                 'Please use "Open raw...data" to load a data file',

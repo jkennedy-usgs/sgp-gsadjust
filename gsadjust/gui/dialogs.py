@@ -27,11 +27,12 @@ import os
 
 import matplotlib
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
-
 # import matplotlib.pyplot as plt
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -41,7 +42,8 @@ from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
 from .messages import show_message
 from .utils import copy_cells_to_clipboard
-from .widgets import  IncrMinuteTimeEdit
+from .widgets import IncrMinuteTimeEdit
+
 
 class CoordinatesTable(QtWidgets.QDialog):
     """
@@ -1416,8 +1418,8 @@ class ShowCalCoeffs(QtWidgets.QDialog):
                 cal_model.appendRow(
                     [
                         QtGui.QStandardItem(row[0]),
-                        QtGui.QStandardItem("{:.6f}".format(row[1])),
-                        QtGui.QStandardItem("{:.6f}".format(row[2])),
+                        QtGui.QStandardItem(f"{row[1]:.6f}"),
+                        QtGui.QStandardItem(f"{row[2]:.6f}"),
                     ]
                 )
                 h += 30

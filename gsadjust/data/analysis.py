@@ -31,9 +31,11 @@ class InversionError(Exception):
     pass
 
 
-def numpy_inversion(
-    adjustment, results, output_root_dir, write_out_files='n', survey_name='test'
-):
+def _equal_or_truncated(a, b):
+    return a == b or a[:6] == b
+
+
+def numpy_inversion(adjustment, results, output_root_dir, write_out_files='n', survey_name='test'):
     """
     Least-squares network adjustment using numpy
 
@@ -108,13 +110,9 @@ def numpy_inversion(
             if loop_name:
                 if loop_ls_dict[loop_name] == 'netadj':
                     for i in range(delta.ls_drift[1]):  # degree of polynomial
-                        A[
-                            row,
-                            len(sta_dic_ls)
-                            + n_meters
-                            + netadj_loop_keys[loop_name][0]
-                            + i,
-                        ] = (delta.sta2_t - delta.sta1_t) ** (i + 1)
+                        A[row, len(sta_dic_ls) + n_meters + netadj_loop_keys[loop_name][0] + i,] = (
+                            delta.sta2_t - delta.sta1_t
+                        ) ** (i + 1)
 
         S[sta_dic_ls[delta.sta1]] = 1
         S[sta_dic_ls[delta.sta2]] = 1
@@ -236,10 +234,10 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
             g_header = []
             # station_coords can not exist during testing, maybe other times also?
             try:
-                coords = obstreemodel.station_coords[station]
-                lon.append("{:.5f}".format(coords[0]))
-                lat.append("{:.5f}".format(coords[1]))
-                elev.append("{:.5f}".format(coords[2]))
+                lonc, latc, elevc = obstreemodel.station_coords[station]
+                lon.append(f"{lonc:.5f}")
+                lat.append(f"{latc:.5f}")
+                elev.append(f"{elevc:.5f}")
             except TypeError:
                 lat.append(-999)
                 lon.append(-999)
@@ -277,13 +275,14 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
             first = False
         else:
             if table_type == 'simple':
-                header1.append('{}_to_{}'.format(iteration_name, survey.name))
-                header2.append('{}_to_{}'.format(reference_name, survey.name))
+                header1.append(f'{iteration_name}_to_{survey.name}')
+                header2.append(f'{reference_name}_to_{survey.name}')
+
             elif table_type == 'full':
-                header1.append('dH2O_{}_to_{}'.format(iteration_name, survey.name))
-                header1.append('dH2O_sd_{}_to_{}'.format(iteration_name, survey.name))
-                header2.append('dH2O_{}_to_{}'.format(reference_name, survey.name))
-                header2.append('dH2O_sd_{}_to_{}'.format(reference_name, survey.name))
+                header1.append(f'dH2O_{iteration_name}_to_{survey.name}')
+                header1.append(f'dH2O_sd_{iteration_name}_to_{survey.name}')
+                header2.append(f'dH2O_{reference_name}_to_{survey.name}')
+                header2.append(f'dH2O_sd_{reference_name}_to_{survey.name}')
 
             compare_survey = survey.results
             for station_name in unique_station_names:
@@ -292,10 +291,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                     initial_station = initial_survey[ii]
                     # Iterate through, look for matching station. 'if' statements deal with Gravnet, which truncates
                     # station names to 6 characters
-                    if (
-                        initial_station.station == station_name
-                        or initial_station.station[:6] == station_name
-                    ):
+                    if _equal_or_truncated(initial_station.station, station_name):
                         break
                 else:
                     # If we get to the end without breaking, set it to None.
@@ -305,10 +301,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                     iteration_station = iteration_reference.data(
                         iteration_reference.index(ii, 0), role=256
                     )  # 256=Qt.UserRole
-                    if (
-                        iteration_station.station == station_name
-                        or iteration_station.station[:6] == station_name
-                    ):
+                    if _equal_or_truncated(iteration_station.station, station_name):
                         break
 
                 else:
@@ -320,10 +313,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                         compare_survey.index(ii, 0), role=256
                     )  # 256=Qt.UserRole
 
-                    if (
-                        compare_station.station == station_name
-                        or compare_station.station[:6] == station_name
-                    ):
+                    if _equal_or_truncated(compare_station.station, station_name):
                         break
                 else:
                     # If we get to the end without breaking, set it to None.
@@ -336,14 +326,9 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                         )
                     elif table_type == 'full':
                         diff_cumulative.append(
-                            "{:0.2f}".format(
-                                (compare_station.g - initial_station.g) / 41.9
-                            )
+                            "{:0.2f}".format((compare_station.g - initial_station.g) / 41.9)
                         )
-                        var = (
-                            np.sqrt(compare_station.sd ** 2 + initial_station.sd ** 2)
-                            / 41.9
-                        )
+                        var = np.sqrt(compare_station.sd ** 2 + initial_station.sd ** 2) / 41.9
                         if np.isnan(var):
                             diff_cumulative_sd.append('-999')
                         else:
@@ -359,14 +344,9 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                         )
                     elif table_type == 'full':
                         diff_iteration.append(
-                            "{:0.2f}".format(
-                                (compare_station.g - iteration_station.g) / 41.9
-                            )
+                            "{:0.2f}".format((compare_station.g - iteration_station.g) / 41.9)
                         )
-                        var = (
-                            np.sqrt(compare_station.sd ** 2 + iteration_station.sd ** 2)
-                            / 41.9
-                        )
+                        var = np.sqrt(compare_station.sd ** 2 + iteration_station.sd ** 2) / 41.9
                         if np.isnan(var):
                             diff_iteration_sd.append('-999')
                         else:
@@ -382,9 +362,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                 out_table_cumulative.append(diff_cumulative_sd)
             iteration_reference = compare_survey
             iteration_name = survey.name
-    out_table = (
-        [list(unique_station_names)] + out_table_iteration + out_table_cumulative
-    )
+    out_table = [list(unique_station_names)] + out_table_iteration + out_table_cumulative
 
     if table_type == 'simple':
         # deal with 2-survey case
@@ -402,16 +380,11 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
         table += g
         # deal with 2-survey case
         if header1 == header2:
-            header = (
-                ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1
-            )
+            header = ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1
             table += out_table_iteration
         else:
             header = (
-                ['Station', 'Latitude', 'Longitude', 'Elevation']
-                + g_header
-                + header1
-                + header2
+                ['Station', 'Latitude', 'Longitude', 'Elevation'] + g_header + header1 + header2
             )
             table += out_table_iteration
             table += out_table_cumulative
@@ -460,9 +433,7 @@ def adjusted_vs_observed_datum_analysis(self):
                 idx = obstreesurvey.datum_model.index(ii, 0)
                 datum = obstreesurvey.datum_model.data(idx, role=Qt.UserRole)
                 if datum.station == station:
-                    checkstate = obstreesurvey.datum_model.data(
-                        idx, role=Qt.CheckStateRole
-                    )
+                    checkstate = obstreesurvey.datum_model.data(idx, role=Qt.CheckStateRole)
                     obstreesurvey.datum_model.setData(idx, 0, Qt.CheckStateRole)
                     if self.menus.mnAdjPyLSQ.isChecked():
                         adj_type = 'PyLSQ'
@@ -470,9 +441,7 @@ def adjusted_vs_observed_datum_analysis(self):
                         adj_type = 'Gravnet'
                     obstreesurvey.run_inversion(adj_type)
                     # Restore check state
-                    obstreesurvey.datum_model.setData(
-                        idx, checkstate, Qt.CheckStateRole
-                    )
+                    obstreesurvey.datum_model.setData(idx, checkstate, Qt.CheckStateRole)
                     for adj_station in obstreesurvey.results:
 
                         if adj_station.station == station:

@@ -683,26 +683,25 @@ class TabDrift(QtWidgets.QWidget):
                         ln = self.axes_drift_cont_lower.plot(xp, yp, 'k-')
                         if any(z):
                             textcolor = 'k'
-                            if len(z) == 1:
-                                if type(z[0]) is tuple:
-                                    mean_drift, sigma = z[0][0], z[0][1]
-                                    tstat = mean_drift / sigma
-                                    if (
-                                        np.abs(tstat) > 4.303
-                                    ):  # Critical value for 95% CI, 2 DOF, 2-tailed t-test
-                                        textcolor = 'r'
-                                    z = [mean_drift]
-                                annot_text = "{:.2f} µGal/hr".format(*z)
-                            elif len(z) == 2:
-                                annot_text = "{:.2f} µGal/hr per day".format(*z)
-                            elif len(z) == 3:
-                                annot_text = "{:.2f}*t^2 {:+.2f}*t {:+.2f}".format(*z)
-                            elif len(z) == 4:
-                                annot_text = "{:.2f}*t^3 {:+.2f}*t^2 {:+.2f}*t {:+.2f}".format(
-                                    *z
-                                )
-                            else:
-                                annot_text = ""
+
+                            if len(z) == 1 and type(z[0]) is tuple:
+                                mean_drift, sigma = z[0][0], z[0][1]
+                                tstat = mean_drift / sigma
+                                if (
+                                    np.abs(tstat) > 4.303
+                                ):  # Critical value for 95% CI, 2 DOF, 2-tailed t-test
+                                    textcolor = 'r'
+                                z = [mean_drift]
+
+                            format_str = {
+                                1: "{:.2f} µGal/hr",
+                                2: "{:.2f} µGal/hr per day",
+                                3: "{:.2f}*t^2 {:+.2f}*t {:+.2f}",
+                                4: "{:.2f}*t^3 {:+.2f}*t^2 {:+.2f}*t {:+.2f}"
+                            }.get(lz, None)
+
+                            annot_text = format_str.format(*z) if s else ""
+
                             annot = self.axes_drift_cont_lower.annotate(
                                 annot_text,
                                 xy=(737287, 45),
@@ -868,6 +867,9 @@ class TabDrift(QtWidgets.QWidget):
                     self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
                     self.drift_continuous()
                 else:
+                    # FIXME: This branching is confusing. This final will be applied in all cases
+                    # *except* where method is continuous. Is this intended? If it is, nest the other
+                    # ifs (none, netadj, roman) under this branch to make it clearer.
                     self.disable_weighted_checkbox()
                 self.set_width(width, method)
 
@@ -916,16 +918,16 @@ class TabDrift(QtWidgets.QWidget):
         """
         if all(w == 0 for w in width): # default is [0, 0, 0]
             self.drift_window.setSizes([900, 0, 500, 2000])
+
         elif method == 'none' or method == 'netadj' or method == 'roman':
-            if width[0] > width[1]:
-                self.drift_window.setSizes([width[0], width[1], width[2], width[3]])
-            else:
-                self.drift_window.setSizes([width[1], width[0], width[2], width[3]])
+            # Order so larger of first two values is first.
+            width[:2] = sorted(width[:2], reverse=True)
+
         else:
-            if width[0] > width[1]:
-                self.drift_window.setSizes([width[1], width[0], width[2], width[3]])
-            else:
-                self.drift_window.setSizes([width[0], width[1], width[2], width[3]])
+            # Order so larger of first two values is last.
+            width[:2] = sorted(width[:2])
+
+        self.drift_window.setSizes(width)
 
     def update_delta_model(self, method, model):
         """

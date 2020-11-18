@@ -82,9 +82,7 @@ class TimeSeries:
         except ValueError:
             print('pb at line {:d} : Is it really .tsf (or .TSF) format? '.format(i))
         except IndexError:
-            print(
-                'pb at line {:d} : check raw data file: possibly last line?'.format(i)
-            )
+            print('pb at line {:d} : check raw data file: possibly last line?'.format(i))
 
     def populate_from_eterna_file(self, filename, channel):
         """
@@ -134,9 +132,7 @@ class TimeSeries:
         except ValueError:
             print('pb at line {:d} : Is it really eterna format? '.format(i))
         except IndexError:
-            print(
-                'pb at line {:d} : check raw data file: possibly last line?'.format(i)
-            )
+            print('pb at line {:d} : check raw data file: possibly last line?'.format(i))
 
     def interpolate_on_given_times(self, t):
         """

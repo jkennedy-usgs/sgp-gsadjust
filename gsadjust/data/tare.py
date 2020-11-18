@@ -38,10 +38,8 @@ class Tare:
         self.checked = 2
 
     def __str__(self):
-        if self.checked == 2:
-            in_use = 'x'
-        else:
-            in_use = 'o'
+
+        in_use = 'x' if self.checked == 2 else 'o'
         return f"{in_use} {self.date} {self.time} {self.tare}"
 
     @property

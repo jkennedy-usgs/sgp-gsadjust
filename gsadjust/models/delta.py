@@ -144,7 +144,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
 
                 def format_datetime(date):
                     return dt.datetime.utcfromtimestamp(
-                        date * 86400.0
+                        date #FIXME: Is this correct? * 86400.0
                     ).strftime('%Y-%m-%d %H:%M:%S')
 
                 def get_g():
@@ -204,7 +204,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             else:
                                 delta.type = 'assigned'
                                 delta.assigned_dg = float(value)
-                        self.dataChanged.emit(index, index, [])
+                        self.dataChanged.emit(index, index)
                         self.signal_adjust_update_required.emit()
                     return True
                 except ValueError:

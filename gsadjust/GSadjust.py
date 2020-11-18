@@ -503,11 +503,15 @@ class MainProg(QtWidgets.QMainWindow):
 
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            caption='Open file', directory=self.settings.value('current_dir')
+            caption='Open file',
+            directory=self.settings.value('current_dir'),
         )
 
         if fname:
             self.settings.setValue('current_dir', os.path.dirname(fname))
+
+            # FIXME: This check wouldn't be neccessary if we restrict the file extensions in the open dialog.
+            # is that possible for this?
             _, ext = os.path.splitext(fname)
             if ext in ['.p', '.gsa']:
                 self.msg = show_message(
@@ -651,7 +655,8 @@ class MainProg(QtWidgets.QMainWindow):
         Append previously-saved workspace to current workspace.
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open File', self.settings.value('current_dir')
+            None, 'Open File', self.settings.value('current_dir'),
+            filter="Workspace files (*.gsa);;P files (*.p)"
         )
         if fname:
             self.settings.setValue('current_dir', os.path.dirname(fname))
@@ -773,16 +778,10 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open File', self.settings.value('current_dir')
+            None, 'Open File', self.settings.value('current_dir'),
+            filter="Workspace files (*.gsa)"
         )
         if not fname:
-            return
-        elif fname[-4:] != '.gsa':
-            self.msg = show_message(
-                'Saved workspaces should have a .gsa extension. '
-                'Please use "Open raw...data" to load a data file',
-                'File load error',
-            )
             return
 
         self.settings.setValue('current_dir', os.path.dirname(fname))

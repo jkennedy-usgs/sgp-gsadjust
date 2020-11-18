@@ -21,9 +21,10 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
+import datetime as dt
 
 # Constants for column headers
-TARE_DATE, TARE_TIME, TARE_TARE = range(3)
+TARE_DATETIME, TARE_TARE = range(2)
 
 
 def format_numeric_column(column):
@@ -43,10 +44,10 @@ class TareTableModel(QAbstractTableModel):
     Model to store tares (offsets)
     """
 
-    _headers = {TARE_DATE: 'Date', TARE_TIME: 'Time', TARE_TARE: 'Tare (\u00b5Gal)'}
+    _headers = {TARE_DATETIME: 'Date', TARE_TARE: 'Tare (\u00b5Gal)'}
 
     def __init__(self):
-        super(TareTableModel, self).__init__()
+        super(TareTableModel, self).__init__(parent=None)
         self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -75,17 +76,17 @@ class TareTableModel(QAbstractTableModel):
         return len(self._data)
 
     def columnCount(self, parent=None):
-        return 3
+        return 2
 
     def data(self, index, role):
         if index.isValid():
             tare = self._data[index.row()]
 
-            if role == Qt.DisplayRole:
+            if role == Qt.DisplayRole or role == Qt.EditRole:
                 column = index.column()
                 fn, *args = {
-                    TARE_DATE: (str, tare.date.toString('yyyy-MM-dd')),
-                    TARE_TIME: (str, tare.time.toString()),
+                    TARE_DATETIME: (str, tare.datetime),
+                    # TARE_TIME: (str, tare.time.toString()),
                     TARE_TARE: (format, tare.tare, "0.1f"),
                 }.get(column)
                 return fn(*args)
@@ -115,10 +116,13 @@ class TareTableModel(QAbstractTableModel):
                 column = index.column()
                 if len(str(value)) > 0:
                     if column == 0:
-                        tare.date = float(value)
+                        try:
+                            tare.datetime = dt.datetime.strptime(value,'%Y-%m-%d %H:%M:%S')
+                        except ValueError:
+                            return
+                    # elif column == 1:
+                    #     tare.time = float(value)
                     elif column == 1:
-                        tare.time = float(value)
-                    elif column == 2:
                         tare.tare = float(value)
                     self.dataChanged.emit(index, index)
                 return True

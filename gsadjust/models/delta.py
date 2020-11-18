@@ -106,6 +106,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             column = index.column()
             if role == Qt.ForegroundRole:
                 brush = QtGui.QBrush(Qt.black)
+
                 if delta.type == 'normal':
                     try:
                         if (

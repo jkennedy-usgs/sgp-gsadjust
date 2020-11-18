@@ -220,24 +220,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def load_workspace(self, fname):
         """
-        Load previously-save workspace. Need to recreate PyQt models.
 
-        Importantly, there are two types of deltas: those on the Drift tab and
-        those on the network adjustment tab. deltas are COPIED from one to
-        another by discrete menu commands, it's not automatic.
-
-        The workflow:
-        1) Create obstreesurvey object so we have somewhere to store loop and
-            station objects.
-        2) deltas on the drift tab are created strictly from the station objects
-            and specified options (drift correction method, etc.). We don't store
-            a corresponding delta object in the saved workspace/json.
-        3) deltas on the network adjustment tab have additional information that
-            must be stored in the saved workspace/json (checked state, std. dev.
-            for adj., etc.). When loading a workspace, this delta is INDEPENDENT of
-            the delta stored in the delta table on the Drift tab. The Net Adj. tab
-            delta table is re-created later, not here, because Roman-method deltas
-            depend on the drift-tab deltas.
         :param fname:
         :return: (ObsTreeSurvey, delta_table, coords)
         """

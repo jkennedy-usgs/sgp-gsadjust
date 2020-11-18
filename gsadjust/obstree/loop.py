@@ -21,6 +21,7 @@ resulting from the authorized or unauthorized use of the software.
 
 
 import logging
+import datetime as dt
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
@@ -44,7 +45,7 @@ class ObsTreeLoop(ObsTreeItemBase):
         super(ObsTreeLoop, self).__init__()
 
         self.deltas = []
-        self.tare = []
+        self.tares = []
 
         self.name = name
         self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'
@@ -65,6 +66,7 @@ class ObsTreeLoop(ObsTreeItemBase):
 
         # TODO: Import comment from Burris file?
         self.source = ''  # Filename of raw input file
+
 
     def __str__(self):
         if self.drift_method == 'roman' or self.drift_method == 'none':
@@ -128,8 +130,8 @@ class ObsTreeLoop(ObsTreeItemBase):
             'Source: {}'.format(
                 self.name,
                 self.__dict__.get('drift_method', ''),
-                self.__dict__.get('meter', ''),
-                self.__dict__.get('oper', ''),
+                self.meter,
+                self.oper,
                 self.__dict__.get('comment', ''),
                 self.__dict__.get('source', ''),
             )
@@ -164,14 +166,15 @@ class ObsTreeLoop(ObsTreeItemBase):
             'source': '',
             'drift_cont_weighting': 0,
         }
-
+        tare_objects = []
         for tare_dict in data['tares']:
             tare_object = Tare(
-                tare_dict['datetime'].date(),
-                tare_dict['datetime'].time(),
-                tare_dict['tare'],
+                dt.datetime.strptime(tare_dict['datetime'], '%Y-%m-%d %H:%M:%S'),
+                tare_dict['tare']
             )
-            temp.tare.insert(0, tare_object)
+            tare_object.checked = tare_dict['checked']
+            tare_objects.append(tare_object)
+        temp.tares = tare_objects
         if 'checked' in data:
             temp.setCheckState(data['checked'])
         for k, v in potential_missing_fields.items():
@@ -318,16 +321,14 @@ class ObsTreeLoop(ObsTreeItemBase):
     def to_json(self):
         # Copy stations from PyQt models to lists
         stations_json = [s.to_json() for s in self.stations()]
-
-        # FIXME: Why empty these?
-        self.deltas = []
+        tares_json = [t.to_json() for t in self.tares]
 
         return {
             'checked': self.checkState(),
             'delta_model': None,
             'tare_model': None,
             'stations': stations_json,
-            'tares': self.tare,
+            'tares': tares_json,
             'name': self.name,
             'drift_method': self.drift_method,
             'drift_cont_method': self.drift_cont_method,

@@ -31,9 +31,8 @@ class Tare:
     and (2) an interpolated value between two occupations at the other station.
     """
 
-    def __init__(self, date, time, tare):
-        self.date = date
-        self.time = time
+    def __init__(self, datetime, tare):
+        self.datetime = datetime
         self.tare = float(tare)
         self.checked = 2
 
@@ -42,11 +41,12 @@ class Tare:
             in_use = 'x'
         else:
             in_use = 'o'
-        return f"{in_use} {self.date} {self.time} {self.tare}"
+        return f"{in_use} {self.datetime} {self.tare}"
 
-    @property
-    def datetime(self):
-        """
-        :return: Python datetime object.
-        """
-        return QDateTime(self.date, self.time).toPyDateTime()
+    def to_json(self):
+        return {
+            'checked': self.checked,
+            'datetime': str(self.datetime),
+            'tare': self.tare,
+        }
+

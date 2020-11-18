@@ -55,7 +55,7 @@ class CoordinatesTable(QtWidgets.QDialog):
         vlayout = QtWidgets.QVBoxLayout()
         self.sys_clip = QtWidgets.QApplication.clipboard()
         self.setWindowModality(QtCore.Qt.ApplicationModal)
-        self.setWindowTitle('Station coordinates')
+        self.setWindowTitle("Station coordinates")
 
         ok_button = QtWidgets.QPushButton("Ok")
         ok_button.clicked.connect(self.accept)
@@ -75,7 +75,7 @@ class CoordinatesTable(QtWidgets.QDialog):
         vlayout.addWidget(self.table)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
-            ['Station', 'Latitude', 'Longitude', 'Elevation']
+            ["Station", "Latitude", "Longitude", "Elevation"]
         )
         for k, v in coords.items():
             row = self.table.rowCount()
@@ -110,13 +110,13 @@ class CoordinatesTable(QtWidgets.QDialog):
         if e.modifiers() & QtCore.Qt.ControlModifier:
             selected = self.table.selectedRanges()
             if e.key() == QtCore.Qt.Key_C:  # copy
-                s = ''
+                s = ""
                 for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
-                    row_text = ''
+                    row_text = ""
                     for c in range(self.table.columnCount()):
-                        row_text += self.table.item(r, c).text() + '\t'
+                        row_text += self.table.item(r, c).text() + "\t"
                     rt = row_text[:-1]  # Remove trailing \t
-                    rt += '\n'
+                    rt += "\n"
                     s += rt
                 clipboard = QtWidgets.QApplication.clipboard()
                 clipboard.setText(s)
@@ -124,10 +124,10 @@ class CoordinatesTable(QtWidgets.QDialog):
             if e.key() == QtCore.Qt.Key_V:
                 clipboard = QtWidgets.QApplication.clipboard()
                 s = clipboard.text()
-                rows = s.split('\n')
+                rows = s.split("\n")
                 for idx, r in enumerate(rows):
-                    if r != '':
-                        elems = r.split('\t')
+                    if r != "":
+                        elems = r.split("\t")
                         table_item_station = QtWidgets.QTableWidgetItem(elems[0])
                         table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
                         table_item_long = QtWidgets.QTableWidgetItem(elems[2])
@@ -157,14 +157,14 @@ class DialogLoopProperties(QtWidgets.QDialog):
         super(DialogLoopProperties, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
         self.loops = loops
-        self.setWindowTitle('Loop properties')
+        self.setWindowTitle("Loop properties")
         self.init_ui()
 
     def init_ui(self):
         # create buttons and actions
-        self.cancel_button = QtWidgets.QPushButton('Cancel')
+        self.cancel_button = QtWidgets.QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.close)
-        self.ok_button = QtWidgets.QPushButton('OK')
+        self.ok_button = QtWidgets.QPushButton("OK")
         self.ok_button.clicked.connect(self.set_loop_options)
 
         button_box = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
@@ -174,22 +174,22 @@ class DialogLoopProperties(QtWidgets.QDialog):
         try:
             self.operator_edit = QtWidgets.QLineEdit(self.loops[0].oper)
         except AttributeError:
-            self.operator_edit = QtWidgets.QLineEdit('')
+            self.operator_edit = QtWidgets.QLineEdit("")
         try:
             self.meter_edit = QtWidgets.QLineEdit(self.loops[0].meter)
         except AttributeError:
-            self.meter_edit = QtWidgets.QLineEdit('')
+            self.meter_edit = QtWidgets.QLineEdit("")
         self.comment_edit = QtWidgets.QTextEdit()
         try:
             self.comment_edit.setPlainText(self.loops[0].comment)
         except (IndexError, AttributeError):
-            self.comment_edit.setPlainText('')
+            self.comment_edit.setPlainText("")
         grid = QtWidgets.QGridLayout()
-        grid.addWidget(QtWidgets.QLabel('Operator'), 1, 0)
+        grid.addWidget(QtWidgets.QLabel("Operator"), 1, 0)
         grid.addWidget(self.operator_edit, 1, 1)
-        grid.addWidget(QtWidgets.QLabel('Meter ID'), 2, 0)
+        grid.addWidget(QtWidgets.QLabel("Meter ID"), 2, 0)
         grid.addWidget(self.meter_edit, 2, 1)
-        grid.addWidget(QtWidgets.QLabel('Comment'), 3, 0)
+        grid.addWidget(QtWidgets.QLabel("Comment"), 3, 0)
         grid.addWidget(self.comment_edit, 4, 0, 1, 2)
         grid.addWidget(button_box, 5, 0, 1, 2)
         self.setLayout(grid)
@@ -209,37 +209,37 @@ class AdjustOptions(QtWidgets.QDialog):
         super(AdjustOptions, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
         self.ao = options
-        self.surveys_to_update = ''
+        self.surveys_to_update = ""
         self.update_options = []
         # self.drift_temp_chk = QtWidgets.QCheckBox('Model temperature drift, polynomial degree:')
         self.sigma_prefactor_chk = QtWidgets.QCheckBox(
-            'Standard deviation multiplier: pre-minimum'
+            "Standard deviation multiplier: pre-minimum"
         )
         self.sigma_postfactor_chk = QtWidgets.QCheckBox(
-            'Standard deviation multiplier: post-minimum'
+            "Standard deviation multiplier: post-minimum"
         )
         self.sigma_prefactor_chk.setToolTip(
-            'This multiplier is applied prior to enforcing the minimum standard '
-            'deviation (if checked)'
+            "This multiplier is applied prior to enforcing the minimum standard "
+            "deviation (if checked)"
         )
         self.sigma_postfactor_chk.setToolTip(
-            'This multiplier is applied after enforcing the minimum standard '
-            'deviation (if checked)'
+            "This multiplier is applied after enforcing the minimum standard "
+            "deviation (if checked)"
         )
         self.sigma_add_chk = QtWidgets.QCheckBox(
-            'Add to standard deviation: pre-minimum'
+            "Add to standard deviation: pre-minimum"
         )
-        self.sigma_min_chk = QtWidgets.QCheckBox('Minimum standard deviation')
+        self.sigma_min_chk = QtWidgets.QCheckBox("Minimum standard deviation")
         self.sigma_min_chk.stateChanged.connect(self.min_sd_checked_or_unchecked)
         self.cal_coeff_chk = QtWidgets.QCheckBox(
-            'Calculate relative meter calibration coefficient'
+            "Calculate relative meter calibration coefficient"
         )
         self.cal_coeff_chk.stateChanged.connect(
             self.calc_cal_coeff_checked_or_unchecked
         )
-        self.alpha_text = QtWidgets.QLabel('Significance level for global model test')
+        self.alpha_text = QtWidgets.QLabel("Significance level for global model test")
         self.cal_coeff_specify_chk = QtWidgets.QCheckBox(
-            'Specify calibration coefficient'
+            "Specify calibration coefficient"
         )
         self.cal_coeff_specify_chk.stateChanged.connect(
             self.specify_cal_coeff_checked_or_unchecked
@@ -272,7 +272,7 @@ class AdjustOptions(QtWidgets.QDialog):
                 self.cal_coeff_specify_chk.setChecked(self.ao.specify_cal_coeff)
             except Exception:
                 self.ao.specify_cal_coeff = False
-            if not hasattr(self.ao, 'meter_cal_dict'):
+            if not hasattr(self.ao, "meter_cal_dict"):
                 self.ao.meter_cal_dict = init_cal_coeff_dict(self.parent().obsTreeModel)
             elif self.ao.meter_cal_dict is None:
                 self.ao.meter_cal_dict = init_cal_coeff_dict(self.parent().obsTreeModel)
@@ -286,15 +286,15 @@ class AdjustOptions(QtWidgets.QDialog):
             self.cal_coeff_table.setFixedWidth(260)
 
             # create buttons and actions
-            btn_restore_default = QtWidgets.QPushButton('Restore defaults')
+            btn_restore_default = QtWidgets.QPushButton("Restore defaults")
             btn_restore_default.clicked.connect(self.restore_default)
-            btn_cancel = QtWidgets.QPushButton('Cancel')
+            btn_cancel = QtWidgets.QPushButton("Cancel")
             btn_cancel.clicked.connect(self.close)
             btn_current = QtWidgets.QPushButton(
-                'Apply to current survey (' + survey_name + ')'
+                "Apply to current survey (" + survey_name + ")"
             )
             btn_current.clicked.connect(self.apply_current)
-            btn_all = QtWidgets.QPushButton('Apply to all surveys')
+            btn_all = QtWidgets.QPushButton("Apply to all surveys")
             btn_all.clicked.connect(self.apply_all)
 
             buttonBox = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
@@ -333,12 +333,12 @@ class AdjustOptions(QtWidgets.QDialog):
             vlayout.addWidget(buttonBox)
 
             self.setLayout(vlayout)
-            self.setWindowTitle('Network adjustment options')
+            self.setWindowTitle("Network adjustment options")
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
             MessageBox.warning(
-                'Network adjustment options',
-                'Please load a survey first',
+                "Network adjustment options",
+                "Please load a survey first",
             )
 
     def restore_default(self):
@@ -414,16 +414,16 @@ class AdjustOptions(QtWidgets.QDialog):
             self.ao.alpha = float(self.alpha_edit.text())
 
         except ValueError as e:  # caught if invalid number is entered in any box
-            logging.error('Error setting adjustment options: %s', e)
+            logging.error("Error setting adjustment options: %s", e)
 
     def apply_current(self):
         self.set_adjust_options()
-        self.surveys_to_update = 'single'
+        self.surveys_to_update = "single"
         self.accept()
 
     def apply_all(self):
         self.set_adjust_options()
-        self.surveys_to_update = 'all'
+        self.surveys_to_update = "all"
         self.accept()
 
 
@@ -432,31 +432,31 @@ class DialogMeterType(QtWidgets.QMessageBox):
         super(DialogMeterType, self).__init__()
         self.setText("Choose meter file to import")
         self.addButton(
-            QtWidgets.QPushButton(' CG-3, CG-5 '), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton(" CG-3, CG-5 "), QtWidgets.QMessageBox.YesRole
         )
-        self.addButton(QtWidgets.QPushButton(' CG-6 '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(" CG-6 "), QtWidgets.QMessageBox.YesRole)
         self.addButton(
-            QtWidgets.QPushButton(' CG-6 Tsoft '), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton(" CG-6 Tsoft "), QtWidgets.QMessageBox.YesRole
         )
-        self.addButton(QtWidgets.QPushButton(' Burris '), QtWidgets.QMessageBox.YesRole)
-        self.addButton(QtWidgets.QPushButton(' CSV '), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(" Burris "), QtWidgets.QMessageBox.YesRole)
+        self.addButton(QtWidgets.QPushButton(" CSV "), QtWidgets.QMessageBox.YesRole)
         self.addButton(
-            QtWidgets.QPushButton(' Cancel '), QtWidgets.QMessageBox.RejectRole
+            QtWidgets.QPushButton(" Cancel "), QtWidgets.QMessageBox.RejectRole
         )
         self.buttonClicked.connect(self.onClicked)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):
         meter = {
-            ' CG-3, CG-5 ': 'CG5',
-            ' CG-6 ': 'CG6',
-            ' CG-6 Tsoft ': 'CG6Tsoft',
-            ' Burris ': 'Burris',
-            ' CSV ': 'csv',
-            ' Cancel ': 'Cancel',
+            " CG-3, CG-5 ": "CG5",
+            " CG-6 ": "CG6",
+            " CG-6 Tsoft ": "CG6Tsoft",
+            " Burris ": "Burris",
+            " CSV ": "csv",
+            " Cancel ": "Cancel",
         }
         self.meter_type = meter[btn.text()]
-        if self.meter_type == 'Cancel':
+        if self.meter_type == "Cancel":
             self.reject()
         else:
             self.accept()
@@ -468,10 +468,10 @@ class DialogOverwrite(QtWidgets.QMessageBox):
         self.overwrite = False
         self.setText("Overwrite existing data?")
         self.setWindowTitle("GSadjust")
-        ow_button = QtWidgets.QPushButton('Overwrite')
+        ow_button = QtWidgets.QPushButton("Overwrite")
         ow_button.clicked.connect(self.onClicked)
 
-        cancel_button = QtWidgets.QPushButton('Cancel')
+        cancel_button = QtWidgets.QPushButton("Cancel")
         cancel_button.clicked.connect(self.close)
         self.addButton(cancel_button, 0)
         self.addButton(ow_button, 1)
@@ -489,45 +489,45 @@ class GravityChangeTable(QtWidgets.QDialog):
     :param header:
     """
 
-    def __init__(self, MainProg, data, table_type='simple'):
+    def __init__(self, MainProg, data, table_type="simple"):
         super(GravityChangeTable, self).__init__(MainProg)
         result = data
         self.header, self.table, self.dates = result[0], result[1], result[2]
         self.full_header, self.full_table, _ = analysis.compute_gravity_change(
-            MainProg.obsTreeModel, table_type='full'
+            MainProg.obsTreeModel, table_type="full"
         )
         self.list_header, self.list_table, _ = analysis.compute_gravity_change(
-            MainProg.obsTreeModel, table_type='list'
+            MainProg.obsTreeModel, table_type="list"
         )
         self.coords = MainProg.obsTreeModel.station_coords
         layout = QtWidgets.QVBoxLayout()
         self.simple_model = GravityChangeModel(
-            self.header, self.table, table_type='simple'
+            self.header, self.table, table_type="simple"
         )
         self.full_model = GravityChangeModel(
-            self.full_header, self.full_table, table_type='full'
+            self.full_header, self.full_table, table_type="full"
         )
         self.list_model = GravityChangeModel(
-            self.list_header, self.list_table, table_type='list'
+            self.list_header, self.list_table, table_type="list"
         )
         self.table_view = QtWidgets.QTableView()
         self.table_view.setModel(self.simple_model)
 
         # Create buttons and actions
         self.type_comboBox = QtWidgets.QComboBox(self)
-        self.type_comboBox.addItem('simple dg')
-        self.type_comboBox.addItem('full dg')
-        self.type_comboBox.addItem('list')
+        self.type_comboBox.addItem("simple dg")
+        self.type_comboBox.addItem("full dg")
+        self.type_comboBox.addItem("list")
         self.type_comboBox.activated.connect(self.table_changed)
-        btn_map = QtWidgets.QPushButton('Map')
+        btn_map = QtWidgets.QPushButton("Map")
         btn_map.clicked.connect(self.map_change_window)
-        btn_plot = QtWidgets.QPushButton('Plot')
+        btn_plot = QtWidgets.QPushButton("Plot")
         btn_plot.clicked.connect(
             lambda state, x=(self.dates, self.table): MainProg.plot_gravity_change(
                 x[0], x[1], self
             )
         )
-        btn1 = QtWidgets.QPushButton('Copy to clipboard')
+        btn1 = QtWidgets.QPushButton("Copy to clipboard")
         btn1.clicked.connect(lambda: copy_cells_to_clipboard(self.table_view))
 
         # Locations
@@ -535,7 +535,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         hbox, hbox_widget = QtWidgets.QHBoxLayout(), QtWidgets.QWidget()
         hbox.addStretch(0)
         # Only show plot button on simple table
-        hbox.addWidget(QtWidgets.QLabel('Table type:'))
+        hbox.addWidget(QtWidgets.QLabel("Table type:"))
         hbox.addWidget(self.type_comboBox)
         if self.dates:
             hbox.addWidget(btn_plot)
@@ -544,34 +544,34 @@ class GravityChangeTable(QtWidgets.QDialog):
         hbox_widget.setLayout(hbox)
         layout.addWidget(hbox_widget)
         self.setLayout(layout)
-        self.setWindowTitle('Gravity Change')
+        self.setWindowTitle("Gravity Change")
         self.setGeometry(200, 200, 600, 800)
 
     @classmethod
     def show_full_table(cls, index, MainProg):
         MainProg.popup.close()
-        cls(MainProg, table_type='full')
+        cls(MainProg, table_type="full")
 
     @classmethod
     def show_simple_table(cls, index, MainProg):
         MainProg.popup.close()
-        cls(MainProg, table_type='simple')
+        cls(MainProg, table_type="simple")
 
     def table_changed(self, index):
-        if self.type_comboBox.itemText(index) == 'simple dg':
+        if self.type_comboBox.itemText(index) == "simple dg":
             self.table_view.setModel(self.simple_model)
-        if self.type_comboBox.itemText(index) == 'full dg':
+        if self.type_comboBox.itemText(index) == "full dg":
             self.table_view.setModel(self.full_model)
-        if self.type_comboBox.itemText(index) == 'list':
+        if self.type_comboBox.itemText(index) == "list":
             self.table_view.setModel(self.list_model)
 
     def map_change_window(self):
         try:
-            logging.info('try importing cartopy')
+            logging.info("try importing cartopy")
             # This SSL section needed to avoid certificate errors on Mac (?)
             import ssl
 
-            if hasattr(ssl, '_create_unverified_context'):
+            if hasattr(ssl, "_create_unverified_context"):
                 ssl._create_default_https_context = ssl._create_unverified_context
             import cartopy.crs as ccrs
             import cartopy.io.img_tiles as cimgt
@@ -581,11 +581,11 @@ class GravityChangeTable(QtWidgets.QDialog):
             )
             self.win.show()
         except (OSError, ImportError) as e:
-            logging.info('Cartopy import error')
+            logging.info("Cartopy import error")
             MessageBox.warning(
-                'Import error',
-                'Map view plots on Mac or Linux platforms requires installation of the Geos'
-                ' and Proj libraries. '
+                "Import error",
+                "Map view plots on Mac or Linux platforms requires installation of the Geos"
+                " and Proj libraries. "
                 'Please install with homebrew ("brew install geos proj").',
             )
 
@@ -650,14 +650,14 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.sliderResolution.setMinimum(5)
         self.sliderResolution.setMaximum(17)
         self.sliderResolution.setValue(12)
-        btnRefresh = QtWidgets.QPushButton('Refresh')
+        btnRefresh = QtWidgets.QPushButton("Refresh")
         btnRefresh.clicked.connect(self.resolution_slider_changed)
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.cbBasemap)
         bbox.addSpacing(10)
         bbox.addWidget(self.drpBasemap)
         bbox.addSpacing(40)
-        bbox.addWidget(QtWidgets.QLabel('Resolution'))
+        bbox.addWidget(QtWidgets.QLabel("Resolution"))
         bbox.addWidget(self.sliderResolution)
         bbox.addSpacing(10)
         bbox.addWidget(btnRefresh)
@@ -678,7 +678,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         bbox = QtWidgets.QHBoxLayout()
         bbox.addWidget(self.cbUnits)
         bbox.addSpacing(40)
-        bbox.addWidget(QtWidgets.QLabel('Color range'))
+        bbox.addWidget(QtWidgets.QLabel("Color range"))
         bbox.addWidget(self.sliderColorRange)
         bbox.addStretch(1)
         self.units_widget.setLayout(bbox)
@@ -698,7 +698,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         layout.addStretch(1)
         layout.addWidget(self.canvas)
         layout.addWidget(self.slider_label)
-        self.setWindowTitle('Gravity Change Map')
+        self.setWindowTitle("Gravity Change Map")
         layout.addWidget(self.slider)
         layout.addStretch(1)
         self.setLayout(layout)
@@ -707,12 +707,12 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.drpReference.addItem(s)
 
         self.maps = [
-            'NatGeo_World_Map',
-            'USA_Topo_Maps',
-            'World_Imagery',
-            'World_Shaded_Relief',
-            'World_Street_Map',
-            'World_Topo_Map',
+            "NatGeo_World_Map",
+            "USA_Topo_Maps",
+            "World_Imagery",
+            "World_Shaded_Relief",
+            "World_Street_Map",
+            "World_Topo_Map",
         ]
 
         for map in self.maps:
@@ -730,13 +730,13 @@ class GravityChangeMap(QtWidgets.QDialog):
             if first:
                 first = False
                 continue
-            d = title.split('_to_')
+            d = title.split("_to_")
             dates.append(d[0])
             dates.append(d[1])
         return sorted(list(set(dates)))
 
     def update_plot(self):
-        if hasattr(self, 'points'):
+        if hasattr(self, "points"):
             self.cb.remove()
             self.points.remove()
             x, y, d, name = self.get_data()
@@ -751,22 +751,21 @@ class GravityChangeMap(QtWidgets.QDialog):
                 cmap="RdBu",
                 picker=5,
                 zorder=10,
-                transform=self.ccrs.Geodetic(),
             )
             self.cb = self.figure.colorbar(self.points)
             self.set_cb_label()
             self.points.name = name
             self.slider_label.setText(self.get_name())
-            self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
+            self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
             self.canvas.draw()
 
     def get_datenums(self, full_header):
         obs_idxs, obs_dates = [], []
         for item in full_header:
-            if item[-2:] == '_g':
+            if item[-2:] == "_g":
                 try:
                     obs_dates.append(
-                        date2num(dt.datetime.strptime(item[:-2], '%Y-%m-%d'))
+                        date2num(dt.datetime.strptime(item[:-2], "%Y-%m-%d"))
                     )
                     obs_idxs.append(full_header.index(item))
                 except:
@@ -791,10 +790,10 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         elif self.btnReference.isChecked():
             ref_survey = (
-                self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + '_g'
+                self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + "_g"
             )
             ref_col_idx = self.full_header.index(ref_survey)
-            current_survey = self.surveys[self.slider.value() - 1] + '_g'
+            current_survey = self.surveys[self.slider.value() - 1] + "_g"
             current_col_idx = self.full_header.index(current_survey)
             for r in self.full_table:
                 sta = r[0]
@@ -842,12 +841,12 @@ class GravityChangeMap(QtWidgets.QDialog):
             return title
         elif self.btnIncremental.isChecked():
             name = self.header[self.slider.value()]
-            return name.replace('_', ' ')
+            return name.replace("_", " ")
         elif not self.btnIncremental.isChecked():
             ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
             current_survey = self.surveys[self.slider.value() - 1]
-            if dt.datetime.strptime(current_survey, '%Y-%m-%d') < dt.datetime.strptime(
-                ref_survey, '%Y-%m-%d'
+            if dt.datetime.strptime(current_survey, "%Y-%m-%d") < dt.datetime.strptime(
+                ref_survey, "%Y-%m-%d"
             ):
                 return "{} to {}".format(current_survey, ref_survey)
             else:
@@ -874,7 +873,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             1,
             1,
             position=[0.15, 0.15, 0.75, 0.75],
-            projection=self.ccrs.AlbersEqualArea(map_center),
+            projection=self.ccrs.PlateCarree(),
         )  # self.stamen_terrain.crs)
         # self.ax.clear()
         # self.ax.set_aspect('')
@@ -891,59 +890,52 @@ class GravityChangeMap(QtWidgets.QDialog):
             cmap="RdBu",
             picker=5,
             zorder=10,
-            transform=self.ccrs.Geodetic(),
         )
         self.points.name = names
 
         QtWidgets.QApplication.restoreOverrideCursor()
         # self.figure.colorbar(point)
-        self.ax.set_title(self.get_name(), fontsize=16, fontweight='bold')
+        self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
         self.cb = self.figure.colorbar(self.points)
 
-        self.ax.set_xlabel('Distance, in meters', fontsize=16)
+        self.ax.set_xlabel("Distance, in meters", fontsize=16)
 
         self.set_cb_label()
-        self.ax.set_extent(self.axlim, crs=self.ccrs.Geodetic())
+        self.ax.set_extent(self.axlim)
         self.show_background(self.sliderResolution.value())
         # , crs=self.ccrs.Geodetic())
-        self.ax.callbacks.connect('xlim_changed', self.on_lims_change)
-        self.ax.callbacks.connect('ylim_changed', self.on_lims_change)
+        self.ax.callbacks.connect("xlim_changed", self.on_lims_change)
+        self.ax.callbacks.connect("ylim_changed", self.on_lims_change)
         self.slider_label.setText(self.get_name())
 
         # refresh canvas
-        self.figure.canvas.mpl_connect('pick_event', self.show_point_label)
+        self.figure.canvas.mpl_connect("pick_event", self.show_point_label)
         self.canvas.draw()
 
     def set_cb_label(self):
         if self.btnTrend.isChecked():
             if not self.cbUnits.isChecked():
-                self.cb.set_label('Gravity trend, in µGal/yr')
+                self.cb.set_label("Gravity trend, in µGal/yr", fontsize=16)
             else:
-                self.cb.set_label('Gravity trend, in meters of water/yr')
+                self.cb.set_label("Gravity trend, in meters of water/yr", fontsize=16)
         else:
             if not self.cbUnits.isChecked():
-                self.cb.set_label('Gravity change, in µGal', fontsize=16)
+                self.cb.set_label("Gravity change, in µGal", fontsize=16)
             elif self.cbUnits.isChecked():
                 self.cb.set_label(
-                    'Aquifer-storage change,\n in meters of water', fontsize=16
+                    "Aquifer-storage change,\n in meters of water", fontsize=16
                 )
 
     def on_lims_change(self, axes):
-        # self.show_background(self.sliderResolution.value())
-        # self.canvas.draw()
-        self.axlim = self.ax.get_extent(crs=self.ccrs.Geodetic())
-        # self.figure.subplots_adjust(0.1, 0.1, 0.8, 0.8)
-        # self.canvas.draw()
-        # (xmin, xmax, ymin, ymax)
+        self.axlim = self.ax.get_extent()
         return
 
     def show_background(self, zoom):
         if self.cbBasemap.isChecked():
             self.stamen_terrain = self.cimgt.GoogleTiles(
-                url='https://server.arcgisonline.com/ArcGIS/rest/services/'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/"
                 + self.maps[self.drpBasemap.currentIndex()]
-                + '/MapServer/tile/{z}/{y}/{x}.jpg'
-            )  # cimgt.Stamen('terrain-background')
+                + "/MapServer/tile/{z}/{y}/{x}.jpg")
             self.ax.add_image(self.stamen_terrain, zoom)
 
     def show_point_label(self, event):
@@ -955,13 +947,13 @@ class GravityChangeMap(QtWidgets.QDialog):
         """
         thispoint = event.artist
         if self.station_label is not None:
-            self.station_label.set_text('')
+            self.station_label.set_text("")
         self.station_label = self.ax.text(
             0.1,
             0.95,
             thispoint.name[event.ind[0]],
-            horizontalalignment='center',
-            verticalalignment='center',
+            horizontalalignment="center",
+            verticalalignment="center",
             transform=self.ax.transAxes,
         )
         self.canvas.draw()
@@ -1020,19 +1012,19 @@ class TideCoordinatesDialog(QtWidgets.QDialog):
         """
         Get coordinates for tide correction.
         """
-        latLabel = QtWidgets.QLabel('Latitude')
-        lonLabel = QtWidgets.QLabel('Longitude')
-        elevLabel = QtWidgets.QLabel('Elevation')
+        latLabel = QtWidgets.QLabel("Latitude")
+        lonLabel = QtWidgets.QLabel("Longitude")
+        elevLabel = QtWidgets.QLabel("Elevation")
         self.lat = QtWidgets.QLineEdit()
         self.lon = QtWidgets.QLineEdit()
         self.elev = QtWidgets.QLineEdit()
 
-        self.lat.setText('{:.5f}'.format(lat))
-        self.lon.setText('{:.5f}'.format(lon))
-        self.elev.setText('{:.1f}'.format(elev))
+        self.lat.setText("{:.5f}".format(lat))
+        self.lon.setText("{:.5f}".format(lon))
+        self.elev.setText("{:.1f}".format(elev))
 
         # create buttons and actions
-        self.btn1 = QtWidgets.QPushButton('OK')
+        self.btn1 = QtWidgets.QPushButton("OK")
         self.btn1.clicked.connect(self.onClicked)
         # locations
         grid = QtWidgets.QGridLayout()
@@ -1044,7 +1036,7 @@ class TideCoordinatesDialog(QtWidgets.QDialog):
         grid.addWidget(self.elev, 3, 1)
         grid.addWidget(self.btn1, 4, 0)
         self.setLayout(grid)
-        self.setWindowTitle('Survey coordinates')
+        self.setWindowTitle("Survey coordinates")
         # enterCoordinates.show()
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
@@ -1061,19 +1053,19 @@ class TideCorrectionDialog(QtWidgets.QDialog):
         self.msg = QtWidgets.QMessageBox()
         self.msg.setText("Select tide-correction method")
         self.msg.addButton(
-            QtWidgets.QPushButton('Meter-supplied'), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton("Meter-supplied"), QtWidgets.QMessageBox.YesRole
         )
         self.msg.addButton(
-            QtWidgets.QPushButton('Agnew'), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton("Agnew"), QtWidgets.QMessageBox.YesRole
         )
-        btn2 = QtWidgets.QPushButton('Cancel')
+        btn2 = QtWidgets.QPushButton("Cancel")
         self.msg.addButton(btn2, QtWidgets.QMessageBox.RejectRole)
         self.msg.buttonClicked.connect(self.onClicked)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):
         self.correction_type = btn.text()
-        if self.correction_type == 'Cancel':
+        if self.correction_type == "Cancel":
             self.reject()
         else:
             self.accept()
@@ -1083,7 +1075,7 @@ class AddDatumFromList(QtWidgets.QInputDialog):
     @classmethod
     def add_datum(cls, station_list):
         dialog = cls()
-        text, ok = dialog.getItem(None, 'Input Dialog', 'Datum station:', station_list)
+        text, ok = dialog.getItem(None, "Input Dialog", "Datum station:", station_list)
         if ok:
             return text
         else:
@@ -1097,7 +1089,7 @@ class LoopTimeThresholdDialog(QtWidgets.QDialog):
 
     def __init__(self):
         super(LoopTimeThresholdDialog, self).__init__()
-        self.title = 'Specify elapsed time that indicates a new loop'
+        self.title = "Specify elapsed time that indicates a new loop"
         self.left = 100
         self.top = 100
         self.width = 300
@@ -1150,7 +1142,7 @@ class AddTareDialog(QtWidgets.QDialog):
 
     def __init__(self, default_time):
         super(AddTareDialog, self).__init__()
-        self.title = 'Specify date, time, and magnitude of tare'
+        self.title = "Specify date, time, and magnitude of tare"
         self.left = 100
         self.top = 100
         self.width = 200
@@ -1206,7 +1198,7 @@ class SelectAbsg(QtWidgets.QDialog):
 
     def __init__(self, path, datum_table_model=None, parent=None):
         super(SelectAbsg, self).__init__(parent)
-        self.title = 'Select directory with Abs. g files (.project.txt)'
+        self.title = "Select directory with Abs. g files (.project.txt)"
         self.left = 100
         self.top = 100
         self.width = 1200
@@ -1263,7 +1255,7 @@ class SelectAbsg(QtWidgets.QDialog):
         self.tree.resize(800, 480)
 
         # Buttons and checkbox
-        self.load_unpublished_cb = QtWidgets.QCheckBox('Ignore unpublished')
+        self.load_unpublished_cb = QtWidgets.QCheckBox("Ignore unpublished")
         self.load_unpublished_cb.setToolTip(
             'Files inside a directory named "unpublished" (anywhere on the path) will be ignored'
         )
@@ -1338,20 +1330,20 @@ class SelectAbsg(QtWidgets.QDialog):
         QtWidgets.QApplication.restoreOverrideCursor()
         if not files_found:
             MessageBox.warning(
-                'Import error',
-                'No *.project.txt files found in the selected directories.',
+                "Import error",
+                "No *.project.txt files found in the selected directories.",
             )
 
     def append_datums(self, path):
         files_found = False
         n_files = 100
-        pbar = ProgressBar(total=n_files, textmess='Scanning directory...')
+        pbar = ProgressBar(total=n_files, textmess="Scanning directory...")
         ctr = 1
         pbar.show()
         for dirname, _, fileList in os.walk(path):
             if (
                 self.load_unpublished_cb.isChecked()
-                and dirname.find('unpublished') != -1
+                and dirname.find("unpublished") != -1
             ):
                 continue
             else:
@@ -1359,7 +1351,7 @@ class SelectAbsg(QtWidgets.QDialog):
                     pbar.progressbar.setValue(ctr)
                     QtWidgets.QApplication.processEvents()
 
-                    if '.project.txt' in name:
+                    if ".project.txt" in name:
                         ctr += 1
                         if ctr > 100:
                             ctr = 1
@@ -1386,12 +1378,12 @@ class AboutDialog(QtWidgets.QDialog):
         super(AboutDialog, self).__init__()
 
         msg1 = (
-            '<html>GSadjust, a product of the USGS Southwest Gravity Program<br>'
+            "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
             + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
-            + '<br><br>Commit '
+            + "<br><br>Commit "
             + version
             + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
-            + 'https://github.com/jkennedy-usgs/sgp-gsadjust</a>'
+            + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"
             + '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
         )
         ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
@@ -1413,7 +1405,7 @@ class ShowCalCoeffs(QtWidgets.QDialog):
             vlayout.addWidget(view)
             cal_model = QtGui.QStandardItemModel()
             cal_model.setColumnCount(3)
-            cal_model.setHorizontalHeaderLabels(['Date', 'Coeff.', 'S.D.'])
+            cal_model.setHorizontalHeaderLabels(["Date", "Coeff.", "S.D."])
             for row in data:
                 cal_model.appendRow(
                     [
@@ -1435,35 +1427,35 @@ class DialogApplyTimeCorrection(QtWidgets.QDialog):
         super(DialogApplyTimeCorrection, self).__init__()
         self.time_correction_type = False
         self.msg = QtWidgets.QMessageBox()
-        self.msg.setWindowTitle('GSadjust')
+        self.msg.setWindowTitle("GSadjust")
         self.msg.setText("Apply time correction to:")
         self.msg.addButton(
-            QtWidgets.QPushButton('Current station(s)'), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton("Current station(s)"), QtWidgets.QMessageBox.YesRole
         )
         self.msg.addButton(
-            QtWidgets.QPushButton('Current loop'), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton("Current loop"), QtWidgets.QMessageBox.YesRole
         )
         self.msg.addButton(
-            QtWidgets.QPushButton('Current survey'), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton("Current survey"), QtWidgets.QMessageBox.YesRole
         )
         self.msg.addButton(
-            QtWidgets.QPushButton('All data'), QtWidgets.QMessageBox.YesRole
+            QtWidgets.QPushButton("All data"), QtWidgets.QMessageBox.YesRole
         )
         self.msg.addButton(
-            QtWidgets.QPushButton('Cancel'), QtWidgets.QMessageBox.RejectRole
+            QtWidgets.QPushButton("Cancel"), QtWidgets.QMessageBox.RejectRole
         )
         self.msg.buttonClicked.connect(self.onClicked)
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def onClicked(self, btn):
-        if btn.text() == 'Cancel':
+        if btn.text() == "Cancel":
             self.reject()
         else:
             options = {
-                'Current station(s)': 'station',
-                'Current loop': 'loop',
-                'Current survey': 'survey',
-                'All data': 'all',
+                "Current station(s)": "station",
+                "Current loop": "loop",
+                "Current survey": "survey",
+                "All data": "all",
             }
             self.time_correction_type = options[btn.text()]
             self.accept()

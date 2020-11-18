@@ -175,6 +175,7 @@ class TabDrift(QtWidgets.QWidget):
         self.tare_view.clicked.connect(self.update_tares)
         self.tare_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tare_view.customContextMenuRequested.connect(self.tare_context_menu)
+        self.tare_view.setModel(TareTableModel())
         self.resultsProxyModel = QtCore.QSortFilterProxyModel(self)
 
         self.tare_popup_menu = QtWidgets.QMenu("tare Popup Menu", self)
@@ -476,17 +477,16 @@ class TabDrift(QtWidgets.QWidget):
         Plots a vertical line at the time of a tare
         """
         ylim = axes.get_ylim()
-        if len(obstreeloop.tare) > 0:
-            for i in range(obstreeloop.tare_model.rowCount()):
-                idx = obstreeloop.tare_model.createIndex(i, 0)
-                tare = obstreeloop.tare_model.data(idx, role=Qt.UserRole)
-                tm = tare.datetime.time()
-                x_time = (
-                        tare.datetime.toordinal()
-                        + tm.hour / 24
-                        + tm.minute / 1440
-                        + tm.second / 86400
-                )
+        if len(obstreeloop.tares) > 0:
+            for tare in obstreeloop.tares:
+                # tm = tare.datetime.time()
+                # x_time = (
+                #         tare.datetime.toordinal()
+                #         + tm.hour / 24
+                #         + tm.minute / 1440
+                #         + tm.second / 86400
+                # ) - 719163
+                x_time = tare.datetime
                 axes.plot([x_time, x_time], [ylim[0], ylim[1]], 'gray')
                 axes.set_ylim(ylim)
                 axes.figure.canvas.draw()
@@ -999,6 +999,7 @@ class TabDrift(QtWidgets.QWidget):
             else:
                 obstreeloop.deltas = model
                 self.delta_view.model().init_data(model)
+                self.tare_view.model().init_data(obstreeloop.tares)
                 # Hide std_for_adj and residual columns
                 # self.show_all_columns(self.delta_view)
                 self.delta_view.hideColumn(2)
@@ -1024,12 +1025,13 @@ class TabDrift(QtWidgets.QWidget):
 
         for i in range(obstreeloop.rowCount()):
             obstreestation = obstreeloop.child(i)
+            # Clear old tare data
             for idx, t in enumerate(obstreestation.t):
                 obstreestation.tare[idx] = 0
-            for tare in obstreeloop.tare_model.tares:
+            for tare in obstreeloop.tares:
                 if tare.checked == 2:
-                    qdt = QtCore.QDateTime(tare.date, tare.time)
-                    tare_dt = date2num(qdt.toPyDateTime())
+                    # qdt = QtCore.QDateTime(tare.date, tare.time)
+                    tare_dt = date2num(tare.datetime)
                     for idx, t in enumerate(obstreestation.t):
                         if t > tare_dt:
                             obstreestation.tare[idx] += tare.tare
@@ -1043,9 +1045,9 @@ class TabDrift(QtWidgets.QWidget):
                 self.parent.index_current_loop
             )
             self.process_tares(obstreeloop)
-            model = self.plot_drift()
-            method = obstreeloop.drift_method
-            self.update_delta_model(method, model)
+            self.plot_drift()
+            # method = obstreeloop.drift_method
+            # self.update_delta_model(method, model)
 
     def drift_adjust(self):
         """

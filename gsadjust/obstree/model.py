@@ -329,11 +329,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurvey = self.itemFromIndex(self.index(i, 0))
             surveys.append(obstreesurvey)
         workspace_data = [surveys, self.station_coords]
-        if fname[-4:] != '.gsa':
-            # FIXME: We shouldn't be changing the user's selected filename
-            # when saving. The choice of extension should be determined/limited by the
-            # save-as box. As it is, we could cause a user to overwrite an unexpected file.
-            fname += '.gsa'
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
         logging.info('Saving JSON workspace to {}'.format(fname))

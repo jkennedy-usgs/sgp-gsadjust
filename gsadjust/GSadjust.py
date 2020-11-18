@@ -749,7 +749,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            None, 'Save workspace as', self.settings.value('current_dir')
+            None, 'Save workspace as', self.settings.value('current_dir'),
+            filter="Workspace files (*.gsa)"
         )
         if fname:
             self.settings.setValue('current_dir', os.path.dirname(fname))

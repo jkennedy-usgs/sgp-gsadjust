@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pytest
-from PyQt5 import Qt, QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 import gsadjust
 from gsadjust.gui.dialogs import (

@@ -615,9 +615,14 @@ class TabDrift(QtWidgets.QWidget):
                             drift_rate.append(dr)
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
-                            drift_time.append(
-                                dt.datetime.utcfromtimestamp(xmean * 86400.0)  # raises OS Error as outside range, xmean is unix timestamp?
-                            )
+                            try:
+                                drift_time.append(
+                                    dt.datetime.utcfromtimestamp(xmean * 86400.0)  # raises OS Error as outside range, xmean is unix timestamp?
+                                )
+                            except OSError:
+                                drift_time.append(
+                                    dt.datetime.utcfromtimestamp((xmean-719163) * 86400.0)  # raises OS Error as outside range, xmean is unix timestamp?
+                                )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
                                 self.axes_drift_cont_lower.plot(
@@ -750,19 +755,18 @@ class TabDrift(QtWidgets.QWidget):
                     QtWidgets.QApplication.restoreOverrideCursor()
                 except IndexError as e:
                     if self.drift_polydegree_combobox.currentIndex() == 1:
-                        MessageBox.warning(self,
+                        MessageBox.warning(
                             'Error'
                             'Insufficient drift observations for spline method',
                         )
                     else:
                         # FIXME: Can we add more information for the user here (or to logs)?
-                        MessageBox.warning(self, 'Unknown error', 'Unknown error')
+                        MessageBox.warning('Unknown error', 'Unknown error')
 
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)
                     MessageBox.warning(
-                        self,
                         'Error',
                         'Insufficient drift observations for ' 'polynomial method',
                     )
@@ -770,7 +774,6 @@ class TabDrift(QtWidgets.QWidget):
                     obstreeloop.drift_cont_method = 0
             else:
                 MessageBox.warning(
-                    self,
                     'No data available for plotting',
                     'Plot error'
                 )
@@ -787,16 +790,26 @@ class TabDrift(QtWidgets.QWidget):
                     # Make values relative to first station value
                     y = [f - line[1][0] for f in line[1]]
                     # TODO: store dates in station object in datetime format, to avoid this conversion?
-                    x = [
-                        dt.datetime.utcfromtimestamp(f * 86400.0) # raises OS Error as outside range, f is unix timestamp?
-                        for f in line[0]
-                    ]
+                    try:
+                        x = [
+                            dt.datetime.utcfromtimestamp(f * 86400.0) # raises OS Error as outside range, f is unix timestamp?
+                            for f in line[0]
+                        ]
+                    except OSError:
+                        x = [
+                            dt.datetime.utcfromtimestamp((f-719163) * 86400.0) # raises OS Error as outside range, f is unix timestamp?
+                            for f in line[0]
+                        ]
                     a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)
                     a[0].name = line[2]
 
             for line in deltas[2]:
                 if update:
-                    self.axes_drift_single.plot(line[0], line[1], '--')
+                    try:
+                        d = dt.datetime.utcfromtimestamp((line[0][0]-719163) * 86400.0)
+                        self.axes_drift_single.plot([d, d], line[1], '--')
+                    except OSError:
+                        self.axes_drift_single.plot(line[0], line[1], '--')
             if plot_data and update:
                 self.axes_drift_single.xaxis.set_major_formatter(DateFormatter('%H:%M'))
             if update:
@@ -895,6 +908,8 @@ class TabDrift(QtWidgets.QWidget):
             self.parent.adjust_update_required()
             # When loading a workspace, deltas[0] will be a dict, meaning
             # we don't want to update the adjust tables at this point.
+            #
+            # Otherwise the normal operation when the plots are update:
             try:
                 if type(self.parent.obsTreeModel.itemFromIndex(
                         self.parent.index_current_survey
@@ -902,6 +917,8 @@ class TabDrift(QtWidgets.QWidget):
                     self.parent.update_adjust_tables()
             except IndexError:
                 pass
+            except TypeError:
+                self.parent.update_adjust_tables()
 
             # Clear results table
             # survey.adjustment.adjustmentresults.n_unknowns

@@ -337,7 +337,7 @@ class AdjustOptions(QtWidgets.QDialog):
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
             MessageBox.warning(
-                'Network adjustment options'
+                'Network adjustment options',
                 'Please load a survey first',
             )
 

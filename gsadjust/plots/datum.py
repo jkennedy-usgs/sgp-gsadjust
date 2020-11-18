@@ -41,10 +41,7 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
         datum_names = []
         for i in range(obsTreeModel.rowCount()):
             survey = obsTreeModel.invisibleRootItem().child(i)
-            for ii in range(survey.datum_model.rowCount()):
-                datum = survey.datum_model.data(
-                    survey.datum_model.index(ii, 0), role=Qt.UserRole
-                )
+            for datum in survey.datums:
                 datum_names.append(datum.station)
 
         unique_datum_names = list(set(datum_names))
@@ -54,10 +51,7 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
             xdata, ydata_obs, ydata_adj = [], [], []
             for i in range(obsTreeModel.rowCount()):
                 survey = obsTreeModel.invisibleRootItem().child(i)
-                for ii in range(survey.datum_model.rowCount()):
-                    datum = survey.datum_model.data(
-                        survey.datum_model.index(ii, 0), role=Qt.UserRole
-                    )
+                for datum in survey.datums:
                     if (
                         datum.station == name
                         and datum.residual > -998
@@ -114,7 +108,7 @@ class PlotDatumCompare(QtWidgets.QDialog):
             for result in survey.results:
                 if result.station == datum.station:
                     diff.append(
-                        result.g - datum.g - datum.meas_height * datum.gradient
+                        result.g - datum.g + datum.meas_height * datum.gradient
                         )
                     lbl.append(datum.station)
 

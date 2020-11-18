@@ -414,7 +414,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             # not found at all: error
             else:
                 MessageBox.warning(
-                    'Inversion error'
+                    'Inversion error',
                     'Gravnet.exe not found, aborting',
                 )
                 logging.error('Inversion error, Gravnet.exe not found')

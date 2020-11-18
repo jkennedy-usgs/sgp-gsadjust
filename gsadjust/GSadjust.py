@@ -636,7 +636,7 @@ class MainProg(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.restoreOverrideCursor()
             else:
                 QtWidgets.QApplication.restoreOverrideCursor()
-                MessageBox.warning(self,'Unknown import error', 'File error')
+                MessageBox.warning('Unknown import error', 'File error')
         else:
             QtWidgets.QApplication.restoreOverrideCursor()
             return False
@@ -674,7 +674,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue('current_dir', os.path.dirname(fname))
             if fname[-1] == 'p':
                 MessageBox.warning(
-                    self,
                     'Import error',
                     'If trying to append a .p file, please save it as a .gsa file first.',
                 )
@@ -860,71 +859,75 @@ class MainProg(QtWidgets.QMainWindow):
                 [survey, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
             )
             saved_deltas += survey.deltas
-        saved_deltas_dict = {d['key']: (d['checked'], d['adj_sd'], d['assigned_dg']) for d in saved_deltas}
-        saved_assigned_deltas_dict = {d['key']: (d['checked'], d['adj_sd'], d['assigned_dg'])
-                                      for d in saved_deltas if d['type'] == 'assigned'}
-        pbar.setLabelText('Building Observation Tree')
+        try:
+            saved_deltas_dict = {d['key']: (d['checked'], d['adj_sd'], d['assigned_dg']) for d in saved_deltas}
+            saved_assigned_deltas_dict = {d['key']: (d['checked'], d['adj_sd'], d['assigned_dg'])
+                                          for d in saved_deltas if d['type'] == 'assigned'}
+            pbar.setLabelText('Building Observation Tree')
+            QtWidgets.QApplication.processEvents()
+
+            if not delta_models:
+                QtWidgets.QApplication.restoreOverrideCursor()
+                return
+            else:
+                i = 0
+                firststation = None
+                # This avoids an error when the first loop (or subsequent loops) are empty
+                firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+                while firststation is None:
+                    firstloop = firstsurvey.child(i)
+                    firststation = firstloop.child(0)
+                    i += 1
+                pbar.setValue(1)
+                pbar.setLabelText('Updating drift plots')
+                QtWidgets.QApplication.processEvents()
+                self.select_first_treeview_item()
+                try:
+                    self.populate_station_coords()
+                except Exception as e:
+                    logging.exception(str(e))
+                    # sometimes coordinates aren't valid
+                    pass
+
+                self.workspace_loaded = True
+
+                # This is going to create new deltas on the drift and adjust tabs:
+                self.update_all_drift_plots()
+
+                # After creating the new deltas, we want to apply these attributes that might have been user-specified:
+                # - a delta was unchecked
+                # - the delta was type='assigned' and assigned_dg = float
+                # - the adj_sd was modified
+                #
+                # We do this by matching up the new delta with the
+                # corresponding old delta and copying over those items.
+                new_deltas = self.obsTreeModel.deltas()
+                new_deltas_dict = {d.key:d for d in new_deltas}
+
+                # Update adj_sd and checked
+                for key, delta in saved_deltas_dict.items():
+                    new_deltas_dict[key].adj_sd = delta[1]
+                    new_deltas_dict[key].checked = delta[0]
+
+                # Create type = 'assigned' deltas
+                for key, delta in saved_assigned_deltas_dict.items():
+                    new_deltas_dict[key].type = 'assigned'
+                    new_deltas_dict[key].assigned_dg = delta[2]
+        except KeyError:
+            pass
+
+        pbar.setValue(2)
+        pbar.setLabelText('Populating delta tables')
         QtWidgets.QApplication.processEvents()
 
-        if not delta_models:
-            QtWidgets.QApplication.restoreOverrideCursor()
-            return
-        else:
-            i = 0
-            firststation = None
-            # This avoids an error when the first loop (or subsequent loops) are empty
-            firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
-            while firststation is None:
-                firstloop = firstsurvey.child(i)
-                firststation = firstloop.child(0)
-                i += 1
-            pbar.setValue(1)
-            pbar.setLabelText('Updating drift plots')
-            QtWidgets.QApplication.processEvents()
-            self.select_first_treeview_item()
-            try:
-                self.populate_station_coords()
-            except Exception as e:
-                logging.exception(str(e))
-                # sometimes coordinates aren't valid
-                pass
-
-            self.workspace_loaded = True
-
-            # This is going to create new deltas on the drift and adjust tabs:
-            self.update_all_drift_plots()
-
-            # After creating the new deltas, we want to apply these attributes that might have been user-specified:
-            # - a delta was unchecked
-            # - the delta was type='assigned' and assigned_dg = float
-            # - the adj_sd was modified
-            #
-            # We do this by matching up the new delta with the
-            # corresponding old delta and copying over those items.
-            new_deltas = self.obsTreeModel.deltas()
-            new_deltas_dict = {d.key:d for d in new_deltas}
-
-            # Update adj_sd and checked
-            for key, delta in saved_deltas_dict.items():
-                new_deltas_dict[key].adj_sd = delta[1]
-                new_deltas_dict[key].checked = delta[0]
-
-            # Create type = 'assigned' deltas
-            for key, delta in saved_assigned_deltas_dict.items():
-                new_deltas_dict[key].type = 'assigned'
-                new_deltas_dict[key].assigned_dg = delta[2]
-
-            pbar.setValue(2)
-            pbar.setLabelText('Populating delta tables')
-            QtWidgets.QApplication.processEvents()
-            self.update_adjust_tables()
-            pbar.setValue(3)
-            pbar.setLabelText('Initializing GUI')
-            QtWidgets.QApplication.processEvents()
-            self.init_gui()
-            QtWidgets.QApplication.restoreOverrideCursor()
-            pbar.setValue(4)
-            pbar.close()
+        pbar.setValue(3)
+        pbar.setLabelText('Initializing GUI')
+        QtWidgets.QApplication.processEvents()
+        self.init_gui()
+        self.update_adjust_tables()
+        QtWidgets.QApplication.restoreOverrideCursor()
+        pbar.setValue(4)
+        pbar.close()
 
     def populate_station_coords(self):
         """
@@ -1622,7 +1625,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         if obstreeloop.rowCount() > 1:
             MessageBox.warning(
-                "GSadjust error"
+                "GSadjust error",
                 "Loop must have a single station to divide by height.",
             )
             return

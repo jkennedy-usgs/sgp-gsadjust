@@ -143,9 +143,14 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                         return delta.loop
 
                 def format_datetime(date):
-                    return dt.datetime.utcfromtimestamp(
-                        date * 86400.0
-                    ).strftime('%Y-%m-%d %H:%M:%S')
+                    try:
+                        return dt.datetime.utcfromtimestamp(
+                            date * 86400.0
+                        ).strftime('%Y-%m-%d %H:%M:%S')
+                    except OSError:
+                        return dt.datetime.utcfromtimestamp(
+                            (date-719163) * 86400.0
+                        ).strftime('%Y-%m-%d %H:%M:%S')
 
                 def get_g():
                     if delta.type == 'assigned':

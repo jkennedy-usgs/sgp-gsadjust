@@ -288,7 +288,7 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
             compare_survey = survey.results
             for station_name in unique_station_names:
 
-                for ii in range(initial_survey.rowCount()):
+                for ii in range(len(initial_survey)):
                     initial_station = initial_survey[ii]
                     # Iterate through, look for matching station. 'if' statements deal with Gravnet, which truncates
                     # station names to 6 characters
@@ -301,10 +301,12 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                     # If we get to the end without breaking, set it to None.
                     initial_station = None
 
-                for ii in range(iteration_reference.rowCount()):
-                    iteration_station = iteration_reference.data(
-                        iteration_reference.index(ii, 0), role=256
-                    )  # 256=Qt.UserRole
+                # for ii in range(len(iteration_reference)):
+                #     iteration_station = iteration_reference[ii]
+                    # iteration_station = iteration_reference.data(
+                    #     iteration_reference.index(ii, 0), role=256
+                    # )  # 256=Qt.UserRole
+                for iteration_station in iteration_reference:
                     if (
                         iteration_station.station == station_name
                         or iteration_station.station[:6] == station_name
@@ -315,11 +317,11 @@ def compute_gravity_change(obstreemodel, table_type='simple'):
                     # If we get to the end without breaking, set it to None.
                     iteration_station = None
 
-                for ii in range(compare_survey.rowCount()):
-                    compare_station = compare_survey.data(
-                        compare_survey.index(ii, 0), role=256
-                    )  # 256=Qt.UserRole
-
+                # for ii in range(compare_survey.rowCount()):
+                #     compare_station = compare_survey.data(
+                #         compare_survey.index(ii, 0), role=256
+                #     )  # 256=Qt.UserRole
+                for compare_station in compare_survey:
                     if (
                         compare_station.station == station_name
                         or compare_station.station[:6] == station_name

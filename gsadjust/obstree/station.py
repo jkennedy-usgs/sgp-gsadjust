@@ -166,7 +166,10 @@ class ObsTreeStation(ObsTreeItemBase):
             w = self._weights_()
             wt = [g * w for (g, w) in zip(ttmp, w)]
             tmean = sum(wt) / d
-            return tmean
+            if tmean > 50000:
+                return tmean - 719163
+            else:
+                return tmean
         except:
             return -999
 

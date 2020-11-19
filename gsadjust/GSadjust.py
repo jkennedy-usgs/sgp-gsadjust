@@ -1520,7 +1520,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         index = self.gui_data_treeview.selectedIndexes()
         obstreesurvey = self.obsTreeModel.itemFromIndex(index[0]).parent()
-
+        loop_to_delete = self.obsTreeModel.itemFromIndex(index[0]).name
         # store bool True / False.
         update_selected_station = index[0] == self.index_current_station_loop
 
@@ -1552,6 +1552,9 @@ class MainProg(QtWidgets.QMainWindow):
                     self.index_current_station = first_station.index()
                     self.update_data_tab()
                 self.activate_survey_or_loop(self.index_current_loop)
+        obstreesurvey.deltas = [d for d in obstreesurvey.deltas if d.loop !=
+                                loop_to_delete]
+        self.update_adjust_tables()
         self.set_window_title_asterisk()
         self.update_menus()
 
@@ -1597,6 +1600,8 @@ class MainProg(QtWidgets.QMainWindow):
             new_selection_index, QtCore.QItemSelectionModel.SelectCurrent
         )
         self.update_data_tab()
+        self.update_drift_tables_and_plots()
+        self.update_adjust_tables()
         self.update_menus()
 
     def delete_tare(self):

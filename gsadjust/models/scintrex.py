@@ -23,7 +23,7 @@ resulting from the authorized or unauthorized use of the software.
 import numpy as np
 from matplotlib.dates import num2date
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QModelIndex
 
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
@@ -159,6 +159,20 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             if index.column() == 0:
                 return self.checkState(index)
 
+    def checkAll(self):
+        self.ChannelList_obj.keepdata = [1] * len(self.ChannelList_obj.raw_grav)
+        self.signal_adjust_update_required.emit()
+        self.layoutChanged.emit()
+        self.signal_check_station.emit()
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
+
+    def uncheckAll(self):
+        self.ChannelList_obj.keepdata = [0] * len(self.ChannelList_obj.raw_grav)
+        self.signal_adjust_update_required.emit()
+        self.layoutChanged.emit()
+        self.signal_uncheck_station.emit()
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
+
     def checkState(self, index):
         """
         By default, everything is checked. If keepdata property from the
@@ -170,7 +184,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
         else:
             return Qt.Checked
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role, silent=False):
         # type: (object, object, object) -> object
         """
         if a row is unchecked, update the keepdata value to 0 setData launched
@@ -185,8 +199,9 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                 self.ChannelList_obj.keepdata[index.row()] = 0
                 if not any(self.ChannelList_obj.keepdata):
                     self.signal_uncheck_station.emit()
-            self.signal_adjust_update_required.emit()
-            self.dataChanged.emit(index, index)
+            if not silent:
+                self.signal_adjust_update_required.emit()
+                self.dataChanged.emit(index, index)
             return True
 
     def headerData(self, section, orientation, role):

@@ -24,8 +24,7 @@ from matplotlib.dates import DateFormatter
 from matplotlib.figure import Figure
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
-
-from ..messages import QMessageBox
+from ..messages import MessageBox
 
 
 ###########################################################################
@@ -421,7 +420,7 @@ class TabData(QtWidgets.QWidget):
         Tilts: absolute value higher than threshold are set to keepdata=0
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.currentStationIndex
+            self.parent.index_current_station
         )
         if obstreestation.meter_type == 'Burris':
             MessageBox.warning(
@@ -451,10 +450,10 @@ class TabData(QtWidgets.QWidget):
         sd: sd values higher than threshold are set to keepdata=0
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.currentStationIndex
+            self.parent.index_current_station
         )
         if obstreestation.meter_type == 'Burris':
-            QMessageBox.warning(
+            MessageBox.warning(
                 'Data selection error',
                 'Not implemented for Burris data',
             )
@@ -478,10 +477,10 @@ class TabData(QtWidgets.QWidget):
         dur: duration different than given value are set to keepdata=0
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.currentStationIndex
+            self.parent.index_current_station
         )
         if obstreestation.meter_type == 'Burris':
-            QMessageBox.warning(
+            MessageBox.warning(
                 'Data selection error',
                 'Not implemented for Burris data',
             )
@@ -506,25 +505,28 @@ class TabData(QtWidgets.QWidget):
         mean value from 3 last points are set to keepdata=0
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.currentStationIndex
+            self.parent.index_current_station
         )
         if obstreestation.meter_type == 'Burris':
             g_column = 4
         else:
             g_column = 2
-        g_threshold = float(autoselec.val.text())
-        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
-        g = obstreestation.grav()
-        stabilized_value = obstreestation.gmean()
-        for i in range(self.parent.station_model.rowCount()):
-            indx = self.parent.station_model.index(i, g_column)
-            data = float(self.parent.station_model.data(indx, role=Qt.DisplayRole))
-            if abs(data - stabilized_value) > g_threshold:
-                idx_chk = indx.sibling(i, 0)
-                self.parent.station_model.setData(
-                    idx_chk, Qt.Unchecked, Qt.CheckStateRole
-                )
-        QtWidgets.QApplication.restoreOverrideCursor()
+        try:
+            g_threshold = float(autoselec.val.text())
+            QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
+            g = obstreestation.grav()
+            stabilized_value = obstreestation.gmean()
+            for i in range(self.parent.station_model.rowCount()):
+                indx = self.parent.station_model.index(i, g_column)
+                data = float(self.parent.station_model.data(indx, role=Qt.DisplayRole))
+                if abs(data - stabilized_value) > g_threshold:
+                    idx_chk = indx.sibling(i, 0)
+                    self.parent.station_model.setData(
+                        idx_chk, Qt.Unchecked, Qt.CheckStateRole
+                    )
+            QtWidgets.QApplication.restoreOverrideCursor()
+        except ValueError:  # If box is empty
+            return
 
     def autoselect_all(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
         """
@@ -549,7 +551,7 @@ class TabData(QtWidgets.QWidget):
             selec_dur = True
 
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.currentStationIndex
+            self.parent.index_current_station
         )
         g = obstreestation.grav()
         stabilized_value = obstreestation.gmean()
@@ -649,27 +651,13 @@ class TabData(QtWidgets.QWidget):
         """
         uncheck all items in the displayed table when button is clicked
         """
-        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
-        for i in range(self.parent.station_model.rowCount()):
-            # because the setData function currently only works for column 0,
-            # then pass the index of the element with same row as selected (if
-            # the user does not select element from first column) and column=0
-            indx = self.parent.station_model.index(i, 0)
-            self.parent.station_model.setData(indx, Qt.Unchecked, Qt.CheckStateRole)
-        QtWidgets.QApplication.restoreOverrideCursor()
+        self.parent.station_model.uncheckAll()
 
     def checkall(self):
         """
         check all items in the displayed table when button is clicked
         """
-        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
-        for i in range(self.parent.station_model.rowCount()):
-            # because the setData function currently only works for column 0,
-            # then pass the index of the element with same row as selected (if
-            # the user does not select element from first column) and column=0
-            indx = self.parent.station_model.index(i, 0)
-            self.parent.station_model.setData(indx, Qt.Checked, Qt.CheckStateRole)
-        QtWidgets.QApplication.restoreOverrideCursor()
+        self.parent.station_model.checkAll()
 
     def checkselected(self):
         """

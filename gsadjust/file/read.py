@@ -16,7 +16,7 @@ resulting from the authorized or unauthorized use of the software.
 """
 
 import datetime as dt
-
+import logging
 from matplotlib.dates import date2num
 
 from ..data import ChannelList, Datum
@@ -522,7 +522,7 @@ def import_abs_g_complete(fname):
                     )
                     datums.append(datum)
             except ValueError:
-                pass  # Log this error?
+                logging.error('No file : %s', fname)
     return datums
 
 

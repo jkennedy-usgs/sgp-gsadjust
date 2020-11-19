@@ -22,7 +22,7 @@ resulting from the authorized or unauthorized use of the software.
 """
 import numpy as np
 from matplotlib.dates import num2date
-from PyQt5.QtCore import QAbstractTableModel, Qt, pyqtSignal
+from PyQt5.QtCore import QAbstractTableModel, Qt, pyqtSignal, QModelIndex
 
 # Constants for column headers
 (
@@ -166,6 +166,20 @@ class BurrisTableModel(QAbstractTableModel):
             # check status definition
             if index.column() == 0:
                 return self.checkState(index)
+
+    def checkAll(self):
+        self.ChannelList_obj.keepdata = [1] * len(self.ChannelList_obj.raw_grav)
+        self.signal_adjust_update_required.emit()
+        self.layoutChanged.emit()
+        self.signal_check_station.emit()
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
+
+    def uncheckAll(self):
+        self.ChannelList_obj.keepdata = [0] * len(self.ChannelList_obj.raw_grav)
+        self.signal_adjust_update_required.emit()
+        self.layoutChanged.emit()
+        self.signal_uncheck_station.emit()
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
 
     def checkState(self, index):
         """

@@ -86,7 +86,7 @@ def channellist():
 
 @pytest.fixture
 def obstreestation():
-    a = gsadjust.obstree.station(channellist(), 'jeff', 1)
+    a = gsadjust.obstree.station(channellist(), '', 1)
     return a
 
 

@@ -34,7 +34,7 @@ constitute any such warranty. The software is provided on the condition tha
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-from . import adjustment, analysis, channel, correction, datum, delta, tare, timeseries
+from . import adjustment, analysis, channel, correction, datum, delta, tare
 from .adjustment import (
     AdjustedStation,
     Adjustment,
@@ -45,10 +45,8 @@ from .channel import ChannelList
 from .datum import Datum
 from .delta import (
     Delta3Point,
-    DeltaAssigned,
     DeltaList,
     DeltaNormal,
     create_delta_by_type,
 )
 from .tare import Tare
-from .timeseries import TimeSeries

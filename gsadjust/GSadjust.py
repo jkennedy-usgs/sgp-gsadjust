@@ -482,7 +482,6 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Get station to plot, update station table model if necessary.
         """
-        # Center panel: table (station values)
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreeloop = obstreestation.parent()
         station = obstreestation
@@ -506,10 +505,30 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
 
     def uncheck_station(self):
+        """
+        Unchecks station in the tree view.
+
+        Called when all samples at a station are unchecked; in that case we want to exclude
+        that station from the deltas.
+
+        Returns
+        -------
+        None
+        """
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreestation.setCheckState(0)
 
     def check_station(self):
+        """
+        Checks station in the tree view.
+
+        Called when one or more samples at a station are unchecked; in that case we want to exclude
+        that station from the deltas.
+
+        Returns
+        -------
+        None
+        """
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreestation.setCheckState(2)
 
@@ -1152,8 +1171,6 @@ class MainProg(QtWidgets.QMainWindow):
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
                 stats_model.setColumnCount(2)
                 stats_model.setHorizontalHeaderLabels(["", ""])
-                self.tab_adjust.stats_view.setColumnWidth(0, 350)
-                self.tab_adjust.stats_view.setColumnWidth(1, 150)
                 for line in survey.adjustment.results_string():
                     try:
                         line_elems = line.split(":")
@@ -1172,13 +1189,16 @@ class MainProg(QtWidgets.QMainWindow):
                             stats_model.appendRow([qt_item, QtGui.QStandardItem("")])
                     except:
                         pass
+                self.tab_adjust.stats_view.setModel(stats_model)
+                self.tab_adjust.stats_view.setColumnWidth(0, 350)
+                self.tab_adjust.stats_view.setColumnWidth(1, 150)
             elif survey.adjustment.adjustmentresults.text:  # Gravnet adjustment
+                for line in survey.adjustment.adjustmentresults.text:
+                    stats_model.appendRow([QtGui.QStandardItem(line)])
+                self.tab_adjust.stats_view.setModel(stats_model)
                 self.tab_adjust.stats_view.setColumnWidth(0, 600)
                 stats_model.setColumnCount(1)
                 stats_model.setHorizontalHeaderLabels([""])
-                for line in survey.adjustment.adjustmentresults.text:
-                    stats_model.appendRow([QtGui.QStandardItem(line)])
-            self.tab_adjust.stats_view.setModel(stats_model)
 
             self.tab_adjust.update_col_widths()
 
@@ -1255,18 +1275,26 @@ class MainProg(QtWidgets.QMainWindow):
             self, "Input parameters", "time offset to apply (min)?"
         )
         if ok:
+            try:
+                text = float(text)
+            except ValueError:
+                MessageBox.warning('Time correction error',
+                                   'Invalid value entered for time correction')
+                return
             time_correction_dialog = DialogApplyTimeCorrection()
             time_correction_dialog.msg.exec_()
             correction_type = time_correction_dialog.time_correction_type
             if correction_type:
-                time_correction(
-                    self.obsTreeModel,
-                    int(text),
-                    self.index_current_survey,
-                    self.index_current_loop,
-                    self.gui_data_treeview.selectedIndexes(),
-                )
-                self.set_window_title_asterisk()
+                    time_correction(
+                        self.obsTreeModel,
+                        correction_type,
+                        text,
+                        self.index_current_survey,
+                        self.index_current_loop,
+                        self.gui_data_treeview.selectedIndexes(),
+                    )
+                    self.update_data_tab()
+                    self.set_window_title_asterisk()
 
     def set_vertical_gradient_interval(self):
         """
@@ -1286,7 +1314,7 @@ class MainProg(QtWidgets.QMainWindow):
         # Want to get the selected loop, not the self.index_current_loop (former is highlighted, latter is bold)
         current_loop_index = self.gui_data_treeview.selectedIndexes()[0]
         current_loop = self.obsTreeModel.itemFromIndex(current_loop_index)
-        deltas = current_loop.delta
+        deltas = current_loop.deltas
         n_stations = current_loop.n_unique_stations()
 
         dg, sd = None, None
@@ -1317,8 +1345,7 @@ class MainProg(QtWidgets.QMainWindow):
                     )
                     if filename:
                         dg_list, sd_list = [], []
-                        for i in range(deltamodel.rowCount()):
-                            delta = deltas[i]
+                        for delta in current_loop.deltas:
                             dg_list.append(delta.dg)
                             sd_list.append(delta.sd)
                         dg = np.mean(dg_list)
@@ -2512,8 +2539,6 @@ def main():
             "GSadjust error",
             "Please install GSadjust somewhere where admin rights are not required.",
         )
-    # TODO: Logging not working?
-    logging.info("JEFF")
     splash_pix = QtGui.QPixmap(":/icons/Splash.png")
     splash = QtWidgets.QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())

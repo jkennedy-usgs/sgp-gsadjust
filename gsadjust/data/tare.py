@@ -2,7 +2,7 @@
 data/tare.py
 ===============
 
-GSadjust objects for Tare: Represents an offset applied to the data
+Represents an offset applied to the data
 
 This software is preliminary, provisional, and is subject to revision. It is
 being provided to meet the need for timely best science. The software has not
@@ -13,22 +13,24 @@ constitute any such warranty. The software is provided on the condition tha
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-from PyQt5.QtCore import QDateTime
 
 
 class Tare:
     """
-    Object to store relative-gravity difference
+    Tares are offsets in the meter reading.
 
-    Deltas are calculated when one of the "populate delta table" menu commands
-    is chosen. They may or may not be drift-corrected. Before a network
-    adjustment is done, there is no residual and the default value of -999 is
-    assigned.
+    Tares apply to all data collected after the time of the Tare. Typically the time
+    is assigned so that a Tare falls between two station occupations.
 
-    It's tempting to store just the Station objects that make up the delta,
-    and calculate dg, sd, etc. as needed. But that doesn't work too well with
-    the Roman method because the delta-g is calculated between (1) a station
-    and (2) an interpolated value between two occupations at the other station.
+    Attributes
+    ----------
+    checked: int
+        For PyQt tables. Checked = 2, Unchecked = 0
+    datetime : datetime
+        Python datetime, the time the Tare occurred
+    tare : Float
+        Tare value, in µGal
+
     """
 
     def __init__(self, datetime, tare):
@@ -38,15 +40,19 @@ class Tare:
 
     def __str__(self):
         if self.checked == 2:
-            in_use = 'x'
+            in_use = "x"
         else:
-            in_use = 'o'
+            in_use = "o"
         return f"{in_use} {self.datetime} {self.tare}"
 
     def to_json(self):
-        return {
-            'checked': self.checked,
-            'datetime': str(self.datetime),
-            'tare': self.tare,
-        }
+        """Method for serializing Tare.
 
+        Python datetime objects can't be jsonified, therefore we convert to string.
+
+        """
+        return {
+            "checked": self.checked,
+            "datetime": str(self.datetime),
+            "tare": self.tare,
+        }

@@ -153,7 +153,10 @@ class BurrisTableModel(QAbstractTableModel):
                 value = self.arraydata[row][column]
 
             def format_datetime(dt):
-                return num2date(float(dt)).strftime('%Y-%m-%d %H:%M:%S')
+                if dt > 50000:
+                    return num2date(dt - 719163).strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    return num2date(dt).strftime('%Y-%m-%d %H:%M:%S')
 
             fn, *args = {
                 BURRIS_DATE: (format_datetime, value),

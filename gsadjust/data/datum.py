@@ -4,8 +4,8 @@
 data/datum.py
 ===============
 
-GSadjust objects for Datum: Absolute-gravity observation or other reference for the relative-gravity
-network. At least one datum is required for network adjustment.
+Absolute-gravity observation or other reference for the relative-gravity network. At
+least one datum is required for network adjustment.
 
 This software is preliminary, provisional, and is subject to revision. It is
 being provided to meet the need for timely best science. The software has not
@@ -29,10 +29,19 @@ class Datum:
     considered when transferring between the absolute- and relative-gravimeter
     measuring heights. The date field is not used in the adjustment (datum
     observations must be manually assigned to a survey).
+
+    See __init__ for description of each attribute.
     """
 
     def __init__(
-        self, station, g=50000, sd=5, date='1/1/2000', gradient=-3.0, meas_height=0, checked=2,
+        self,
+        station,  # Station name (str)
+        g=50000,  # Default value, in µGal
+        sd=5,  # Standard deviation, in µGal
+        date="1/1/2000",  # For reference; not used
+        gradient=-3.0,  # µGal/cm
+        meas_height=0,  # Instrument height for the absolute gravity meter, in cm
+        checked=2,  # For PyQt tables
     ):
         self.station = station
         self.g = g
@@ -45,11 +54,11 @@ class Datum:
         self.n_sets = None
 
     def __str__(self):
-        """
-        Override the built-in method 'print' when applied to such object
-        """
         if self.checked == 2:
-            in_use = '1'
+            in_use = "1"
         else:
-            in_use = '0'
-        return f'{in_use} {self.station} {self.date} {self.g:.2f} {self.sd:.2f} {self.residual:.2f}'
+            in_use = "0"
+        return (
+            f"{in_use} {self.station} {self.date} {self.g:.2f} {self.sd:.2f}"
+            f" {self.residual:.2f}"
+        )

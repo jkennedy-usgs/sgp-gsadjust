@@ -391,8 +391,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
             except Exception as e:
                 logging.exception(e, exc_info=True)
                 MessageBox.warning(
-                    "Inversion error",
-                    "GSadjust"
+                    "GSadjust",
+                    "Unknown inversion error"
                 )
 
     def gravnet_inversion(self):
@@ -689,13 +689,13 @@ class ObsTreeSurvey(ObsTreeItemBase):
         self.adjustment.adjustmentresults.text = ''
 
         try:
-            cal_dic = numpy_inversion(
-                self.adjustment, self.results, output_root_dir, write_out_files='n',
+            self.results = numpy_inversion(
+                self.adjustment
             )
         except InversionError:
             logging.exception("Inversion Error")
             MessageBox.warning("Inversion Error", str(InversionError))
-        self.match_inversion_results('numpy', cal_dic)
+        self.match_inversion_results('numpy', self.adjustment.adjustmentresults.cal_dic)
 
     def match_inversion_results(self, inversion_type, cal_dic=None):
         """

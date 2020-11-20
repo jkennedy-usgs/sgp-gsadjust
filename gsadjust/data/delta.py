@@ -278,7 +278,11 @@ class DeltaNormal(DeltaBase):
             self.station1.gmean(),
             self.station2.gmean(),
         )
-        return gm2 - gm1 - self.driftcorr
+        try:
+            return gm2 - gm1 - self.driftcorr
+        # If drift method == "netadj", self.driftcorr is a str
+        except TypeError:
+            return gm2 - gm2
 
     @property
     def sta1_t(self):

@@ -109,7 +109,7 @@ class DatumTableModel(QAbstractTableModel):
         if index.isValid():
             datum = self._data[index.row()]
             column = index.column()
-            if role == Qt.DisplayRole:
+            if role == Qt.DisplayRole or role == Qt.EditRole:
                 # To accommodate old save files
                 def get_nsets():
                     try:

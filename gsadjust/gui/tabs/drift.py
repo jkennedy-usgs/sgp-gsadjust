@@ -430,7 +430,7 @@ class TabDrift(QtWidgets.QWidget):
             delta = DeltaNormal(
                 prev_station,
                 station,
-                driftcorr=0.0,
+                driftcorr="Adj.",
                 ls_drift=(loop_name, self.drift_polydegree_combobox.currentIndex() - 1),
                 loop=loop_name,
             )
@@ -494,7 +494,9 @@ class TabDrift(QtWidgets.QWidget):
 
         avg_deltas = []
         for station_pair in avg_dg.items():
-            avg_deltas.append(DeltaList(None, station_pair[1], loop=loop_name))
+            avg_deltas.append(
+                DeltaList(None, station_pair[1], loop=loop_name, driftcorr="Roman")
+            )
         return roman_dg_model, avg_deltas, vert_lines
 
     @staticmethod
@@ -582,7 +584,7 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] + offset for f in line[1]]
                     x = [f for f in line[0]]
                     if update:
-                        a = self.axes_drift_single.plot(x, y, ".-", pickradius=5)
+                        a = self.axes_drift_single.plot(x, y, ".-", picker=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
 
@@ -661,7 +663,7 @@ class TabDrift(QtWidgets.QWidget):
                                     [x[idx], x[idx - 1]], [dr, dr], "-", color="0.5"
                                 )
                     if update:
-                        a = self.axes_drift_cont_upper.plot(x, y, ".-", pickradius=5)
+                        a = self.axes_drift_cont_upper.plot(x, y, ".-", picker=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
 
@@ -675,7 +677,7 @@ class TabDrift(QtWidgets.QWidget):
                         DateFormatter("%H:%M")
                     )
                     self.axes_drift_cont_lower.plot(
-                        drift_time, drift_rate, ".", pickradius=2
+                        drift_time, drift_rate, ".", picker=2
                     )
                     xticks = self.axes_drift_cont_upper.get_xticks()
                     self.axes_drift_cont_lower.set_xticks(xticks)
@@ -827,7 +829,7 @@ class TabDrift(QtWidgets.QWidget):
                             dt.datetime.utcfromtimestamp((f - 719163) * 86400.0)
                             for f in line[0]
                         ]
-                    a = self.axes_drift_single.plot(x, y, ".-", pickradius=5)
+                    a = self.axes_drift_single.plot(x, y, ".-", picker=5)
                     a[0].name = line[2]
 
             for line in deltas[2]:

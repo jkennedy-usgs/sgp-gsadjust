@@ -22,7 +22,7 @@ resulting from the authorized or unauthorized use of the software.
 """
 
 import datetime as dt
-
+import logging
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QVariant
 
@@ -133,7 +133,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     if column == DELTA_G:
                         brush = QtGui.QBrush(Qt.red)
                 return brush
-            if role == Qt.DisplayRole:
+            if role == Qt.DisplayRole or role == Qt.EditRole:
                 def delta_station_loop():
                     if delta.loop is None:
                         if type(delta.station2) == list:
@@ -153,11 +153,21 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             (date-719163) * 86400.0
                         ).strftime('%Y-%m-%d %H:%M:%S')
 
+                def get_sd():
+                    delta.delta_edited_sd = delta.adj_sd
+                    return delta.adj_sd
                 def get_g():
+                    delta.edited_dg = delta.dg
                     if delta.type == 'assigned':
                         return delta.assigned_dg
                     else:
                         return delta.dg
+
+                def get_driftcorr():
+                    if delta.driftcorr == "Roman" or delta.driftcorr == "Adj.":
+                        return delta.driftcorr, ""
+                    else:
+                        return delta.driftcorr, "0.1f"
 
                 fn, *args = {
                     DELTA_STATION1: (str, delta.sta1),
@@ -165,9 +175,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     LOOP: (str, delta_station_loop()),
                     DELTA_TIME: (format_datetime, delta.time()),
                     DELTA_G: (format, get_g(), "0.1f"),
-                    DELTA_DRIFTCORR: (format, delta.driftcorr, "0.1f"),
+                    DELTA_DRIFTCORR: (format, *get_driftcorr()),
                     DELTA_SD: (format, delta.sd, "0.1f"),
-                    DELTA_ADJ_SD: (format, delta.adj_sd, "0.1f"),
+                    DELTA_ADJ_SD: (format, get_sd(), "0.1f"),
                     DELTA_RESIDUAL: (format, delta.residual, "0.1f"),
                 }.get(column, (str, "NA"))
 
@@ -203,6 +213,10 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     if len(str(value)) > 0:
                         if column == DELTA_ADJ_SD:
                             delta.adj_sd = float(value)
+                            logging.info(
+                            "delta {}, adj_sd changed from {} to {}".format(delta,
+                                                                       delta.edited_sd,
+                                                                       value))
                         if column == DELTA_G:
                             if delta.type == 'list':
                                 self.tried_to_update_list_delta.emit()
@@ -210,6 +224,10 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             else:
                                 delta.type = 'assigned'
                                 delta.assigned_dg = float(value)
+                                logging.info(
+                                    "delta {}, g changed from {} to {}".format(delta,
+                                                                              delta.edited_dg,
+                                                                              value))
                         self.dataChanged.emit(index, index)
                         self.signal_adjust_update_required.emit()
                     return True
@@ -217,8 +235,6 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     return False
         if role == Qt.UserRole:
             self._data[index.row()] = value
-
-        # self.layoutChanged.emit()
 
     def clearDeltas(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())

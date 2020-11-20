@@ -122,12 +122,13 @@ def test_meter_type(qtbot, mainprog):
     def on_timeout():
         qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Tab, delay=50)
         qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Tab, delay=50)
-        qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter, delay=50)
 
-    QtCore.QTimer.singleShot(1500, on_timeout)
+    def after_timeout():
+        qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter, delay=50)
+    QtCore.QTimer.singleShot(1000, on_timeout)
+    QtCore.QTimer.singleShot(2000, after_timeout)
     meter_dialog.exec_()
     assert meter_dialog.meter_type == 'CG6Tsoft'
-    qtbot.wait(1000)
 
 def test_loop_options(qtbot, mainprog):
     loops = [mainprog.obsTreeModel.invisibleRootItem().child(0).child(0)]

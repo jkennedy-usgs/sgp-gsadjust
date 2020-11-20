@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 gui/tabs/network.py
 ===============
@@ -50,11 +48,11 @@ class TabAdjust(QtWidgets.QWidget):
         self.datum_view.setSortingEnabled(True)
 
         self.datum_popup_menu = QtWidgets.QMenu("Datum Popup Menu", self)
-        self.mnDeleteDatum = QtWidgets.QAction('Delete datum', self)
+        self.mnDeleteDatum = QtWidgets.QAction("Delete datum", self)
         self.mnDeleteDatum.triggered.connect(self.parent.delete_datum)
 
         self.results_popup_menu = QtWidgets.QMenu("Results Popup Menu", self)
-        self.mnCopyResults = QtWidgets.QAction('Copy to clipboard', self)
+        self.mnCopyResults = QtWidgets.QAction("Copy to clipboard", self)
         self.mnCopyResults.triggered.connect(self.copy_results)
 
         # Results table (top right)
@@ -107,42 +105,47 @@ class TabAdjust(QtWidgets.QWidget):
         layout_final.addWidget(main_layout)
         self.setLayout(layout_final)
 
-    def invalidate_sort(self):
-        self.datum_proxy_model.invalidate()
-
     def save_delta_column_widths_to_settings(self):
         col_widths = []
         for i in range(self.delta_view.model().columnCount()):
             col_widths.append(int(self.delta_view.columnWidth(i)))
-        self.parent.settings.setValue('delta_table_column_widths', col_widths)
+        self.parent.settings.setValue("delta_table_column_widths", col_widths)
 
     def save_datum_column_widths_to_settings(self):
         col_widths = []
         for i in range(self.datum_view.model().columnCount()):
             col_widths.append(int(self.datum_view.columnWidth(i)))
-        self.parent.settings.setValue('datum_table_column_widths', col_widths)
+        self.parent.settings.setValue("datum_table_column_widths", col_widths)
 
     def save_results_column_widths_to_settings(self):
         col_widths = []
         for i in range(self.results_view.model().columnCount()):
             col_widths.append(int(self.results_view.columnWidth(i)))
-        self.parent.settings.setValue('results_table_column_widths', col_widths)
+        self.parent.settings.setValue("results_table_column_widths", col_widths)
 
     def update_col_widths(self):
-        cw = self.parent.settings.value('delta_table_column_widths')
+        cw = self.parent.settings.value("delta_table_column_widths")
         if cw:
             for i, w in enumerate(cw):
                 self.delta_view.setColumnWidth(i, int(w))
-        cw = self.parent.settings.value('datum_table_column_widths')
+        cw = self.parent.settings.value("datum_table_column_widths")
         if cw:
             for i, w in enumerate(cw):
                 self.datum_view.setColumnWidth(i, int(w))
-        cw = self.parent.settings.value('results_table_column_widths')
+        cw = self.parent.settings.value("results_table_column_widths")
         if cw:
             for i, w in enumerate(cw):
                 self.results_view.setColumnWidth(i, int(w))
 
     def datum_context_menu(self, point):
+        """
+        Right-click context menu for datum table - for deleting datums.
+
+        Parameters
+        ----------
+        point : PyQt reference to click point, determines where to show popup.
+
+        """
         selected = self.datum_view.selectedIndexes()
         if selected:
             self.datum_popup_menu.addAction(self.mnDeleteDatum)
@@ -150,8 +153,9 @@ class TabAdjust(QtWidgets.QWidget):
 
     def results_context_menu(self, point):
         """
-        Right-click context menu on results table
-        :param point: PyQt reference to click point, determines where to show popup.
+        Right-click context menu on results table - for copying results
+
+        point: PyQt reference to click point, determines where to show popup.
         """
         self.results_popup_menu.addAction(self.mnCopyResults)
         self.results_popup_menu.exec_(self.results_view.mapToGlobal(point))

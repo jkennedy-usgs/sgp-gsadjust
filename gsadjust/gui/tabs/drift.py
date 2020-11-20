@@ -19,20 +19,22 @@ import datetime as dt
 import logging
 
 import numpy as np
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.dates import DateFormatter, date2num
-from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.dates import DateFormatter, date2num
+from matplotlib.figure import Figure
 
-from ...data import DeltaList, DeltaNormal
-from ...drift import drift_continuous, drift_roman
-from ...models import (DeltaTableModel, NoCheckDeltaTableModel,
-                       RomanTableModel, TareTableModel)
-from ...obstree import ObsTreeLoop
 from ..messages import MessageBox
 from ..widgets import IncrMinuteTimeEdit
+from ...data import DeltaList, DeltaNormal
+from ...drift import drift_continuous, drift_roman
+from ...models import (
+    DeltaTableModel,
+    RomanTableModel,
+    TareTableModel,
+)
+from ...obstree import ObsTreeLoop
 
 
 ###########################################################################
@@ -53,7 +55,7 @@ class TabDrift(QtWidgets.QWidget):
         # Setup drift figures (Roman and Continuous). Only one will be shown at a time.
         # Drift figure: default and roman
         self.drift_window = QtWidgets.QSplitter(Qt.Horizontal, self)
-        self.drift_fig = Figure((3.0, 5.0), dpi=self.dpi, facecolor='white')
+        self.drift_fig = Figure((3.0, 5.0), dpi=self.dpi, facecolor="white")
         self.drift_single_canvas = FigureCanvas(self.drift_fig)
         self.drift_fig.subplots_adjust(wspace=0.3)
         self.axes_drift_single = self.drift_fig.add_subplot(111)
@@ -62,12 +64,12 @@ class TabDrift(QtWidgets.QWidget):
         # Plot panel
         self.drift_cont_plotpanel = QtWidgets.QSplitter(Qt.Vertical, self)
         # Top plot - lines
-        self.drift_cont_figtop = Figure((3.0, 5.0), dpi=self.dpi, facecolor='white')
+        self.drift_cont_figtop = Figure((3.0, 5.0), dpi=self.dpi, facecolor="white")
         self.drift_cont_canvastop = FigureCanvas(self.drift_cont_figtop)
         self.drift_cont_figtop.subplots_adjust(wspace=0.3)
         self.axes_drift_cont_upper = self.drift_cont_figtop.add_subplot(111)
         # Bottom plot - drift curves
-        self.drift_cont_figbot = Figure((3.0, 5.0), dpi=self.dpi, facecolor='white')
+        self.drift_cont_figbot = Figure((3.0, 5.0), dpi=self.dpi, facecolor="white")
         self.drift_cont_canvasbot = FigureCanvas(self.drift_cont_figbot)
         self.drift_cont_figbot.subplots_adjust(wspace=0.3)
         self.axes_drift_cont_lower = self.drift_cont_figbot.add_subplot(111)
@@ -97,22 +99,22 @@ class TabDrift(QtWidgets.QWidget):
 
         # Widget to remove dg-observations with a long elapsed time in between
         self.drift_screen_elapsed_time = CustomCheckBox(
-            'Max. time between repeats (hh:mm)'
+            "Max. time between repeats (hh:mm)"
         )
         self.drift_screen_elapsed_time.setChecked(False)
-        self.drift_screen_elapsed_time.stateChanged.connect(self.time_extent_changed)
+        self.drift_screen_elapsed_time.stateChanged.connect(self.plot_drift)
         self.drift_time_spinner = IncrMinuteTimeEdit(QtCore.QTime(1, 0))
-        self.drift_time_spinner.timeChanged.connect(self.time_extent_changed)
+        self.drift_time_spinner.timeChanged.connect(self.plot_drift)
         self.drift_time_spinner.setDisplayFormat("hh:mm")
 
         # Widget to add horizontal-extent lines to drift-rate plot
         self.drift_plot_hz_extent = QtWidgets.QCheckBox(
-            'Show time-extent of drift observation'
+            "Show time-extent of drift observation"
         )
         self.drift_plot_hz_extent.setChecked(False)
         self.drift_plot_hz_extent.stateChanged.connect(self.plot_drift)
 
-        self.drift_plot_weighted = CustomCheckBox('Weight drift observations')
+        self.drift_plot_weighted = CustomCheckBox("Weight drift observations")
         self.drift_plot_weighted.setChecked(False)
         self.drift_plot_weighted.stateChanged.connect(self.update_weighted)
 
@@ -122,7 +124,7 @@ class TabDrift(QtWidgets.QWidget):
         self.tension_slider.setEnabled(False)
         self.tension_slider.valueChanged.connect(self.update_tension)
         self.tension_label = QtWidgets.QLabel()
-        self.tension_label.setText('{:2.2f}'.format(self.tension_slider.value()))
+        self.tension_label.setText("{:2.2f}".format(self.tension_slider.value()))
         self.tension_label.setAlignment(Qt.AlignCenter)
         self.drift_polydegree_combobox_key = {
             0: "Constant",
@@ -150,19 +152,19 @@ class TabDrift(QtWidgets.QWidget):
         drift_control_sublayout = QtWidgets.QVBoxLayout()
         grid_widget = QtWidgets.QWidget()
         grid = QtWidgets.QGridLayout()
-        grid.addWidget(QtWidgets.QLabel('Drift correction method'), 0, 0)
+        grid.addWidget(QtWidgets.QLabel("Drift correction method"), 0, 0)
         grid.addWidget(self.driftmethod_combobox, 0, 1)
-        grid.addWidget(QtWidgets.QLabel('Drift model type'), 1, 0)
+        grid.addWidget(QtWidgets.QLabel("Drift model type"), 1, 0)
         grid.addWidget(self.drift_polydegree_combobox, 1, 1)
-        grid.addWidget(QtWidgets.QLabel('Behavior at start/end:'), 2, 0)
+        grid.addWidget(QtWidgets.QLabel("Behavior at start/end:"), 2, 0)
         grid.addWidget(self.drift_cont_startendcombobox, 2, 1)
         grid.addWidget(self.drift_screen_elapsed_time, 3, 0)
         grid.addWidget(self.drift_time_spinner, 3, 1)
         grid.addWidget(self.drift_plot_hz_extent, 4, 0)
         grid.addWidget(self.drift_plot_weighted, 5, 0)
-        grid.addWidget(QtWidgets.QLabel('Vertical line offset'), 6, 0)
+        grid.addWidget(QtWidgets.QLabel("Vertical line offset"), 6, 0)
         grid.addWidget(self.offset_slider, 6, 1)
-        grid.addWidget(QtWidgets.QLabel('Spline tension:'), 7, 0)
+        grid.addWidget(QtWidgets.QLabel("Spline tension:"), 7, 0)
         grid.addWidget(self.tension_slider, 7, 1)
         grid.addWidget(self.tension_label, 7, 2)
 
@@ -177,7 +179,7 @@ class TabDrift(QtWidgets.QWidget):
         self.resultsProxyModel = QtCore.QSortFilterProxyModel(self)
 
         self.tare_popup_menu = QtWidgets.QMenu("tare Popup Menu", self)
-        self.mnDeleteTare = QtWidgets.QAction('Delete tare', self)
+        self.mnDeleteTare = QtWidgets.QAction("Delete tare", self)
         self.mnDeleteTare.triggered.connect(self.parent.delete_tare)
 
         lbl = QtWidgets.QLabel("Tares")
@@ -249,12 +251,6 @@ class TabDrift(QtWidgets.QWidget):
         self.dg_samples_view.setModel(DeltaTableModel())
         self.tare_view.setModel(TareTableModel())
 
-    def time_extent_changed(self):
-        """
-        Called when "Max time between repeats" is checked/unchecked
-        """
-        self.plot_drift()
-
     # This section provides the right-click context menu in the continuous drift lower plot - not implemented
     # def drift_newpoint_picked(self, event):
     #     if event.button == 3:
@@ -299,18 +295,21 @@ class TabDrift(QtWidgets.QWidget):
         """
         Shows the station name in the upper left of the drift plot when a
         line is clicked.
-        :param event: Matplotlib event
-        :param axes: Current axes (differs for none|netadj|roman vs continuous)
+
+        Parameters
+        ----------
+        event : Matplotlib event
+        axes : Current axes (differs for none|netadj|roman vs continuous)
         """
         thisline = event.artist
         if self.station_label is not None:
-            self.station_label.set_text('')
+            self.station_label.set_text("")
         self.station_label = axes.text(
             0.05,
             0.95,
             thisline.name,
-            horizontalalignment='center',
-            verticalalignment='center',
+            horizontalalignment="center",
+            verticalalignment="center",
             transform=axes.transAxes,
         )
         axes.figure.canvas.draw()
@@ -318,11 +317,20 @@ class TabDrift(QtWidgets.QWidget):
     @staticmethod
     def screen_for_elapsed_time(plot_data, elapsed_time):
         """
-        We may want to exclude repeat observations with a lot of elapsed time
-        between occupations.
-        :param plot_data: input data (list of lists)
-        :param elapsed_time: maximum time to be considered a repeat, in minutes
-        :return: list with same format as plot_data
+        For exclude repeat observations with a lot of elapsed time between
+        occupations.
+
+        Parameters
+        ----------
+        plot_data : list
+            List of lists with plot data
+        elapsed_time : int
+            Maximum time to be considered a repeat, in minutes
+
+        Returns
+        -------
+        List
+            list with same format as plot_data, missing the data that were excluded
         """
         new_data = []
         for line in plot_data:
@@ -359,9 +367,6 @@ class TabDrift(QtWidgets.QWidget):
         if obstreeloop:
             obstreeloop.drift_cont_weighting = self.drift_plot_weighted.checkState()
             self.drift_plot_weighted.update_drift_plots.emit()
-            # model = self.plot_drift()
-            # if model:
-            #     self.update_delta_model(obstreeloop.drift_method, model)
 
     def update_tension(self):
         """
@@ -379,8 +384,17 @@ class TabDrift(QtWidgets.QWidget):
     def calc_none_dg(data, loop_name):
         """
         Calculates delta-g's from successive gravity observations
-        :param data: list of stations from which to calculate delta-g
-        :return: PyQt DeltaTableModel
+
+        Parameter
+        ---------
+        data : list
+            list of stations from which to calculate delta-g
+
+        Returns
+        -------
+        list
+            List of deltas
+
         """
         deltas = []
         # Take the first station from the list, or None if there aren't any.
@@ -395,9 +409,18 @@ class TabDrift(QtWidgets.QWidget):
     def calc_netadj_dg(self, data, loop_name):
         """
         Calculates delta-g's from successive gravity observations
-        :param data: list of stations from which to calculate delta-g
-        :param loop_name: stored with Delta object, used later in network adjustment
-        :return: PyQt DeltaTableModel
+
+        Parameters
+        ----------
+        data : list
+            list of stations from which to calculate delta-g
+        loop_name : str
+             Stored with Delta object, used later in network adjustment
+
+        Returns
+        -------
+        list
+            List of deltas
         """
         deltas = []
         # Take the first station from the list, or None if there aren't any.
@@ -416,7 +439,7 @@ class TabDrift(QtWidgets.QWidget):
         return deltas
 
     @staticmethod
-    def calc_roman_dg(data, loop_name, time_threshold=None):
+    def calc_roman_dg(data, loop_name):
         """
         Caculates delta-g between three station occupations (one station visited
         once, one station visited twice) by interpolating drift at the latter station.
@@ -424,13 +447,22 @@ class TabDrift(QtWidgets.QWidget):
         Accommodating the time threshold is tricky. for the plotting to be
         correct the initial g subtracted from each measurement has to vary.
 
-        :param data: list of stations
-        :return: tuple with 2 pyqt models (for dg samples and average dg) and
+        Parameters
+        ----------
+        data : list
+            List of stations
+        loop_name : str
+            Loop name, stored in the delta objects to be created
+
+        Returns
+        -------
+        (roman_dg_model, avg_deltas, vert_lines)
+        tuple with 2 pyqt models (for dg samples and average dg) and
             plot data for vertical lines
         """
         # assumes stations in data are in chronological order
         roman_dg_model = RomanTableModel()
-        deltas, vert_lines = drift_roman(data, loop_name, time_threshold=None)
+        deltas, vert_lines = drift_roman(data, loop_name)
 
         for delta in deltas:
             roman_dg_model.insertRows(delta, 0)
@@ -460,12 +492,8 @@ class TabDrift(QtWidgets.QWidget):
                     if delta_key1 == testdelta_key1 or delta_key1 == testdelta_key2:
                         avg_dg[delta_key1].append(testdelta)
 
-        roman_avg_dg_model = NoCheckDeltaTableModel()
         avg_deltas = []
         for station_pair in avg_dg.items():
-            # just send list of deltas, not key (station info is already in the deltas)
-            # avg_delta = DeltaList(None, station_pair[1])
-            # roman_avg_dg_model.insertRows(avg_delta, 0)
             avg_deltas.append(DeltaList(None, station_pair[1], loop=loop_name))
         return roman_dg_model, avg_deltas, vert_lines
 
@@ -473,19 +501,17 @@ class TabDrift(QtWidgets.QWidget):
     def plot_tares(axes, obstreeloop):
         """
         Plots a vertical line at the time of a tare
+
+        Parameters
+        ----------
+        axes : Matpotlib Axes object
+        obstreeloop : ObsTreeLoop
         """
         ylim = axes.get_ylim()
         if len(obstreeloop.tares) > 0:
             for tare in obstreeloop.tares:
-                # tm = tare.datetime.time()
-                # x_time = (
-                #         tare.datetime.toordinal()
-                #         + tm.hour / 24
-                #         + tm.minute / 1440
-                #         + tm.second / 86400
-                # ) - 719163
                 x_time = tare.datetime
-                axes.plot([x_time, x_time], [ylim[0], ylim[1]], 'gray')
+                axes.plot([x_time, x_time], [ylim[0], ylim[1]], "gray")
                 axes.set_ylim(ylim)
                 axes.figure.canvas.draw()
 
@@ -502,9 +528,15 @@ class TabDrift(QtWidgets.QWidget):
 
     def plot_drift(self, obstreeloop=None, update=True):
         """
-        Catch-all function to plot drift
-        :param obstreeloop: Can either specify a loop, or by default use the
-            currentLoopIndex.
+        Function to plot drift. Typically called from self.set_drift_method().
+
+        Parameters
+        ----------
+        obstreeloop : ObsTreeLoop
+            Can either specify a loop, or by default use the currentLoopIndex.
+        update : bool
+            True if gui elements should be updated .
+            (Better performance if they're only updated when visible)
         """
         # I use update to indicate lines that are run only if the plots are visible. If the plotting and
         # delta-g code were better separated, update wouldn't be needed.
@@ -520,8 +552,8 @@ class TabDrift(QtWidgets.QWidget):
 
         self.parent.obsTreeModel.resetStationAsd()
 
-        # Check that there's station repeats. If there isn't, skip the plotting but we still want to calculate
-        # delta-g's (except for Roman correction).
+        # Check that there's station repeats. If there isn't, skip the plotting but
+        # we still want to calculate delta-g's (except for Roman correction).
         no_data = True
         if any([True for x in plot_data if len(x[0]) > 1]):
             no_data = False
@@ -537,13 +569,12 @@ class TabDrift(QtWidgets.QWidget):
             plot_data = self.screen_for_elapsed_time(
                 plot_data, elapsed_time=time_threshold
             )
-        if drift_type == 'none' or drift_type == 'netadj':
+        if drift_type == "none" or drift_type == "netadj":
             # none, netadj, and roman all use axes_drift_single
-
             deltas = None
             if update:
                 self.axes_drift_single.cla()
-            logging.info('Plotting drift - no correction, Loop ' + obstreeloop.name)
+            logging.info("Plotting drift - no correction, Loop " + obstreeloop.name)
             # Get data for plotting
             for line in plot_data:
                 if len(line[0]) > 1:
@@ -551,39 +582,39 @@ class TabDrift(QtWidgets.QWidget):
                     y = [f - line[1][0] + offset for f in line[1]]
                     x = [f for f in line[0]]
                     if update:
-                        a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)
+                        a = self.axes_drift_single.plot(x, y, ".-", pickradius=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
 
             # Plot
             if plot_data and not no_data and update:
-                self.axes_drift_single.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+                self.axes_drift_single.xaxis.set_major_formatter(DateFormatter("%H:%M"))
                 self.axes_drift_single.yaxis.set_label_text(
-                    'Change in gravity since initial \nstation occupation, '
-                    + 'in microGal'
+                    "Change in gravity since initial \nstation occupation, "
+                    + "in microGal"
                 )
                 self.drift_fig.canvas.mpl_connect(
-                    'pick_event',
+                    "pick_event",
                     lambda event: self.show_line_label(event, self.axes_drift_single),
                 )
                 self.plot_tares(self.axes_drift_single, obstreeloop)
             elif update:
                 self.axes_drift_single.cla()
-                self.axes_drift_single.text(0.35, 0.5, 'NO STATION REPEATS')
+                self.axes_drift_single.text(0.35, 0.5, "NO STATION REPEATS")
             if update:
                 self.axes_drift_single.set_title(
-                    'Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name
+                    "Survey " + obstreesurvey.name + ", Loop " + obstreeloop.name
                 )
                 self.drift_single_canvas.draw()
 
-            if drift_type == 'none':
+            if drift_type == "none":
                 deltas = self.calc_none_dg(data, obstreeloop.name)
-            elif drift_type == 'netadj':
+            elif drift_type == "netadj":
                 deltas = self.calc_netadj_dg(data, obstreeloop.name)
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        elif drift_type == 'continuous':
-            logging.info('Plotting continuous drift, Loop ' + obstreeloop.name)
+        elif drift_type == "continuous":
+            logging.info("Plotting continuous drift, Loop " + obstreeloop.name)
             self.axes_drift_cont_lower.clear()
             self.axes_drift_cont_upper.clear()
             # Get data for plotting
@@ -599,8 +630,9 @@ class TabDrift(QtWidgets.QWidget):
                     min_time = min(x)
                 if max(x) > max_time:
                     max_time = max(x)
-                # Only bother plotting if there's more than one station (don't do this otherwise, otherwise singleton
-                # stations at the start or end of a survey won't be included when setting the min_time/max_time
+                # Only bother plotting if there's more than one station (don't do
+                # this otherwise, otherwise singleton stations at the start or end of
+                # a survey won't be included when setting the min_time/max_time
                 if len(line[0]) > 1:
                     # Loop over the line vertices
                     for idx, obs in enumerate(y):
@@ -608,26 +640,28 @@ class TabDrift(QtWidgets.QWidget):
                         # get drift rate for bottom plot
                         if idx >= 1:
                             dr = (y[idx] - y[idx - 1]) / (
-                                    (x[idx] - x[idx - 1]) * 24
+                                (x[idx] - x[idx - 1]) * 24
                             )  # drift rate
                             drift_rate.append(dr)
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
                             try:
                                 drift_time.append(
-                                    dt.datetime.utcfromtimestamp(xmean * 86400.0)  # raises OS Error as outside range, xmean is unix timestamp?
+                                    dt.datetime.utcfromtimestamp(xmean * 86400.0)
                                 )
                             except OSError:
                                 drift_time.append(
-                                    dt.datetime.utcfromtimestamp((xmean-719163) * 86400.0)  # raises OS Error as outside range, xmean is unix timestamp?
+                                    dt.datetime.utcfromtimestamp(
+                                        (xmean - 719163) * 86400.0
+                                    )
                                 )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
                                 self.axes_drift_cont_lower.plot(
-                                    [x[idx], x[idx - 1]], [dr, dr], '-', color='0.5'
+                                    [x[idx], x[idx - 1]], [dr, dr], "-", color="0.5"
                                 )
                     if update:
-                        a = self.axes_drift_cont_upper.plot(x, y, '.-', pickradius=5)
+                        a = self.axes_drift_cont_upper.plot(x, y, ".-", pickradius=5)
                         a[0].name = line[2]
                         offset += self.offset_slider.value()
 
@@ -635,34 +669,38 @@ class TabDrift(QtWidgets.QWidget):
             if plot_data:
                 if update:
                     self.axes_drift_cont_upper.xaxis.set_major_formatter(
-                        DateFormatter('%H:%M')
+                        DateFormatter("%H:%M")
                     )
                     self.axes_drift_cont_lower.xaxis.set_major_formatter(
-                        DateFormatter('%H:%M')
+                        DateFormatter("%H:%M")
                     )
                     self.axes_drift_cont_lower.plot(
-                        drift_time, drift_rate, '.', pickradius=2
+                        drift_time, drift_rate, ".", pickradius=2
                     )
                     xticks = self.axes_drift_cont_upper.get_xticks()
                     self.axes_drift_cont_lower.set_xticks(xticks)
                     xlims = self.axes_drift_cont_upper.get_xlim()
                     self.axes_drift_cont_lower.set_xlim(xlims)
                     self.axes_drift_cont_lower.yaxis.set_label_text(
-                        'Drift rate,\nin microGal/hr'
+                        "Drift rate,\nin microGal/hr"
                     )
                     self.axes_drift_cont_upper.yaxis.set_label_text(
-                        'Drift, in microGal\n(arbitrary offset)'
+                        "Drift, in microGal\n(arbitrary offset)"
                     )
                     self.drift_cont_figtop.canvas.mpl_connect(
-                        'pick_event',
+                        "pick_event",
                         lambda event: self.show_line_label(
                             event, self.axes_drift_cont_upper
                         ),
                     )
-                    # drift_point_picked and drift_newpoint_picked are for adding/removing points to continuous drift
-                    # curve - not yet implemented.
-                    # self.drift_cont_figbot.canvas.mpl_connect('pick_event', self.drift_point_picked)
-                    # self.drift_cont_figbot.canvas.mpl_connect('button_release_event', self.drift_newpoint_picked)
+                    # drift_point_picked and drift_newpoint_picked are for
+                    # adding/removing points to continuous drift curve - not yet
+                    # implemented.
+
+                    # self.drift_cont_figbot.canvas.mpl_connect(
+                    # 'pick_event', self.drift_point_picked)
+                    # self.drift_cont_figbot.canvas.mpl_connect(
+                    # 'button_release_event', self.drift_newpoint_picked)
 
                 try:
                     z = []
@@ -683,9 +721,9 @@ class TabDrift(QtWidgets.QWidget):
                     if update:
                         self.plot_tares(self.axes_drift_cont_lower, obstreeloop)
                         self.plot_tares(self.axes_drift_cont_upper, obstreeloop)
-                        ln = self.axes_drift_cont_lower.plot(xp, yp, 'k-')
+                        ln = self.axes_drift_cont_lower.plot(xp, yp, "k-")
                         if any(z):
-                            textcolor = 'k'
+                            textcolor = "k"
                             # type(z) = ndarray if constant drift
                             if len(z) == 1 and type(z[0]) is tuple:
                                 mean_drift, sigma = z[0][0], z[0][1]
@@ -693,14 +731,14 @@ class TabDrift(QtWidgets.QWidget):
                                 if (
                                     np.abs(tstat) > 4.303
                                 ):  # Critical value for 95% CI, 2 DOF, 2-tailed t-test
-                                    textcolor = 'r'
+                                    textcolor = "r"
                                 z = [mean_drift]
 
                             format_str = {
                                 1: "{:.2f} µGal/hr",
                                 2: "{:.2f} µGal/hr per day",
                                 3: "{:.2f}*t^2 {:+.2f}*t {:+.2f}",
-                                4: "{:.2f}*t^3 {:+.2f}*t^2 {:+.2f}*t {:+.2f}"
+                                4: "{:.2f}*t^3 {:+.2f}*t^2 {:+.2f}*t {:+.2f}",
                             }.get(len(z), "")
 
                             annot_text = format_str.format(*z)
@@ -735,16 +773,16 @@ class TabDrift(QtWidgets.QWidget):
                                     # fig.canvas.draw_idle()
 
                             self.drift_cont_figbot.canvas.mpl_connect(
-                                'motion_notify_event', hover
+                                "motion_notify_event", hover
                             )
                         self.axes_drift_cont_lower.set_ylim(
                             np.round(min(drift_rate), 0) - 5,
                             np.round(max(drift_rate), 0) + 5,
                         )
                         self.axes_drift_cont_upper.set_title(
-                            'Survey '
+                            "Survey "
                             + obstreesurvey.name
-                            + ', Loop '
+                            + ", Loop "
                             + obstreeloop.name
                         )
                         self.drift_cont_canvasbot.draw()
@@ -753,73 +791,67 @@ class TabDrift(QtWidgets.QWidget):
                 except IndexError as e:
                     if self.drift_polydegree_combobox.currentIndex() == 1:
                         MessageBox.warning(
-                            'Error'
-                            'Insufficient drift observations for spline method',
+                            "ErrorInsufficient drift observations for spline method",
                         )
                     else:
                         # FIXME: Can we add more information for the user here (or to logs)?
-                        MessageBox.warning('Unknown error', 'Unknown error')
+                        MessageBox.warning("Unknown error", "Unknown error")
 
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)
                     MessageBox.warning(
-                        'Error',
-                        'Insufficient drift observations for ' 'polynomial method',
+                        "Error",
+                        "Insufficient drift observations for polynomial method",
                     )
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                     obstreeloop.drift_cont_method = 0
             else:
-                MessageBox.warning(
-                    'No data available for plotting',
-                    'Plot error'
-                )
+                MessageBox.warning("No data available for plotting", "Plot error")
 
         # Plots vertical dashed lines showing delta-g's
-        elif drift_type == 'roman':
-            logging.info('Plotting Roman drift, Loop ' + obstreeloop.name)
+        elif drift_type == "roman":
+            logging.info("Plotting Roman drift, Loop " + obstreeloop.name)
             if update:
                 self.axes_drift_single.cla()
-            deltas = self.calc_roman_dg(data, obstreeloop.name, time_threshold)
+            deltas = self.calc_roman_dg(data, obstreeloop.name)
 
             for line in plot_data:
                 if len(line[0]) > 1:
                     # Make values relative to first station value
                     y = [f - line[1][0] for f in line[1]]
-                    # TODO: store dates in station object in datetime format, to avoid this conversion?
                     try:
-                        x = [
-                            dt.datetime.utcfromtimestamp(f * 86400.0) # raises OS Error as outside range, f is unix timestamp?
-                            for f in line[0]
-                        ]
+                        x = [dt.datetime.utcfromtimestamp(f * 86400.0) for f in line[0]]
                     except OSError:
                         x = [
-                            dt.datetime.utcfromtimestamp((f-719163) * 86400.0) # raises OS Error as outside range, f is unix timestamp?
+                            dt.datetime.utcfromtimestamp((f - 719163) * 86400.0)
                             for f in line[0]
                         ]
-                    a = self.axes_drift_single.plot(x, y, '.-', pickradius=5)
+                    a = self.axes_drift_single.plot(x, y, ".-", pickradius=5)
                     a[0].name = line[2]
 
             for line in deltas[2]:
                 if update:
                     try:
-                        d = dt.datetime.utcfromtimestamp((line[0][0]-719163) * 86400.0)
-                        self.axes_drift_single.plot([d, d], line[1], '--')
+                        d = dt.datetime.utcfromtimestamp(
+                            (line[0][0] - 719163) * 86400.0
+                        )
+                        self.axes_drift_single.plot([d, d], line[1], "--")
                     except OSError:
-                        self.axes_drift_single.plot(line[0], line[1], '--')
+                        self.axes_drift_single.plot(line[0], line[1], "--")
             if plot_data and update:
-                self.axes_drift_single.xaxis.set_major_formatter(DateFormatter('%H:%M'))
+                self.axes_drift_single.xaxis.set_major_formatter(DateFormatter("%H:%M"))
             if update:
                 self.axes_drift_single.yaxis.set_label_text(
-                    'Change in gravity since initial \nstation occupation, '
-                    + 'in microGal'
+                    "Change in gravity since initial \nstation occupation, "
+                    + "in microGal"
                 )
                 self.drift_fig.canvas.mpl_connect(
-                    'pick_event',
+                    "pick_event",
                     lambda event: self.show_line_label(event, self.axes_drift_single),
                 )
                 self.axes_drift_single.set_title(
-                    'Survey ' + obstreesurvey.name + ', Loop ' + obstreeloop.name
+                    "Survey " + obstreesurvey.name + ", Loop " + obstreeloop.name
                 )
                 self.drift_single_canvas.draw()
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -828,39 +860,50 @@ class TabDrift(QtWidgets.QWidget):
         return deltas
 
     @staticmethod
-    def show_all_columns(delta_view):
+    def show_all_columns(view):
         """
-        Helper function to reset columns in the delta_model
-        :param delta_view: view to reset
+        Helper function to reset columns in a view
+
+        Parameters
+        ----------
+        delta_view : QTableView
+
         """
-        model = delta_view.model()
+        model = view.model()
         for i in range(model.columnCount()):
-            delta_view.showColumn(i)
+            view.showColumn(i)
 
     def set_drift_method(self, update=True, update_adjust_tables=True):
         """
         Called from update_drift_tables_and_plots + callback from GUI.
+
         Initiates plotting on drift tab.
-        :param update: Boolean or int, controls if plots are updated. For
-        performance, it's set to false when loading a file
+
+        Parameters
+        ----------
+        update : Boolean or int
+            Controls if plots are updated. For performance, it's set to false when
+            loading a file. It is an int when true because it's sent directly from a
+            callback.
+        update_adjust_tables : bool
+            We don't want to update the adjust tables when loading a workspace (we
+            want the deltas to be generated from the loop/station data)
+
         """
 
         if type(update) is int:
             update = True
-        if self.parent.index_current_loop is not None:  # Prevents crashing if no data are loaded
+        if (
+            self.parent.index_current_loop is not None
+        ):  # Prevents crashing if no data are loaded
             obstreeloop = self.parent.obsTreeModel.itemFromIndex(
                 self.parent.index_current_loop
             )
             method_key = self.driftmethod_combobox.currentIndex()
 
-            # if len(obstreeloop.tare) >= 0:
-            #     self.tare_view.model().dataChanged.connect(self.update_tares)
-            # self.tare_view.setModel(tare_model)
-
             inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
             method = inv_drift_lookup[method_key]
-            logging.info('Drift method set to ' + method)
-            orig_method = obstreeloop.drift_method
+            logging.info("Drift method set to " + method)
             obstreeloop.drift_method = method
 
             # These control the visibility of different tables
@@ -868,34 +911,34 @@ class TabDrift(QtWidgets.QWidget):
             # menu-item callback
             if update:
                 width = self.drift_window.sizes()
-                if method == 'none':
-                    self.drift_none()
-                if method == 'netadj':
-                    self.drift_polydegree_combobox.setCurrentIndex(
-                        obstreeloop.drift_netadj_method
-                    )
-                    self.drift_adjust()
-                if method == 'roman':
-                    self.drift_roman()
-                if method == 'continuous':
+                if method == "continuous":
                     self.drift_polydegree_combobox.setCurrentIndex(
                         obstreeloop.drift_cont_method
                     )
                     self.drift_cont_startendcombobox.setCurrentIndex(
                         obstreeloop.drift_cont_startend
                     )
-                    self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
+                    self.drift_plot_weighted.setCheckState(
+                        obstreeloop.drift_cont_weighting
+                    )
                     self.drift_continuous()
                 else:
-                    # FIXME: This branching is confusing. This final will be applied in all cases
-                    # *except* where method is continuous. Is this intended? If it is, nest the other
-                    # ifs (none, netadj, roman) under this branch to make it clearer.
                     self.disable_weighted_checkbox()
+                    if method == "none":
+                        self.drift_none()
+                    if method == "netadj":
+                        self.drift_polydegree_combobox.setCurrentIndex(
+                            obstreeloop.drift_netadj_method
+                        )
+                        self.drift_adjust()
+                    if method == "roman":
+                        self.drift_roman()
+
                 self.set_width(width, method)
 
             model = self.plot_drift(update=update)
 
-            if method == 'roman':
+            if method == "roman":
                 obstreeloop.deltas = model[1]
             else:
                 obstreeloop.deltas = model
@@ -911,29 +954,28 @@ class TabDrift(QtWidgets.QWidget):
             #
             # Otherwise the normal operation when the plots are update:
             try:
-                if type(self.parent.obsTreeModel.itemFromIndex(
-                        self.parent.index_current_survey
-                ).deltas[0]) != dict:
+                if (
+                    type(
+                        self.parent.obsTreeModel.itemFromIndex(
+                            self.parent.index_current_survey
+                        ).deltas[0]
+                    )
+                    != dict
+                ):
                     self.parent.update_adjust_tables()
             except IndexError:
                 pass
             except TypeError:
                 self.parent.update_adjust_tables()
 
-            # Clear results table
-            # survey.adjustment.adjustmentresults.n_unknowns
-            # survey.adjustment.adjustmentresults.text
-            # self.parent.update_adjust_tables()
-
     def update_deltas_on_adj_tab(self, obstreeloop):
         """
+        After creating/modifying deltas on the drift tab, this clears the deltas for
+        that loop from the adjust tab, and replaces them with the new deltas.
 
         Parameters
         ----------
-        obstreeloop
-
-        Returns
-        -------
+        obstreeloop : ObsTreeLoop
 
         """
         survey = obstreeloop.parent()
@@ -944,26 +986,39 @@ class TabDrift(QtWidgets.QWidget):
                 # Remove the old deltas that correspond to this loop
                 for delta in reversed(survey.deltas):
                     try:
-                        if delta['loop'] == obstreeloop.name:
+                        if delta["loop"] == obstreeloop.name:
                             survey.deltas.remove(delta)
                     except TypeError:
                         if delta.loop == obstreeloop.name:
                             survey.deltas.remove(delta)
-                    # survey.deltas = [d for d in survey.deltas if d.loop != obstreeloop.name]
                 survey.deltas += obstreeloop.deltas
-                self.parent.set_adj_sd(survey, survey.adjustment.adjustmentoptions, loop=obstreeloop.name)
+                self.parent.set_adj_sd(
+                    survey, survey.adjustment.adjustmentoptions, loop=obstreeloop.name
+                )
         except TypeError:  # No loops with deltas
             pass
 
     def set_width(self, width, method):
         """
-        Maintains relative width of plot windows when switching between drift-correction methods.
+        Maintains relative width of plot windows when switching between
+        drift-correction methods.
+
+        Parameters
+        ----------
+        width : list
+            Width of the elements in the middle window of the drift tab, in pixels
+            [single plot, double continuous plot, tools, spacer]
+            Either element 1 or 2 will be set to 0 depending on the drift correction
+            method.
+        method : {"none", "netadj", "roman", "continuous"}
+            Drift correction method, controls which plots are shown
+
         """
         if all(w == 0 for w in width):  # default is [0, 0, 0]
             self.drift_window.setSizes([900, 0, 500, 2000])
             return
 
-        if method == 'none' or method == 'netadj' or method == 'roman':
+        if method == "none" or method == "netadj" or method == "roman":
             # Order so larger of first two values is first.
             width[:2] = sorted(width[:2], reverse=True)
 
@@ -979,15 +1034,20 @@ class TabDrift(QtWidgets.QWidget):
 
         This method takes the model generated by plot_drift() and assigns it to
         the delta_view on the drift tab.
-        :param method: If 'roman', show sample and average models. Otherwise,
-            show a single model.
-        :param model: a PyQt model or list of models (Roman method).
+
+        Parameters
+        ----------
+        method : {"none", "netadj", "roman", "continuous"}
+            If 'roman', show sample and average models. Otherwise, show a single model.
+        model : list or tuple
+             A tuple of lists (Roman method) or a list of deltas (other methods)
+
         """
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_loop
         )
         if model:
-            if method == 'roman':
+            if method == "roman":
                 # Hide drift correction, std_for_adj, and residual columns
                 obstreeloop.deltas = model[1]
                 self.dg_samples_view.setModel(model[0])
@@ -1002,7 +1062,7 @@ class TabDrift(QtWidgets.QWidget):
                 self.delta_view.model().init_data(model)
                 self.tare_view.model().init_data(obstreeloop.tares)
                 # Hide std_for_adj and residual columns
-                # self.show_all_columns(self.delta_view)
+                self.show_all_columns(self.delta_view)
                 self.delta_view.hideColumn(2)
                 self.delta_view.hideColumn(7)
                 self.delta_view.hideColumn(8)
@@ -1010,7 +1070,12 @@ class TabDrift(QtWidgets.QWidget):
     def tare_context_menu(self, point):
         """
         Right-click context menu on tare table
-        :param point: PyQt reference to click point, determines where to show popup.
+
+        Parameters
+        ----------
+        point : PyQt reference to click point
+            Determines where to show popup.
+
         """
         selected = self.tare_view.selectedIndexes()
         if selected:
@@ -1021,7 +1086,11 @@ class TabDrift(QtWidgets.QWidget):
     def process_tares(obstreeloop):
         """
         Apply tares in the tare table.
-        :param obstreeloop: Loop shown in drift tab
+
+        Parameters
+        obstreeloop : ObsTreeLoop
+            Loop shown in drift tab
+
         """
 
         for i in range(obstreeloop.rowCount()):
@@ -1039,17 +1108,19 @@ class TabDrift(QtWidgets.QWidget):
 
     def update_tares(self, selected):
         """
-        Respond to tare check/uncheck.
+        Respond to tare check/uncheck. Callback from tare_view.clicked.
+
+        Parameters
+        ----------
+        selected : PyQt indexes of selected tares
+
         """
-        if hasattr(selected, 'model'):
+        if hasattr(selected, "model"):
             obstreeloop = self.parent.obsTreeModel.itemFromIndex(
                 self.parent.index_current_loop
             )
             self.process_tares(obstreeloop)
             self.set_drift_method()
-            # self.plot_drift()
-            # method = obstreeloop.drift_method
-            # self.update_delta_model(method, model)
 
     def drift_adjust(self):
         """
@@ -1077,13 +1148,11 @@ class TabDrift(QtWidgets.QWidget):
         """
         Update which PyQt tables are shown
         """
-        # self.plot_drift()
         self.roman_label_widget.show()
         self.drift_single_canvas.show()
         self.drift_single_canvas.setMinimumWidth(700)
         self.drift_cont_plotpanel.hide()
         self.dg_samples_view.show()
-        # self.delta_view.show()
         self.cont_label_widget.hide()
         self.roman_label_widget.show()
         self.roman_label_widget.setMinimumHeight(50)
@@ -1112,7 +1181,6 @@ class TabDrift(QtWidgets.QWidget):
         self.roman_label_widget.hide()
         self.drift_window.setMinimumHeight(200)
         # Re-enable these options (they're disabled if netadj drift was selected)
-
         self.drift_polydegree_combobox.model().item(0).setEnabled(True)
         self.drift_polydegree_combobox.model().item(1).setEnabled(True)
         self.tension_slider.setEnabled(True)
@@ -1147,20 +1215,19 @@ class TabDrift(QtWidgets.QWidget):
     def disable_weighted_checkbox(self):
         self.drift_plot_weighted.setEnabled(False)
         self.drift_plot_weighted.setToolTip(
-            'Weighted observations is only enabled when Continuous '
-            'model drift correction method and Constant drift model type are selected.'
+            "Weighted observations is only enabled when Continuous "
+            "model drift correction method and Constant drift model type are selected."
         )
 
     def enable_weighted_checkbox(self):
         self.drift_plot_weighted.setEnabled(True)
-        self.drift_plot_weighted.setToolTip('')
+        self.drift_plot_weighted.setToolTip("")
 
     def drift_combobox_updated(self):
         """
         Called when either the drift poly degree or extrapolate/constant
         combobox is changed.
         """
-
         method_key = self.drift_polydegree_combobox.currentIndex()
         startend_key = self.drift_cont_startendcombobox.currentIndex()
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(
@@ -1168,7 +1235,7 @@ class TabDrift(QtWidgets.QWidget):
         )
         drift_method = obstreeloop.drift_method
 
-        if drift_method == 'continuous':
+        if drift_method == "continuous":
             obstreeloop.drift_cont_method = method_key
             obstreeloop.drift_cont_startend = startend_key
             if method_key == 1:
@@ -1180,12 +1247,10 @@ class TabDrift(QtWidgets.QWidget):
             else:
                 self.disable_weighted_checkbox()
 
-        elif drift_method == 'netadj':
+        elif drift_method == "netadj":
             obstreeloop.drift_netadj_method = method_key
 
         self.parent.update_drift_tables_and_plots()
-        # model = self.plot_drift()
-        # self.update_delta_model(drift_method, model)
 
 
 class CustomCheckBox(QtWidgets.QCheckBox):

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 gui/tabs/data.py
 ===============
@@ -16,14 +14,14 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-# import matplotlib.pyplot as plt
 import numpy as np
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import DateFormatter
 from matplotlib.figure import Figure
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+
 from ..messages import MessageBox
 
 
@@ -33,13 +31,10 @@ from ..messages import MessageBox
 # noinspection PyUnresolvedReferences
 class TabData(QtWidgets.QWidget):
     """
-    station data selection
+    Tab for station data selection
 
-    On the left panel is a treeview of the data.
-    TreeWidgetItems are defined in models.
-
-    On the middle panel is a tableview of the selected station (within
-    a survey/loop, clicked on the left panel). Table items are also defined
+    On the left panel is a tableview of the selected station (within
+    a survey/loop, clicked on the left-hand tree view). Table items are also defined
     in models.
 
     On the right panel is a matplotlib-type figure of relevant data.
@@ -72,7 +67,8 @@ class TabData(QtWidgets.QWidget):
 
         self.data_mpl_toolbar = NavigationToolbar(self.data_canvas, main_frame)
 
-        # Plot panel: define some buttons with actions (signal/slot events) and line edits
+        # Plot panel: define some buttons with actions (signal/slot events) and line
+        # edits
         checkselected_button = QtWidgets.QPushButton("&check selected", self)
         checkselected_button.clicked.connect(self.checkselected)
         uncheckselected_button = QtWidgets.QPushButton("&uncheck selected", self)
@@ -167,8 +163,16 @@ class TabData(QtWidgets.QWidget):
         """
         Updates relative-gravity data plots shown on 'Data' tab by creating a
         new PyQt model array for the specified station.
+
+        Parameters
+        ----------
+        station : ObsTreeStation
+        meter_type : {'csv', 'CG5', 'CG6', 'CG6TSoft', 'Burris'}
+
+        Returns
+        -------
+
         """
-        # Store new station key
         self.parent.station_model.layoutAboutToBeChanged.emit()
         self.parent.station_model.createArrayData(station)
         self.parent.station_model.layoutChanged.emit()
@@ -179,16 +183,15 @@ class TabData(QtWidgets.QWidget):
         # gravity channel (convert to microgals for display)
         series = np.array(station.grav())
         series_selec = [s for i, s in enumerate(series) if keepdata[i] == 1]
-        if meter_type == 'CG5' or meter_type == 'CG6' or meter_type == 'csv':
+        if meter_type == "CG5" or meter_type == "CG6" or meter_type == "csv":
             self.set_plot(
                 self.axes_data_UL,
                 t,
                 series,
                 t_selec,
                 series_selec,
-                'Gravity',
-                r'µgal',
-                '1',
+                "Gravity",
+                r"µgal",
             )
             # tiltx channel
             series = np.array(station.tiltx)
@@ -199,9 +202,8 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Tilt X',
-                'arcsec',
-                '2',
+                "Tilt X",
+                "arcsec",
             )
             # tilty channel
             series = np.array(station.tilty)
@@ -212,9 +214,8 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Tilt Y',
-                'arcsec',
-                '3',
+                "Tilt Y",
+                "arcsec",
             )
             # SD channel
             series = np.array(station.sd)
@@ -225,21 +226,19 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Standard deviation',
-                r'µgal',
-                '4',
+                "Standard deviation",
+                r"µgal",
             )
 
-        elif meter_type == 'CG6Tsoft':
+        elif meter_type == "CG6Tsoft":
             self.set_plot(
                 self.axes_data_UL,
                 t,
                 series,
                 t_selec,
                 series_selec,
-                'Gravity',
-                r'µgal',
-                '1',
+                "Gravity",
+                r"µgal",
             )
             # tiltx channel
             series = np.array(station.tiltx)
@@ -250,9 +249,8 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Tilt X',
-                'arcsec',
-                '2',
+                "Tilt X",
+                "arcsec",
             )
             # tilty channel
             series = np.array(station.tilty)
@@ -263,9 +261,8 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Tilt Y',
-                'arcsec',
-                '3',
+                "Tilt Y",
+                "arcsec",
             )
             # SD channel
             series = np.array(station.etc)
@@ -276,21 +273,19 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Earth Tide Correction',
-                r'µgal',
-                '4',
+                "Earth Tide Correction",
+                r"µgal",
             )
 
-        elif meter_type == 'Burris':
+        elif meter_type == "Burris":
             self.set_plot(
                 self.axes_data_UL,
                 t,
                 series,
                 t_selec,
                 series_selec,
-                'Gravity',
-                r'µgal',
-                '1',
+                "Gravity",
+                r"µgal",
             )
             # tiltx channel
             series = np.array(station.feedback)
@@ -301,9 +296,8 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Feedback',
-                'mV',
-                '2',
+                "Feedback",
+                "mV",
             )
             # tilty channel
             series = np.array(station.etc)
@@ -314,9 +308,8 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Earth Tide Correction',
-                r'µgal',
-                '3',
+                "Earth Tide Correction",
+                r"µgal",
             )
             # SD channel
             series = np.array(station.tiltx)
@@ -327,14 +320,17 @@ class TabData(QtWidgets.QWidget):
                 series,
                 t_selec,
                 series_selec,
-                'Tilt Correction',
-                r'µgal',
-                '4',
+                "Tilt Correction",
+                r"µgal",
             )
         self.data_canvas.draw()
         return True
 
     def clear_axes(self):
+        """
+        Called when clearing a workspace.
+
+        """
         self.axes_data_LL.clear()
         self.axes_data_LR.clear()
         self.axes_data_UL.clear()
@@ -342,90 +338,86 @@ class TabData(QtWidgets.QWidget):
         self.data_canvas.draw()
 
     def set_plot(
-        self,
-        axe,
-        seriex,
-        seriey,
-        seriex_selec,
-        seriey_selec,
-        serie_type,
-        serie_unit,
-        plot_location,
+        self, axe, seriex, seriey, seriex_selec, seriey_selec, serie_type, serie_unit
     ):
         """
-        plot data samples from relative-gravity meter at a single station
+        Plot data samples from relative-gravity meter at a single station
         (gravity, tilt, temp., etc.).
-        :param axe: Axes on which to plot
-        :param seriex: X data, all points
-        :param seriey: Y data, all points
-        :param seriex_selec: X data, highlighted (blue) points
-        :param seriey_selec: Y data, highlighted (blue) points
-        :param serie_type: Name of data to plot
-        :param serie_unit: Data units for y-axis label
-        :return:
+
+        Parameters
+        ----------
+        axe : AxesSubplot
+            Axes on which to plot
+        seriex : list
+            List of data times (float). Plots in black
+        seriey : ndarray
+            Y data to plot. Plots in black
+        seriex_selec : list
+            List of selected data times. Plots in blue
+        seriey_selec : list
+            List of selected data. Plots in blue
+        serie_type : str
+            Data type, varies based on meter: 'Gravity', 'Tilt X', etc.
+        serie_unit: str
+            Data units, e.g. µGal
+
         """
         axe.cla()
         axe.grid(True)
-        xfmt = DateFormatter('%H:%M')
-        # It should be possible to just set_data on the plot object returned from axe.plot, but I couldn't figure it out
+        xfmt = DateFormatter("%H:%M")
         mean_g = np.mean(seriey_selec)
-        if serie_type == 'Gravity' and seriey_selec:  # Plot horizontal line at mean g
+        if serie_type == "Gravity" and seriey_selec:  # Plot horizontal line at mean g
             axe.plot(
                 [seriex[0], seriex[-1]],
                 [mean_g, mean_g],
-                '-',
-                color='b',
+                "-",
+                color="b",
                 label=serie_type,
             )
-
-        setattr(
-            self,
-            'plot1_' + plot_location,
-            axe.plot(seriex, seriey, 'o-', color='k', label=serie_type),
-        )
-        setattr(
-            self,
-            'plot2_' + plot_location,
-            axe.plot(seriex_selec, seriey_selec, 'o-', color='b', label=serie_type),
-        )
-        axe.set_ylabel(serie_unit, size='x-small')
-        axe.set_title(serie_type, size='x-small')
+        axe.plot(seriex, seriey, "o-", color="k", label=serie_type)
+        axe.plot(seriex_selec, seriey_selec, "o-", color="b", label=serie_type)
+        axe.set_ylabel(serie_unit, size="x-small")
+        axe.set_title(serie_type, size="x-small")
         labels = axe.get_xticklabels() + axe.get_yticklabels()
         for label in labels:
-            label.set_size('x-small')
-        xfmt = DateFormatter('%H:%M')
+            label.set_size("x-small")
         axe.xaxis.set_major_formatter(xfmt)
         axe.set_xticklabels(
-            axe.get_xticklabels(), rotation=30, horizontalalignment='right'
+            axe.get_xticklabels(), rotation=30, horizontalalignment="right"
         )
-        # plt.setp(axe.get_xticklabels(), rotation=30, horizontalalignment='right')
-        # Scale y axis to mean +/- 10. If a larger range is needed, color the axis red as a warning.
-        if serie_type == 'Gravity':
+        # Scale y axis to mean +/- 10. If a larger range is needed, color the axis
+        # red as a warning.
+        if serie_type == "Gravity":
             g_range_pos = max(seriey) - mean_g
             g_range_neg = mean_g - min(seriey)
             if g_range_neg <= 10 and g_range_pos <= 10:
                 axe.set_ylim(mean_g - 10, mean_g + 10)
-                axe.yaxis.label.set_color('black')
-                axe.spines['left'].set_color('black')
-                axe.tick_params(axis='y', colors='black')
+                axe.yaxis.label.set_color("black")
+                axe.spines["left"].set_color("black")
+                axe.tick_params(axis="y", colors="black")
             else:
-                axe.yaxis.label.set_color('red')
-                axe.spines['left'].set_color('red')
-                axe.tick_params(axis='y', colors='red')
+                axe.yaxis.label.set_color("red")
+                axe.spines["left"].set_color("red")
+                axe.tick_params(axis="y", colors="red")
 
     # All of these check/uncheck routines are very slow. Why?
     def autoselect_tilt(self, autoselec):
         """
-        function for automatic selection of data based on simple thresholds:
-        Tilts: absolute value higher than threshold are set to keepdata=0
+        function for automatic selection of data based on tilt deviation.
+        Scintrex only.
+
+        Parameters
+        ----------
+        autoselec : QWidget
+            Tilt values higher than threshold are set to keepdata=0 (unchecked)
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_station
         )
-        if obstreestation.meter_type == 'Burris':
+        if obstreestation.meter_type == "Burris":
             MessageBox.warning(
-                'Data selection error',
-                'Not implemented for Burris data',
+                "Data selection error",
+                "Not implemented for Burris data",
             )
             return
         tilt_column1 = 4
@@ -446,16 +438,21 @@ class TabData(QtWidgets.QWidget):
 
     def autoselect_sd(self, autoselec):
         """
-        function for automatic selection of data based on simple thresholds
-        sd: sd values higher than threshold are set to keepdata=0
+        Function for automatic selection of data based on standard deviation threshold
+        Scintrex only.
+
+        Parameters
+        ----------
+        autoselec : QWidget
+            Standard deviations higher than this value are set to keepdata=0 (unchecked)
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_station
         )
-        if obstreestation.meter_type == 'Burris':
+        if obstreestation.meter_type == "Burris":
             MessageBox.warning(
-                'Data selection error',
-                'Not implemented for Burris data',
+                "Data selection error",
+                "Not implemented for Burris data",
             )
             return
         sd_column = 3
@@ -473,16 +470,20 @@ class TabData(QtWidgets.QWidget):
 
     def autoselect_dur(self, autoselec):
         """
-        function for automatic selection of data based on simple thresholds
-        dur: duration different than given value are set to keepdata=0
+        function for automatic selection of data based on duration
+
+        Parameters
+        ----------
+        autoselec : QWidget
+            Duration values higher than threshold are set to keepdata=0 (unchecked)
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_station
         )
-        if obstreestation.meter_type == 'Burris':
+        if obstreestation.meter_type == "Burris":
             MessageBox.warning(
-                'Data selection error',
-                'Not implemented for Burris data',
+                "Data selection error",
+                "Not implemented for Burris data",
             )
             return
         dur_column = 7
@@ -500,14 +501,19 @@ class TabData(QtWidgets.QWidget):
 
     def autoselect_grav(self, autoselec):
         """
-        function for automatic selection of data based on simple thresholds
-        grav: absolute values higher than threshold offset with respect to the
-        mean value from 3 last points are set to keepdata=0
+        function for automatic selection of data based on deviation from the mean
+
+        Parameters
+        ----------
+        autoselec : QWidget
+            absolute values higher than threshold offset with respect to the mean
+            value from 3 last points are unchecked
+
         """
         obstreestation = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_station
         )
-        if obstreestation.meter_type == 'Burris':
+        if obstreestation.meter_type == "Burris":
             g_column = 4
         else:
             g_column = 2
@@ -530,9 +536,18 @@ class TabData(QtWidgets.QWidget):
 
     def autoselect_all(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
         """
-        function for automatic selection of data based on simple thresholds
-        apply all selection critera which have been input by the user to all
-        the data set.
+        Function for automatic selection of data based on simple thresholds.
+
+        Apply all selection criteria which have been input by the user to all
+        of the samples of the current station.
+
+        Parameters
+        ----------
+        tilts_thrshld : QWidget
+        sd_thrshld : QWidget
+        grav_thrshld : QWidget
+        dur_thrshld : QWidget
+
         """
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         selec_grav, selec_sd, selec_tilts, selec_dur = False, False, False, False
@@ -571,9 +586,9 @@ class TabData(QtWidgets.QWidget):
                 continue
             if selec_tilts:
                 if (
-                    obstreestation.meter_type == 'CG5'
-                    or obstreestation.meter_type == 'CG6'
-                    or obstreestation.meter_type == 'CG6Tsoft'
+                    obstreestation.meter_type == "CG5"
+                    or obstreestation.meter_type == "CG6"
+                    or obstreestation.meter_type == "CG6Tsoft"
                 ):
                     if (
                         abs(obstreestation.tiltx[iiii]) > tilt_threshold
@@ -587,9 +602,20 @@ class TabData(QtWidgets.QWidget):
 
     def autoselect_alldata(self, tilts_thrshld, sd_thrshld, grav_thrshld, dur_thrshld):
         """
-        function for automatic selection of data based on simple thresholds
-        apply all selection critera which have been input by the user to all
-        the data set.
+        Function for automatic selection of data based on simple thresholds.
+
+        Apply all selection criteria which have been input by the user to all
+        of the data in the entire campaign.
+
+        Pretty slow!
+
+        Parameters
+        ----------
+        tilts_thrshld : QWidget
+        sd_thrshld : QWidget
+        grav_thrshld : QWidget
+        dur_thrshld : QWidget
+
         """
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         selec_grav, selec_sd, selec_tilts, selec_dur = False, False, False, False
@@ -636,14 +662,20 @@ class TabData(QtWidgets.QWidget):
                             )
                             continue
                         if selec_tilts:
-                            if obstreestation.meter_type == 'CG-5':
+                            if (
+                                obstreestation.meter_type == "CG5"
+                                or obstreestation.meter_type == "CG6"
+                                or obstreestation.meter_type == "CG6Tsoft"
+                            ):
                                 if (
                                     abs(obstreestation.tiltx[iiii]) > tilt_threshold
                                     and abs(obstreestation.tilty[iiii]) > tilt_threshold
                                 ):
                                     obstreestation.keepdata[iiii] = 0
                                     self.parent.station_model.setData(
-                                        indx, Qt.Unchecked, Qt.CheckStateRole,
+                                        indx,
+                                        Qt.Unchecked,
+                                        Qt.CheckStateRole,
                                     )
         QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -672,6 +704,14 @@ class TabData(QtWidgets.QWidget):
         self.check_or_uncheck_selected(Qt.Unchecked)
 
     def check_or_uncheck_selected(self, check_type):
+        """
+        Check/Uncheck selected samples in the table
+
+        Parameters
+        ----------
+        check_type: 0 or 2 (unchecked or checked)
+
+        """
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         qmodelindex = self.data_view.selectedIndexes()
         col0_indexes = [x for x in list(qmodelindex) if x.column() == 0]

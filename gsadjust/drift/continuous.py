@@ -21,6 +21,9 @@ from scipy.interpolate import UnivariateSpline
 
 from ..data import DeltaNormal
 
+N_PTS_IN_INTERPOLATION = 300
+N_PTS_IN_EXTRAPOLATION = 200
+
 
 def drift_continuous(
     data,
@@ -35,11 +38,65 @@ def drift_continuous(
     max_time,
     loop_name,
 ):
+    """Interpolate drift model: polynomial, spline, etc. at N_PTS_IN_INTERPOLATION
+    points, plus N_PTS_IN_EXTRAPOLATION on either side.
+
+    These values need to be relatively small for decent performance.
+
+    Parameters
+    ----------
+    data : list
+        list of ObsTreeStations
+    plot_data : list
+        One entry per station. Each entry is a list, in the order:
+        [[plot time values],
+         [plot g values],
+         station name,
+         [g standard deviation],
+         [time standard deviation]]
+    drift_x : list
+        Drift time observations (x location of points on bottom plot)
+    drift_rate : list
+        Drift rate observations (y location of points on bottom plot)
+    method_key : {0, 1, 2, 3, 4}
+        Indicates type of drift correction.
+        0: Constant
+        1: Spline
+        2-4: Polynomial (degree is one less than the value)
+    tension_slider_value : int
+        Controls tension on the interpolated spline
+    extrapolation_type : {1, anything else}
+        Controls how interpolation is extended from the outermost data.
+        1: Constant
+        not 1: linearly extend the fitted curve at the same slope as the first/last
+               2 data points
+    weight_obs : int
+        Controls if observations are weighted when fitting a constant drift rate.
+        Only used if drift is set to constant, not for other methods.
+        0: no weighting
+        not 0: weighted
+    min_time : float
+        Time to extrapolate at the beginning. Should be the time of the first station
+        occupation of the loop.
+    max_time : float
+        Time to extrapolate at the end. Should be the time of the last station
+        occupation of the loop.
+    loop_name : str
+        loop name, for creating deltas
+
+    Returns
+    -------
+    delta_list : list
+        List of deltas
+    xp : ndarray
+        For plotting the bottom plot
+    yp : ndarray
+        For plotting the bottom plot
+    z_main : (mean_drift, sigma)
+        These are displayed on the plot.
+
     """
-    Interpolate drift model: polynomial, spline, etc. at xp number of points.
-    xp needs to remain relatively low to maintain performance.
-    """
-    N_PTS_IN_INTERPOLATION = 300
+
     xp = np.linspace(min(drift_x), max(drift_x), N_PTS_IN_INTERPOLATION)  # constant
     drift_stats = None
     z_main = []
@@ -79,9 +136,9 @@ def drift_continuous(
                 num.append(w * (drifts[idx] - mean_drift) ** 2)
             sigma_d = np.sqrt(np.sum(num) / ((len(drift_w) - 1) * np.sum(drift_w)))
             drift_stats = dict()
-            drift_stats['t0'] = plot_data[0][0][0]
-            drift_stats['sigma_d'] = sigma_d
-            drift_stats['mean_drift'] = mean_drift
+            drift_stats["t0"] = plot_data[0][0][0]
+            drift_stats["sigma_d"] = sigma_d
+            drift_stats["mean_drift"] = mean_drift
             yp = np.zeros(xp.size) + mean_drift
             z_main = [(mean_drift, sigma_d)]
     else:
@@ -102,7 +159,7 @@ def drift_continuous(
                 xs = np.linspace(x0[0], x0[-1], N_PTS_IN_INTERPOLATION)
                 yp = s(xs)
                 logging.info(
-                    'Spline drift correction, tension={}'.format(tension_slider_value)
+                    "Spline drift correction, tension={}".format(tension_slider_value)
                 )
             except Exception:
                 raise IndexError
@@ -114,14 +171,14 @@ def drift_continuous(
                 p = np.poly1d(z_main)
                 yp = p(xp0)
                 logging.info(
-                    'Polynomial drift correction degree {}'.format(method_key - 1)
+                    "Polynomial drift correction degree {}".format(method_key - 1)
                 )
             except np.linalg.LinAlgError as e:
                 return np.linalg.LinAlgError
 
-    # Method for extrapolating beyond fitted drift curve extene
+    # Method for extrapolating beyond fitted drift curve extent
     if extrapolation_type == 1:  # constant
-        new_xp = np.linspace(min_time, min(drift_x), 200)
+        new_xp = np.linspace(min_time, min(drift_x), N_PTS_IN_EXTRAPOLATION)
         new_xp = np.append(new_xp, xp)
         new_xp = np.append(new_xp, np.linspace(max(drift_x), max_time, 200))
         xp = new_xp
@@ -154,10 +211,20 @@ def drift_continuous(
 def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
     """
     Calculates delta-g's while removing drift using the input drift model
-    :param xp: times of continuous drift model
-    :param yp: continuous drift model
-    :param data: plot_data list
-    :return: PyQt DeltaTableModel
+
+    Parameters
+    ----------
+    xp : ndarray
+        times of continuous drift model
+    yp : ndarray
+        continuous drift model
+    data : list
+        list of ObsTreeStations
+
+     Returns
+     -------
+    list
+        list of deltas
     """
     first = True
     ypsum = [0]
@@ -179,10 +246,10 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
         if drift_stats:
             station.assigned_sd = np.sqrt(
                 station.original_sd ** 2
-                + ((station.tmean() - drift_stats['t0']) * 24) ** 2
-                * drift_stats['sigma_d'] ** 2
+                + ((station.tmean() - drift_stats["t0"]) * 24) ** 2
+                * drift_stats["sigma_d"] ** 2
                 + np.sqrt(station.t_stdev ** 2 + data[0].t_stdev ** 2)
-                * drift_stats['mean_drift'] ** 2
+                * drift_stats["mean_drift"] ** 2
             )
         else:
             station.assigned_sd = None

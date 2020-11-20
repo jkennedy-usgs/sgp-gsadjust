@@ -19,7 +19,26 @@ from ..data import Delta3Point
 
 
 def drift_roman(data, loop_name, time_threshold=None):
-    # roman_dg_model = RomanTableModel()
+    """Calculates Roman-style gravity differences
+
+    Parameters
+    ----------
+    data : list
+        list of ObsTreeStations
+    loop_name : str
+        loop name, for creating deltas
+    time_threshold : int
+        criteria for excluding repeat observations (maximum minutes between repeats)
+
+    Returns
+    -------
+    deltas : list
+        List of deltas
+    vertlines : list
+        List of 2 tuples: [(x_coord, x_coord), (bottom y coord, top y coord]
+        For plotting vertical dashed lines
+
+    """
     deltas, vert_lines = [], []
     station_list = [i.station_name for i in data]
     unique_stations = list(set(station_list))
@@ -81,17 +100,21 @@ def drift_roman(data, loop_name, time_threshold=None):
                                 < time_threshold
                             ):
                                 delta = Delta3Point(
-                                    station, (other1, other2), loop=loop_name,
+                                    station,
+                                    (other1, other2),
+                                    loop=loop_name,
                                 )
                                 sta2_dg = other2.gmean() - other1.gmean()
                                 # this is the drift correction
                                 time_prorate = (station.tmean() - other1.tmean()) / (
                                     other2.tmean() - other1.tmean()
                                 )
-                                # Look for previous occupation at same station. If there is a break > time_threshold
-                                # between the previous and current occupation, we need to account for the shift in
-                                # initial g. Each station has a unique initial g (that might change,
-                                # depending on the time_threshold).
+                                # Look for previous occupation at same station. If
+                                # there is a break > time_threshold between the
+                                # previous and current occupation, we need to account
+                                # for the shift in initial g. Each station has a
+                                # unique initial g (that might change, depending on
+                                # the time_threshold).
                                 if time_threshold is not None:
                                     initial_gees = initial_g[other1.station_name]
                                     other_initial_g = initial_gees[0][1]
@@ -105,7 +128,8 @@ def drift_roman(data, loop_name, time_threshold=None):
                                         for initial_xy in initial_gees[1:]:
                                             if station.tmean() >= initial_xy[0]:
                                                 station_initial_g = initial_xy[1]
-                                # Easy case: everything relative to the initial observation.
+                                # Easy case: everything relative to the initial
+                                # observation.
                                 else:
                                     other_initial_g = initial_g[other1.station_name]
                                     station_initial_g = initial_g[station.station_name]

@@ -1,5 +1,5 @@
 """
-a10.py
+file/a10.py
 ===============
 
 GSadjust object for absolute gravity observation
@@ -66,41 +66,42 @@ class A10:
         olf = False
         skip_grad = False
         in_comments = 0
-        project_file = open(filename, 'r', encoding='unicode_escape')
+        project_file = open(filename, "r", encoding="unicode_escape")
         data_array = []  # ['a']*32
         # Look for these words in the g file.
         tags = re.compile(
-            r'Project|Name|Created|Setup'
-            r'|Transfer|Actual|Date|Time|TimeOffset|Nominal|Red'
-            r'|Blue|Scatter|SetsColl|SetsProc|Precision|Total_unc'
+            r"Project|Name|Created|Setup"
+            r"|Transfer|Actual|Date|Time|TimeOffset|Nominal|Red"
+            r"|Blue|Scatter|SetsColl|SetsProc|Precision|Total_unc"
         )
         # 'Lat' is special because there are three data on the same line:
         # (Lat, Long, Elev)
-        lat_tag = re.compile(r'Lat')
+        lat_tag = re.compile(r"Lat")
 
         # 'Polar' is also special, for the same reason.
-        pol_tag = re.compile(r'Polar')
+        pol_tag = re.compile(r"Polar")
 
-        version_tag = re.compile(r'Version')
+        version_tag = re.compile(r"Version")
 
-        # Apparently using a delta file is optional, it's not always written to the .project file.
-        delta_tag = re.compile(r'DFFile')
-        ol_tag = re.compile(r'OLFile')
-        rub_tag = re.compile(r'RubFrequency')
-        grav_tag = re.compile(r'Grv')
-        grad_tag = re.compile(r'Gradient')
+        # Apparently using a delta file is optional, it's not always written to the
+        # .project file.
+        delta_tag = re.compile(r"DFFile")
+        ol_tag = re.compile(r"OLFile")
+        rub_tag = re.compile(r"RubFrequency")
+        grav_tag = re.compile(r"Grv")
+        grad_tag = re.compile(r"Gradient")
 
         # This one, because "Gradient:" is repeated exactly in this section.
-        unc_tag = re.compile(r'Uncertainties')
+        unc_tag = re.compile(r"Uncertainties")
 
         # This deals with multi-line comments
-        comment_tag = re.compile(r'Comments')
+        comment_tag = re.compile(r"Comments")
 
         for line in project_file:
             # Change up some text in the g file to make it easier to parse
             # (remove duplicates, etc.)
             line = line.strip()
-            line = line.replace('\n\n', '\n')
+            line = line.replace("\n\n", "\n")
             line = line.replace(":  ", ": ")
             # Repeat to take care of ":   " (three spaces).
             line = line.replace(":  ", ": ")
@@ -109,7 +110,7 @@ class A10:
             line = line.replace("g Processing ", "")
             line = line.replace("Project Name:", "Project")
             line = line.replace("File Created:", "Created")
-            line = line.replace('Gravity Corrections', 'grvcorr')
+            line = line.replace("Gravity Corrections", "grvcorr")
             line = line.replace(" Height:", ":")
             line = line.replace("Delta Factor Filename:", "DFFile")
             line = line.replace("Ocean Load ON, Filename:", "OLFile")
@@ -162,7 +163,7 @@ class A10:
             # Old g versions don't output Time Offset, which comes right before gravity.
             if grav_tag_found is not None:
                 if version < 5:
-                    data_array.append('-999')
+                    data_array.append("-999")
                 data_array.append(line_elements[1])
 
             if delta_tag_found is not None:
@@ -177,11 +178,11 @@ class A10:
                 if dtf:
                     data_array.append(df)
                 else:
-                    data_array.append('-999')
+                    data_array.append("-999")
                 if olf:
                     data_array.append(of)
                 else:
-                    data_array.append('-999')
+                    data_array.append("-999")
                 data_array.append(line_elements[1])
 
             if version_tag_found is not None:
@@ -191,7 +192,7 @@ class A10:
                 try:
                     data_array.append(line_elements[1])
                 except:
-                    data_array.append('-999')
+                    data_array.append("-999")
 
             if lat_tag_found is not None:
                 data_array.append(line_elements[1])
@@ -200,9 +201,9 @@ class A10:
                 # This accomodates old versions of g. If these data are to be published,
                 # though, they should be reprocessed in a more recent version.
                 if version < 5:
-                    data_array.append('-999')  # Setup Height.
-                    data_array.append('-999')  # Transfer Height.
-                    data_array.append('-999')  # Actual Height.
+                    data_array.append("-999")  # Setup Height.
+                    data_array.append("-999")  # Transfer Height.
+                    data_array.append("-999")  # Actual Height.
 
             if pol_tag_found is not None:
                 data_array.append(line_elements[1])
@@ -211,18 +212,18 @@ class A10:
             if in_comments > 0:
                 comments += line
                 if in_comments > 1:
-                    comments += ' | '
+                    comments += " | "
                 in_comments += in_comments
 
             if comment_tag_found is not None:
                 in_comments = 1
-                comments = ''
+                comments = ""
 
         data_array.append(comments)
 
         # Old g versions don't output transfer height correction.
         if version < 5:
-            data_array.append('-999')
+            data_array.append("-999")
         project_file.close()
 
         self.created = data_array[0]
@@ -243,9 +244,9 @@ class A10:
         self.clock = data_array[15]
         self.blue = data_array[16]
         self.red = data_array[17]
-        date_elems = data_array[18].split('/')
+        date_elems = data_array[18].split("/")
         self.date = (
-            str(int(date_elems[2]) + 2000) + '-' + date_elems[0] + '-' + date_elems[1]
+            str(int(date_elems[2]) + 2000) + "-" + date_elems[0] + "-" + date_elems[1]
         )
         self.time = data_array[19]
         self.timeoffset = data_array[20]

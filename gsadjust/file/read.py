@@ -17,6 +17,7 @@ resulting from the authorized or unauthorized use of the software.
 
 import datetime as dt
 import logging
+
 from matplotlib.dates import date2num
 
 from ..data import ChannelList, Datum
@@ -34,16 +35,24 @@ def file_reader(meter_type, fh):
     Generic file reader, which given a meter type and a file handle will
     pass loading off to an appropriate reader, returning the result.
 
-    :param meter_type: the type of data we are loading.
-    :param fh: open file handle to the file to load.
-    :return: ChannelList
+    Parameters
+    ----------
+    meter_type : {'csv', 'CG5', 'Burris', 'CG6', CG6Tsoft'}
+        The type of data tp load
+    fh : TextIOWrapper
+        Open file handle to the file to load.
+
+    Returns
+    -------
+    ChannelList
+
     """
     read_fn = {
-        'csv': read_csv,
-        'CG5': read_cg5,
-        'Burris': read_burris,
-        'CG6': read_cg6,
-        'CG6Tsoft': read_cg6tsoft,
+        "csv": read_csv,
+        "CG5": read_cg5,
+        "Burris": read_burris,
+        "CG6": read_cg6,
+        "CG6Tsoft": read_cg6tsoft,
     }.get(meter_type)
     if read_fn is None:
         raise InvalidMeterException
@@ -54,7 +63,32 @@ def file_reader(meter_type, fh):
 
 
 def read_csv(fh):
+    """Read arbitraty data in a csv file.
 
+    TODO: Make more general
+
+    CSV columns (must be in this order:
+      Station name
+      Latitude
+      Longitude
+      ALtitude
+      Gravity
+      Standard deviation
+      Tilt X
+      Tilt Y
+      Temperature
+      Tide
+      Duration
+      Rejected
+      Time
+      Decimal Date.time (ignored)
+      Terrain correction (ignored)
+      Date
+
+    Representative line:
+    TEST,26.3724,-112.4124,110.0,6134.455,0.016,-1,0.2,-1.49,-0.014,60,0,...
+    14:11:20,42572.59026,0,8/22/2016
+    """
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
@@ -66,15 +100,16 @@ def read_csv(fh):
             i += 1
             line = orig_line.strip()
             # Skip blank and comment lines
-            if (not line) or (line[0] == '%'):
+            if (not line) or (line[0] == "%"):
                 continue
 
-            # parse string line first with respect to '/' characters (used in the date format),
-            # then with ':' (used for the time display), eventually with the classic ' '
-            vals_temp1 = line.split('/')
-            vals_temp2 = vals_temp1[0].split(':')
-            vals_temp3 = vals_temp2[0].split(',')
-            vals_temp4 = vals_temp2[2].split(',')
+            # parse string line first with respect to '/' characters (used in the
+            # date format), then with ':' (used for the time display), eventually
+            # with the classic ' '
+            vals_temp1 = line.split("/")
+            vals_temp2 = vals_temp1[0].split(":")
+            vals_temp3 = vals_temp2[0].split(",")
+            vals_temp4 = vals_temp2[2].split(",")
 
             # fill object properties:
             all_survey_data.station.append(vals_temp3[0].strip())
@@ -108,11 +143,11 @@ def read_csv(fh):
             if meter:
                 all_survey_data.meter.append(meter)
             else:
-                all_survey_data.meter.append('-999')
+                all_survey_data.meter.append("-999")
             if oper:
                 all_survey_data.oper.append(oper)
             else:
-                all_survey_data.oper.append('-999')
+                all_survey_data.oper.append("-999")
             all_survey_data.keepdata.append(1)
         except IndexError as e:
             e.i = i
@@ -122,15 +157,23 @@ def read_csv(fh):
             e.i = i
             e.line = orig_line
             raise e
-    all_survey_data.meter_type = 'csv'
+    all_survey_data.meter_type = "csv"
     return all_survey_data
 
 
 def read_cg5(fh):
     """
     Read CG5 formatted file, from given open file handle.
-    :param fh: open file handle, of type CG5
-    :return: ChannelList
+
+    Parameters
+    ----------
+    fh : TextIOWrapper
+       open file handle, of type CG5
+
+    Returns
+    -------
+    ChannelList
+
     """
     i = 0
     meter, oper = None, None
@@ -144,29 +187,29 @@ def read_cg5(fh):
             line = orig_line.strip()
 
             # Skip blank and comment lines
-            if (not line) or (line[0] == 'L'):
+            if (not line) or (line[0] == "L"):
                 continue
 
             # Header line; look for useful information
-            if line[0] == '/':
+            if line[0] == "/":
                 vals_temp = line.split()
                 if len(vals_temp) > 1:
-                    if vals_temp[1] == 'Instrument':
+                    if vals_temp[1] == "Instrument":
                         meter = vals_temp[-1]
-                    if vals_temp[1] == 'Operator:':
+                    if vals_temp[1] == "Operator:":
                         oper = vals_temp[-1]
                 continue
 
             # parse string line first with respect to '/' characters (used in the date format),
             # then with ':' (used for the time display), eventually with the classic ' '
-            vals_temp1 = line.split('/')
-            vals_temp2 = vals_temp1[0].split(':')
+            vals_temp1 = line.split("/")
+            vals_temp2 = vals_temp1[0].split(":")
             vals_temp3 = vals_temp2[0].split()
             vals_temp4 = vals_temp2[2].split()
 
             # fill object properties:
             all_survey_data.line.append(float(vals_temp3[0]))
-            s = vals_temp3[1].replace('.0000000', '')
+            s = vals_temp3[1].replace(".0000000", "")
             all_survey_data.station.append(s.strip())
             all_survey_data.elev.append(float(vals_temp3[2]))
             all_survey_data.raw_grav.append(
@@ -196,11 +239,11 @@ def read_cg5(fh):
             if meter:
                 all_survey_data.meter.append(meter)
             else:
-                all_survey_data.meter.append('-999')
+                all_survey_data.meter.append("-999")
             if oper:
                 all_survey_data.oper.append(oper)
             else:
-                all_survey_data.oper.append('-999')
+                all_survey_data.oper.append("-999")
             all_survey_data.keepdata.append(1)
         except IndexError as e:
             e.i = i
@@ -210,15 +253,25 @@ def read_cg5(fh):
             e.i = i
             e.line = orig_line
             raise e
-    all_survey_data.meter_type = 'CG5'
+    all_survey_data.meter_type = "CG5"
     return all_survey_data
 
 
 def read_burris(fh):
     """
     Read Burris formatted file, from given open file handle.
-    :param fh: open file handle, of type Burris
-    :return: ChannelList
+
+    Accepts comma or tab-separated files.
+
+    Parameters
+    ----------
+    fh : TextIOWrapper
+       open file handle
+
+    Returns
+    -------
+    ChannelList
+
     """
 
     i = 0
@@ -228,15 +281,15 @@ def read_burris(fh):
         try:
             i += 1
             line = orig_line.strip()
-            if line.find(',') != -1:
-                vals_temp = line.split(',')
-                if vals_temp[0] == 'Station ID' or vals_temp[0] == 'Station':
+            if line.find(",") != -1:
+                vals_temp = line.split(",")
+                if vals_temp[0] == "Station ID" or vals_temp[0] == "Station":
                     continue
-            elif line.find('\t') != -1:
-                vals_temp = line.split('\t')
+            elif line.find("\t") != -1:
+                vals_temp = line.split("\t")
             else:
                 vals_temp = line.split()
-            if vals_temp[0] == 'Station ID' or vals_temp[0] == 'Station':
+            if vals_temp[0] == "Station ID" or vals_temp[0] == "Station":
                 continue
             # Numbers are columns in the imported file
             c_station, c_oper, c_meter, c_date, c_time = 0, 1, 2, 3, 4
@@ -255,20 +308,20 @@ def read_burris(fh):
                 c_lat -= 1
                 c_long -= 1
                 c_height -= 1
-                all_survey_data.oper.append('None')
+                all_survey_data.oper.append("None")
             else:
                 all_survey_data.oper.append(vals_temp[c_oper])
-            if line.find('/') != -1:
-                date_temp = vals_temp[c_date].split('/')
-            elif line.find('-') != -1:
-                date_temp = vals_temp[c_date].split('-')
+            if line.find("/") != -1:
+                date_temp = vals_temp[c_date].split("/")
+            elif line.find("-") != -1:
+                date_temp = vals_temp[c_date].split("-")
             if int(date_temp[2]) > 999:
                 date_temp = [date_temp[2], date_temp[0], date_temp[1]]
             elif int(date_temp[0]) > 999:
                 date_temp = [date_temp[0], date_temp[1], date_temp[2]]
             # Else raise date error
 
-            time_temp = vals_temp[c_time].split(':')
+            time_temp = vals_temp[c_time].split(":")
 
             # fill object properties:
             all_survey_data.station.append(vals_temp[0].strip())
@@ -313,17 +366,24 @@ def read_burris(fh):
             e.i = i
             e.line = orig_line
             raise e
-    all_survey_data.meter_type = 'Burris'
+    all_survey_data.meter_type = "Burris"
     return all_survey_data
 
 
 def read_cg6(fh):
     """
     Read CG6 formatted file, from given open file handle.
-    :param fh: open file handle, of type CG6
-    :return: ChannelList
-    """
 
+    Parameters
+    ----------
+    fh : TextIOWrapper
+       open file handle
+
+    Returns
+    -------
+    ChannelList
+
+    """
     i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
@@ -332,13 +392,13 @@ def read_cg6(fh):
         try:
             i += 1
             line = orig_line.strip()
-            vals_temp = line.split('\t')
-            if line[0] == '/':
+            vals_temp = line.split("\t")
+            if line[0] == "/":
                 vals_temp = line.split()
                 if len(vals_temp) > 1:
-                    if vals_temp[1] == 'Instrument':
+                    if vals_temp[1] == "Instrument":
                         meter = vals_temp[-1]
-                    if vals_temp[1] == 'Operator:':
+                    if vals_temp[1] == "Operator:":
                         oper = vals_temp[-1]
                 continue
             # Numbers are columns in the imported file
@@ -348,8 +408,8 @@ def read_cg6(fh):
             c_dur = 15
             c_grav, c_elev, c_lat, c_long = 3, 19, 17, 18
 
-            date_temp = vals_temp[c_date].split('-')
-            time_temp = vals_temp[c_time].split(':')
+            date_temp = vals_temp[c_date].split("-")
+            time_temp = vals_temp[c_time].split(":")
 
             # fill object properties:
             all_survey_data.line.append(0.0)
@@ -385,11 +445,11 @@ def read_cg6(fh):
             if meter:
                 all_survey_data.meter.append(meter)
             else:
-                all_survey_data.meter.append('-999')
+                all_survey_data.meter.append("-999")
             if oper:
                 all_survey_data.oper.append(oper)
             else:
-                all_survey_data.oper.append('-999')
+                all_survey_data.oper.append("-999")
             all_survey_data.keepdata.append(1)
         except IndexError as e:
             e.i = i
@@ -399,15 +459,23 @@ def read_cg6(fh):
             e.i = i
             e.line = orig_line
             raise e
-    all_survey_data.meter_type = 'CG6'
+    all_survey_data.meter_type = "CG6"
     return all_survey_data
 
 
 def read_cg6tsoft(fh):
     """
-    Read CG6TSoft formatted file, from given open file handle.
-    :param fh: open file handle, of type CG6TSoft
-    :return: ChannelList
+    Read CG6 TSoft formatted file, from given open file handle.
+
+    Parameters
+    ----------
+    fh : TextIOWrapper
+       open file handle, of type CG5
+
+    Returns
+    -------
+    ChannelList
+
     """
 
     i = 0
@@ -420,13 +488,13 @@ def read_cg6tsoft(fh):
             line = orig_line.strip()
             vals_temp = line.split()
 
-            if line[0] == '/':
+            if line[0] == "/":
                 if len(vals_temp) > 1:
-                    if vals_temp[1] == 'Instrument':
+                    if vals_temp[1] == "Instrument":
                         meter = vals_temp[-1]
-                    if vals_temp[1] == 'Operator:':
+                    if vals_temp[1] == "Operator:":
                         oper = vals_temp[-1]
-                    if vals_temp[1] == 'Station:':
+                    if vals_temp[1] == "Station:":
                         station_name = vals_temp[-1]
                 continue
 
@@ -455,17 +523,15 @@ def read_cg6tsoft(fh):
                 all_survey_data.temp.append(float(vals_temp[c_temp]) * 1000.0)
                 # cols 0, 1, 2, 3, 4, 5 = year, month, day, hour, minute, second
                 temp_date_ints = (int(i) for i in vals_temp[:6])
-                all_survey_data.t.append(
-                    date2num(dt.datetime(*temp_date_ints))
-                )
+                all_survey_data.t.append(date2num(dt.datetime(*temp_date_ints)))
                 if meter:
                     all_survey_data.meter.append(meter)
                 else:
-                    all_survey_data.meter.append('-999')
+                    all_survey_data.meter.append("-999")
                 if oper:
                     all_survey_data.oper.append(oper)
                 else:
-                    all_survey_data.oper.append('-999')
+                    all_survey_data.oper.append("-999")
                 all_survey_data.keepdata.append(1)
                 all_survey_data.dur.append(-999)
                 all_survey_data.rej.append(-999)
@@ -480,33 +546,40 @@ def read_cg6tsoft(fh):
     if len(all_survey_data.raw_grav) == 0:
         raise ValueError
     else:
-        all_survey_data.meter_type = 'CG6Tsoft'
+        all_survey_data.meter_type = "CG6Tsoft"
         return all_survey_data
 
 
 def import_abs_g_complete(fname):
     """
-    Imports absolute gravity data as output by A10_parse.py.
-    Adds rows to datum_model
+    Imports absolute gravity data from comma-separated file output by fg5_parse.py.
+    Output will be displayed in datum model on Adjust tab.
 
-    :param fname: filename to open
-    :return: a list of Datum objects
+    Parameters
+    ----------
+    fname : str
+        filename to open (complete path)
+
+    Returns
+    -------
+    list of Datum objects
+
     """
 
     datums = list()
 
-    with open(fname, 'r') as fh:
+    with open(fname, "r") as fh:
 
         # Read header line
         line = fh.readline()
         parts = [p.strip() for p in line.split("\t")]
 
-        g_idx = index_or_none(parts, 'Gravity')
-        n_idx = index_or_none(parts, 'Station Name')
-        s_idx = index_or_none(parts, 'Set Scatter')
-        d_idx = index_or_none(parts, 'Date')
-        th_idx = index_or_none(parts, 'Transfer Height')
-        gr_idx = index_or_none(parts, 'Gradient')
+        g_idx = index_or_none(parts, "Gravity")
+        n_idx = index_or_none(parts, "Station Name")
+        s_idx = index_or_none(parts, "Set Scatter")
+        d_idx = index_or_none(parts, "Date")
+        th_idx = index_or_none(parts, "Transfer Height")
+        gr_idx = index_or_none(parts, "Gradient")
 
         for line in fh:
             try:
@@ -522,20 +595,28 @@ def import_abs_g_complete(fname):
                     )
                     datums.append(datum)
             except ValueError:
-                logging.error('No file : %s', fname)
+                logging.error("No file : %s", fname)
     return datums
 
 
 def import_abs_g_simple(fname):
     """
-    Imports absolute data from three column file, station g stdev.
-    Adds rows to datum_model
+    Imports absolute data from a three-column space-separated file:
+      station g stdev.
 
-    :param fname: filename to open
-    :return: a list of Datum objects
+    Output will be displayed in datum model on Adjust tab.
+
+    Parameters
+    ----------
+    fname : str
+        filename to open (complete path)
+
+    Returns
+    -------
+    List of Datum objects
     """
     datums = list()
-    with open(fname, 'r') as fh:
+    with open(fname, "r") as fh:
         line = fh.readline()
         while True:
             if not line:

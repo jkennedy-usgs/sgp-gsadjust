@@ -16,6 +16,7 @@ resulting from the authorized or unauthorized use of the software.
 """
 
 import datetime as dt
+import logging
 
 from matplotlib.dates import date2num
 
@@ -55,15 +56,13 @@ def file_reader(meter_type, fh):
 
 def read_csv(fh):
 
-    i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
 
     # Skip 1 header line
     _ = fh.readline()
-    for orig_line in fh:
+    for i, orig_line in enumerate(fh, 1):
         try:
-            i += 1
             line = orig_line.strip()
             # Skip blank and comment lines
             if (not line) or (line[0] == '%'):
@@ -105,23 +104,20 @@ def read_csv(fh):
                     )
                 )
             )
-            if meter:
-                all_survey_data.meter.append(meter)
-            else:
-                all_survey_data.meter.append('-999')
-            if oper:
-                all_survey_data.oper.append(oper)
-            else:
-                all_survey_data.oper.append('-999')
+
+            all_survey_data.meter.append(meter or '-999')
+            all_survey_data.oper.append(oper or '-999')
+
             all_survey_data.keepdata.append(1)
-        except IndexError as e:
+
+        except (IndexError, ValueError) as e:
+            logging.exception("Error loading CSV file at line %d", i)
+            logging.info("LINE: %s", line)
+
             e.i = i
             e.line = orig_line
             raise e
-        except ValueError as e:
-            e.i = i
-            e.line = orig_line
-            raise e
+
     all_survey_data.meter_type = 'csv'
     return all_survey_data
 
@@ -132,14 +128,11 @@ def read_cg5(fh):
     :param fh: open file handle, of type CG5
     :return: ChannelList
     """
-    i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
 
-    for orig_line in fh:
+    for i, orig_line in enumerate(fh, 1):
         try:
-            i += 1
-
             # Clean line
             line = orig_line.strip()
 
@@ -193,23 +186,19 @@ def read_cg5(fh):
                     )
                 )
             )
-            if meter:
-                all_survey_data.meter.append(meter)
-            else:
-                all_survey_data.meter.append('-999')
-            if oper:
-                all_survey_data.oper.append(oper)
-            else:
-                all_survey_data.oper.append('-999')
+
+            all_survey_data.meter.append(meter or '-999')
+            all_survey_data.oper.append(oper or '-999')
+
             all_survey_data.keepdata.append(1)
-        except IndexError as e:
+        except (IndexError, ValueError) as e:
+            logging.exception("Error loading CG5 file at line %d", i)
+            logging.info("LINE: %s", line)
+
             e.i = i
             e.line = orig_line
             raise e
-        except ValueError as e:
-            e.i = i
-            e.line = orig_line
-            raise e
+
     all_survey_data.meter_type = 'CG5'
     return all_survey_data
 
@@ -221,12 +210,10 @@ def read_burris(fh):
     :return: ChannelList
     """
 
-    i = 0
     all_survey_data = ChannelList()
 
-    for orig_line in fh:
+    for i, orig_line in enumerate(fh, 1):
         try:
-            i += 1
             line = orig_line.strip()
             if line.find(',') != -1:
                 vals_temp = line.split(',')
@@ -238,26 +225,19 @@ def read_burris(fh):
                 vals_temp = line.split()
             if vals_temp[0] == 'Station ID' or vals_temp[0] == 'Station':
                 continue
-            # Numbers are columns in the imported file
-            c_station, c_oper, c_meter, c_date, c_time = 0, 1, 2, 3, 4
-            c_grav, c_dial, c_feedback, c_tide, c_tilt = 5, 6, 7, 8, 9
-            c_height, c_elev, c_lat, c_long = 12, 13, 14, 15
+
             if len(vals_temp) == 15:  # no meter operator specified
-                c_dial -= 1
-                c_feedback -= 1
-                c_tide -= 1
-                c_tilt -= 1
-                c_meter -= 1
-                c_date -= 1
-                c_time -= 1
-                c_grav -= 1
-                c_elev -= 1
-                c_lat -= 1
-                c_long -= 1
-                c_height -= 1
+                (c_station, c_meter, c_date, c_time, c_grav, c_dial, c_feedback,
+                c_tide, c_tilt, _, _,  c_height, c_elev, c_lat, c_long) = range(16) # 0 - 15
                 all_survey_data.oper.append('None')
-            else:
+
+            else: # 16 values, includes meter operator.
+                # Numbers are columns in the imported file
+                (c_station, c_oper, c_meter, c_date, c_time, c_grav, c_dial, c_feedback,
+                c_tide, c_tilt, _, _,  c_height, c_elev, c_lat, c_long) = range(15) # 0 - 14
+
                 all_survey_data.oper.append(vals_temp[c_oper])
+
             if line.find('/') != -1:
                 date_temp = vals_temp[c_date].split('/')
             elif line.find('-') != -1:
@@ -271,7 +251,7 @@ def read_burris(fh):
             time_temp = vals_temp[c_time].split(':')
 
             # fill object properties:
-            all_survey_data.station.append(vals_temp[0].strip())
+            all_survey_data.station.append(vals_temp[c_station].strip())
             all_survey_data.elev.append(float(vals_temp[c_elev]))
             all_survey_data.height.append(float(vals_temp[c_height]))
             all_survey_data.lat.append(float(vals_temp[c_lat]))
@@ -305,14 +285,15 @@ def read_burris(fh):
                 )
             )
             all_survey_data.keepdata.append(1)
-        except IndexError as e:
+
+        except (IndexError, ValueError) as e:
+            logging.exception("Error loading Burris file at line %d", i)
+            logging.info("LINE: %s", line)
+
             e.i = i
             e.line = orig_line
             raise e
-        except ValueError as e:
-            e.i = i
-            e.line = orig_line
-            raise e
+
     all_survey_data.meter_type = 'Burris'
     return all_survey_data
 
@@ -324,13 +305,11 @@ def read_cg6(fh):
     :return: ChannelList
     """
 
-    i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
 
-    for orig_line in fh:
+    for i, orig_line in enumerate(fh, 1):
         try:
-            i += 1
             line = orig_line.strip()
             vals_temp = line.split('\t')
             if line[0] == '/':
@@ -353,7 +332,7 @@ def read_cg6(fh):
 
             # fill object properties:
             all_survey_data.line.append(0.0)
-            all_survey_data.station.append(vals_temp[0].strip())
+            all_survey_data.station.append(vals_temp[c_station].strip())
             all_survey_data.elev.append(float(vals_temp[c_elev]))
             all_survey_data.lat.append(float(vals_temp[c_lat]))
             all_survey_data.long.append(float(vals_temp[c_long]))
@@ -382,23 +361,19 @@ def read_cg6(fh):
                     )
                 )
             )
-            if meter:
-                all_survey_data.meter.append(meter)
-            else:
-                all_survey_data.meter.append('-999')
-            if oper:
-                all_survey_data.oper.append(oper)
-            else:
-                all_survey_data.oper.append('-999')
+
+            all_survey_data.meter.append(meter or '-999')
+            all_survey_data.oper.append(oper or '-999')
+
             all_survey_data.keepdata.append(1)
-        except IndexError as e:
+
+        except (IndexError, ValueError) as e:
+            logging.exception("Error loading CG6 file at line %d", i)
+            logging.info("LINE: %s", line)
             e.i = i
             e.line = orig_line
             raise e
-        except ValueError as e:
-            e.i = i
-            e.line = orig_line
-            raise e
+
     all_survey_data.meter_type = 'CG6'
     return all_survey_data
 
@@ -410,13 +385,11 @@ def read_cg6tsoft(fh):
     :return: ChannelList
     """
 
-    i = 0
     meter, oper = None, None
     all_survey_data = ChannelList()
     station_name = None
-    for orig_line in fh:
+    for i, orig_line in enumerate(fh, 1):
         try:
-            i += 1
             line = orig_line.strip()
             vals_temp = line.split()
 
@@ -458,30 +431,27 @@ def read_cg6tsoft(fh):
                 all_survey_data.t.append(
                     date2num(dt.datetime(*temp_date_ints))
                 )
-                if meter:
-                    all_survey_data.meter.append(meter)
-                else:
-                    all_survey_data.meter.append('-999')
-                if oper:
-                    all_survey_data.oper.append(oper)
-                else:
-                    all_survey_data.oper.append('-999')
+
+                all_survey_data.meter.append(meter or '-999')
+                all_survey_data.oper.append(oper or '-999')
+
                 all_survey_data.keepdata.append(1)
                 all_survey_data.dur.append(-999)
                 all_survey_data.rej.append(-999)
-        except IndexError as e:
+
+        except (IndexError, ValueError) as e:
+            logging.exception("Error loading CG6TSoft file %s, at line %d", fname, i)
+            logging.info("LINE: %s", line)
             e.i = i
             e.line = orig_line
             raise e
-        except ValueError as e:
-            e.i = i
-            e.line = orig_line
-            raise e
-    if len(all_survey_data.raw_grav) == 0:
-        raise ValueError
-    else:
+
+    if all_survey_data.raw_grav:
         all_survey_data.meter_type = 'CG6Tsoft'
         return all_survey_data
+
+    else:
+        raise ValueError
 
 
 def import_abs_g_complete(fname):
@@ -527,7 +497,9 @@ def import_abs_g_complete(fname):
                         )
                         datums.append(datum)
                 except ValueError:
-                    pass  # Log this error?
+                    logging.exception("Error loading absolute gravity data from %s", fname)
+                    # FIXME: Should this fail on error? If so raise exception.
+
     return datums
 
 

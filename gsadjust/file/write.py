@@ -67,7 +67,7 @@ def export_metadata(obsTreeModel, data_path):
 
     return fn
 
-def _export_metadata_table(obsTreeModel);
+def _export_metadata_table(obsTreeModel):
     table = [
         SEPARATOR.join([
         "Surve", "Max. delta residual", "Max. datum residual", "Mean SD", "Deltas", "Deltas not used",

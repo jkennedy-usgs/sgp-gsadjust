@@ -227,14 +227,14 @@ def read_burris(fh):
                 continue
 
             if len(vals_temp) == 15:  # no meter operator specified
-                (c_station, c_meter, c_date, c_time, c_grav, c_dial, c_feedback,
-                c_tide, c_tilt, _, _,  c_height, c_elev, c_lat, c_long) = range(16) # 0 - 15
+                (c_station, c_date, c_time, c_grav, c_dial, c_feedback,
+                c_tide, c_tilt, _, _,  c_height, c_elev, c_lat, c_long) = range(15) # 0 - 15
                 all_survey_data.oper.append('None')
 
             else: # 16 values, includes meter operator.
                 # Numbers are columns in the imported file
                 (c_station, c_oper, c_meter, c_date, c_time, c_grav, c_dial, c_feedback,
-                c_tide, c_tilt, _, _,  c_height, c_elev, c_lat, c_long) = range(15) # 0 - 14
+                c_tide, c_tilt, _, _,  c_height, c_elev, c_lat, c_long) = range(16) # 0 - 14
 
                 all_survey_data.oper.append(vals_temp[c_oper])
 

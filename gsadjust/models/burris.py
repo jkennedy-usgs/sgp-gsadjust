@@ -216,9 +216,14 @@ class BurrisTableModel(QAbstractTableModel):
                         self.arraydata[index.row()][index.column()] = float(value)
                         attr = 'long'
                         self.signal_update_coordinates.emit()
-                    if attr is not None:
-                        self.dataChanged.emit(index, index)
-                        return True
+
+                    if attr is None:
+                        return False
+
+                    self.dataChanged.emit(index, index)
+                    return True
+
+
 
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:

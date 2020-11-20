@@ -298,9 +298,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurvey = self.itemFromIndex(self.index(i, 0))
             surveys.append(obstreesurvey)
         workspace_data = [surveys, self.station_coords]
-        _, ext = os.path.splitext(fname)
-        if ext != '.gsa':
-            fname += '.gsa'
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
         logging.info('Saving JSON workspace to {}'.format(fname))

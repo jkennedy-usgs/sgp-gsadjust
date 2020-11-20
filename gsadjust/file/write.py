@@ -22,6 +22,9 @@ import time
 from ..data.analysis import compute_gravity_change
 
 
+SEPARATOR = ' | '
+
+
 def line_generator(lines):
     for line in lines:
         yield line + "\n"
@@ -43,134 +46,129 @@ def export_metadata(obsTreeModel, data_path):
     -------
     filename or False
     """
-    fn = os.path.join(
+    filename = os.path.join(
         data_path, "GSadjust_MetadataText_" + time.strftime("%Y%m%d-%H%M") + ".txt"
     )
-    results_written, sf_header_written = False, False
-    output_format = "table"
-    with open(fn, "w") as fid:
 
+    output_format = 'table'
+
+    export_fn = {
+        'table': _export_metadata_table,
+        'text': _export_metadata_text,
+    }
+
+    fn = export_fn.get(output_format)
+    lines = fn(obsTreeModel)
+
+    if not lines:
+        return False
+
+
+    with open(filename, 'w') as fid:
         fid.write(
             "Attribute accuracy is evaluated from the least-squares network adjustment"
             " results. "
         )
-        if output_format == "table":
-            table = [
-                "Survey | Max. delta residual | Max. datum residual | Mean SD | Deltas"
-                " | Deltas not used | Datums | Datums not used"
-            ]
-            for survey in obsTreeModel.checked_surveys():
-                if survey.adjustment.adjustmentresults.n_datums > 0:
-                    results_written = True
-                    table.append(
-                        f"{survey.name}"
-                        f" {survey.adjustment.adjustmentresults.max_dg_residual:>5.1f}"
-                        f" {survey.adjustment.adjustmentresults.max_datum_residual:>5.1f}"
-                        f" {survey.adjustment.adjustmentresults.avg_stdev:>5.1f}"
-                        f" {survey.adjustment.adjustmentresults.n_deltas:>4}"
-                        f" {survey.adjustment.adjustmentresults.n_deltas_notused:>3}"
-                        f" {survey.adjustment.adjustmentresults.n_datums:>3}"
-                        f" {survey.adjustment.adjustmentresults.n_datums_notused:>3}"
-                    )
-            for survey in obsTreeModel.checked_surveys():
-                if survey.adjustment.adjustmentresults.n_datums > 0:
-                    if len(survey.adjustment.adjustmentresults.cal_dic) > 0:
-                        if not sf_header_written:
-                            table.append("Relative gravimeter scale factor(s)")
-                            table.append(
-                                "Survey | Meter | Scale factor | Scale factor S.D. (0 ="
-                                " specified S.F.)"
-                            )
-                            sf_header_written = True
-                        for k, v in survey.adjustment.adjustmentresults.cal_dic.items():
-                            table.append(
-                                "{} {:>6} {:>10.6f} {:>10.6f}".format(
-                                    survey.name, k, v[0], v[1]
-                                )
-                            )
-                    elif survey.adjustment.adjustmentoptions.specify_cal_coeff:
-                        if not sf_header_written:
-                            table.append("Relative gravimeter scale factor(s)")
-                            table.append(
-                                "Survey | Meter | Scale factor | Scale factor S.D."
-                            )
-                            sf_header_written = True
-                        for (
-                            k,
-                            v,
-                        ) in survey.adjustment.adjustmentoptions.meter_cal_dict.items():
-                            table.append(
-                                "{} {:>6} {:>10.6f} 0".format(survey.name, k, v)
-                            )
-            lines = line_generator(table)
-            fid.writelines(lines)
-        else:
-            for survey in obsTreeModel.checked_surveys():
-                if (
-                    survey.adjustment.adjustmentresults.n_datums > 0
-                ):  # check that there are results
-                    results_written = True
-                    fid.write(
-                        "For the {} survey, the minimum and maximum gravity-difference"
-                        " residuals were {:0.1f} and {:0.1f} ".format(
-                            survey.name,
-                            survey.adjustment.adjustmentresults.min_dg_residual,
-                            survey.adjustment.adjustmentresults.max_dg_residual,
-                        )
-                    )
-                    fid.write(
-                        "microGal, respectively. The minimum and maximum datum"
-                        " (absolute-gravity station) residuals "
-                    )
-                    fid.write(
-                        "were {:0.1f} and {:0.1f} microGal, respectively. ".format(
-                            survey.adjustment.adjustmentresults.min_datum_residual,
-                            survey.adjustment.adjustmentresults.max_datum_residual,
-                        )
-                    )
-                    fid.write(
-                        "The average standard deviation of the adjusted gravity values"
-                        " at each station"
-                    )
-                    fid.write(
-                        " (derived from the network adjustment) was {:0.1f} microGal. "
-                        .format(survey.adjustment.adjustmentresults.avg_stdev)
-                    )
-                    # TODO: account for instance of 1 outlier ('1 was removed')
-                    datum_was_or_were, delta_was_or_were = "were", "were"
-                    outlier_or_outliers = "outliers"
-                    if survey.adjustment.adjustmentresults.n_datums == 1:
-                        datum_was_or_were = "was"
-                    if survey.adjustment.adjustmentresults.n_deltas_notused == 1:
-                        delta_was_or_were = "was"
-                        outlier_or_outliers = "an outlier"
-                    fid.write(
-                        "{} out of {} possible gravity differences were used in the"
-                        " adjustment ({} {} removed ".format(
-                            survey.adjustment.adjustmentresults.n_deltas,
-                            survey.adjustment.adjustmentresults.n_deltas_notused
-                            + survey.adjustment.adjustmentresults.n_deltas,
-                            survey.adjustment.adjustmentresults.n_deltas_notused,
-                            delta_was_or_were,
-                        )
-                    )
-                    fid.write(
-                        "as {}). {} out of {} possible datum observations {} used. "
-                        .format(
-                            outlier_or_outliers,
-                            survey.adjustment.adjustmentresults.n_datums,
-                            survey.adjustment.adjustmentresults.n_datums_notused
-                            + survey.adjustment.adjustmentresults.n_datums,
-                            datum_was_or_were,
-                        )
-                    )
-                    logging.info("Metadata text written to file")
+        fid.writelines(lines)
 
-    if not results_written:
-        os.remove(fn)
-        return False
-    else:
-        return fn
+    return filename
+
+def _export_metadata_table(obsTreeModel):
+    table = [
+        SEPARATOR.join([
+        "Survey", "Max. delta residual", "Max. datum residual", "Mean SD", "Deltas", "Deltas not used",
+        "Datums", "Datums not used"])
+    ]
+    sf_header_written = False
+    for survey in obsTreeModel.checked_surveys():
+        if survey.adjustment.adjustmentresults.n_datums > 0:
+            table.append(
+                f"{survey.name} "
+                f"{survey.adjustment.adjustmentresults.max_dg_residual:>5.1f} "
+                f"{survey.adjustment.adjustmentresults.max_datum_residual:>5.1f} "
+                f"{survey.adjustment.adjustmentresults.avg_stdev:>5.1f} "
+                f"{survey.adjustment.adjustmentresults.n_deltas:>4} "
+                f"{survey.adjustment.adjustmentresults.n_deltas_notused:>3} "
+                f"{survey.adjustment.adjustmentresults.n_datums:>3} "
+                f"{survey.adjustment.adjustmentresults.n_datums_notused:>3}"
+            )
+    for survey in obsTreeModel.checked_surveys():
+        if survey.adjustment.adjustmentresults.n_datums > 0:
+            if len(survey.adjustment.adjustmentresults.cal_dic) > 0:
+                if not sf_header_written:
+                    table.append("Relative gravimeter scale factor(s)")
+                    table.append(
+                        "Survey | Meter | Scale factor | Scale factor S.D. (0 = specified S.F.)"
+                    )
+                    sf_header_written = True
+                for k, v in survey.adjustment.adjustmentresults.cal_dic.items():
+                    table.append(
+                        "{} {:>6} {:>10.6f} {:>10.6f}".format(
+                            survey.name, k, v[0], v[1]
+                        )
+                    )
+            elif survey.adjustment.adjustmentoptions.specify_cal_coeff:
+                if not sf_header_written:
+                    table.append("Relative gravimeter scale factor(s)")
+                    table.append(
+                        "Survey | Meter | Scale factor | Scale factor S.D."
+                    )
+                    sf_header_written = True
+                for (
+                    k,
+                    v,
+                ) in survey.adjustment.adjustmentoptions.meter_cal_dict.items():
+                    table.append(
+                        "{} {:>6} {:>10.6f} 0".format(survey.name, k, v)
+                    )
+    return line_generator(table) if table else False
+
+def _export_metadata_text(obsTreeModel):
+    lines = []
+    for survey in obsTreeModel.checked_surveys():
+        if (
+            survey.adjustment.adjustmentresults.n_datums > 0
+        ):  # check that there are results
+            lines.append(
+                f'For the {survey.name} survey, the minimum and maximum gravity-difference '
+                f'residuals were {survey.adjustment.adjustmentresults.min_dg_residual:0.1f} '
+                f'and {survey.adjustment.adjustmentresults.max_dg_residual:0.1f} '
+                f'microGal, respectively. The minimum and maximum datum (absolute-gravity station) residuals '
+                f'were {survey.adjustment.adjustmentresults.min_datum_residual:0.1f} and '
+                f'{survey.adjustment.adjustmentresults.max_datum_residual:0.1f} microGal, respectively. '
+                f'The average standard deviation of the adjusted gravity values at each station '
+                f'(derived from the network adjustment) was {survey.adjustment.adjustmentresults.avg_stdev:0.1f} microGal. '
+            )
+            # TODO: account for instance of 1 outlier ('1 was removed')
+            datum_was_or_were, delta_was_or_were = 'were', 'were'
+            outlier_or_outliers = 'outliers'
+            if survey.adjustment.adjustmentresults.n_datums == 1:
+                datum_was_or_were = 'was'
+            if survey.adjustment.adjustmentresults.n_deltas_notused == 1:
+                delta_was_or_were = 'was'
+                outlier_or_outliers = 'an outlier'
+            lines.append(
+                '{} out of {} possible gravity differences were used in the adjustment ({} {} removed '.format(
+                    survey.adjustment.adjustmentresults.n_deltas,
+                    survey.adjustment.adjustmentresults.n_deltas_notused
+                    + survey.adjustment.adjustmentresults.n_deltas,
+                    survey.adjustment.adjustmentresults.n_deltas_notused,
+                    delta_was_or_were,
+                )
+            )
+            lines.append(
+                'as {}). {} out of {} possible datum observations {} used. '.format(
+                    outlier_or_outliers,
+                    survey.adjustment.adjustmentresults.n_datums,
+                    survey.adjustment.adjustmentresults.n_datums_notused
+                    + survey.adjustment.adjustmentresults.n_datums,
+                    datum_was_or_were,
+                )
+            )
+            logging.info('Metadata text written to file')
+
+    return line_generator(lines) if lines else False
+
 
 
 def export_summary(obsTreeModel, data_path):

@@ -210,7 +210,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             else:
                                 delta.type = 'assigned'
                                 delta.assigned_dg = float(value)
-                        self.dataChanged.emit(index, index, [])
+                        self.dataChanged.emit(index, index)
                         self.signal_adjust_update_required.emit()
                     return True
                 except ValueError:

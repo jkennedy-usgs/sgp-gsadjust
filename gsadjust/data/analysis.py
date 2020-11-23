@@ -184,6 +184,11 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
         of water.
         List: Shows station, date, g, sd for each adjusted station.
 
+    Returns
+    -------
+    tuple
+        header, table, dates
+
     """
 
     # Check that all values are positive (it should work either way, but it avoids confusion)
@@ -400,5 +405,4 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
             table += out_table_cumulative
         # transpose back
         table = [list(i) for i in zip(*table)]
-        # table = [header] + table
         return header, table, dates

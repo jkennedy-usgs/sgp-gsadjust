@@ -647,16 +647,16 @@ class TabDrift(QtWidgets.QWidget):
                             drift_rate.append(dr)
                             xmean = np.mean([x[idx], x[idx - 1]])
                             drift_x.append(xmean)
-                            try:
-                                drift_time.append(
-                                    dt.datetime.utcfromtimestamp(xmean * 86400.0)
-                                )
-                            except OSError:
-                                drift_time.append(
-                                    dt.datetime.utcfromtimestamp(
-                                        (xmean - 719163) * 86400.0
-                                    )
-                                )
+                            # try:
+                            drift_time.append(
+                                dt.datetime.utcfromtimestamp(xmean * 86400.0)
+                            )
+                            # except OSError:
+                            #     drift_time.append(
+                            #         dt.datetime.utcfromtimestamp(
+                            #             (xmean - 719163) * 86400.0
+                            #         )
+                            #     )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
                                 self.axes_drift_cont_lower.plot(
@@ -796,9 +796,7 @@ class TabDrift(QtWidgets.QWidget):
                             "ErrorInsufficient drift observations for spline method",
                         )
                     else:
-                        # FIXME: Can we add more information for the user here (or to logs)?
-                        MessageBox.warning("Unknown error", "Unknown error")
-
+                        MessageBox.warning("Unknown error", "Index error")
                     self.drift_polydegree_combobox.setCurrentIndex(0)
                 except np.linalg.LinAlgError as e:
                     logging.error(e)
@@ -822,25 +820,25 @@ class TabDrift(QtWidgets.QWidget):
                 if len(line[0]) > 1:
                     # Make values relative to first station value
                     y = [f - line[1][0] for f in line[1]]
-                    try:
-                        x = [dt.datetime.utcfromtimestamp(f * 86400.0) for f in line[0]]
-                    except OSError:
-                        x = [
-                            dt.datetime.utcfromtimestamp((f - 719163) * 86400.0)
-                            for f in line[0]
-                        ]
+                    # try:
+                    x = [dt.datetime.utcfromtimestamp(f * 86400.0) for f in line[0]]
+                    # except OSError:
+                    #     x = [
+                    #         dt.datetime.utcfromtimestamp((f - 719163) * 86400.0)
+                    #         for f in line[0]
+                    #     ]
                     a = self.axes_drift_single.plot(x, y, ".-", picker=5)
                     a[0].name = line[2]
 
             for line in deltas[2]:
                 if update:
-                    try:
-                        d = dt.datetime.utcfromtimestamp(
-                            (line[0][0] - 719163) * 86400.0
-                        )
-                        self.axes_drift_single.plot([d, d], line[1], "--")
-                    except OSError:
-                        self.axes_drift_single.plot(line[0], line[1], "--")
+                    # try:
+                    #     d = dt.datetime.utcfromtimestamp(
+                    #         (line[0][0] - 719163) * 86400.0
+                    #     )
+                    #     self.axes_drift_single.plot([d, d], line[1], "--")
+                    # except OSError:
+                    self.axes_drift_single.plot(line[0], line[1], "--")
             if plot_data and update:
                 self.axes_drift_single.xaxis.set_major_formatter(DateFormatter("%H:%M"))
             if update:
@@ -1084,30 +1082,6 @@ class TabDrift(QtWidgets.QWidget):
             self.tare_popup_menu.addAction(self.mnDeleteTare)
             self.tare_popup_menu.exec_(self.tare_view.mapToGlobal(point))
 
-    @staticmethod
-    def process_tares(obstreeloop):
-        """
-        Apply tares in the tare table.
-
-        Parameters
-        obstreeloop : ObsTreeLoop
-            Loop shown in drift tab
-
-        """
-
-        for i in range(obstreeloop.rowCount()):
-            obstreestation = obstreeloop.child(i)
-            # Clear old tare data
-            for idx, t in enumerate(obstreestation.t):
-                obstreestation.tare[idx] = 0
-            for tare in obstreeloop.tares:
-                if tare.checked == 2:
-                    # qdt = QtCore.QDateTime(tare.date, tare.time)
-                    tare_dt = date2num(tare.datetime)
-                    for idx, t in enumerate(obstreestation.t):
-                        if t > tare_dt:
-                            obstreestation.tare[idx] += tare.tare
-
     def update_tares(self, selected):
         """
         Respond to tare check/uncheck. Callback from tare_view.clicked.
@@ -1121,7 +1095,7 @@ class TabDrift(QtWidgets.QWidget):
             obstreeloop = self.parent.obsTreeModel.itemFromIndex(
                 self.parent.index_current_loop
             )
-            self.process_tares(obstreeloop)
+            self.parent.process_tares(obstreeloop)
             self.set_drift_method()
 
     def drift_adjust(self):

@@ -1,3 +1,20 @@
+"""
+gui/utils.py
+==============
+
+Custom PyQt widgets
+------------------------
+
+This software is preliminary, provisional, and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
+"""
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
@@ -11,6 +28,12 @@ class IncrMinuteTimeEdit(QtWidgets.QTimeEdit):
     the MinuteSection or HourSection. This manifests as when at a time, e.g.,
     3:00, stepBy isn't called when in the Minute Section because time is
     already at 0.
+
+    Parameters
+    ----------
+    time : QTime
+        Default time to show in dialog.
+
     """
 
     def __init__(self, time):
@@ -36,10 +59,10 @@ class IncrMinuteTimeEdit(QtWidgets.QTimeEdit):
 
 class ProgressBar(QtWidgets.QWidget):
     """
-    define progress bar
+    Define progress bar
     """
 
-    def __init__(self, parent=None, total=20, textmess='Progress'):
+    def __init__(self, parent=None, total=20, textmess="Progress"):
         super(ProgressBar, self).__init__(parent)
         self.progressbar = QtWidgets.QProgressBar()
         self.progressbar.setMinimum(1)
@@ -51,10 +74,13 @@ class ProgressBar(QtWidgets.QWidget):
 
 
 class helpButton(QtWidgets.QAbstractButton):
+    """
+    Not used yet.
+    """
+
     def __init__(self, pixmap, parent=None):
         super(helpButton, self).__init__(parent)
         self.pixmap = pixmap
-        # self.clicked.connect(self.doNothing)
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)

@@ -53,6 +53,6 @@ class Tare:
         """
         return {
             "checked": self.checked,
-            "datetime": str(self.datetime),
+            "datetime": self.datetime,
             "tare": self.tare,
         }

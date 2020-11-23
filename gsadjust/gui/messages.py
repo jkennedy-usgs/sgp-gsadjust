@@ -5,11 +5,6 @@ gui/messages.py
 GUI message boxes
 -----------------
 
-Major GUI objects (tabs, table views) are in the tab_... files. This module has
-primarily pop-up dialogs used to set network adjustment settings, show gravity
-change over time, etc. Major dialogs are written as classes and instantiated in
-GSadjust.py. Minor dialogs are written as functions and called directly.
-
 This software is preliminary, provisional, and is subject to revision. It is
 being provided to meet the need for timely best science. The software has not
 received final approval by the U.S. Geological Survey (USGS). No warranty,
@@ -19,34 +14,30 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-from PyQt5.QtWidgets import QMessageBox
-
 import logging
 
-from .widgets import helpButton
+from PyQt5.QtWidgets import QMessageBox
 
 
 class MessageBox:
-
     @staticmethod
     def critical(title, message, **kwargs):
-        logging.exception('%s: %s', title, message, exc_info=True)
+        logging.exception("%s: %s", title, message, exc_info=True)
         return QMessageBox.critical(None, title, message, **kwargs)
 
     @staticmethod
     def information(title, message, **kwargs):
-        logging.info('%s: %s', title, message)
+        logging.info("%s: %s", title, message)
         return QMessageBox.information(None, title, message, **kwargs)
 
     @staticmethod
     def question(title, message, **kwargs):
-        logging.info('%s: %s', title, message)
+        logging.info("%s: %s", title, message)
         result = QMessageBox.question(None, title, message, **kwargs)
-        logging.info('[User answered] - %s', result)
+        logging.info("[User answered] - %s", result)
         return result
 
     @staticmethod
     def warning(title, message, **kwargs):
-        logging.warning('%s: %s', title, message, exc_info=True)
+        logging.warning("%s: %s", title, message, exc_info=True)
         return QMessageBox.warning(None, title, message, **kwargs)
-

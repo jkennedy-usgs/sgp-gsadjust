@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
-menus.py
+gui/menus.py
 ===============
 
-Menus for GSadjust
+Menus for GSadjust. Controls visibility
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -38,184 +36,202 @@ class MENU_STATE:
     OBS_TREE_SURVEY = 13
     DELTA_MODEL = 11
     MULTIPLE_STATION = 14
-    UNENABLE_ALL = 15
+    MULTIPLE_LOOP = 15
+    UNENABLE_ALL = 16
 
 
 _ENABLED_MENUS = {
     MENU_STATE.UNINIT: [
-        ('mnFileAppendLoop', False),
-        ('mnFileAppendSurvey', False),
-        ('mnFileAppendWorkspace', False),
-        ('mnFileSaveWorkspaceAs', False),
-        ('mnDivideLoopByTime', False),
-        ('mnDivideLoopByHeight', False),
-        ('mnEditAddTareDialog', False),
-        ('mnEditVerticalGradientIntervalAction', False),
-        ('mnEditVerticalGradientWriteAction', False),
-        ('mnEditTideCorrection', False),
-        ('mnEditCorrectRecordedTimeAction', False),
-        ('mnEditShowCoordinates', False),
-        ('mnEditLoadCoordinates', False),
-        ('mnAdjUpdateDeltas', False),
-        ('mnAdjUpdateDeltasCurrentSurvey', False),
-        ('mnAdjUpdateDeltasCurrentLoop', False),
-        ('mnAdjClearDeltaTable', False),
-        ('mnAdjClearDatumTable', False),
-        ('mnAdjUpdateDeltas', False),
-        ('mnAdjUpdateDeltasCurrentSurvey', False),
-        ('mnAdjOptions', False),
-        ('mnAdjAdjustCurrent', False),
-        ('mnAdjAdjust', False),
-        ('mnAdjClearDeltaTable', False),
-        ('mnAdjAddDatum', False),
-        ('mnAdjImportAbsSimple', False),
-        ('mnAdjImportAbsFull', False),
-        ('mnAdjImportAbsDatabase', False),
-        ('mnAdjClearDatumTable', False),
-        ('mnAdjPlotHist', False),
-        ('mnAdjPlotCompareDatum', False),
-        ('mnAdjPlotObservedAdjustedAbs', False),
-        ('mnToolsNGCircular', False),
-        ('mnToolsNGMap', False),
-        ('mnToolsComputeGravityChangeAction', False),
-        ('mnToolsWriteMetadataText', False),
-        ('mnToolsWriteTabularOutput', False),
-        ('mnToolsWriteSummary', False),
+        ("mnFileAppendLoop", False),
+        ("mnFileAppendSurvey", False),
+        ("mnFileAppendWorkspace", False),
+        ("mnFileSaveWorkspaceAs", False),
+        ("mnDivideLoopByTime", False),
+        ("mnDivideLoopByHeight", False),
+        ("mnEditAddTareDialog", False),
+        ("mnEditVerticalGradientIntervalAction", False),
+        ("mnEditVerticalGradientWriteAction", False),
+        ("mnEditTideCorrection", False),
+        ("mnEditCorrectRecordedTimeAction", False),
+        ("mnEditShowCoordinates", False),
+        ("mnEditLoadCoordinates", False),
+        ("mnAdjUpdateDeltas", False),
+        ("mnAdjUpdateDeltasCurrentSurvey", False),
+        ("mnAdjUpdateDeltasCurrentLoop", False),
+        ("mnAdjClearDeltaTable", False),
+        ("mnAdjClearDatumTable", False),
+        ("mnAdjUpdateDeltas", False),
+        ("mnAdjUpdateDeltasCurrentSurvey", False),
+        ("mnAdjOptions", False),
+        ("mnAdjAdjustCurrent", False),
+        ("mnAdjAdjust", False),
+        ("mnAdjClearDeltaTable", False),
+        ("mnAdjAddDatum", False),
+        ("mnAdjImportAbsSimple", False),
+        ("mnAdjImportAbsFull", False),
+        ("mnAdjImportAbsDatabase", False),
+        ("mnAdjClearDatumTable", False),
+        ("mnAdjPlotHist", False),
+        ("mnAdjPlotCompareDatum", False),
+        ("mnAdjPlotObservedAdjustedAbs", False),
+        ("mnToolsNGCircular", False),
+        ("mnToolsNGMap", False),
+        ("mnToolsComputeGravityChangeAction", False),
+        ("mnToolsWriteMetadataText", False),
+        ("mnToolsWriteTabularOutput", False),
+        ("mnToolsWriteSummary", False),
     ],
     MENU_STATE.INIT: [
-        ('mnFileAppendLoop', True),
-        ('mnFileAppendSurvey', True),
-        ('mnFileAppendWorkspace', True),
-        ('mnFileSaveWorkspaceAs', True),
-        ('mnEditTideCorrection', True),
-        ('mnEditCorrectRecordedTimeAction', True),
-        ('mnEditShowCoordinates', True),
-        ('mnEditLoadCoordinates', True),
-        ('mnAdjClearDatumTable', True),
-        ('mnAdjUpdateDeltas', True),
-        ('mnAdjUpdateDeltasCurrentSurvey', True),
-        ('mnAdjOptions', True),
-        ('mnAdjAdjustCurrent', True),
-        ('mnAdjAdjust', True),
-        ('mnAdjUpdateDeltas', True),
-        ('mnAdjUpdateDeltasCurrentSurvey', True),
-        ('mnAdjUpdateDeltasCurrentLoop', True),
-        ('mnAdjClearDeltaTable', True),
-        ('mnAdjAddDatum', True),
-        ('mnAdjImportAbsSimple', True),
-        ('mnAdjImportAbsFull', True),
-        ('mnAdjImportAbsDatabase', True),
-        ('mnAdjClearDatumTable', True),
+        ("mnFileAppendLoop", True),
+        ("mnFileAppendSurvey", True),
+        ("mnFileAppendWorkspace", True),
+        ("mnFileSaveWorkspaceAs", True),
+        ("mnEditTideCorrection", True),
+        ("mnEditCorrectRecordedTimeAction", True),
+        ("mnEditShowCoordinates", True),
+        ("mnEditLoadCoordinates", True),
+        ("mnAdjClearDatumTable", True),
+        ("mnAdjUpdateDeltas", True),
+        ("mnAdjUpdateDeltasCurrentSurvey", True),
+        ("mnAdjOptions", True),
+        ("mnAdjAdjustCurrent", True),
+        ("mnAdjAdjust", True),
+        ("mnAdjUpdateDeltas", True),
+        ("mnAdjUpdateDeltasCurrentSurvey", True),
+        ("mnAdjUpdateDeltasCurrentLoop", True),
+        ("mnAdjClearDeltaTable", True),
+        ("mnAdjAddDatum", True),
+        ("mnAdjImportAbsSimple", True),
+        ("mnAdjImportAbsFull", True),
+        ("mnAdjImportAbsDatabase", True),
+        ("mnAdjClearDatumTable", True),
     ],
-    MENU_STATE.ACTIVE_WORKSPACE: [('mnFileSaveWorkspace', True),],
-    MENU_STATE.NO_ACTIVE_WORKSPACE: [('mnFileSaveWorkspace', False),],
+    MENU_STATE.ACTIVE_WORKSPACE: [
+        ("mnFileSaveWorkspace", True),
+    ],
+    MENU_STATE.NO_ACTIVE_WORKSPACE: [
+        ("mnFileSaveWorkspace", False),
+    ],
     MENU_STATE.SURVEY_HAS_DELTAS: [
-        ('mnToolsNGCircular', True),
-        ('mnToolsNGMap', True),
-        ('mnToolsComputeGravityChangeAction', True),
+        ("mnToolsNGCircular", True),
+        ("mnToolsNGMap", True),
+        ("mnToolsComputeGravityChangeAction", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_DELTAS: [
-        ('mnToolsNGCircular', False),
-        ('mnToolsNGMap', False),
-        ('mnToolsComputeGravityChangeAction', False),
+        ("mnToolsNGCircular", False),
+        ("mnToolsNGMap", False),
+        ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.SURVEY_HAS_RESULTS: [
-        ('mnAdjPlotHist', True),
-        ('mnAdjPlotCompareDatum', True),
-        ('mnAdjPlotObservedAdjustedAbs', True),
-        ('mnToolsWriteSummary', True),
-        ('mnToolsWriteTabularOutput', True),
-        ('mnToolsWriteMetadataText', True),
-        ('mnAdjPlotObservedAdjustedAbs', True),
-        ('mnAdjUpdateSD', True),
-        ('mnToolsShowCalCoeffTimeSeries', True),
+        ("mnAdjPlotHist", True),
+        ("mnAdjPlotCompareDatum", True),
+        ("mnAdjPlotObservedAdjustedAbs", True),
+        ("mnToolsWriteSummary", True),
+        ("mnToolsWriteTabularOutput", True),
+        ("mnToolsWriteMetadataText", True),
+        ("mnAdjPlotObservedAdjustedAbs", True),
+        ("mnAdjUpdateSD", True),
+        ("mnToolsShowCalCoeffTimeSeries", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_RESULTS: [
-        ('mnAdjPlotHist', False),
-        ('mnAdjPlotCompareDatum', False),
-        ('mnAdjPlotObservedAdjustedAbs', False),
-        ('mnToolsWriteSummary', False),
-        ('mnToolsWriteTabularOutput', False),
-        ('mnToolsWriteMetadataText', False),
-        ('mnAdjPlotObservedAdjustedAbs', False),
-        ('mnAdjUpdateSD', False),
+        ("mnAdjPlotHist", False),
+        ("mnAdjPlotCompareDatum", False),
+        ("mnAdjPlotObservedAdjustedAbs", False),
+        ("mnToolsWriteSummary", False),
+        ("mnToolsWriteTabularOutput", False),
+        ("mnToolsWriteMetadataText", False),
+        ("mnAdjPlotObservedAdjustedAbs", False),
+        ("mnAdjUpdateSD", False),
     ],
-    MENU_STATE.CALCULATE_CHANGE: [('mnToolsComputeGravityChangeAction', True),],
+    MENU_STATE.CALCULATE_CHANGE: [
+        ("mnToolsComputeGravityChangeAction", True),
+    ],
     MENU_STATE.AT_LEAST_ONE_SURVEY: [
-        ('mnAdjAdjust', True),
-        ('mnAdjAdjustCurrent', True),
-        ('mnDivideLoopByHeight', True),
-        ('mnDivideLoopByTime', True),
-        ('mnEditAddTareDialog', True),
-        ('mnEditVerticalGradientIntervalAction', True),
-        ('mnEditVerticalGradientWriteAction', True),
-        ('mnToolsComputeGravityChangeAction', False),
+        ("mnAdjAdjust", True),
+        ("mnAdjAdjustCurrent", True),
+        ("mnDivideLoopByHeight", True),
+        ("mnDivideLoopByTime", True),
+        ("mnEditAddTareDialog", True),
+        ("mnEditVerticalGradientIntervalAction", True),
+        ("mnEditVerticalGradientWriteAction", True),
+        ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.MORE_THAN_ONE_SURVEY: [
-        ('mnAdjPlotObservedAdjustedAbs', True),
-        ('mnAdjPlotCompareDatum', True),
-        ('mnEditVerticalGradientWriteAction', False),
+        ("mnAdjPlotObservedAdjustedAbs", True),
+        ("mnAdjPlotCompareDatum", True),
+        ("mnEditVerticalGradientWriteAction", False),
     ],
     # Right-click context menus below here
     MENU_STATE.OBS_TREE_STATION: [
-        ('mnDeleteSurvey', False),
-        ('mnDeleteLoop', False),
-        ('mnLoopProperties', False),
-        ('mnDeleteStation', True),
-        ('mnStationDuplicate', True),
-        ('mnRename', True),
-        ('mnDataNewLoop', True),
-        ('mnLoopAnimate', False),
-        ('mnVerticalGradientWriteAction', False),
+        ("mnDeleteSurvey", False),
+        ("mnDeleteLoop", False),
+        ("mnLoopProperties", False),
+        ("mnDeleteStation", True),
+        ("mnStationDuplicate", True),
+        ("mnRename", True),
+        ("mnDataNewLoop", True),
+        ("mnLoopAnimate", False),
+        ("mnVerticalGradientWriteAction", False),
     ],
     MENU_STATE.OBS_TREE_LOOP: [
-        ('mnDeleteSurvey', False),
-        ('mnDeleteLoop', True),
-        ('mnLoopProperties', True),
-        ('mnDeleteStation', False),
-        ('mnStationDuplicate', False),
-        ('mnRename', True),
-        ('mnDataNewLoop', False),
-        ('mnLoopAnimate', True),
-        ('mnVerticalGradientWriteAction', True),
+        ("mnDeleteSurvey", False),
+        ("mnDeleteLoop", True),
+        ("mnLoopProperties", True),
+        ("mnDeleteStation", False),
+        ("mnStationDuplicate", False),
+        ("mnRename", True),
+        ("mnDataNewLoop", False),
+        ("mnLoopAnimate", True),
+        ("mnVerticalGradientWriteAction", True),
     ],
     MENU_STATE.OBS_TREE_SURVEY: [
-        ('mnDeleteSurvey', True),
-        ('mnDeleteLoop', False),
-        ('mnLoopProperties', False),
-        ('mnDeleteStation', False),
-        ('mnStationDuplicate', False),
-        ('mnRename', True),
-        ('mnDataNewLoop', False),
-        ('mnLoopAnimate', False),
-        ('mnVerticalGradientWriteAction', False),
+        ("mnDeleteSurvey", True),
+        ("mnDeleteLoop", False),
+        ("mnLoopProperties", False),
+        ("mnDeleteStation", False),
+        ("mnStationDuplicate", False),
+        ("mnRename", True),
+        ("mnDataNewLoop", False),
+        ("mnLoopAnimate", False),
+        ("mnVerticalGradientWriteAction", False),
     ],
     MENU_STATE.UNENABLE_ALL: [
-        ('mnDeleteSurvey', False),
-        ('mnDeleteLoop', False),
-        ('mnLoopProperties', False),
-        ('mnDeleteStation', False),
-        ('mnStationDuplicate', False),
-        ('mnRename', False),
-        ('mnDataNewLoop', False),
-        ('mnLoopAnimate', False),
-        ('mnVerticalGradientWriteAction', False),
+        ("mnDeleteSurvey", False),
+        ("mnDeleteLoop", False),
+        ("mnLoopProperties", False),
+        ("mnDeleteStation", False),
+        ("mnStationDuplicate", False),
+        ("mnRename", False),
+        ("mnDataNewLoop", False),
+        ("mnLoopAnimate", False),
+        ("mnVerticalGradientWriteAction", False),
     ],
     MENU_STATE.MULTIPLE_STATION: [
-        ('mnDeleteSurvey', False),
-        ('mnDeleteLoop', False),
-        ('mnLoopProperties', False),
-        ('mnDeleteStation', True),
-        ('mnStationDuplicate', False),
-        ('mnRename', False),
-        ('mnDataNewLoop', True),
-        ('mnLoopAnimate', False),
-        ('mnVerticalGradientWriteAction', False),
+        ("mnDeleteSurvey", False),
+        ("mnDeleteLoop", False),
+        ("mnLoopProperties", False),
+        ("mnDeleteStation", True),
+        ("mnStationDuplicate", False),
+        ("mnRename", False),
+        ("mnDataNewLoop", True),
+        ("mnLoopAnimate", False),
+        ("mnVerticalGradientWriteAction", False),
+    ],
+    MENU_STATE.MULTIPLE_LOOP: [
+        ("mnDeleteSurvey", False),
+        ("mnDeleteLoop", False),
+        ("mnLoopProperties", True),
+        ("mnDeleteStation", False),
+        ("mnStationDuplicate", False),
+        ("mnRename", False),
+        ("mnDataNewLoop", False),
+        ("mnLoopAnimate", False),
+        ("mnVerticalGradientWriteAction", False),
     ],
     MENU_STATE.DELTA_MODEL: [
-        ('mnAdjClearDeltaTable', True),
-        ('mnAdjAdjust', True),
-        ('mnAdjAdjustCurrent', True),
+        ("mnAdjClearDeltaTable", True),
+        ("mnAdjAdjust", True),
+        ("mnAdjAdjustCurrent", True),
     ],
 }
 
@@ -234,45 +250,45 @@ class Menus:
         self.mnFileOpenScintrexFile = self.create_action(
             "&Load raw CG-3/CG-5 data...",
             shortcut="Ctrl+5",
-            slot=lambda meter='CG5': self.mainProg.open_file_dialog('CG5'),
+            slot=lambda meter="CG5": self.mainProg.open_file_dialog("CG5"),
             tip="Open data file",
             enabled=True,
         )
         self.mnFileOpenBurrisFile = self.create_action(
             "Load raw &Burris data...",
             shortcut="Ctrl+b",
-            slot=lambda meter='Burris': self.mainProg.open_file_dialog('Burris'),
+            slot=lambda meter="Burris": self.mainProg.open_file_dialog("Burris"),
             tip="Open data file",
             enabled=True,
         )
         self.mnFileOpenCG6File = self.create_action(
             "Load raw CG-6 data...",
             shortcut="Ctrl+6",
-            slot=lambda meter='CG6': self.mainProg.open_file_dialog('CG6'),
+            slot=lambda meter="CG6": self.mainProg.open_file_dialog("CG6"),
             tip="Open data file",
             enabled=True,
         )
         self.mnFileOpenCG6FileTsoft = self.create_action(
             "Load raw CG-6 data (Tsoft format)...",
-            slot=lambda meter='CG6Tsoft': self.mainProg.open_file_dialog('CG6Tsoft'),
+            slot=lambda meter="CG6Tsoft": self.mainProg.open_file_dialog("CG6Tsoft"),
             tip="Open data file",
             enabled=True,
         )
         self.mnFileOpenCsvFile = self.create_action(
             "Import csv data...",
             shortcut="Ctrl+7",
-            slot=lambda meter='csv': self.mainProg.open_file_dialog('csv'),
+            slot=lambda meter="csv": self.mainProg.open_file_dialog("csv"),
             tip="Open comma-separated value data file",
             enabled=True,
         )
         self.mnFileAppendSurvey = self.create_action(
             "Append survey to campaign...",
-            slot=lambda meter='choose': self.mainProg.open_file_dialog('survey'),
+            slot=lambda meter="choose": self.mainProg.open_file_dialog("survey"),
             enabled=False,
         )
         self.mnFileAppendLoop = self.create_action(
             "Append loop to current survey...",
-            slot=lambda meter='choose': self.mainProg.open_file_dialog('loop'),
+            slot=lambda meter="choose": self.mainProg.open_file_dialog("loop"),
             enabled=False,
         )
         self.mnFileAppendWorkspace = self.create_action(
@@ -296,8 +312,9 @@ class Menus:
             enabled=False,
         )
         self.mnFileLoadJSONAction = self.create_action(
-            "&Open workspace...", slot=self.mainProg.workspace_open_getjson,
-            shortcut="Ctrl+o"
+            "&Open workspace...",
+            slot=self.mainProg.workspace_open_getjson,
+            shortcut="Ctrl+o",
         )
         self.mnFileExitAction = self.create_action(
             "&Exit", shortcut="Alt+F4", slot=self.mainProg.close, tip="Exit App"
@@ -412,15 +429,15 @@ class Menus:
         # Adjust Menu
         #######################################################################
         self.mnAdj = self.mainProg.menuBar().addMenu("&Adjustment")
-        self.mnAdjtype = self.mnAdj.addMenu('Adjustment type')
+        self.mnAdjtype = self.mnAdj.addMenu("Adjustment type")
         actiongroup_adjustmenttype = QtWidgets.QActionGroup(self.mainProg)
 
         self.mnAdjPyLSQ = actiongroup_adjustmenttype.addAction(
-            self.create_action('Numpy least squares', checkable=True)
+            self.create_action("Numpy least squares", checkable=True)
         )
         self.mnAdjtype.addAction(self.mnAdjPyLSQ)
         self.mnAdjGravnet = actiongroup_adjustmenttype.addAction(
-            self.create_action('Gravnet', checkable=True)
+            self.create_action("Gravnet", checkable=True)
         )
         self.mnAdjtype.addAction(self.mnAdjGravnet)
         self.mnAdjPyLSQ.setChecked(True)
@@ -433,33 +450,33 @@ class Menus:
         self.mnAdjAdjustCurrent = self.create_action(
             "&Adjust current survey",
             shortcut="Ctrl+2",
-            slot=lambda: self.mainProg.adjust_network('current'),
+            slot=lambda: self.mainProg.adjust_network("current"),
             tip="Adjust current survey",
             enabled=False,
-            icon=QtGui.QIcon(':/icons/ac.png'),
+            icon=QtGui.QIcon(":/icons/ac.png"),
         )
         self.mnAdjAdjust = self.create_action(
             "&Adjust all surveys",
             shortcut="Ctrl+1",
-            slot=lambda: self.mainProg.adjust_network('all'),
+            slot=lambda: self.mainProg.adjust_network("all"),
             tip="Adjust all surveys",
             enabled=False,
-            icon=QtGui.QIcon(':/icons/aa.png'),
+            icon=QtGui.QIcon(":/icons/aa.png"),
         )
         self.mnAdjUpdateDeltas = self.create_action(
             "&Populate delta table - all surveys",
             shortcut="Ctrl+A",
-            slot=lambda: self.mainProg.populate_deltamodel('all'),
+            slot=lambda: self.mainProg.populate_deltamodel("all"),
             enabled=False,
         )
         self.mnAdjUpdateDeltasCurrentSurvey = self.create_action(
             "Populate delta table - selected survey",
-            slot=lambda: self.mainProg.populate_deltamodel('selectedsurvey'),
+            slot=lambda: self.mainProg.populate_deltamodel("selectedsurvey"),
             enabled=False,
         )
         self.mnAdjUpdateDeltasCurrentLoop = self.create_action(
             "Populate delta table - selected loop(s)",
-            slot=lambda: self.mainProg.populate_deltamodel('selectedloop'),
+            slot=lambda: self.mainProg.populate_deltamodel("selectedloop"),
             enabled=False,
         )
         self.mnAdjClearDeltaTable = self.create_action(
@@ -510,12 +527,8 @@ class Menus:
             "Scale std. dev. from results",
             slot=self.mainProg.update_SD_and_run_adjustment,
             enabled=False,
-            icon=QtGui.QIcon(':/icons/ua.png'),
+            icon=QtGui.QIcon(":/icons/ua.png"),
         )
-        # self.mnAdjCompareAllDatum = self.create_action("Plot absolute vs. relative offset",
-        #                  slot=self.mainProg.plot_compare_datum_all,
-        #                  enabled=True)
-
         self.add_actions(
             self.mnAdj,
             (
@@ -544,21 +557,21 @@ class Menus:
         #######################################################################
         # Tools Menu
         #######################################################################
-        self.mnTools = self.mainProg.menuBar().addMenu('&Tools')
+        self.mnTools = self.mainProg.menuBar().addMenu("&Tools")
         self.mnToolsNGCircular = self.create_action(
-            'Network graph - circular', slot=self.mainProg.plot_network_graph_circular
+            "Network graph - circular", slot=self.mainProg.plot_network_graph_circular
         )
         self.mnToolsNGMap = self.create_action(
-            'Network graph - map view', slot=self.mainProg.plot_network_graph_map
+            "Network graph - map view", slot=self.mainProg.plot_network_graph_map
         )
         self.mnToolsWriteMetadataText = self.create_action(
-            'Write metadata text', slot=self.mainProg.write_metadata_text
+            "Write metadata text", slot=self.mainProg.write_metadata_text
         )
         self.mnToolsWriteTabularOutput = self.create_action(
-            'Write tabular data', slot=self.mainProg.write_tabular_data
+            "Write tabular data", slot=self.mainProg.write_tabular_data
         )
         self.mnToolsWriteSummary = self.create_action(
-            'Write adjustment summary', slot=self.mainProg.write_summary_text
+            "Write adjustment summary", slot=self.mainProg.write_summary_text
         )
         self.mnToolsComputeGravityChangeAction = self.create_action(
             "&Compute gravity change",
@@ -591,17 +604,25 @@ class Menus:
         #######################################################################
         # Help Menu
         #######################################################################
-        self.mnHelp = self.mainProg.menuBar().addMenu('&Help')
-        self.mnHelpHelp = self.create_action('Help', slot=self.mainProg.show_help)
-        self.mnHelpAbout = self.create_action('About', slot=self.mainProg.dialog_about)
-        self.mnHelpLog = self.create_action('Log window', slot=self.mainProg.toggle_logview)
+        self.mnHelp = self.mainProg.menuBar().addMenu("&Help")
+        self.mnHelpHelp = self.create_action("Help", slot=self.mainProg.show_help)
+        self.mnHelpAbout = self.create_action("About", slot=self.mainProg.dialog_about)
+        self.mnHelpLog = self.create_action(
+            "Log window", slot=self.mainProg.toggle_logview
+        )
         self.mnHelpCheckForUpdates = self.create_action(
-            'Check for updates...', slot=lambda: self.mainProg.check_for_updates(True)
+            "Check for updates...", slot=lambda: self.mainProg.check_for_updates(True)
         )
 
         self.add_actions(
             self.mnHelp,
-            (self.mnHelpHelp, self.mnHelpAbout, self.mnHelpLog, None, self.mnHelpCheckForUpdates),
+            (
+                self.mnHelpHelp,
+                self.mnHelpAbout,
+                self.mnHelpLog,
+                None,
+                self.mnHelpCheckForUpdates,
+            ),
         )
 
     def create_action(
@@ -638,6 +659,7 @@ class Menus:
         """
         Add actions to a target
         """
+
         for action in actions:
             if action is None:
                 target.addSeparator()
@@ -645,6 +667,10 @@ class Menus:
                 target.addAction(action)
 
     def set_state(self, *args):
+        """
+        Main function for setting menu state.
+        """
+
         for state in args:
             if state not in _ENABLED_MENUS:
                 raise Exception("Invalid menu state: " % state)

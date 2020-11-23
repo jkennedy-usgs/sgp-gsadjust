@@ -20,35 +20,36 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-
 import datetime as dt
 import logging
 import os
 
-import matplotlib
 import numpy as np
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
+from PyQt5 import QtCore, QtGui, QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
-# import matplotlib.pyplot as plt
-from PyQt5 import QtCore, QtGui, QtWidgets
 
+from .messages import MessageBox
+from .utils import copy_cells_to_clipboard
+from .widgets import IncrMinuteTimeEdit, ProgressBar
 from ..data import Datum, analysis
 from ..file import a10
 from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
-from .messages import MessageBox
-from .utils import copy_cells_to_clipboard
-from .widgets import IncrMinuteTimeEdit, ProgressBar
 
 
 class CoordinatesTable(QtWidgets.QDialog):
     """
     Shows table of coordinates, which can be edited or copy/pasted. Coordinates
     provided by self.coords(), called by the calling routine.
+
+    Parameters
+    ----------
+    coords: dict (str: tuple)
+        station: (lat, lon, elev)
+
     """
 
     def __init__(self, coords):
@@ -56,7 +57,7 @@ class CoordinatesTable(QtWidgets.QDialog):
         vlayout = QtWidgets.QVBoxLayout()
         self.sys_clip = QtWidgets.QApplication.clipboard()
         self.setWindowModality(QtCore.Qt.ApplicationModal)
-        self.setWindowTitle('Station coordinates')
+        self.setWindowTitle("Station coordinates")
 
         ok_button = QtWidgets.QPushButton("Ok")
         ok_button.clicked.connect(self.accept)
@@ -76,7 +77,7 @@ class CoordinatesTable(QtWidgets.QDialog):
         vlayout.addWidget(self.table)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
-            ['Station', 'Latitude', 'Longitude', 'Elevation']
+            ["Station", "Latitude", "Longitude", "Elevation"]
         )
         for k, v in coords.items():
             row = self.table.rowCount()
@@ -105,19 +106,22 @@ class CoordinatesTable(QtWidgets.QDialog):
         """
         Handle copy/paste. Without this, the default is to copy only one cell.
         No sanity checks.
-        :param e: key pressed
-        :return: None
+
+        Parameters
+        ----------
+        e : key pressed
+
         """
         if e.modifiers() & QtCore.Qt.ControlModifier:
             selected = self.table.selectedRanges()
             if e.key() == QtCore.Qt.Key_C:  # copy
-                s = ''
+                s = ""
                 for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
-                    row_text = ''
+                    row_text = ""
                     for c in range(self.table.columnCount()):
-                        row_text += self.table.item(r, c).text() + '\t'
+                        row_text += self.table.item(r, c).text() + "\t"
                     rt = row_text[:-1]  # Remove trailing \t
-                    rt += '\n'
+                    rt += "\n"
                     s += rt
                 clipboard = QtWidgets.QApplication.clipboard()
                 clipboard.setText(s)
@@ -125,10 +129,10 @@ class CoordinatesTable(QtWidgets.QDialog):
             if e.key() == QtCore.Qt.Key_V:
                 clipboard = QtWidgets.QApplication.clipboard()
                 s = clipboard.text()
-                rows = s.split('\n')
+                rows = s.split("\n")
                 for idx, r in enumerate(rows):
-                    if r != '':
-                        elems = r.split('\t')
+                    if r != "":
+                        elems = r.split("\t")
                         table_item_station = QtWidgets.QTableWidgetItem(elems[0])
                         table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
                         table_item_long = QtWidgets.QTableWidgetItem(elems[2])
@@ -141,7 +145,12 @@ class CoordinatesTable(QtWidgets.QDialog):
     def coords(self):
         """
         Puts table coordinates into a dict.
-        :return: A dict with key = station name, value = tuple[lat, long, elev)
+
+        Returns
+        -------
+        dict
+            key = station name, value = tuple (lat, long, elev)
+
         """
         c = dict()
         for i in range(self.table.rowCount()):
@@ -154,18 +163,28 @@ class CoordinatesTable(QtWidgets.QDialog):
 
 
 class DialogLoopProperties(QtWidgets.QDialog):
+    """
+    Dialog for editing basic loop properties (operator, meter, comments)
+
+    Parameters
+    ----------
+    loops : list
+        Loops to apply settings, can be more than one
+
+    """
+
     def __init__(self, loops, parent=None):
         super(DialogLoopProperties, self).__init__(parent)
         self.setGeometry(50, 50, 350, 350)
         self.loops = loops
-        self.setWindowTitle('Loop properties')
+        self.setWindowTitle("Loop properties")
         self.init_ui()
 
     def init_ui(self):
         # create buttons and actions
-        self.cancel_button = QtWidgets.QPushButton('Cancel')
+        self.cancel_button = QtWidgets.QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.close)
-        self.ok_button = QtWidgets.QPushButton('OK')
+        self.ok_button = QtWidgets.QPushButton("OK")
         self.ok_button.clicked.connect(self.set_loop_options)
 
         button_box = QtWidgets.QDialogButtonBox(QtCore.Qt.Horizontal)
@@ -194,7 +213,6 @@ class DialogLoopProperties(QtWidgets.QDialog):
         grid.addWidget(self.comment_edit, 4, 0, 1, 2)
         grid.addWidget(button_box, 5, 0, 1, 2)
         self.setLayout(grid)
-
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def set_loop_options(self):
@@ -204,6 +222,13 @@ class DialogLoopProperties(QtWidgets.QDialog):
 class AdjustOptions(QtWidgets.QDialog):
     """
     Dialog to set network adjustment options.
+
+    Parameters
+    ----------
+    survey_str : str
+        Used to display the survey name in the apply button
+    options : AdjustOptions
+
     """
 
     def __init__(self, survey_str, options, parent=None):
@@ -262,7 +287,6 @@ class AdjustOptions(QtWidgets.QDialog):
 
     def init_ui(self, survey_name):
         if survey_name is not None:
-            # self.drift_temp_chk.setChecked(self.ao.use_model_temp)
             self.sigma_prefactor_chk.setChecked(self.ao.use_sigma_prefactor)
             self.sigma_postfactor_chk.setChecked(self.ao.use_sigma_postfactor)
             self.sigma_add_chk.setChecked(self.ao.use_sigma_add)
@@ -387,11 +411,6 @@ class AdjustOptions(QtWidgets.QDialog):
             self.cal_coeff_chk.setEnabled(True)
 
     def set_adjust_options(self):
-        # if self.drift_temp_chk.isChecked():
-        #     self.ao.use_model_temp = True
-        #     self.ao.model_temp_degree = int(self.ao.model_temp_degree.text())
-        # else:
-        #     self.ao.use_model_temp = False
         try:
             self.ao.use_sigma_prefactor = self.sigma_prefactor_chk.isChecked()
             self.ao.use_sigma_postfactor = self.sigma_postfactor_chk.isChecked()
@@ -429,6 +448,10 @@ class AdjustOptions(QtWidgets.QDialog):
 
 
 class DialogMeterType(QtWidgets.QMessageBox):
+    """
+    Dialog to specify meter type when appending a survey or loop.
+    """
+
     def __init__(self):
         super(DialogMeterType, self).__init__()
         self.setText("Choose meter file to import")
@@ -464,6 +487,10 @@ class DialogMeterType(QtWidgets.QMessageBox):
 
 
 class DialogOverwrite(QtWidgets.QMessageBox):
+    """
+    Dialog to confirm workspace overwrite
+    """
+
     def __init__(self):
         super(DialogOverwrite, self).__init__()
         self.overwrite = False
@@ -485,15 +512,20 @@ class DialogOverwrite(QtWidgets.QMessageBox):
 class GravityChangeTable(QtWidgets.QDialog):
     """
     Floating window to show gravity-change results
-    :param MainProg:
-    :param table:
-    :param header:
+
+    Parameters
+    ----------
+    MainProg : MainProg object
+    data : tuple
+        header, table, dates - return value from compute_gravity_change
+    table_type : {"simple", "full", "list"}
+        controls how data are displayed
+
     """
 
     def __init__(self, MainProg, data, table_type="simple"):
         super(GravityChangeTable, self).__init__(MainProg)
-        result = data
-        self.header, self.table, self.dates = result[0], result[1], result[2]
+        self.header, self.table, self.dates = data[0], data[1], data[2]
         self.full_header, self.full_table, _ = analysis.compute_gravity_change(
             MainProg.obsTreeModel, table_type="full"
         )
@@ -585,13 +617,26 @@ class GravityChangeTable(QtWidgets.QDialog):
             logging.info("Cartopy import error")
             MessageBox.warning(
                 "Import error",
-                "Map view plots on Mac or Linux platforms requires installation of the Geos"
-                " and Proj libraries. "
-                'Please install with homebrew ("brew install geos proj").',
+                "Map view plots on Mac or Linux platforms requires installation of the"
+                ' Geos and Proj libraries. Please install with homebrew ("brew install'
+                ' geos proj").',
             )
 
 
 class GravityChangeMap(QtWidgets.QDialog):
+    """
+    Map window for showing gravity-change results
+
+    Parameters
+    ----------
+    table
+    header
+    coords
+    full_table
+    full_header
+
+    """
+
     station_label = None
     try:
         import cartopy.crs as ccrs
@@ -822,7 +867,6 @@ class GravityChangeMap(QtWidgets.QDialog):
                 for idx, obs_idx in enumerate(obs_idxs):
                     if float(r[obs_idx]) > -998:
                         X.append(obs_dates[idx])
-                # Y = [obs_dates[idx] for idx in obs_idxs if float(r[idx]) > -998]
                 if len(X) > 1:
                     z = np.polyfit(X, Y, 1)
                     x.append(self.coords[sta][0])
@@ -861,23 +905,18 @@ class GravityChangeMap(QtWidgets.QDialog):
         if self.btnIncremental.isChecked():
             self.slider.setEnabled(True)
             self.slider.setRange(1, self.n_surveys)
-            # self.slider.setValue(1)
         elif not self.btnIncremental.isChecked():
             self.slider.setEnabled(True)
             self.slider.setRange(1, self.n_surveys + 1)
 
         self.figure.clf()
-
-        map_center = (self.axlim[0] + self.axlim[1]) / 2
         self.ax = self.figure.add_subplot(
             1,
             1,
             1,
             position=[0.15, 0.15, 0.75, 0.75],
             projection=self.ccrs.PlateCarree(),
-        )  # self.stamen_terrain.crs)
-        # self.ax.clear()
-        # self.ax.set_aspect('')
+        )
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         self.points = []
         x, y, d, names = self.get_data()
@@ -895,16 +934,12 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.points.name = names
 
         QtWidgets.QApplication.restoreOverrideCursor()
-        # self.figure.colorbar(point)
         self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
         self.cb = self.figure.colorbar(self.points)
-
         self.ax.set_xlabel("Distance, in meters", fontsize=16)
-
         self.set_cb_label()
         self.ax.set_extent(self.axlim)
         self.show_background(self.sliderResolution.value())
-        # , crs=self.ccrs.Geodetic())
         self.ax.callbacks.connect("xlim_changed", self.on_lims_change)
         self.ax.callbacks.connect("ylim_changed", self.on_lims_change)
         self.slider_label.setText(self.get_name())
@@ -936,16 +971,23 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.stamen_terrain = self.cimgt.GoogleTiles(
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/"
                 + self.maps[self.drpBasemap.currentIndex()]
-                + "/MapServer/tile/{z}/{y}/{x}.jpg")
+                + "/MapServer/tile/{z}/{y}/{x}.jpg"
+            )
             self.ax.add_image(self.stamen_terrain, zoom)
 
     def show_point_label(self, event):
         """
         Shows the station name in the upper left of the drift plot when a
         line is clicked.
-        :param event: Matplotlib event
-        :param axes: Current axes (differs for none|netadj|roman vs continuous)
+
+        Parameters
+        ----------
+        event : Matplotlib event
+        axes : Current axes
+            Differs for none|netadj|roman vs continuous
+
         """
+
         thispoint = event.artist
         if self.station_label is not None:
             self.station_label.set_text("")
@@ -1005,14 +1047,15 @@ class VerticalGradientDialog(QtWidgets.QInputDialog):
 
 
 class TideCoordinatesDialog(QtWidgets.QDialog):
+    """
+    Get coordinates for tide correction.
+    """
+
     def __init__(self, lat, lon, elev):
         super(TideCoordinatesDialog, self).__init__()
         self.init_ui(lat, lon, elev)
 
     def init_ui(self, lat, lon, elev):
-        """
-        Get coordinates for tide correction.
-        """
         latLabel = QtWidgets.QLabel("Latitude")
         lonLabel = QtWidgets.QLabel("Longitude")
         elevLabel = QtWidgets.QLabel("Elevation")
@@ -1046,6 +1089,10 @@ class TideCoordinatesDialog(QtWidgets.QDialog):
 
 
 class TideCorrectionDialog(QtWidgets.QDialog):
+    """
+    Get method for tide correction.
+    """
+
     def __init__(self):
         super(TideCorrectionDialog, self).__init__()
         self.init_ui()
@@ -1073,6 +1120,10 @@ class TideCorrectionDialog(QtWidgets.QDialog):
 
 
 class AddDatumFromList(QtWidgets.QInputDialog):
+    """
+    Dialog to add existing station as a datum station.
+    """
+
     @classmethod
     def add_datum(cls, station_list):
         dialog = cls()
@@ -1120,7 +1171,6 @@ class LoopTimeThresholdDialog(QtWidgets.QDialog):
         self.dt_edit = IncrMinuteTimeEdit(QtCore.QTime(8, 0))
         self.dt_edit.setDisplayFormat("hh:mm")
 
-        # self.dt_edit.setDateTime(default_time)
         main_layout.addWidget(self.dt_edit, 0, 1)
         grid_widget = QtWidgets.QWidget()
         grid_widget.setLayout(main_layout)
@@ -1129,7 +1179,6 @@ class LoopTimeThresholdDialog(QtWidgets.QDialog):
         final_layout.addWidget(grid_widget)
         final_layout.addWidget(button_widget)
         self.setLayout(final_layout)
-
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def return_time(self):
@@ -1184,7 +1233,6 @@ class AddTareDialog(QtWidgets.QDialog):
         final_layout.addWidget(grid_widget)
         final_layout.addWidget(button_widget)
         self.setLayout(final_layout)
-
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def return_date(self):
@@ -1195,6 +1243,15 @@ class SelectAbsg(QtWidgets.QDialog):
     """
     Dialog to show absolute-gravity values from *.project.txt files. The user
     can select the files to import as Datums.
+
+    Parameters
+    ----------
+    path : str
+        Path to open. Should be same as previous, if dialog was previously opened.
+    datum_table_model : list
+        If not None, it's the datums the previous time this dialog was opened. Saves
+        time for large directories.
+
     """
 
     def __init__(self, path, datum_table_model=None, parent=None):
@@ -1237,9 +1294,6 @@ class SelectAbsg(QtWidgets.QDialog):
                 self.new_datums.append(nd)
         self.accept()
 
-    # def closeEvent(self, QCloseEvent):
-    #     return self.close()
-
     def init_ui(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -1258,7 +1312,8 @@ class SelectAbsg(QtWidgets.QDialog):
         # Buttons and checkbox
         self.load_unpublished_cb = QtWidgets.QCheckBox("Ignore unpublished")
         self.load_unpublished_cb.setToolTip(
-            'Files inside a directory named "unpublished" (anywhere on the path) will be ignored'
+            'Files inside a directory named "unpublished" (anywhere on the path) will'
+            " be ignored"
         )
         self.load_unpublished_cb.setChecked(True)
         self.load_button = QtWidgets.QPushButton("Load")
@@ -1312,7 +1367,6 @@ class SelectAbsg(QtWidgets.QDialog):
         self.splitter_window.setSizes([240, 560])
         final_layout.addWidget(self.splitter_window)
         self.setLayout(final_layout)
-
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def load_a10_data(self):
@@ -1391,6 +1445,16 @@ class AboutDialog(QtWidgets.QDialog):
 
 
 class ShowCalCoeffs(QtWidgets.QDialog):
+    """
+    Dialog to show table of calibration coefficients (specified or calculated.
+
+    Parameters
+    ----------
+    cal_coeffs : dict
+        key = meter name (str), value = list of tuples: (survey name, cal coeff, s.d.)
+
+    """
+
     def __init__(self, cal_coeffs, parent=None):
         super(ShowCalCoeffs, self).__init__(parent)
         self.setWindowTitle("Calibration coefficients")
@@ -1417,13 +1481,16 @@ class ShowCalCoeffs(QtWidgets.QDialog):
                 )
                 h += 30
             view.setModel(cal_model)
-            w = view.horizontalHeader().width()
             view.setFixedSize(340, h + 40)
         self.setLayout(vlayout)
         self.resize(self.sizeHint())
 
 
 class DialogApplyTimeCorrection(QtWidgets.QDialog):
+    """
+    Dialog to apply time shift to observed times
+    """
+
     def __init__(self):
         super(DialogApplyTimeCorrection, self).__init__()
         self.time_correction_type = False

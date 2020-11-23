@@ -108,7 +108,6 @@ Survey.
 import copy
 import logging
 import os
-
 # Standard library modules
 import sys
 import time
@@ -118,11 +117,10 @@ import webbrowser
 # Modules that must be installed
 import matplotlib
 import numpy as np
-from matplotlib.dates import num2date
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
+from matplotlib.dates import num2date, date2num
 
-from . import resources
 from .data import (
     ChannelList,
     Datum,
@@ -130,6 +128,16 @@ from .data import (
 )
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
+# GSadjust modules
+from .file import (
+    InvalidMeterException,
+    export_data,
+    export_metadata,
+    export_summary,
+    file_reader,
+    import_abs_g_complete,
+    import_abs_g_simple,
+)
 from .gui.dialogs import (
     AboutDialog,
     AddDatumFromList,
@@ -148,22 +156,11 @@ from .gui.dialogs import (
     TideCorrectionDialog,
     VerticalGradientDialog,
 )
-from .gui.messages import MessageBox
+from .gui.logger import LoggerWidget
 from .gui.menus import MENU_STATE, Menus
+from .gui.messages import MessageBox
 from .gui.tabs import TabAdjust, TabData, TabDrift
 from .gui.widgets import ProgressBar
-from .gui.logger import LoggerWidget
-
-# GSadjust modules
-from .file import (
-    InvalidMeterException,
-    export_data,
-    export_metadata,
-    export_summary,
-    file_reader,
-    import_abs_g_complete,
-    import_abs_g_simple,
-)
 from .models import (
     BurrisTableModel,
     DatumTableModel,
@@ -275,9 +272,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_drift.drift_screen_elapsed_time.update_drift_plots.connect(
             self.update_drift_tables_and_plots
         )
-        self.tab_drift.tare_view.model().dataChanged.connect(
-            self.tares_updated
-        )
+        self.tab_drift.tare_view.model().dataChanged.connect(self.tares_updated)
 
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.addTab(self.tab_data, "Data")
@@ -547,22 +542,13 @@ class MainProg(QtWidgets.QMainWindow):
 
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            caption='Open file',
-            directory=self.settings.value('current_dir'),
+            caption="Open file",
+            directory=self.settings.value("current_dir"),
+            filter="Data files (*.csv *.txt)"
         )
 
         if fname:
-            self.settings.setValue('current_dir', os.path.dirname(fname))
-
-            # FIXME: This check wouldn't be neccessary if we restrict the file extensions in the open dialog.
-            # is that possible for this?
-            _, ext = os.path.splitext(fname)
-            if ext in [".p", ".gsa"]:
-                MessageBox.warning(
-                    "File load error",
-                    'Please use "Open workspace... " to load a .p or .gsa file',
-                )
-                return
+            self.settings.setValue("current_dir", os.path.dirname(fname))
             self.open_raw_data(fname, open_type)
             self.init_gui()
 
@@ -701,18 +687,21 @@ class MainProg(QtWidgets.QMainWindow):
         Append previously-saved workspace to current workspace.
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open File', self.settings.value('current_dir'),
-            filter="Workspace files (*.gsa)"
+            None,
+            "Open File",
+            self.settings.value("current_dir"),
+            filter="Workspace files (*.gsa)",
         )
         if fname:
             self.settings.setValue("current_dir", os.path.dirname(fname))
             if fname[-1] == "p":
                 MessageBox.warning(
                     "Import error",
-                    "If trying to append a .p file, please save it as a .gsa file first.",
+                    "If trying to append a .p file, please save it as a .gsa file"
+                    " first.",
                 )
                 return
-            obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(
+            obstreesurveys, coords = self.obsTreeModel.load_workspace(
                 fname
             )
             # TODO: Do something with coords (append to table if not already there)
@@ -723,9 +712,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.update_all_drift_plots()
             self.populate_station_coords()
             self.workspace_loaded = True
-            # self.populate_survey_deltatable_from_simpledeltas(
-            #     delta_models, obstreesurveys
-            # )
             QtWidgets.QApplication.restoreOverrideCursor()
             self.set_window_title_asterisk()
             self.update_menus()
@@ -736,7 +722,10 @@ class MainProg(QtWidgets.QMainWindow):
         """
         if confirm:
             if self.windowTitle()[-1] == "*":
-                quit_msg = "The workspace isn't saved. Are you sure you want to clear all data?"
+                quit_msg = (
+                    "The workspace isn't saved. Are you sure you want to clear all"
+                    " data?"
+                )
                 reply = MessageBox.question(
                     "Message",
                     quit_msg,
@@ -796,18 +785,18 @@ class MainProg(QtWidgets.QMainWindow):
         """
 
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            None, 'Save workspace as', self.settings.value('current_dir'),
-            filter="Workspace files (*.gsa)"
+            None,
+            "Save workspace as",
+            self.settings.value("current_dir"),
+            filter="Workspace files (*.gsa)",
         )
         if fname:
             save_name = None
             self.settings.setValue("current_dir", os.path.dirname(fname))
             try:
                 save_name = self.obsTreeModel.save_workspace(fname)
-
             except Exception as e:
                 logging.exception(e, exc_info=True)
-
             else:
                 self.menus.mnFileSaveWorkspace.setEnabled(False)
 
@@ -829,8 +818,10 @@ class MainProg(QtWidgets.QMainWindow):
         :return:
         """
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
-            None, 'Open File', self.settings.value('current_dir'),
-            filter="Workspace files (*.gsa)"
+            None,
+            "Open File",
+            self.settings.value("current_dir"),
+            filter="Workspace files (*.gsa)",
         )
         if not fname:
             return
@@ -855,10 +846,10 @@ class MainProg(QtWidgets.QMainWindow):
         # try:
         QtWidgets.QApplication.processEvents()
         start = time.time()
-        obstreesurveys, delta_models, coords = self.obsTreeModel.load_workspace(fname)
+        obstreesurveys, coords = self.obsTreeModel.load_workspace(fname)
         if obstreesurveys:
             self.workspace_savename = fname
-            self.populate_obstreemodel(obstreesurveys, delta_models)
+            self.populate_obstreemodel(obstreesurveys)
             self.adjust_update_required()
             self.set_window_title(fname)
         end = time.time()
@@ -867,9 +858,10 @@ class MainProg(QtWidgets.QMainWindow):
             self.obsTreeModel.station_coords = coords
         self.update_menus()
 
-    def populate_obstreemodel(self, obstreesurveys, delta_models):
+    def populate_obstreemodel(self, obstreesurveys):
         """
         Only called for loading workspace, not when loading raw data.
+
         Parameters
         ----------
         obstreesurveys
@@ -906,59 +898,61 @@ class MainProg(QtWidgets.QMainWindow):
             pbar.setLabelText("Building Observation Tree")
             QtWidgets.QApplication.processEvents()
 
-            if not delta_models:
-                QtWidgets.QApplication.restoreOverrideCursor()
-                return
-            else:
-                i = 0
-                firststation = None
-                # This avoids an error when the first loop (or subsequent loops) are empty
-                firstsurvey = self.obsTreeModel.itemFromIndex(
-                    self.obsTreeModel.index(0, 0)
-                )
-                while firststation is None:
-                    firstloop = firstsurvey.child(i)
-                    firststation = firstloop.child(0)
-                    i += 1
-                pbar.setValue(1)
-                pbar.setLabelText("Updating drift plots")
-                QtWidgets.QApplication.processEvents()
-                self.select_first_treeview_item()
-                try:
-                    self.populate_station_coords()
-                except Exception as e:
-                    logging.exception(str(e))
-                    # sometimes coordinates aren't valid
-                    pass
+            i = 0
+            firststation = None
+            # This avoids an error when the first loop (or subsequent loops) are empty
+            firstsurvey = self.obsTreeModel.itemFromIndex(self.obsTreeModel.index(0, 0))
+            while firststation is None:
+                firstloop = firstsurvey.child(i)
+                firststation = firstloop.child(0)
+                i += 1
+            pbar.setValue(1)
+            pbar.setLabelText("Updating drift plots")
+            QtWidgets.QApplication.processEvents()
+            self.select_first_treeview_item()
+            try:
+                self.populate_station_coords()
+            except Exception as e:
+                logging.exception(str(e))
+                # sometimes coordinates aren't valid
+                pass
 
-                # This is going to create new deltas on the drift and adjust tabs:
-                self.update_all_drift_plots()
+            # This is going to create new deltas on the drift and adjust tabs:
+            self.update_all_drift_plots()
 
-                # After creating the new deltas, we want to apply these attributes
-                # that might have been user-specified:
-                # - a delta was unchecked
-                # - the delta was type='assigned' and assigned_dg = float
-                # - the adj_sd was modified
-                #
-                # We do this by matching up the new delta with the
-                # corresponding old delta and copying over those items.
-                new_deltas = self.obsTreeModel.deltas()
-                new_deltas_dict = {d.key: d for d in new_deltas}
+            # After creating the new deltas, we want to apply these attributes
+            # that might have been user-specified:
+            # - a delta was unchecked
+            # - the delta was type='assigned' and assigned_dg = float
+            # - the adj_sd was modified
+            #
+            # We do this by matching up the new delta with the
+            # corresponding old delta and copying over those items.
+            new_deltas = self.obsTreeModel.deltas()
+            new_deltas_dict = {d.key: d for d in new_deltas}
 
-                # Update adj_sd and checked
-                for key, delta in saved_deltas_dict.items():
-                    new_deltas_dict[key].adj_sd = delta[1]
-                    new_deltas_dict[key].checked = delta[0]
+            # Update adj_sd and checked
+            for key, delta in saved_deltas_dict.items():
+                new_deltas_dict[key].adj_sd = delta[1]
+                new_deltas_dict[key].checked = delta[0]
 
-                # Create type = 'assigned' deltas
-                for key, delta in saved_assigned_deltas_dict.items():
-                    new_deltas_dict[key].type = "assigned"
-                    new_deltas_dict[key].assigned_dg = delta[2]
+            # Create type = 'assigned' deltas
+            for key, delta in saved_assigned_deltas_dict.items():
+                new_deltas_dict[key].type = "assigned"
+                new_deltas_dict[key].assigned_dg = delta[2]
         except (KeyError, AttributeError) as e:
-            old_workspace = True
-            for survey in obstreesurveys:
-                survey.deltas = []
-            pass
+            QtWidgets.QApplication.restoreOverrideCursor()
+            MessageBox.warning(
+                "Import warning",
+                "This workspaced was saved by an "
+                "earlier version of GSadjust. The station data and "
+                "drift options will be loaded, but not the deltas "
+                "on the adjust tab, which will need to be re-created"
+                " with one of the 'Populate delta table' options. "
+                "Please verify workspace for accuracy.",
+            )
+            self.temp_shifttime(obstreesurveys)
+            QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
 
         pbar.setValue(2)
         pbar.setLabelText("Populating delta tables")
@@ -973,6 +967,27 @@ class MainProg(QtWidgets.QMainWindow):
         pbar.setValue(4)
         self.workspace_loaded = True
         pbar.close()
+
+    def temp_shifttime(self, obstreesurveys):
+        """
+        For some old workspaces we need to shift time to matplotlib format.
+        Returns
+        -------
+
+        """
+        for survey in obstreesurveys:
+            for loop_idx in range(len(survey.loops())):
+                loop = survey.child(loop_idx)
+                for i in range(loop.rowCount()):
+                    obstreestation = loop.child(i)
+                    if obstreestation.t[0] > 50000:
+                        obstreestation.t = [s - 719163 for s in obstreestation.t]
+                for tare in loop.tares:
+                    if tare.t[0] > 50000:
+                        tare.t = [s - 719163 for s in tare.t]
+                self.process_tares(loop)
+            survey.deltas = []
+        return
 
     def populate_station_coords(self):
         """
@@ -1114,8 +1129,8 @@ class MainProg(QtWidgets.QMainWindow):
                 else:
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_NO_DELTAS)
                 if (
-                    len(current_survey.results) > 0
-                    and not self.label_adjust_update_required_set
+                        len(current_survey.results) > 0
+                        and not self.label_adjust_update_required_set
                 ):
                     self.menus.set_state(MENU_STATE.SURVEY_HAS_RESULTS)
                 else:
@@ -1151,8 +1166,8 @@ class MainProg(QtWidgets.QMainWindow):
     def show_delta_update_message(self):
         MessageBox.warning(
             "Delta error",
-            "The Delta-g value can only be edited if the drift-correction method for the "
-            "respective loop is a method other than the Roman method.",
+            "The Delta-g value can only be edited if the drift-correction method for"
+            " the respective loop is a method other than the Roman method.",
         )
 
     def update_adjust_tables(self):
@@ -1217,6 +1232,9 @@ class MainProg(QtWidgets.QMainWindow):
             self.drift_lookup[drift_method]
         )
         self.tab_drift.set_drift_method(update, update_adjust_tables)
+        self.tab_drift.tare_view.model().init_data(self.obsTreeModel.itemFromIndex(
+            self.index_current_loop
+        ).tares)
         self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
@@ -1278,23 +1296,24 @@ class MainProg(QtWidgets.QMainWindow):
             try:
                 text = float(text)
             except ValueError:
-                MessageBox.warning('Time correction error',
-                                   'Invalid value entered for time correction')
+                MessageBox.warning(
+                    "Time correction error", "Invalid value entered for time correction"
+                )
                 return
             time_correction_dialog = DialogApplyTimeCorrection()
             time_correction_dialog.msg.exec_()
             correction_type = time_correction_dialog.time_correction_type
             if correction_type:
-                    time_correction(
-                        self.obsTreeModel,
-                        correction_type,
-                        text,
-                        self.index_current_survey,
-                        self.index_current_loop,
-                        self.gui_data_treeview.selectedIndexes(),
-                    )
-                    self.update_data_tab()
-                    self.set_window_title_asterisk()
+                time_correction(
+                    self.obsTreeModel,
+                    correction_type,
+                    text,
+                    self.index_current_survey,
+                    self.index_current_loop,
+                    self.gui_data_treeview.selectedIndexes(),
+                )
+                self.update_data_tab()
+                self.set_window_title_asterisk()
 
     def set_vertical_gradient_interval(self):
         """
@@ -1321,8 +1340,8 @@ class MainProg(QtWidgets.QMainWindow):
         if n_stations == 2:
             stationname = (
                 self.obsTreeModel.itemFromIndex(self.index_current_loop)
-                .child(0)
-                .station_name
+                    .child(0)
+                    .station_name
             )
             defaultfile = os.path.join(
                 self.settings.value("current_dir"), stationname + ".grd"
@@ -1337,8 +1356,8 @@ class MainProg(QtWidgets.QMainWindow):
                         dg = delta.dg
                         sd = delta.sd
                 elif (
-                    current_loop.drift_method == "none"
-                    or current_loop.drift_method == "continuous"
+                        current_loop.drift_method == "none"
+                        or current_loop.drift_method == "continuous"
                 ):
                     filename, _ = QtWidgets.QFileDialog.getSaveFileName(
                         None, "Vertical gradient file to write", defaultfile
@@ -1353,8 +1372,8 @@ class MainProg(QtWidgets.QMainWindow):
                 else:
                     MessageBox.warning(
                         "Vertical gradient error",
-                        "When writing a vertical gradient the drift correction method must be "
-                        '"None", "Roman", or "Continuous"',
+                        "When writing a vertical gradient the drift correction method"
+                        ' must be "None", "Roman", or "Continuous"',
                     )
                 if dg:
                     with open(filename, "w") as fid:
@@ -1367,21 +1386,21 @@ class MainProg(QtWidgets.QMainWindow):
             except:
                 MessageBox.warning(
                     "Vertical gradient error",
-                    "Error writing gradient file (try visiting the Drift tab then re-running this "
-                    "command).",
+                    "Error writing gradient file (try visiting the Drift tab then"
+                    " re-running this command).",
                 )
         else:
             MessageBox.warning(
                 "Vertical gradient error",
-                "Writing a vertical gradient file requires that the respective loop has only "
-                "two stations. The gradient interval is set "
-                'by the "Vertical gradient interval..." menu command (instrument height in the '
-                "meter file is ignored).",
+                "Writing a vertical gradient file requires that the respective loop has"
+                ' only two stations. The gradient interval is set by the "Vertical'
+                ' gradient interval..." menu command (instrument height in the meter'
+                " file is ignored).",
             )
 
     def tares_updated(self):
         current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
-        self.tab_drift.process_tares(current_loop)
+        self.process_tares(current_loop)
         self.update_drift_tables_and_plots()
         self.set_window_title_asterisk()
 
@@ -1398,16 +1417,37 @@ class MainProg(QtWidgets.QMainWindow):
             new_tare_date = taredialog.dt_edit.dateTime()
             new_tare_value = taredialog.edit_box.text()
         try:
-            tare = Tare(new_tare_date.toPyDateTime(), new_tare_value)
+            tare = Tare(date2num(new_tare_date.toPyDateTime()), new_tare_value)
         except:
             return
 
         current_loop.tares.append(tare)
         self.tab_drift.tare_view.model().init_data(current_loop.tares)
-        # current_loop.tare_model.insertRows(current_loop.tare_model, tare)
-        self.tab_drift.process_tares(current_loop)
+        self.process_tares(current_loop)
         self.update_drift_tables_and_plots()
         self.set_window_title_asterisk()
+
+    @staticmethod
+    def process_tares(obstreeloop):
+        """
+        Apply tares in the tare table.
+
+        Parameters
+        ----------
+        obstreeloop : ObsTreeLoop
+            Loop shown in drift tab
+
+        """
+        for i in range(obstreeloop.rowCount()):
+            obstreestation = obstreeloop.child(i)
+            for idx, t in enumerate(obstreestation.tare):
+                obstreestation.tare[idx] = 0
+            for tare in obstreeloop.tares:
+                if tare.checked == 2:
+                    for idx, t in enumerate(obstreestation.t):
+                        # if t > tare_dt:
+                        if t > tare.datetime:
+                            obstreestation.tare[idx] += tare.tare
 
     def clear_delta_model(self):
         """
@@ -1465,7 +1505,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self._plot_loop_animation.show()
             except Exception:
                 # FIXME: Can we add more information for the user here (or to logs)?
-                MessageBox.warning("GSadjust error", "Unknown error")
+                MessageBox.warning("GSadjust error", "Unknown error, station {}".format(station))
 
     def properties_loop(self):
         """
@@ -1579,8 +1619,9 @@ class MainProg(QtWidgets.QMainWindow):
                     self.index_current_station = first_station.index()
                     self.update_data_tab()
                 self.activate_survey_or_loop(self.index_current_loop)
-        obstreesurvey.deltas = [d for d in obstreesurvey.deltas if d.loop !=
-                                loop_to_delete]
+        obstreesurvey.deltas = [
+            d for d in obstreesurvey.deltas if d.loop != loop_to_delete
+        ]
         self.update_adjust_tables()
         self.set_window_title_asterisk()
         self.update_menus()
@@ -1667,7 +1708,8 @@ class MainProg(QtWidgets.QMainWindow):
             # Convert to days. Subtract one from the date because the default is 1 (i.e., if the time set in the
             # loop dialog is 8:00, loop thresh is a Qdatetime equal to (2000,1,1,8,0).
             loop_thresh = (
-                int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
+                    int(loop_thresh.toString("H")) / 24 + int(
+                loop_thresh.toString("d")) - 1
             )
         else:
             return
@@ -1711,16 +1753,11 @@ class MainProg(QtWidgets.QMainWindow):
                 for k, v in station.__dict__.items():
                     try:  # some fields have no len()
                         if len(v) == n_samples:
-                            # temp_sta = new_station.extract_subset_idx(height_idx, idx)
                             setattr(new_station, k, v[height_idx:idx])
                         else:
                             setattr(new_station, k, v)
                     except Exception:
                         continue
-
-                # new_station = 0
-                # # obstreestation = self.obsTreeModel.itemFromIndex(index)
-                # new_station_count = float(obstreestation.station_count) + 0.1
                 if height == 0:
                     name = station.station_name
                 else:
@@ -1952,6 +1989,8 @@ class MainProg(QtWidgets.QMainWindow):
             ]
             if all([it == ObsTreeStation for it in index_types]):
                 self.menus.set_state(MENU_STATE.MULTIPLE_STATION)
+            elif all([it == ObsTreeLoop for it in index_types]):
+                self.menus.set_state(MENU_STATE.MULTIPLE_LOOP)
             else:
                 self.menus.set_state(MENU_STATE.UNENABLE_ALL)
         else:
@@ -2105,8 +2144,8 @@ class MainProg(QtWidgets.QMainWindow):
             except IndexError:
                 MessageBox.warning(
                     "File read error",
-                    "Error reading absolute gravity file. Is it three columns (station, g, std. dev.), "
-                    "space delimited",
+                    "Error reading absolute gravity file. Is it three columns (station,"
+                    " g, std. dev.), space delimited",
                 )
             for datum in datums:
                 self.obsTreeModel.itemFromIndex(
@@ -2362,7 +2401,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         try:
             gitpath = (
-                os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"
+                    os.path.dirname(
+                        self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"
             )
             os.environ["PATH"] += os.pathsep + gitpath
             from git import Repo
@@ -2377,7 +2417,10 @@ class MainProg(QtWidgets.QMainWindow):
                 logging.info("Git fetched: {}".format(f))
             self.commit = str(repo.head.commit)[:5]
             if repo.head.commit != master.commit:
-                msg = "An update is available for GSadjust.\nWould you like to install now?"
+                msg = (
+                    "An update is available for GSadjust.\nWould you like to install"
+                    " now?"
+                )
                 confirm = MessageBox.question(
                     "Update Available",
                     msg,
@@ -2420,8 +2463,7 @@ class MainProg(QtWidgets.QMainWindow):
             repo.git.merge(master.name)
             logging.info("Git update successful")
             msg = (
-                "Updated successfully downloaded from GitHub. Please\n"
-                "restart GSadjust."
+                "Updated successfully downloaded from GitHub. Please\nrestart GSadjust."
             )
             MessageBox.information("Update results", msg)
             return False  # Don't launch GSadjust, need to restart to install updates
@@ -2509,18 +2551,9 @@ def except_hook2(cls, exception, traceback):
 def main():
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
-    # GSadjust starts in different directories on Mac and Windows
-    # FIXME: Shouldn't need to change path here, you can
-    # find the location of the current folder (see __file__ elsewhere) and
-    # use relative paths from there for your project.
-    # if sys.platform == 'darwin':
-    #     os.chdir('../')
-    # else:
-    #     os.chdir('../sgp-gsadjust')
 
     # Needed to show icon in Windows Taskbar (?)
     import ctypes
-
     myappid = "usgs.sgp.gsadjust.1.0"  # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 

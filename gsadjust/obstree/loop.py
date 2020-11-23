@@ -167,7 +167,7 @@ class ObsTreeLoop(ObsTreeItemBase):
         tare_objects = []
         for tare_dict in data['tares']:
             tare_object = Tare(
-                dt.datetime.strptime(tare_dict['datetime'], '%Y-%m-%d %H:%M:%S'),
+                tare_dict['datetime'],
                 tare_dict['tare']
             )
             tare_object.checked = tare_dict['checked']
@@ -322,4 +322,5 @@ class ObsTreeLoop(ObsTreeItemBase):
             'meter': self.meter,  # Meter S/N, for the case where multiple meters are calibrated
             'comment': self.comment,
             'oper': self.oper,
+            'source': self.source,
         }

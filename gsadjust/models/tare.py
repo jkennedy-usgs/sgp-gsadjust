@@ -20,8 +20,10 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
 import datetime as dt
+
+from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
+from matplotlib.dates import num2date, date2num
 
 # Constants for column headers
 TARE_DATETIME, TARE_TARE = range(2)
@@ -85,7 +87,8 @@ class TareTableModel(QAbstractTableModel):
             if role == Qt.DisplayRole or role == Qt.EditRole:
                 column = index.column()
                 fn, *args = {
-                    TARE_DATETIME: (str, tare.datetime),
+                    TARE_DATETIME: (str, dt.datetime.strftime(num2date(tare.datetime),
+                                                              "%Y-%m-%d %H:%M:%S")),
                     # TARE_TIME: (str, tare.time.toString()),
                     TARE_TARE: (format, tare.tare, "0.1f"),
                 }.get(column)
@@ -117,7 +120,7 @@ class TareTableModel(QAbstractTableModel):
                 if len(str(value)) > 0:
                     if column == 0:
                         try:
-                            tare.datetime = dt.datetime.strptime(value,'%Y-%m-%d %H:%M:%S')
+                            tare.datetime = date2num(value)
                         except ValueError:
                             return
                     # elif column == 1:
@@ -144,10 +147,10 @@ class TareTableModel(QAbstractTableModel):
 
     def flags(self, index):
         return (
-            Qt.ItemIsUserCheckable
-            | Qt.ItemIsEnabled
-            | Qt.ItemIsEditable
-            | Qt.ItemIsSelectable
+                Qt.ItemIsUserCheckable
+                | Qt.ItemIsEnabled
+                | Qt.ItemIsEditable
+                | Qt.ItemIsSelectable
         )
 
     def checkState(self, tare):

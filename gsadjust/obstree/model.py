@@ -252,9 +252,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     [obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
                 )
             obstreesurveys.append(obstreesurvey)
-            delta_tables.append(obstreesurvey.deltas)
 
-        return (obstreesurveys, delta_tables, coords)
+        return (obstreesurveys, coords)
 
     def datums(self):
         datum_list = []

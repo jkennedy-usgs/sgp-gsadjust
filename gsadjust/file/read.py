@@ -585,32 +585,32 @@ def import_abs_g_complete(fname):
         s_idx = index_or_none(parts, "Set Scatter")
         d_idx = index_or_none(parts, "Date")
         th_idx = index_or_none(parts, "Transfer Height")
+        gr_idx = index_or_none(parts, "Gradient")
 
-        if "Gradient" in parts:
-            gr_idx = parts.index("Gradient")
-
-            # FIXME: This looks like it might be incorrectly indented? If not
-            # the index_or_none part above it can be moved in here, since we
-            # do nothing if there is no Gradient in parts.
-            for line in fh:
-                try:
-                    if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
-                        parts = line.split("\t")
-                        datum = Datum(
-                            parts[n_idx],
-                            g=float(parts[g_idx]),
-                            sd=float(parts[s_idx]),
-                            date=parts[d_idx],
-                            meas_height=float(parts[th_idx]),
-                            gradient=float(parts[gr_idx]),
-                        )
-                        datums.append(datum)
-                except ValueError:
-                    logging.exception(
-                        "Error loading absolute gravity data from %s", fname
+        for line in fh:
+            try:
+                if all([g_idx, n_idx, s_idx, d_idx, th_idx]):
+                    parts = line.split("\t")
+                    # Gradient can be optional
+                    if gr_idx:
+                        gr = float(parts[gr_idx])
+                    else:
+                        gr = -3.0
+                        
+                    datum = Datum(
+                        parts[n_idx],
+                        g=float(parts[g_idx]),
+                        sd=float(parts[s_idx]),
+                        date=parts[d_idx],
+                        meas_height=float(parts[th_idx]),
+                        gradient=gr
                     )
-                    # FIXME: Should this fail on error? If so raise exception.
-
+                    datums.append(datum)
+            except ValueError:
+                logging.exception(
+                    "Error loading absolute gravity data from %s", fname
+                )
+                return []
     return datums
 
 

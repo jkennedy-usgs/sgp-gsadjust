@@ -75,11 +75,11 @@ class TabDrift(QtWidgets.QWidget):
         self.axes_drift_cont_lower = self.drift_cont_figbot.add_subplot(111)
 
         # Drift tab tables
-        self.dg_samples_table = DeltaTableModel()
+        self.dg_avg_table = DeltaTableModel()
         self.delta_view = QtWidgets.QTableView()
         # Hide std_for_adj and residual columns
         self.cont_label_widget = QtWidgets.QWidget()
-        self.dg_avg_model = RomanTableModel()
+        self.dg_samples_model = RomanTableModel()
         self.dg_samples_view = QtWidgets.QTableView()
 
         #######################################################################
@@ -225,8 +225,8 @@ class TabDrift(QtWidgets.QWidget):
         self.roman_label_widget.hide()
 
         # dg table (Roman method)
-        self.dg_samples_view.setModel(self.dg_avg_model)
-        self.delta_view.setModel(self.dg_samples_table)
+        self.dg_samples_view.setModel(self.dg_samples_model)
+        self.delta_view.setModel(self.dg_avg_table)
         main_hsplitter_window = QtWidgets.QSplitter(Qt.Horizontal, self)
         main_hsplitter_window.addWidget(self.dg_samples_view)
         main_hsplitter_window.addWidget(self.delta_view)
@@ -651,12 +651,6 @@ class TabDrift(QtWidgets.QWidget):
                             drift_time.append(
                                 dt.datetime.utcfromtimestamp(xmean * 86400.0)
                             )
-                            # except OSError:
-                            #     drift_time.append(
-                            #         dt.datetime.utcfromtimestamp(
-                            #             (xmean - 719163) * 86400.0
-                            #         )
-                            #     )
                             # Plot horizontal extent
                             if self.drift_plot_hz_extent.isChecked() and update:
                                 self.axes_drift_cont_lower.plot(
@@ -820,24 +814,12 @@ class TabDrift(QtWidgets.QWidget):
                 if len(line[0]) > 1:
                     # Make values relative to first station value
                     y = [f - line[1][0] for f in line[1]]
-                    # try:
                     x = [dt.datetime.utcfromtimestamp(f * 86400.0) for f in line[0]]
-                    # except OSError:
-                    #     x = [
-                    #         dt.datetime.utcfromtimestamp((f - 719163) * 86400.0)
-                    #         for f in line[0]
-                    #     ]
                     a = self.axes_drift_single.plot(x, y, ".-", picker=5)
                     a[0].name = line[2]
 
             for line in deltas[2]:
                 if update:
-                    # try:
-                    #     d = dt.datetime.utcfromtimestamp(
-                    #         (line[0][0] - 719163) * 86400.0
-                    #     )
-                    #     self.axes_drift_single.plot([d, d], line[1], "--")
-                    # except OSError:
                     self.axes_drift_single.plot(line[0], line[1], "--")
             if plot_data and update:
                 self.axes_drift_single.xaxis.set_major_formatter(DateFormatter("%H:%M"))

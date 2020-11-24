@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 #  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
-===============
+models/sort.py
+==============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt sorting model. Unused.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other

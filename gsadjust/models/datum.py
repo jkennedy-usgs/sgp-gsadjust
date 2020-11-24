@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
+models/datum.py
 ===============
 
 PyQt models for GSadjust. Handles assembling input matrices for
@@ -21,8 +19,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-from PyQt5.QtCore import (QAbstractTableModel, QDate, QModelIndex, Qt,
-                          QVariant, pyqtSignal)
+from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant, pyqtSignal
 
 from .utils import format_numeric_column
 
@@ -49,25 +46,24 @@ class DatumTableModel(QAbstractTableModel):
     """
     Model to store Datums, shown on the adjust tab.
     """
-
     _headers = {  # As map, so do not need to be kept in order with the above.
-        DATUM_STATION: 'Station',
-        DATUM_G: 'g',
-        DATUM_SD: 'Std. dev.',
-        DATUM_DATE: 'Date',
-        MEAS_HEIGHT: 'Meas. height',
-        GRADIENT: 'Gradient',
-        DATUM_RESIDUAL: 'Residual',
-        N_SETS: '# sets',
+        DATUM_STATION: "Station",
+        DATUM_G: "g",
+        DATUM_SD: "Std. dev.",
+        DATUM_DATE: "Date",
+        MEAS_HEIGHT: "Meas. height",
+        GRADIENT: "Gradient",
+        DATUM_RESIDUAL: "Residual",
+        N_SETS: "# sets",
     }
 
     _attrs = {  # From column constants to object attributes, for setting.
-        DATUM_STATION: ('station', str),
-        DATUM_G: ('g', float),
-        DATUM_SD: ('sd', float),
-        DATUM_DATE: ('date', lambda x: x),  # pass through
-        MEAS_HEIGHT: ('meas_height', float),
-        GRADIENT: ('gradient', float),
+        DATUM_STATION: ("station", str),
+        DATUM_G: ("g", float),
+        DATUM_SD: ("sd", float),
+        DATUM_DATE: ("date", lambda x: x),  # pass through
+        MEAS_HEIGHT: ("meas_height", float),
+        GRADIENT: ("gradient", float),
     }
 
     signal_adjust_update_required = pyqtSignal()
@@ -115,16 +111,16 @@ class DatumTableModel(QAbstractTableModel):
                     try:
                         return datum.n_sets
                     except:
-                        return 'NA'
+                        return "NA"
 
                 fn, *args = {
-                    DATUM_SD: (format, datum.sd, '0.2f'),
-                    DATUM_G: (format, datum.g, '8.1f'),
+                    DATUM_SD: (format, datum.sd, "0.2f"),
+                    DATUM_G: (format, datum.g, "8.1f"),
                     DATUM_STATION: (str, datum.station),
                     DATUM_DATE: (str, datum.date),
-                    MEAS_HEIGHT: (format, datum.meas_height, '0.2f'),
-                    GRADIENT: (format, datum.gradient, '0.2f'),
-                    DATUM_RESIDUAL: (format, datum.residual, '0.1f'),
+                    MEAS_HEIGHT: (format, datum.meas_height, "0.2f"),
+                    GRADIENT: (format, datum.gradient, "0.2f"),
+                    DATUM_RESIDUAL: (format, datum.residual, "0.1f"),
                     N_SETS: (get_nsets,),
                 }.get(column, (format_numeric_column, column))
 
@@ -145,14 +141,11 @@ class DatumTableModel(QAbstractTableModel):
         ChannelList object is 0, it is unchecked
         """
         if datum.checked == 0:
-            # self.unchecked[index]= Qt.Unchecked
-            # return self.unchecked[index]
             return Qt.Unchecked
         else:
             return Qt.Checked
 
     def setData(self, index, value, role):
-        # type: (object, object, object) -> object
         """
         If a row is unchecked, update the keepdata value to 0 setData launched
         when role is acting value is Qt.Checked or Qt.Unchecked

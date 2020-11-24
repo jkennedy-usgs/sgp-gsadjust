@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
+models/delta.py
 ===============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+Delta model for GSadjust.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -23,6 +20,7 @@ resulting from the authorized or unauthorized use of the software.
 
 import datetime as dt
 import logging
+
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QVariant
 
@@ -46,21 +44,17 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
     adjustment tab and as the Roman average table (bottom right table when using
     Roman method drift correction).
 
-    There is one DeltaTableModel per survey. The delta-g's that populate the
-    model depend on the drift method used; if the Roman method is used, the
-    delta-g's are the average of the individual delta-g's in the RomanTableModel.
     """
-
     _headers = {
-        DELTA_STATION1: 'From',
-        DELTA_STATION2: 'To',
-        LOOP: 'Loop',
-        DELTA_TIME: 'Time',
-        DELTA_G: 'Delta-g',
-        DELTA_DRIFTCORR: 'Drift corr.',
-        DELTA_SD: 'Std. dev.',
-        DELTA_ADJ_SD: 'SD for adj.',
-        DELTA_RESIDUAL: 'Residual',
+        DELTA_STATION1: "From",
+        DELTA_STATION2: "To",
+        LOOP: "Loop",
+        DELTA_TIME: "Time",
+        DELTA_G: "Delta-g",
+        DELTA_DRIFTCORR: "Drift corr.",
+        DELTA_SD: "Std. dev.",
+        DELTA_ADJ_SD: "SD for adj.",
+        DELTA_RESIDUAL: "Residual",
     }
 
     _is_checkable = True
@@ -107,7 +101,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             if role == Qt.ForegroundRole:
                 brush = QtGui.QBrush(Qt.black)
 
-                if delta.type == 'normal':
+                if delta.type == "normal":
                     try:
                         if (
                             delta.station1.data(role=Qt.CheckStateRole) == 2
@@ -128,12 +122,13 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             else:
                                 brush = QtGui.QBrush(Qt.lightGray)
                     except:
-                        catch = 1
-                elif delta.type == 'assigned':
+                        return False
+                elif delta.type == "assigned":
                     if column == DELTA_G:
                         brush = QtGui.QBrush(Qt.red)
                 return brush
             if role == Qt.DisplayRole or role == Qt.EditRole:
+
                 def delta_station_loop():
                     if delta.loop is None:
                         if type(delta.station2) == list:
@@ -144,21 +139,17 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                         return delta.loop
 
                 def format_datetime(date):
-                    # try:
-                    return dt.datetime.utcfromtimestamp(
-                        date * 86400.0
-                    ).strftime('%Y-%m-%d %H:%M:%S')
-                    # except OSError:
-                    #     return dt.datetime.utcfromtimestamp(
-                    #         (date-719163) * 86400.0
-                    #     ).strftime('%Y-%m-%d %H:%M:%S')
+                    return dt.datetime.utcfromtimestamp(date * 86400.0).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
 
                 def get_sd():
                     delta.delta_edited_sd = delta.adj_sd
                     return delta.adj_sd
+
                 def get_g():
                     delta.edited_dg = delta.dg
-                    if delta.type == 'assigned':
+                    if delta.type == "assigned":
                         return delta.assigned_dg
                     else:
                         return delta.dg
@@ -196,7 +187,6 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
         If a row is unchecked, update the keepdata value to 0 setData launched
         when role is acting value is Qt.Checked or Qt.Unchecked
         """
-        # self.layoutAboutToBeChanged.emit()
         if role == Qt.CheckStateRole and index.column() == 0:
             delta = self._data[index.row()]
             if value == Qt.Checked:
@@ -214,20 +204,22 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                         if column == DELTA_ADJ_SD:
                             delta.adj_sd = float(value)
                             logging.info(
-                            "delta {}, adj_sd changed from {} to {}".format(delta,
-                                                                       delta.edited_sd,
-                                                                       value))
+                                "delta {}, adj_sd changed from {} to {}".format(
+                                    delta, delta.edited_sd, value
+                                )
+                            )
                         if column == DELTA_G:
-                            if delta.type == 'list':
+                            if delta.type == "list":
                                 self.tried_to_update_list_delta.emit()
                                 return False
                             else:
-                                delta.type = 'assigned'
+                                delta.type = "assigned"
                                 delta.assigned_dg = float(value)
                                 logging.info(
-                                    "delta {}, g changed from {} to {}".format(delta,
-                                                                              delta.edited_dg,
-                                                                              value))
+                                    "delta {}, g changed from {} to {}".format(
+                                        delta, delta.edited_dg, value
+                                    )
+                                )
                         self.dataChanged.emit(index, index)
                         self.signal_adjust_update_required.emit()
                     return True

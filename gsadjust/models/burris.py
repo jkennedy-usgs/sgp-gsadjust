@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
-===============
+models/burris.py
+================
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt model for ZLS Burris relative gravimeter data.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -21,8 +18,8 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 import numpy as np
-from matplotlib.dates import num2date
 from PyQt5.QtCore import QAbstractTableModel, Qt, pyqtSignal, QModelIndex
+from matplotlib.dates import num2date
 
 # Constants for column headers
 (
@@ -49,16 +46,13 @@ class BurrisTableModel(QAbstractTableModel):
     The model is created dynamically each time a station is selected in the tree
     view on the data tab, rather than stored in memory.
 
-    The station position in the data hierarchy are stored, so that if a
-    modification is triggered, the original data can be accessed and changed
-    accordingly (keysurv,keyloop,keysta)
-
     by default, all table entries are checked (this can be modified to allow
     pre-check based on user criteria (tiltx, tilty,...)). Then, if one is
     unchecked, the keepdata property of the ChannelList object at the table
     row position is set to 0
 
-    properties:
+    Attributes
+    ----------
     _headers:             table header
     unchecked:            a dictionary of unchecked items. Keys are item
                           indexes, entries are states
@@ -66,12 +60,7 @@ class BurrisTableModel(QAbstractTableModel):
                           table data as the structured data
     arraydata:            an array representation of the data from the
                           ChannelList_obj
-    keysurv:              the key of a survey object within the grav_obj
-                          hierarchy
-    keyloop:              the key of a loop object within the grav_obj
-                          hierarchy
-    keysta:               the key of a station object within the grav_obj
-                          hierarchy
+
     """
 
     _headers = {
@@ -102,11 +91,8 @@ class BurrisTableModel(QAbstractTableModel):
 
     def createArrayData(self, ChannelList_obj):
         """
-        Create the np array data for table display, and update the
-        ChannelList_obj. This function can be called from outside to update the
-        table display
+        Create the np array data for table display, and update the ChannelList_obj.
         """
-        # channel list attributes aren't specified in advance, so don't worry whether it's Burris or CG5 data
         self.ChannelList_obj = ChannelList_obj
         try:
             self.arraydata = np.concatenate(
@@ -123,7 +109,7 @@ class BurrisTableModel(QAbstractTableModel):
                     np.array(ChannelList_obj.lat),
                     np.array(ChannelList_obj.long),
                 )
-            ).reshape(len(ChannelList_obj.t), 11, order='F')
+            ).reshape(len(ChannelList_obj.t), 11, order="F")
         except Exception:
             return
 
@@ -153,10 +139,7 @@ class BurrisTableModel(QAbstractTableModel):
                 value = self.arraydata[row][column]
 
             def format_datetime(dt):
-                # if dt > 50000:
-                #     return num2date(dt - 719163).strftime('%Y-%m-%d %H:%M:%S')
-                # else:
-                return num2date(dt).strftime('%Y-%m-%d %H:%M:%S')
+                return num2date(dt).strftime("%Y-%m-%d %H:%M:%S")
 
             fn, *args = {
                 BURRIS_DATE: (format_datetime, value),
@@ -221,17 +204,17 @@ class BurrisTableModel(QAbstractTableModel):
                     attr = None
                     if index.column() == 1:  # Oper
                         self.arraydata[index.row()][index.column()] = value
-                        attr = 'oper'
+                        attr = "oper"
                     if index.column() == 2:  # Meter
                         self.arraydata[index.row()][index.column()] = value
-                        attr = 'meter'
+                        attr = "meter"
                     if index.column() == 9:  # Lat
                         self.arraydata[index.row()][index.column()] = float(value)
-                        attr = 'lat'
+                        attr = "lat"
                         self.signal_update_coordinates.emit()
                     if index.column() == 10:  # Long
                         self.arraydata[index.row()][index.column()] = float(value)
-                        attr = 'long'
+                        attr = "long"
                         self.signal_update_coordinates.emit()
 
                     if attr is None:
@@ -239,8 +222,6 @@ class BurrisTableModel(QAbstractTableModel):
 
                     self.dataChanged.emit(index, index)
                     return True
-
-
 
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:

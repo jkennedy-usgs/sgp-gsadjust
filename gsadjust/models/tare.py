@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
-===============
+models/tare.py
+==============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt models for showing Tares on the Drift tab.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -36,17 +33,12 @@ def format_numeric_column(column):
     return column + 1
 
 
-class tempStation:
-    def __init__(self, station):
-        self.__dict__ = station
-
-
 class TareTableModel(QAbstractTableModel):
     """
     Model to store tares (offsets)
     """
 
-    _headers = {TARE_DATETIME: 'Date', TARE_TARE: 'Tare (\u00b5Gal)'}
+    _headers = {TARE_DATETIME: "Date", TARE_TARE: "Tare (\u00b5Gal)"}
 
     def __init__(self):
         super(TareTableModel, self).__init__(parent=None)
@@ -87,9 +79,12 @@ class TareTableModel(QAbstractTableModel):
             if role == Qt.DisplayRole or role == Qt.EditRole:
                 column = index.column()
                 fn, *args = {
-                    TARE_DATETIME: (str, dt.datetime.strftime(num2date(tare.datetime),
-                                                              "%Y-%m-%d %H:%M:%S")),
-                    # TARE_TIME: (str, tare.time.toString()),
+                    TARE_DATETIME: (
+                        str,
+                        dt.datetime.strftime(
+                            num2date(tare.datetime), "%Y-%m-%d %H:%M:%S"
+                        ),
+                    ),
                     TARE_TARE: (format, tare.tare, "0.1f"),
                 }.get(column)
                 return fn(*args)
@@ -123,8 +118,6 @@ class TareTableModel(QAbstractTableModel):
                             tare.datetime = date2num(value)
                         except ValueError:
                             return
-                    # elif column == 1:
-                    #     tare.time = float(value)
                     elif column == 1:
                         tare.tare = float(value)
                     self.dataChanged.emit(index, index)
@@ -147,10 +140,10 @@ class TareTableModel(QAbstractTableModel):
 
     def flags(self, index):
         return (
-                Qt.ItemIsUserCheckable
-                | Qt.ItemIsEnabled
-                | Qt.ItemIsEditable
-                | Qt.ItemIsSelectable
+            Qt.ItemIsUserCheckable
+            | Qt.ItemIsEnabled
+            | Qt.ItemIsEditable
+            | Qt.ItemIsSelectable
         )
 
     def checkState(self, tare):

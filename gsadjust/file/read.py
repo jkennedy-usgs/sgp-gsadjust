@@ -1,6 +1,6 @@
 """
 file/read.py
-==============
+============
 
 GSadjust code for importing relative-gravity meter data.
 --------------------------------------------------------------------------------
@@ -575,7 +575,6 @@ def import_abs_g_complete(fname):
     datums = list()
 
     with open(fname, "r") as fh:
-
         # Read header line
         line = fh.readline()
         parts = [p.strip() for p in line.split("\t")]
@@ -596,7 +595,7 @@ def import_abs_g_complete(fname):
                         gr = float(parts[gr_idx])
                     else:
                         gr = -3.0
-                        
+
                     datum = Datum(
                         parts[n_idx],
                         g=float(parts[g_idx]),

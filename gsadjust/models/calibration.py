@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
+models/calibration.py
 ===============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt model for showing meter calibration coefficients in AdjustOptions dialog.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -27,4 +24,4 @@ class MeterCalibrationModel(QStandardItemModel):
     def __init__(self):
         super(MeterCalibrationModel, self).__init__()
         self.setColumnCount(2)
-        self.setHorizontalHeaderLabels(['Meter', 'Calibration factor'])
+        self.setHorizontalHeaderLabels(["Meter", "Calibration factor"])

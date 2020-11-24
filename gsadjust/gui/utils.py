@@ -1,6 +1,6 @@
 """
 gui/utils.py
-==============
+============
 
 Utility helper functions
 ------------------------

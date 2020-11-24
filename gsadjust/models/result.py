@@ -1,9 +1,8 @@
 """
-pyqt_modules.py
-===============
+models/result.py
+================
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt model to show adjusted station values (top-right table on Adjust tab)
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -30,13 +29,9 @@ ADJSTA_STATION, ADJSTA_G, ADJSTA_SD = range(3)
 class ResultsTableModel(QtCore.QAbstractTableModel):
     """
     Model to store network-adjusted gravity values.
-
-    There is one ResultsTableModel per survey.
-
-    Data stored in .adjusted_stations
     """
 
-    _headers = {ADJSTA_STATION: 'Station', ADJSTA_G: 'g', ADJSTA_SD: 'Std. dev.'}
+    _headers = {ADJSTA_STATION: "Station", ADJSTA_G: "g", ADJSTA_SD: "Std. dev."}
 
     def __init__(self):
         super(ResultsTableModel, self).__init__()
@@ -72,8 +67,8 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
                 column = index.column()
                 fn, *args = {
                     ADJSTA_STATION: (str, sta.station),
-                    ADJSTA_G: (format, sta.g, '8.1f'),
-                    ADJSTA_SD: (format, sta.sd, '1.1f'),
+                    ADJSTA_G: (format, sta.g, "8.1f"),
+                    ADJSTA_SD: (format, sta.sd, "1.1f"),
                 }.get(column, (format_numeric_column, column))
                 return fn(*args)
 
@@ -81,15 +76,9 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
                 return sta
 
     def setData(self, index, value, role):
-        # type: (object, object, object) -> object
-        """
-        If a row is unchecked, update the keepdata value to 0 setData launched
-        when role is acting value is Qt.Checked or Qt.Unchecked
-        """
         if role == Qt.UserRole:
             self._data = []
             return QVariant()
-        # return QtCore.QAbstractTableModel.setData(self, index, value, role)
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -106,8 +95,8 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
                 idx = self.index(r, c)
                 clipboard += str(self.data(idx, role=Qt.DisplayRole))
                 if c != (self.columnCount() - 1):
-                    clipboard += '\t'
-            clipboard += '\n'
+                    clipboard += "\t"
+            clipboard += "\n"
 
         # copy to the system clipboard
         sys_clip = QtWidgets.QApplication.clipboard()

@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
+models/roman.py
 ===============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt model for showing Roman-method gravity differences.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -48,7 +45,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
     Shown on the drift tab.
     """
 
-    _headers = {ROMAN_FROM: 'From', ROMAN_TO: 'To', ROMAN_DELTA: 'Delta g'}
+    _headers = {ROMAN_FROM: "From", ROMAN_TO: "To", ROMAN_DELTA: "Delta g"}
 
     def __init__(self):
         super(RomanTableModel, self).__init__()
@@ -92,11 +89,6 @@ class RomanTableModel(QtCore.QAbstractTableModel):
                 return delta
 
     def setData(self, index, value, role):
-        # type: (object, object, object) -> object
-        """
-        If a row is unchecked, update the keepdata value to 0 setData launched
-        when role is acting value is Qt.Checked or Qt.Unchecked
-        """
         if role == Qt.CheckStateRole and index.column() == 0:
             datum = self.datums[index.row()]
             datum.checked = value

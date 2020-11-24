@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
-===============
+models/gravity.py
+=================
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt model for gravity change table.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -29,24 +26,19 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
     """
     Model to store gravity change between surveys.
 
-    There is only one such model per campaign. Gravity change is calculated
-    when the respective menu item is chosen.
+    There is only one such model per campaign. Gravity change is calculated when the
+    respective menu item is chosen.
     """
 
-    def __init__(self, header, table, table_type='simple', parent=None):
+    def __init__(self, header, table, table_type="simple", parent=None):
         QtCore.QAbstractTableModel.__init__(self, parent)
         self._headers = {n: col for n, col in enumerate(header)}
         self.createArrayData(table, table_type)
 
     def createArrayData(self, table, table_type):
-        """
-        Create the np array data for table display, and update the
-        ChannelList_obj. This function can be called from
-        outside to update the table display
-        """
-        if table_type == 'simple' or table_type == 'list':
+        if table_type == "simple" or table_type == "list":
             array = np.array(table).transpose()
-        elif table_type == 'full':
+        elif table_type == "full":
             array = np.array(table)
         self.arraydata = array
 

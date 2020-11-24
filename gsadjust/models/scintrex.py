@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-pyqt_modules.py
-===============
+models/scintrex.py
+==================
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt model for Scintrex relative gravimeter data.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -61,20 +58,15 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
     unchecked, the keepdata property of the ChannelList object at the table
     row position is set to 0
 
-    properties:
+    Attributes
+    ----------
     _headers:             table header
-    unchecked:            a dictionnary of unchecked items. Keys are item
+    unchecked:            a dictionary of unchecked items. Keys are item
                           indexes, entries are states
     ChannelList_obj:      an object of ChannelList-type: used to store the
                           table data as the structured data
     arraydata:            an array representation of the data from the
                           ChannelList_obj
-    keysurv:              the key of a survey object within the grav_obj
-                          hierarchy
-    keyloop:              the key of a loop object within the grav_obj
-                          hierarchy
-    keysta:               the key of a station object within the grav_obj
-                          hierarchy
     """
 
     _headers = {
@@ -102,8 +94,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
     def createArrayData(self, ChannelList_obj):
         """
         Create the np array data for table display, and update the
-        ChannelList_obj. This function can be called from outside to update
-        the table display
+        ChannelList_obj.
         """
         self.ChannelList_obj = ChannelList_obj
         self.arraydata = np.concatenate(

@@ -1,5 +1,5 @@
 """
-gui/utils.py
+gui/widgets.py
 ==============
 
 Custom PyQt widgets

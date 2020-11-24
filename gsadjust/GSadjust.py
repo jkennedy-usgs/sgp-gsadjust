@@ -238,9 +238,9 @@ class MainProg(QtWidgets.QMainWindow):
         logging.info("Logger initialized.")
 
         # Create model objects for main views.
-        self.delta_model = DeltaTableModel()
-        self.datum_model = DatumTableModel()
-        self.results_model = ResultsTableModel()
+        # self.delta_model = DeltaTableModel()
+        # self.datum_model = DatumTableModel()
+        # self.results_model = ResultsTableModel()
 
         # tab_....s are populated with GUI elements in the tab_...() functions
         self.tab_data = TabData(self)
@@ -249,20 +249,20 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_widget = QtWidgets.QTabWidget()
 
         # Set models for the tab views.
-        self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
-        self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
+        # self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
+        # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         # self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
-        self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
+        # self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
 
         # Connect signals.
-        self.delta_model.signal_adjust_update_required.connect(
+        self.tab_adjust.delta_model.signal_adjust_update_required.connect(
             self.adjust_update_required
         )
-        self.delta_model.tried_to_update_list_delta.connect(
+        self.tab_adjust.delta_model.tried_to_update_list_delta.connect(
             self.show_delta_update_message
         )
-        self.datum_model.signal_adjust_update_required.connect(
+        self.tab_adjust.datum_model.signal_adjust_update_required.connect(
             self.adjust_update_required
         )
         self.tab_drift.drift_plot_weighted.update_drift_plots.connect(
@@ -1055,7 +1055,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.adjust_update_required()
             self.update_adjust_tables()
             # self.tab_adjust.delta_proxy_model.sort(3)
-            self.delta_model.layoutChanged.emit()
+            # self.delta_model.layoutChanged.emit()
 
         self.menus.set_state(MENU_STATE.DELTA_MODEL)
 
@@ -1177,9 +1177,9 @@ class MainProg(QtWidgets.QMainWindow):
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
         if survey:
-            self.delta_model.init_data(survey.deltas)
-            self.datum_model.init_data(survey.datums)
-            self.results_model.init_data(survey.results)
+            self.tab_adjust.delta_model.init_data(survey.deltas)
+            self.tab_adjust.datum_model.init_data(survey.datums)
+            self.tab_adjust.results_model.init_data(survey.results)
 
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
@@ -2255,7 +2255,7 @@ class MainProg(QtWidgets.QMainWindow):
         if station:
             d = Datum(str(station))
             survey.datums.append(d)
-            self.tab_adjust.datum_proxy_model.sourceModel().init_data(survey.datums)
+            self.tab_adjust.datum_model.init_data(survey.datums)
             logging.info("Datum station added: {}".format(station))
             self.set_window_title_asterisk()
 

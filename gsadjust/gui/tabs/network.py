@@ -17,6 +17,12 @@ resulting from the authorized or unauthorized use of the software.
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 
+from ...models import (
+    DeltaTableModel,
+    DatumTableModel,
+    ResultsTableModel,
+)
+
 
 ###########################################################################
 # GSadjust adjustment tab
@@ -29,6 +35,8 @@ class TabAdjust(QtWidgets.QWidget):
         self.parent = parent
         self.delta_view = QtWidgets.QTableView()
         self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.delta_model = DeltaTableModel()
+        self.delta_proxy_model.setSourceModel(self.delta_model)
         self.delta_view.setModel(self.delta_proxy_model)
         self.delta_view.setSortingEnabled(True)
 
@@ -44,6 +52,8 @@ class TabAdjust(QtWidgets.QWidget):
         self.datum_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.datum_view.customContextMenuRequested.connect(self.datum_context_menu)
         self.datum_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.datum_model = DatumTableModel()
+        self.datum_proxy_model.setSourceModel(self.datum_model)
         self.datum_view.setModel(self.datum_proxy_model)
         self.datum_view.setSortingEnabled(True)
 
@@ -60,6 +70,8 @@ class TabAdjust(QtWidgets.QWidget):
         self.results_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.results_view.customContextMenuRequested.connect(self.results_context_menu)
         self.results_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.results_model = ResultsTableModel()
+        self.results_proxy_model.setSourceModel(self.results_model)
         self.results_view.setModel(self.results_proxy_model)
         self.results_view.setSortingEnabled(True)
 

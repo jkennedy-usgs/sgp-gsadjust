@@ -175,10 +175,10 @@ class TabDrift(QtWidgets.QWidget):
         self.tare_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tare_view.customContextMenuRequested.connect(self.tare_context_menu)
 
-        self.tare_view.setModel(TareTableModel())
         self.resultsProxyModel = QtCore.QSortFilterProxyModel(self)
 
         self.tare_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.tare_proxy_model.setSourceModel(TareTableModel())
         self.tare_view.setModel(self.tare_proxy_model)
         self.tare_view.setSortingEnabled(True)
 
@@ -230,10 +230,12 @@ class TabDrift(QtWidgets.QWidget):
 
         # dg table (Roman method)
         self.dg_samples_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.dg_samples_proxy_model.setSourceModel(SamplesTableModel())
         self.dg_samples_view.setModel(self.dg_samples_proxy_model)
         self.dg_samples_view.setSortingEnabled(True)
 
         self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.delta_proxy_model.setSourceModel(DeltaTableModel())
         self.delta_view.setModel(self.delta_proxy_model)
         self.delta_view.setSortingEnabled(True)
 
@@ -262,15 +264,15 @@ class TabDrift(QtWidgets.QWidget):
         self.axes_drift_single.figure.canvas.draw()
 
         # Resetting the models must re-link proxies.
-        self.dg_avg_model = DeltaTableModel()
-        self.delta_proxy_model.setSourceModel(self.dg_avg_model)
-
+        self.delta_proxy_model.sourceModel().init_data([])
+        self.dg_samples_proxy_model.sourceModel().init_data([])
+        self.tare_proxy_model.sourceModel().init_data([])
         # FIXME: Is this correct? dg_samples_table is on the delta_view, not the dg_samples one.
-        self.dg_samples_table = SamplesTableModel()
-        self.dg_samples_proxy_model.setSourceModel(self.dg_avg_model)
-
-        self.tare_model = TareTableModel()
-        self.tare_proxy_model.setSourceModel(self.tare_model)
+        # self.dg_samples_table = SamplesTableModel()
+        # self.dg_samples_proxy_model.setSourceModel(self.dg_avg_model)
+        #
+        # self.tare_model = TareTableModel()
+        # self.tare_proxy_model.setSourceModel(self.tare_model)
 
     def time_extent_changed(self):
         """
@@ -489,25 +491,20 @@ class TabDrift(QtWidgets.QWidget):
         """
         # assumes stations in data are in chronological order
         roman_dg_model = SamplesTableModel()
-        deltas, vert_lines = drift_roman(data, loop_name)
+        sample_deltas, vert_lines = drift_roman(data, loop_name)
 
-        for delta in deltas:
-            roman_dg_model.insertRows(delta, 0)
         # If there is more than one delta-g between a given station pair, average them
         # Setup dict to store averages '(sta1, sta2)':[g]
         avg_dg = dict()
         unique_pairs = set()
-        for i in range(roman_dg_model.rowCount()):
-            delta = roman_dg_model.data(roman_dg_model.index(i, 0), role=Qt.UserRole)
+        for i, delta in enumerate(sample_deltas):
             delta_key1 = (delta.station1.station_name, delta.station2[0].station_name)
             delta_key2 = (delta.station2[0].station_name, delta.station1.station_name)
             if delta_key1 not in unique_pairs and delta_key2 not in unique_pairs:
                 unique_pairs.add(delta_key1)
                 avg_dg[delta_key1] = [delta]
-                for ii in range(i + 1, roman_dg_model.rowCount()):
-                    testdelta = roman_dg_model.data(
-                        roman_dg_model.index(ii, 0), role=Qt.UserRole
-                    )
+                for ii in range(i + 1, len(sample_deltas)):
+                    testdelta = sample_deltas[ii]
                     testdelta_key1 = (
                         testdelta.station1.station_name,
                         testdelta.station2[0].station_name,
@@ -524,7 +521,7 @@ class TabDrift(QtWidgets.QWidget):
             avg_deltas.append(
                 DeltaList(None, station_pair[1], loop=loop_name, driftcorr="Roman")
             )
-        return roman_dg_model, avg_deltas, vert_lines
+        return sample_deltas, avg_deltas, vert_lines
 
     @staticmethod
     def plot_tares(axes, obstreeloop):
@@ -1062,7 +1059,7 @@ class TabDrift(QtWidgets.QWidget):
             if method == "roman":
                 # Hide drift correction, std_for_adj, and residual columns
                 obstreeloop.deltas = model[1]
-                self.dg_samples_view.setModel(model[0])
+                self.dg_samples_view.model().sourceModel().init_data(model[0])
                 self.delta_view.model().sourceModel().init_data(model[1])
                 self.show_all_columns(self.delta_view)
                 self.delta_view.hideColumn(2)

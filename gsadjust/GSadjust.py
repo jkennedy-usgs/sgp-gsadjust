@@ -249,9 +249,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_widget = QtWidgets.QTabWidget()
 
         # Set models for the tab views.
-        self.tab_adjust.delta_view.setModel(self.delta_model)
-        # self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
-        self.tab_adjust.datum_view.setModel(self.datum_model)
+        self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
+        self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         # self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
         self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
@@ -1225,14 +1224,13 @@ class MainProg(QtWidgets.QMainWindow):
             loading a workspace.
         """
 
-        drift_method = self.obsTreeModel.itemFromIndex(
-            self.index_current_loop
-        ).drift_method
+        current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        drift_method = current_loop.drift_method
         self.tab_drift.driftmethod_combobox.setCurrentIndex(
             self.drift_lookup[drift_method]
         )
         self.tab_drift.set_drift_method(update, update_adjust_tables)
-        self.tab_drift.tare_view.model().init_data(self.obsTreeModel.itemFromIndex(
+        self.tab_drift.tare_view.model().sourceModel().init_data(self.obsTreeModel.itemFromIndex(
             self.index_current_loop
         ).tares)
         self.adjust_update_required()
@@ -2257,8 +2255,7 @@ class MainProg(QtWidgets.QMainWindow):
         if station:
             d = Datum(str(station))
             survey.datums.append(d)
-            self.tab_adjust.datum_view.model().init_data(survey.datums)
-            # self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
+            self.tab_adjust.datum_proxy_model.sourceModel().init_data(survey.datums)
             logging.info("Datum station added: {}".format(station))
             self.set_window_title_asterisk()
 
@@ -2272,8 +2269,8 @@ class MainProg(QtWidgets.QMainWindow):
         )
         if adjust_options.exec_():
             if adjust_options.surveys_to_update == "single":
-                # Not sure why the deepcopy is necessary. Without it, all of the survey.adjustmentoptions
-                # reference the same object.
+                # Not sure why the deepcopy is necessary. Without it, all of the
+                # survey.adjustmentoptions reference the same object.
                 ao = copy.deepcopy(adjust_options.ao)
                 survey.adjustment.adjustmentoptions = ao
                 self.set_adj_sd(survey, adjust_options.ao)

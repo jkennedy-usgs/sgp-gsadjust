@@ -3,6 +3,10 @@ models/roman.py
 ===============
 
 PyQt model for showing Roman-method gravity differences.
+
+This table of delta-g's is only for intermediate results when using the Roman
+drift-correction method. The delta-g's used in the adjustment are from the
+DeltaTableModel based on this table.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -39,7 +43,7 @@ ROMAN_FROM, ROMAN_TO, ROMAN_DELTA = range(3)
 ) = range(8)
 
 
-class RomanTableModel(QtCore.QAbstractTableModel):
+class SamplesTableModel(QtCore.QAbstractTableModel):
     """
     Model to store the individual delta-g's calculated using the Roman-method.
     Shown on the drift tab.
@@ -48,7 +52,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
     _headers = {ROMAN_FROM: "From", ROMAN_TO: "To", ROMAN_DELTA: "Delta g"}
 
     def __init__(self):
-        super(RomanTableModel, self).__init__()
+        super(SamplesTableModel, self).__init__()
         self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -90,13 +94,13 @@ class RomanTableModel(QtCore.QAbstractTableModel):
 
     def setData(self, index, value, role):
         if role == Qt.CheckStateRole and index.column() == 0:
-            datum = self.datums[index.row()]
+            datum = self._data[index.row()]
             datum.checked = value
             return True
 
         if role == Qt.EditRole:
             if index.isValid() and index.row() >= 0 and value:
-                datum = self.datums[index.row()]
+                datum = self._data[index.row()]
                 column = index.column()
 
                 if column == DATUM_STATION:

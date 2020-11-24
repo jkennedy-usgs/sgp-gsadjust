@@ -144,7 +144,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     )
 
                 def get_sd():
-                    delta.delta_edited_sd = delta.adj_sd
+                    delta.edited_sd = delta.adj_sd
                     return delta.adj_sd
 
                 def get_g():

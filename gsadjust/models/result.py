@@ -124,5 +124,7 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
         return QVariant()
 
     def init_data(self, data):
+        self.beginResetModel()
         self._data = data
+        self.endResetModel()
         self.layoutChanged.emit()  # Refresh whole view.

@@ -2097,7 +2097,7 @@ class MainProg(QtWidgets.QMainWindow):
         if station:
             d = Datum(str(station))
             survey.datums.append(d)
-            self.tab_adjust.datum_view.model().init_data(survey.datums)
+            self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
             # self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
             logging.info('Datum station added: {}'.format(station))
             self.set_window_title_asterisk()

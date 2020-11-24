@@ -250,7 +250,7 @@ class DeltaNormal(DeltaBase):
 
         """
         try:
-            if hasattr(self.station1, "asd"):
+            if hasattr(self.station1, "assigned_sd"):
                 if self.station1.assigned_sd:
                     s = np.sqrt(
                         self.station2.assigned_sd ** 2 + self.station1.assigned_sd ** 2

@@ -1438,8 +1438,7 @@ class MainProg(QtWidgets.QMainWindow):
             Loop shown in drift tab
 
         """
-        for i in range(obstreeloop.rowCount()):
-            obstreestation = obstreeloop.child(i)
+        for obstreestation in obstreeloop.stations():
             for idx, t in enumerate(obstreestation.tare):
                 obstreestation.tare[idx] = 0
             for tare in obstreeloop.tares:

@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-#  -*- coding: utf-8 -*-
 """
-models/obstree
-=======
+obstree/model.py
+================
 
 PyQt models for GSadjust. Handles assembling input matrices for
 network adjustment.
@@ -21,16 +19,14 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-
 import datetime as dt
 import json
 import logging
-import os
 
 import jsons
-from matplotlib.dates import date2num
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+from matplotlib.dates import date2num
 
 from .loop import ObsTreeLoop
 from .station import ObsTreeStation
@@ -54,11 +50,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def __init__(self):
         super(ObsTreeModel, self).__init__()
         self.setColumnCount(3)
-        self.setHorizontalHeaderLabels(['Name', 'Date', 'g (\u00b5Gal)'])
+        self.setHorizontalHeaderLabels(["Name", "Date", "g (\u00b5Gal)"])
         self.station_coords = None
 
-    #
-    # signal_refresh_view = QtCore.pyqtSignal()
     signal_name_changed = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
@@ -67,23 +61,29 @@ class ObsTreeModel(QtGui.QStandardItemModel):
     def flags(self, QModelIndex):
         if not QModelIndex.isValid():
             return Qt.NoItemFlags
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsUserCheckable
+        return (
+            Qt.ItemIsEnabled
+            | Qt.ItemIsSelectable
+            | Qt.ItemIsEditable
+            | Qt.ItemIsUserCheckable
+        )
 
     def data(self, index, role=Qt.DisplayRole):
         if index.model() is not None:
             column = index.column()
             if role == Qt.DisplayRole:
-
                 if column > 0:
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
                 try:  # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
                     # after deleting a survey
-                    fn, *args = m.display_column_map.get(column, (format_numeric_column, column))
+                    fn, *args = m.display_column_map.get(
+                        column, (format_numeric_column, column)
+                    )
                     return fn(*args)
                 except AttributeError:
-                    return ''
+                    return ""
 
             elif role == Qt.CheckStateRole:
                 if column == 0:
@@ -94,7 +94,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 try:
                     return m.tooltip
                 except AttributeError:
-                    return ''
+                    return ""
 
     def setData(self, index, value, role):
         if role == Qt.CheckStateRole and index.column() == 0:
@@ -120,28 +120,30 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         new_name = str(value)
         if new_name is not item.station_name:
             rename_type = rename_dialog(old_name, new_name)
-            if rename_type == 'Loop':
+            if rename_type == "Loop":
                 loop = item.parent()
                 loop.rename(old_name, new_name)
 
-            if rename_type == 'Survey':
+            if rename_type == "Survey":
                 loop = item.parent()
                 survey = loop.parent()
                 survey.rename(old_name, new_name)
 
-            if rename_type == 'Campaign':
+            if rename_type == "Campaign":
                 campaign = item.model().invisibleRootItem()
                 for i in range(campaign.rowCount()):
                     survey = campaign.child(i, 0)
                     survey.rename(old_name, new_name)
 
-            if rename_type == 'Station':
+            if rename_type == "Station":
                 item.station_name = new_name
                 for i in range(len(item.station)):
                     item.station[i] = new_name
 
             logging.info(
-                'Stations renamed from {} to {} in {}'.format(old_name, new_name, rename_type)
+                "Stations renamed from {} to {} in {}".format(
+                    old_name, new_name, rename_type
+                )
             )
             self.signal_name_changed.emit()
         return True
@@ -152,16 +154,16 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         """
         new_name = str(value)
         old_name = item.name
-        logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
+        logging.info("Loop renamed from {} to {}".format(old_name, new_name))
         item.name = new_name
         return True
 
     def _handler_edit_ObsTreeSurvey(self, item, value):
         new_name = str(value)
         try:
-            name_as_date = dt.datetime.strptime(new_name, '%Y-%m-%d')
+            name_as_date = dt.datetime.strptime(new_name, "%Y-%m-%d")
             old_name = name_as_date
-            logging.info('Loop renamed from {} to {}'.format(old_name, new_name))
+            logging.info("Loop renamed from {} to {}".format(old_name, new_name))
             item.name = new_name
             return True
         except Exception as e:
@@ -171,7 +173,11 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         """
         Retrieves checked data from loop; used for calculating delta-gs in the
         "None" and "Continuous" drift options.
-        :return: list of checked stations
+
+        Returns
+        -------
+        list
+            list of checked stations
         """
         data = []
         for i in range(self.invisibleRootItem().rowCount()):
@@ -212,9 +218,17 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def load_workspace(self, fname):
         """
+        Loads json workspace. Called from workspace_append and workspace_open_json.
 
-        :param fname:
-        :return: (ObsTreeSurvey, delta_table, coords)
+        Parameters
+        ----------
+        fname : str
+            full path to file
+
+        Returns
+        -------
+        (ObsTreeSurvey, coords)
+
         """
         logging.info("Workspace loaded: " + fname)
         delta_tables, obstreesurveys = [], []
@@ -229,30 +243,37 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         # Populate PyQt objects. First, create obstreesurvey
         for survey in surveys:
             obstreesurvey = ObsTreeSurvey.from_json(survey)
-            for loop in survey['loops']:
+            for loop in survey["loops"]:
                 obstreeloop = ObsTreeLoop.from_json(loop)
-                for station in loop['stations']:
+                for station in loop["stations"]:
                     if (
-                        'station_name' in station
+                        "station_name" in station
                     ):  # Sometimes blank stations are generated, not sure why?
                         temp_station = tempStation(station)
                         obstreestation = ObsTreeStation(
-                            temp_station, temp_station.station_name, temp_station.station_count,
+                            temp_station,
+                            temp_station.station_name,
+                            temp_station.station_count,
                         )
                         if type(obstreestation.t[0]) == dt.datetime:
                             obstreestation.t = [date2num(i) for i in obstreestation.t]
                         obstreeloop.appendRow(
-                            [obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0'),]
+                            [
+                                obstreestation,
+                                QtGui.QStandardItem("0"),
+                                QtGui.QStandardItem("0"),
+                            ]
                         )
-                # stations is provided by loop.stations(), it doesn't need to be stored separately in the ObsTreeLoop
-                # object
-                if hasattr(obstreeloop, 'stations'):
+                # stations is provided by loop.stations(), it doesn't need to be
+                # stored separately in the ObsTreeLoop object. This deals with old
+                # workspace:
+                if hasattr(obstreeloop, "stations"):
                     del obstreeloop.stations
+
                 obstreesurvey.appendRow(
-                    [obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
+                    [obstreeloop, QtGui.QStandardItem("0"), QtGui.QStandardItem("0")]
                 )
             obstreesurveys.append(obstreesurvey)
-
         return (obstreesurveys, coords)
 
     def datums(self):
@@ -285,13 +306,30 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                 station_list += obstreeloop.stations()
         return list(set(station_list))
 
-    def resetStationAsd(self):
+    def reset_assigned_sd(self):
+        """
+        Called from plot_drift(), resets the station s.d. set by the continuous drift
+        correction method.
+        """
         for survey in self.surveys():
             for loop in survey.loops():
                 for station in loop.stations():
                     station.assigned_sd = None
 
     def save_workspace(self, fname):
+        """
+        Called from workspace_save and workspace_save_as
+
+        Parameters
+        ----------
+        fname : str
+            filename
+
+        Returns
+        -------
+        str
+            filename (same as input)
+        """
         surveys = []
         for i in range(self.rowCount()):
             obstreesurvey = self.itemFromIndex(self.index(i, 0))
@@ -299,7 +337,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         workspace_data = [surveys, self.station_coords]
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
-        logging.info('Saving JSON workspace to {}'.format(fname))
+        logging.info("Saving JSON workspace to {}".format(fname))
         return fname
 
 
@@ -312,22 +350,29 @@ def rename_dialog(old_name, new_name):
     """
     Dialog called after renaming station in treeview.
 
-    Gives the option to rename stations in the current loop, survey, or
-    throughout the campaign.
-    :param old_name: string, old station name
-    :param new_name: string, new station name
-    :return: integer indicating extent of station rename.
+    Gives the option to rename stations in the current loop, survey, or throughout
+    the campaign.
+
+    Parameters
+    ----------
+    old_name : string, old station name
+    new_name : string, new station name
+
+    Returns
+    -------
+    int
+        integer indicating extent of station rename.
     """
     msg = QtWidgets.QMessageBox()
-    q_string = 'Rename all stations from {} to {} in...'.format(old_name, new_name)
+    q_string = "Rename all stations from {} to {} in...".format(old_name, new_name)
     msg.setText(q_string)
-    msg.addButton(QtWidgets.QPushButton('Campaign'), 0)
-    msg.addButton(QtWidgets.QPushButton('Survey'), 0)
-    msg.addButton(QtWidgets.QPushButton('Loop'), 0)
-    msg.addButton(QtWidgets.QPushButton('Just this station'), 0)
-    msg.addButton(QtWidgets.QPushButton('Cancel'), 1)
+    msg.addButton(QtWidgets.QPushButton("Campaign"), 0)
+    msg.addButton(QtWidgets.QPushButton("Survey"), 0)
+    msg.addButton(QtWidgets.QPushButton("Loop"), 0)
+    msg.addButton(QtWidgets.QPushButton("Just this station"), 0)
+    msg.addButton(QtWidgets.QPushButton("Cancel"), 1)
     method = msg.exec_()
-    methods = {0: 'Campaign', 1: 'Survey', 2: 'Loop', 3: 'Station', 4: 'Cancel'}
+    methods = {0: "Campaign", 1: "Survey", 2: "Loop", 3: "Station", 4: "Cancel"}
 
     return methods[method]
 

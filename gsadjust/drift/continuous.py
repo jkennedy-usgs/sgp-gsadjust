@@ -220,6 +220,9 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
         continuous drift model
     data : list
         list of ObsTreeStations
+    loop_name : str
+    drift_stats : dict or None
+        If dict, observations are weighted; None if not
 
      Returns
      -------
@@ -263,6 +266,5 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
             prev_station, station, driftcorr=drift2 - drift1, loop=loop_name
         )
         delta_list.append(delta)
-        # delta_model.insertRows(delta, 0)
         prev_station = station
     return delta_list

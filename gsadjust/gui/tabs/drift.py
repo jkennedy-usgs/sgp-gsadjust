@@ -552,7 +552,7 @@ class TabDrift(QtWidgets.QWidget):
         drift_type = obstreeloop.drift_method
         plot_data = obstreeloop.get_data_for_plot()
 
-        self.parent.obsTreeModel.resetStationAsd()
+        self.parent.obsTreeModel.reset_assigned_sd()
 
         # Check that there's station repeats. If there isn't, skip the plotting but
         # we still want to calculate delta-g's (except for Roman correction).

@@ -1,9 +1,8 @@
 """
-pyqt_modules.py
+obstree/loop.pu
 ===============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt models for loops in GSadjust tree view.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -19,17 +18,15 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-
 import logging
-import datetime as dt
 from collections import defaultdict
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
 
-from ..data import Tare
 from .base import ObsTreeItemBase
 from .station import ObsTreeStation
+from ..data import Tare
 
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
@@ -40,6 +37,9 @@ SURVEY_NAME = 0
 class ObsTreeLoop(ObsTreeItemBase):
     """
     PyQt model for Loops, parent item for stations.
+
+    Loops are groups of station data that have a common drift method (and
+    accompanying parameters), observed in order.
     """
 
     def __init__(self, name):
@@ -49,7 +49,7 @@ class ObsTreeLoop(ObsTreeItemBase):
         self.tares = []
 
         self.name = name
-        self.drift_method = 'none'  # 'none', 'netadj', 'roman', or 'continuous'
+        self.drift_method = "none"  # 'none', 'netadj', 'roman', or 'continuous'
 
         # If continuous model, also need to keep track of which type of model
         self.drift_cont_method = 0
@@ -63,28 +63,25 @@ class ObsTreeLoop(ObsTreeItemBase):
         # If netadj method, keep track of polynomial degree
         self.drift_netadj_method = 2
 
-        self.comment = ''  # String that can be specified from GUI
+        self.comment = ""  # String that can be specified from GUI
 
         # TODO: Import comment from Burris file?
-        self.source = ''  # Filename of raw input file
-
+        self.source = ""  # Filename of raw input file
 
     def __str__(self):
-        if self.drift_method == 'roman' or self.drift_method == 'none':
-            return (
-                'Loop: {}, '
-                'Drift method: {}, '
-                'Meter type: {}\n'.format(self.name, self.drift_method, self.meter_type)
+        if self.drift_method == "roman" or self.drift_method == "none":
+            return "Loop: {}, Drift method: {}, Meter type: {}\n".format(
+                self.name, self.drift_method, self.meter_type
             )
 
-        elif self.drift_method == 'continuous':
+        elif self.drift_method == "continuous":
             return (
-                'Loop: {}, '
-                'Drift method: {}, '
-                'Meter type: {}, '
-                'Continuous drift method: {}, '
-                'Continuous drift start/end method: {}, '
-                'Weighting: {}\n'.format(
+                "Loop: {}, "
+                "Drift method: {}, "
+                "Meter type: {}, "
+                "Continuous drift method: {}, "
+                "Continuous drift start/end method: {}, "
+                "Weighting: {}\n".format(
                     self.name,
                     self.drift_method,
                     self.meter_type,
@@ -93,13 +90,16 @@ class ObsTreeLoop(ObsTreeItemBase):
                     self.drift_cont_weighting,
                 )
             )
-        elif self.drift_method == 'netadj':
+        elif self.drift_method == "netadj":
             return (
-                'Loop: {}, '
-                'Drift method: {}, '
-                'Meter type: {}, '
-                'Netadj method: {}\n'.format(
-                    self.name, self.drift_method, self.meter_type, self.drift_netadj_method,
+                "Loop: {}, "
+                "Drift method: {}, "
+                "Meter type: {}, "
+                "Netadj method: {}\n".format(
+                    self.name,
+                    self.drift_method,
+                    self.meter_type,
+                    self.drift_netadj_method,
                 )
             )
 
@@ -108,30 +108,30 @@ class ObsTreeLoop(ObsTreeItemBase):
         try:
             return self.child(0).oper[0]
         except AttributeError:
-            return ''
+            return ""
 
     @property
     def meter(self):
         try:
             return self.child(0).meter[0]
         except AttributeError:
-            return ''
+            return ""
 
     @property
     def tooltip(self):
         return (
-            'Loop: {}\n'
-            'Drift method: {}\n'
-            'Meter: {}\n'
-            'Operator: {}\n'
-            'Comment: {}\n'
-            'Source: {}'.format(
+            "Loop: {}\n"
+            "Drift method: {}\n"
+            "Meter: {}\n"
+            "Operator: {}\n"
+            "Comment: {}\n"
+            "Source: {}".format(
                 self.name,
-                self.__dict__.get('drift_method', ''),
+                self.__dict__.get("drift_method", ""),
                 self.meter,
                 self.oper,
-                self.__dict__.get('comment', ''),
-                self.__dict__.get('source', ''),
+                self.__dict__.get("comment", ""),
+                self.__dict__.get("source", ""),
             )
         )
 
@@ -141,40 +141,37 @@ class ObsTreeLoop(ObsTreeItemBase):
             # Column name map
             # index: name
             LOOP_NAME: (str, self.name),
-            1: (str, ''),
-            2: (str, ''),
+            1: (str, ""),
+            2: (str, ""),
         }
 
     @property
     def meter_type(self):
         station = self.child(0)
         # To deal with old-format files (2020-06). Can probably be deleted someday.
-        if station.meter_type == 'Scintrex':
-            return 'CG5'
+        if station.meter_type == "Scintrex":
+            return "CG5"
         else:
             return station.meter_type
 
     @classmethod
     def from_json(cls, data):
-        temp = cls(data['name'])
+        temp = cls(data["name"])
         temp.__dict__.update(data)
         potential_missing_fields = {
-            'comment': '',
-            'oper': '',
-            'source': '',
-            'drift_cont_weighting': 0,
+            "comment": "",
+            "oper": "",
+            "source": "",
+            "drift_cont_weighting": 0,
         }
         tare_objects = []
-        for tare_dict in data['tares']:
-            tare_object = Tare(
-                tare_dict['datetime'],
-                tare_dict['tare']
-            )
-            tare_object.checked = tare_dict['checked']
+        for tare_dict in data["tares"]:
+            tare_object = Tare(tare_dict["datetime"], tare_dict["tare"])
+            tare_object.checked = tare_dict["checked"]
             tare_objects.append(tare_object)
         temp.tares = tare_objects
-        if 'checked' in data:
-            temp.setCheckState(data['checked'])
+        if "checked" in data:
+            temp.setCheckState(data["checked"])
         for k, v in potential_missing_fields.items():
             if not hasattr(temp, k):
                 setattr(temp, k, v)
@@ -193,7 +190,9 @@ class ObsTreeLoop(ObsTreeItemBase):
         Populate loop dictionary using data passed as an option. For now, only
         the 'single' option works.
 
-        :param data: Passed to Loop.populate_station_dic()
+        Parameters
+        ----------
+        data: ChannelList object
         """
         prev_sta = data.station[0]
         ind_start = 0
@@ -213,9 +212,13 @@ class ObsTreeLoop(ObsTreeItemBase):
                     temp_sta, prev_sta, str(station_count_dic[prev_sta])
                 )
                 obstreestation.meter_type = data.meter_type
-                logging.info('Station added: ' + prev_sta + str(station_count_dic[prev_sta]))
+                logging.info(
+                    "Station added: " + prev_sta + str(station_count_dic[prev_sta])
+                )
                 ind_start = i
-                self.appendRow([obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
+                self.appendRow(
+                    [obstreestation, QtGui.QStandardItem("0"), QtGui.QStandardItem("0")]
+                )
             if i == len(data.station) - 1:
                 # enter last data line
                 ind_end = i
@@ -228,16 +231,26 @@ class ObsTreeLoop(ObsTreeItemBase):
                 )
                 obstreestation.meter_type = data.meter_type
                 logging.info(
-                    'Station added: ' + curr_sta + '(' + str(station_count_dic[curr_sta]) + ')'
+                    "Station added: "
+                    + curr_sta
+                    + "("
+                    + str(station_count_dic[curr_sta])
+                    + ")"
                 )
-                self.appendRow([obstreestation, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')])
+                self.appendRow(
+                    [obstreestation, QtGui.QStandardItem("0"), QtGui.QStandardItem("0")]
+                )
             prev_sta = curr_sta
 
     def get_data_for_plot(self):
         """
         Retrieves data from loop that is used for plotting: occupations must be
         checked, and there must be more than one occupation at a station.
-        :return: list of plot_data lists
+
+        Returns
+        -------
+        list
+            One entry per station: [[plot x],[plot y], station name, [y s.d.]]
         """
         unique_stations = set()
         plot_data = []
@@ -281,7 +294,11 @@ class ObsTreeLoop(ObsTreeItemBase):
         """
         Retrieves checked stations from loop; used for calculating delta-gs in
         the "None" and "Continuous" drift options.
-        :return: list of checked stations
+
+        Returns
+        -------
+        list
+            list of checked stations
         """
         stations = []
         for i in range(self.rowCount()):
@@ -292,6 +309,12 @@ class ObsTreeLoop(ObsTreeItemBase):
 
     def stations(self):
         """
+        Convenience method to get all stations in a loop.
+
+        Returns
+        -------
+        list
+            list of station from PyQt model
         """
         stations = []
         for i in range(self.rowCount()):
@@ -303,24 +326,36 @@ class ObsTreeLoop(ObsTreeItemBase):
         return len(sn)
 
     def to_json(self):
+        """
+        For serializing (PyQt models can't be serialized directly)
+
+        Returns
+        -------
+        dict
+            json-friendly dict
+        """
+
         # Copy stations from PyQt models to lists
         stations_json = [s.to_json() for s in self.stations()]
         tares_json = [t.to_json() for t in self.tares]
 
         return {
-            'checked': self.checkState(),
-            'delta_model': None,
-            'tare_model': None,
-            'stations': stations_json,
-            'tares': tares_json,
-            'name': self.name,
-            'drift_method': self.drift_method,
-            'drift_cont_method': self.drift_cont_method,
+            "checked": self.checkState(),
+            "delta_model": None,
+            "tare_model": None,
+            "stations": stations_json,
+            "tares": tares_json,
+            "name": self.name,
+            "drift_method": self.drift_method,
+            "drift_cont_method": self.drift_cont_method,
             # If continuous model, also need to keep track of which type of model
-            'drift_cont_startend': self.drift_cont_startend,  # behavior at start/end. 0: extrapolate, 1: constant
-            'drift_netadj_method': self.drift_netadj_method,  # If netadj method, keep track of polynomial degree
-            'meter': self.meter,  # Meter S/N, for the case where multiple meters are calibrated
-            'comment': self.comment,
-            'oper': self.oper,
-            'source': self.source,
+            "drift_cont_startend": self.drift_cont_startend,
+            # behavior at start/end. 0: extrapolate, 1: constant
+            "drift_netadj_method": self.drift_netadj_method,
+            # If netadj method, keep track of polynomial degree
+            "meter": self.meter,
+            # Meter S/N, for the case where multiple meters are calibrated
+            "comment": self.comment,
+            "oper": self.oper,
+            "source": self.source,
         }

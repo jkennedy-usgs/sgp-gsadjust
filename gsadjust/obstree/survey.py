@@ -1,9 +1,8 @@
 """
-pyqt_modules.py
+obstree/survey.py
 ===============
 
-PyQt models for GSadjust. Handles assembling input matrices for
-network adjustment.
+PyQt models for surveys in GSadjust tree view.
 --------------------------------------------------------------------------------
 
 NB: PyQt models follow the PyQt CamelCase naming convention. All other
@@ -19,23 +18,25 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 import copy
-import datetime as dt
-import json
 import logging
 import os
 
 import jsons
 import numpy as np
-from matplotlib.dates import date2num, num2date
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QVariant
+from PyQt5 import QtGui
+from PyQt5.QtCore import Qt
 
-from ..data import (AdjustedStation, Adjustment, AdjustmentOptions, create_delta_by_type,
-                    AdjustmentResults, Datum, DeltaList, DeltaNormal, Tare)
-from ..data.analysis import InversionError, numpy_inversion
-from ..gui.messages import MessageBox
 from .base import ObsTreeItemBase
 from .loop import ObsTreeLoop
+from ..data import (
+    AdjustedStation,
+    Adjustment,
+    AdjustmentOptions,
+    AdjustmentResults,
+    Datum,
+)
+from ..data.analysis import InversionError, numpy_inversion
+from ..gui.messages import MessageBox
 
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
@@ -45,15 +46,21 @@ SURVEY_NAME = 0
 
 class ObsTreeSurvey(ObsTreeItemBase):
     """
-    A survey object is a little different than Loop or Station objects in that
-    it doesn't have a corresponding data object. All relevant info is in
-    this object.
+    Represents all data to include in a single network adjustment.
+
+    Data may span single or multiple days. Loops refer to groups of data for which
+    drift parameters are applied.
+
+    There is one meter calibration coeffcient per survey, either specified or
+    calculated in the network adjustment if there's sufficient absolute gravity data.
+
     """
 
     def __init__(self, name):
         super(ObsTreeSurvey, self).__init__()
-        # Both surveys and loops have delta models. The survey delta_model holds the observations used in an
-        # adjustment, and may have deltas from one or more loops.
+        # Both surveys and loops have delta lists. The survey delta list holds the
+        # observations used in an adjustment, and may have deltas from one or more
+        # loops.
         self.name = name
 
         # Store related data.
@@ -72,8 +79,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
             # Column name map
             # index: name
             SURVEY_NAME: (str, self.name),
-            1: (str, ''),
-            2: (str, ''),
+            1: (str, ""),
+            2: (str, ""),
         }
 
     @classmethod
@@ -81,110 +88,68 @@ class ObsTreeSurvey(ObsTreeItemBase):
         """
         When loading a workspace, repopulate PyQt models
         """
-        temp = cls(data['name'])
+        temp = cls(data["name"])
 
-        # REVISED 2020-11-16: No longer need to save/load deltas. Instead they are re-created from the station data -
-        # that's a consequence of the adj. tab deltas being force-synced with the drift tab deltas. All we need to do
-        # after recreating the deltas is re-apply the follwing, if they were set:
-        # type = assigned, assigned_dg, adj_sd
-        #
-        # That's handled in the populate_obstreemodel() routine.
+        temp.deltas = data["deltas"]
 
-
-        # (
-        # deltas = []
-        # for delta in data['deltas']:
-        #     # Converting list of dicts to list of SimpleNamespace is to accommodate the loading routine,
-        #     # which expects a delta-like object, not a dict. Could probably keep change it to "temp.deltas = data[
-        #     # 'deltas'] if not for that.
-        #     from types import SimpleNamespace
-        #
-        #     sd = SimpleNamespace()
-        #     sd.adj_sd = delta['adj_sd']
-        #     sd.checked = delta['checked']
-        #     sd.driftcorr = delta['driftcorr']
-        #     sd.loop = delta['loop']
-        #     sd.ls_drift = delta['ls_drift']
-        #     sd.type = delta['type']
-        #     sd.key = delta['key']
-        #     try:
-        #         sd.assigned_dg = delta['assigned_dg']
-        #     except Exception:
-        #         pass
-        #     try:
-        #         sd.sta1 = delta['sta1']
-        #         sd.sta2 = delta['sta2']
-        #     except KeyError as e:
-        #         # Raised if delta type is 'assigned'
-        #         pass
-        #     # if delta['type']
-        #     deltas.append(sd)
-        # temp.deltas = deltas
-        temp.deltas = data['deltas']
-        # for delta in data['deltas']:
-        #     # Converting list of dicts to list of Delta objects, by defined type.
-        #     # Creation is handled by create_delta_by_type which discards empty keyword
-        #     # values (None), which are returned by .get() when missing.
-        #     sd = create_delta_by_type(
-        #         delta['type'],
-        #         # Kwargs will be included/ignored depending on type.
-        #         delta.get('sta1'),  # sta1
-        #         delta.get('sta2'),  # sta2
-        #         driftcorr=delta.get('driftcorr'),
-        #         ls_drift=delta.get('ls_drift'),
-        #         checked=delta.get('checked'),
-        #         adj_sd=delta.get('adj_sd'),
-        #         loop=delta.get('loop'),
-        #         assigned_dg=delta.get('assigned_dg'),
-        #     )
-        #     deltas.append(sd)
-        # temp.deltas = deltas
-        for datum in data['datums']:
-            d = Datum(datum['station'])
+        for datum in data["datums"]:
+            d = Datum(datum["station"])
             d.__dict__.update(datum)
             d.residual = -999
             temp.datums.insert(0, d)
 
         ao = AdjustmentOptions()
-        ao.__dict__.update(data['adjoptions'])
-        if not hasattr(ao, 'use_sigma_prefactor') and hasattr(ao, 'sigma_factor'):
+        ao.__dict__.update(data["adjoptions"])
+        if not hasattr(ao, "use_sigma_prefactor") and hasattr(ao, "sigma_factor"):
             ao.sigma_prefactor = ao.sigma_factor
             ao.use_sigma_prefactor = ao.use_sigma_factor
             ao.sigma_postfactor = 1.0
             ao.use_sigma_postfactor = False
         temp.adjustment.adjustmentoptions = ao
 
-        if 'checked' in data:
-            temp.setCheckState(data['checked'])
+        if "checked" in data:
+            temp.setCheckState(data["checked"])
         return temp
 
     def to_json(self):
+        """
+        Method for saving workspaces.
+        """
         loops, datums = [], []
-        # Remove ObsTreeStation objects from deltas in the survey delta_model (which is different than the individual
-        # loop delta_models; those are ignored and not save (they're recreated when the workspace is loaded).
         for i in range(self.rowCount()):
             loops.append(self.child(i).to_json())
         return {
-            'loops': loops,
-            'deltas': [d.to_json() for d in self.deltas],
-            'datums': jsons.dump(self.datums),
-            'checked': self.checkState(),
-            'name': self.name,
-            'adjoptions': jsons.dump(self.adjustment.adjustmentoptions),
+            "loops": loops,
+            "deltas": [d.to_json() for d in self.deltas],
+            "datums": jsons.dump(self.datums),
+            "checked": self.checkState(),
+            "name": self.name,
+            "adjoptions": jsons.dump(self.adjustment.adjustmentoptions),
         }
 
     @property
     def tooltip(self):
-        return (
-            'Survey: {}\n'
-            'Meters: {}\n'
-            'Number of loops: {}'.format(self.name, self.unique_meters, self.loop_count)
+        """
+        For hover text on tree view
+
+        Returns
+        -------
+        str
+        """
+        return "Survey: {}\nMeters: {}\nNumber of loops: {}".format(
+            self.name, self.unique_meters, self.loop_count
         )
 
     @property
     def unique_meters(self):
         """
-        :return: List of unique gravity-meter IDs (serial numbers) used in the survey
+        Get unique relative gravimeters used in a survey.
+
+        Returns
+        -------
+        list
+            List of strs: gravity-meter IDs (serial numbers) used in the survey
+
         """
         meters = []
         for station in self.iter_stations():
@@ -203,19 +168,11 @@ class ObsTreeSurvey(ObsTreeItemBase):
         if len(self.deltas) > 0:
             for delta in self.deltas:
                 try:
-                    loops.append(delta['loop'])
+                    loops.append(delta["loop"])
                 except TypeError:
                     loops.append(delta.loop)
 
         return list(set(loops))
-            # if type(self.deltas[0]) == dict:
-            #     return list(set([l['loop'] for l in self.deltas]))
-            # else:
-            #     return list(set([l.loop for l in self.deltas]))
-
-    # @property
-    # def datums(self):
-    #     return self.datums[::]
 
     def _handler_edit_ObsTreeSurvey(self, item, value):
         """
@@ -223,7 +180,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
         """
         new_name = str(value)
         old_name = item.name
-        logging.info('Survey renamed from {} to {}'.format(old_name, new_name))
+        logging.info("Survey renamed from {} to {}".format(old_name, new_name))
         item.name = new_name
         return True
 
@@ -251,20 +208,26 @@ class ObsTreeSurvey(ObsTreeItemBase):
             loop = self.child(i, 0)
             loop.rename(from_name, to_name)
 
-    def populate(self, survey_data, name='0', source='NA'):
+    def populate(self, survey_data, name="0", source="NA"):
         """
         Called from open_raw_data. Loads all survey_data into a single loop.
-        :param survey_data: data returned from read_raw_data_file
-        :param name: Survey name
-        :return: None
+
+        Parameters
+        ----------
+        survey_data : ChannelList
+            data returned from read_raw_data_file
+        name : str
+            Survey name, must be convertible to date
+        source : str
+            Name of source file, stored with loop
         """
         obstreeloop = ObsTreeLoop(name)
         obstreeloop.populate(survey_data)
         obstreeloop.source = source
         self.appendRow(
-            [obstreeloop, QtGui.QStandardItem('0'), QtGui.QStandardItem('0')]
+            [obstreeloop, QtGui.QStandardItem("0"), QtGui.QStandardItem("0")]
         )
-        logging.info('Survey added')
+        logging.info("Survey added")
         return obstreeloop.index()
 
     def iter_stations(self):
@@ -278,9 +241,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 obstreestation = obstreeloop.child(ii)
                 yield obstreestation
 
-    def run_inversion(
-        self, adj_type='PyLSQ', write_out_files='n', output_root_dir='./',
-    ):
+    def run_inversion(self, adj_type="PyLSQ"):
         """
         Prepares inversion data and calls appropriate method.
 
@@ -288,9 +249,11 @@ class ObsTreeSurvey(ObsTreeItemBase):
             -Counts n_deltas, n_deltas_notused, n_datums, n_datums_notused
             -Corrects datum observations for gradient
             -Runs inversion
-        :param adj_type: 'PyLSQ' (numpy) or 'Gravnet'
-        :param write_out_files: Write output files, 'y' or 'n'
-        :param output_root_dir: Where to write output files
+
+        Parameters
+        ----------
+        adj_type : {'PyLSQ', 'Gravnet'}
+
         """
 
         if self.data(role=Qt.CheckStateRole) == 2:
@@ -300,12 +263,12 @@ class ObsTreeSurvey(ObsTreeItemBase):
 
             self.adjustment.adjustmentoptions.adj_type = adj_type
 
-            # Form datasets for adjustment from selected table items, count number of deltas and datums (used when
-            # writing metadata about adjustment).
+            # Form datasets for adjustment from selected table items, count number of
+            # deltas and datums (used when writing metadata about adjustment).
             specify_cal_coeff = False
             cal_dic = None
             # To deal with old files
-            if hasattr(self.adjustment.adjustmentoptions, 'specify_cal_coeff'):
+            if hasattr(self.adjustment.adjustmentoptions, "specify_cal_coeff"):
                 if self.adjustment.adjustmentoptions.specify_cal_coeff:
                     specify_cal_coeff = True
                     cal_dic = self.adjustment.adjustmentoptions.meter_cal_dict
@@ -315,9 +278,10 @@ class ObsTreeSurvey(ObsTreeItemBase):
                         delta.cal_coeff = cal_dic[delta.meter]
                     else:
                         delta.cal_coeff = 1
-                    if delta.type == 'normal':
+                    if delta.type == "normal":
                         try:
-                            # Don't include deltas in which one of the stations has been unchecked
+                            # Don't include deltas in which one of the stations has
+                            # been unchecked
                             if (
                                 delta.station1.data(role=Qt.CheckStateRole) == 2
                                 and delta.station2.data(role=Qt.CheckStateRole) == 2
@@ -341,7 +305,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if datum.checked:  # Checkbox checked
                     # account for vertical gradient
                     datum = copy.copy(datum)
-                    if hasattr(datum, 'gradient'):
+                    if hasattr(datum, "gradient"):
                         datum.g = datum.g - datum.gradient * datum.meas_height
                     datums.append(datum)
                     adjustmentresults.n_datums += 1
@@ -365,35 +329,32 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if not self.adjustment.deltas:  # empty.
                     MessageBox.warning(
                         "Inversion error",
-                        "Survey {}: At least one relative-gravity difference must be specified".format(
-                            self.name
-                        ),
+                        "Survey {}: At least one relative-gravity difference must be"
+                        " specified".format(self.name),
                     )
                     return
-                if adj_type == 'PyLSQ':
-                    logging.info('Numpy inversion, Survey: {}'.format(self.name))
-                    self.start_numpy_inversion(output_root_dir, write_out_files)
-                elif adj_type == 'Gravnet':
-                    logging.info('Gravnet inversion, Survey: {}'.format(self.name))
+                if adj_type == "PyLSQ":
+                    logging.info("Numpy inversion, Survey: {}".format(self.name))
+                    self.start_numpy_inversion()
+                elif adj_type == "Gravnet":
+                    logging.info("Gravnet inversion, Survey: {}".format(self.name))
                     self.gravnet_inversion()
             except ZeroDivisionError:
                 MessageBox.warning(
-                    'ZeroDivisionError',
-                    'Unable to adjust. Are there standard deviations that are zero or very small?',
+                    "ZeroDivisionError",
+                    "Unable to adjust. Are there standard deviations that are zero or"
+                    " very small?",
                 )
             except KeyError as e:
                 MessageBox.warning(
-                    'KeyError',
-                    'Station error\nSurvey: {}\nStation: {}'.format(
+                    "KeyError",
+                    "Station error\nSurvey: {}\nStation: {}".format(
                         self.name, e.args[0]
                     ),
                 )
             except Exception as e:
                 logging.exception(e, exc_info=True)
-                MessageBox.warning(
-                    "GSadjust",
-                    "Unknown inversion error"
-                )
+                MessageBox.warning("GSadjust", "Unknown inversion error")
 
     def gravnet_inversion(self):
         """
@@ -402,49 +363,53 @@ class ObsTreeSurvey(ObsTreeItemBase):
         # TODO: method could probably be made static
 
         dir_changed1, dir_changed2 = False, False
-        # Check that executable exists in current directory (it should, if run as compiled .exe
-        if not os.path.exists('.\\gravnet.exe'):
-            # if not found, it might be in the dist directory (i.e., running GSadjust.py)
-            if os.path.exists('..\\dist\\gravnet.exe'):
-                os.chdir('..\\dist')
+        # Check that executable exists in current directory (it should, if run as
+        # compiled .exe
+        if not os.path.exists(".\\gravnet.exe"):
+            # if not found, it might be in the dist directory (i.e., running
+            # GSadjust.py)
+            if os.path.exists("..\\dist\\gravnet.exe"):
+                os.chdir("..\\dist")
                 dir_changed1 = True
-            elif os.path.exists('.\\dist\\gravnet.exe'):
-                os.chdir('.\\dist')
+            elif os.path.exists(".\\dist\\gravnet.exe"):
+                os.chdir(".\\dist")
                 dir_changed2 = True
             # not found at all: error
             else:
                 MessageBox.warning(
-                    'Inversion error',
-                    'Gravnet.exe not found, aborting',
+                    "Inversion error",
+                    "Gravnet.exe not found, aborting",
                 )
-                logging.error('Inversion error, Gravnet.exe not found')
+                logging.error("Inversion error, Gravnet.exe not found")
                 return
 
-        # If using gravnet with netadj drift option (including drift term in the network adjustment), a single
-        # drift model is used for all observations in the adjustment. Check that the method is set to netadj
-        # for all loops, otherwise show an error message and return.
+        # If using gravnet with netadj drift option (including drift term in the
+        # network adjustment), a single drift model is used for all observations in
+        # the adjustment. Check that the method is set to netadj for all loops,
+        # otherwise show an error message and return.
         ls_degree = []
-        drift_term = ''
+        drift_term = ""
         for delta in self.adjustment.deltas:
             if delta.ls_drift is not None:
                 ls_degree.append(delta.ls_drift[1])
         unique_ls = list(set(ls_degree))
         if len(unique_ls) > 1:
             MessageBox.warning(
-                'Inversion error',
-                'It appears that more than one polynomial degree was specified for different loops for the network, '
-                'or that some loops are not using the adjustment drift option. When using Gravnet, all loops must '
-                'have the same degree drift model. Aborting.',
+                "Inversion error",
+                "It appears that more than one polynomial degree was specified for"
+                " different loops for the network, or that some loops are not using the"
+                " adjustment drift option. When using Gravnet, all loops must have the"
+                " same degree drift model. Aborting.",
             )
             return
         if len(unique_ls) == 1:
             if unique_ls[0] is not None:
-                drift_term = '-T' + str(unique_ls[0])
+                drift_term = "-T" + str(unique_ls[0])
 
         # Remove old gravnet files
-        for ext in ['gra', 'err', 'his', 'met', 'res', 'sta']:
+        for ext in ["gra", "err", "his", "met", "res", "sta"]:
             try:
-                os.remove('{}.{}'.format(self.name, ext))
+                os.remove("{}.{}".format(self.name, ext))
             except OSError:
                 pass
 
@@ -455,38 +420,38 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 truncate_warning = True
         if truncate_warning:
             MessageBox.information(
-                'Inversion warning',
-                'One or more station names is longer than 6 characters. Names will be truncated to 6 '
-                'characters in the Gravnet input file. Please verify that names will still be unique '
-                'after truncating.',
+                "Inversion warning",
+                "One or more station names is longer than 6 characters. Names will be"
+                " truncated to 6 characters in the Gravnet input file. Please verify"
+                " that names will still be unique after truncating.",
             )
         # Write delta-g observation file
-        dg_file = self.name + '_dg.obs'
-        with open(dg_file, 'w') as fid:
+        dg_file = self.name + "_dg.obs"
+        with open(dg_file, "w") as fid:
             fid.write(
-                'start, end, difference (mgal), mjd (from), mjd (to),'
-                + ' reading (from, CU), reading (to, CU), standard deviation (mgal)\n'
+                "start, end, difference (mgal), mjd (from), mjd (to),"
+                + " reading (from, CU), reading (to, CU), standard deviation (mgal)\n"
             )
             # Gravnet station names are limited to 6 characters; units are mGal
             for delta in self.adjustment.deltas:
                 fid.write(
-                    '{} {} {:0.6f} {} {} {:0.6f} {} {:0.6f}\n'.format(
+                    "{} {} {:0.6f} {} {} {:0.6f} {} {:0.6f}\n".format(
                         delta.sta1[:6],
                         delta.sta2[:6],
                         delta.dg / 1000.0 * delta.cal_coeff,
                         delta.sta1_t,
                         delta.sta2_t,
                         delta.dg / 1000,
-                        '0',
+                        "0",
                         delta.adj_sd / 1000.0,
                     )
                 )
         # Write absolute-g (aka datum, aka fix) file
-        fix_file = self.name + '_fix.txt'
-        with open(fix_file, 'w') as fid:
+        fix_file = self.name + "_fix.txt"
+        with open(fix_file, "w") as fid:
             for datum in self.adjustment.datums:
                 fid.write(
-                    '{} {:0.6f} {:0.3f}\n'.format(
+                    "{} {:0.6f} {:0.3f}\n".format(
                         datum.station[:6],
                         float(datum.g) / 1000.0,
                         float(datum.sd) / 1000.0,
@@ -498,27 +463,28 @@ class ObsTreeSurvey(ObsTreeItemBase):
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.unique_meters) > 1:
                 MessageBox.warning(
-                    'Inversion error',
-                    "It appears more than one meter was used on the survey. Gravnet calculates a "
-                    "calibration coefficient for a single meter only. Use Numpy inversion "
-                    "to calculate meter-specific calibration coefficients",
+                    "Inversion error",
+                    "It appears more than one meter was used on the survey. Gravnet"
+                    " calculates a calibration coefficient for a single meter only. Use"
+                    " Numpy inversion to calculate meter-specific calibration"
+                    " coefficients",
                 )
             if len(self.adjustment.datums) == 1:
                 MessageBox.warning(
-                    'Inversion error',
-                    "Two or more datum observations are required to calculate a calibration coefficient."
-                    " Aborting.",
+                    "Inversion error",
+                    "Two or more datum observations are required to calculate a"
+                    " calibration coefficient. Aborting.",
                 )
                 return
             # Run gravnet with calibration coefficient
             os.system(
-                'gravnet -D{} -N{} -M2 -C1 {} -F{}'.format(
+                "gravnet -D{} -N{} -M2 -C1 {} -F{}".format(
                     dg_file, self.name, drift_term, fix_file
                 )
             )
-            with open(self.name + '.met', 'r') as fid:
-                symbol = ''
-                while symbol != 'Y_l':
+            with open(self.name + ".met", "r") as fid:
+                symbol = ""
+                while symbol != "Y_l":
                     line = fid.readline().split()
                     symbol = line[0]
                 meter_calib_params = fid.readline().split()
@@ -529,18 +495,18 @@ class ObsTreeSurvey(ObsTreeItemBase):
         else:
             # Run gravnet without calibration coefficient
             os.system(
-                'gravnet -D{} -N{} -M2 {} -F{}'.format(
+                "gravnet -D{} -N{} -M2 {} -F{}".format(
                     dg_file, self.name, drift_term, fix_file
                 )
             )
 
         # Read drift coefficients
-        if drift_term != '':
+        if drift_term != "":
             meter_drift_params = []
-            with open(self.name + '.met', 'r') as fid:
-                symbol = ''
+            with open(self.name + ".met", "r") as fid:
+                symbol = ""
                 while (
-                    symbol != 'Coefficients'
+                    symbol != "Coefficients"
                 ):  # Indicates 'Coefficients of drift' in .met file
                     line = fid.readline().split()
                     symbol = line[0]
@@ -552,7 +518,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
 
         # Read gravnet results
         g_dic, sd_dic = {}, {}
-        with open(self.name + '.gra', 'r') as fid:
+        with open(self.name + ".gra", "r") as fid:
             _ = fid.readline()  # Header line
             all_sd = []
             while True:
@@ -573,11 +539,11 @@ class ObsTreeSurvey(ObsTreeItemBase):
         # Match up residuals with input data
         self.adjustment.g_dic = g_dic
         self.adjustment.sd_dic = sd_dic
-        self.match_inversion_results(inversion_type='gravnet', cal_dic=cal_dic)
+        self.match_inversion_results(inversion_type="Gravnet", cal_dic=cal_dic)
 
         # Add calibration coefficient and/or drift coefficients to output text
         self.adjustment.adjustmentresults.text = []
-        with open(self.name + '.sta', 'r') as fid:
+        with open(self.name + ".sta", "r") as fid:
             while True:
                 fh = fid.readline()
                 if len(fh) == 0:
@@ -596,7 +562,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                             k, v
                         )
                     )
-            if drift_term != '':
+            if drift_term != "":
                 self.adjustment.adjustmentresults.text.append(
                     "Gravimeter drift coefficient(s):"
                 )
@@ -606,41 +572,27 @@ class ObsTreeSurvey(ObsTreeItemBase):
                     )
 
         if dir_changed1:
-            os.chdir('..\\gsadjust')
+            os.chdir("..\\gsadjust")
         elif dir_changed2:
-            os.chdir('..')
+            os.chdir("..")
         return True
 
-    def start_numpy_inversion(self, output_root_dir, write_out_files='n'):
+    def start_numpy_inversion(self):
         """
         Least-squares network adjustment using numpy
-
-        Parameters
-        write_out_files:    (y/n): write output files for drift adjustment
-                            (similar to MCGravi output files)
-        output_root_dir     directory for writing output files
         """
-
         self.adjustment.adjustmentresults.text = []
 
         # sta_dic_LS is a dictionary, key: station name, value: column for A matrix
         self.adjustment.sta_dic_ls = self.get_station_indices()
         self.adjustment.nloops = self.loop_count
 
-        # number of unknowns:
-        # TODO: temperature drift function
-        drift_time = 0  # self.adjustment.adjustmentoptions.drift_time
-        # if self.adjustment.adjustmentoptions.use_model_temp:
-        #     self.adjustment.drift_temp = self.adjustment.adjustmentoptions.model_temp_degree
-        # else:
-        #     self.adjustment.drift_temp = 0
-
         if self.adjustment.adjustmentoptions.cal_coeff:
             if len(self.adjustment.datums) == 1:
                 MessageBox.warning(
                     "Inversion warning",
-                    "Two or more datum observations are required to calculate a calibration coefficient."
-                    " Aborting.",
+                    "Two or more datum observations are required to calculate a"
+                    " calibration coefficient. Aborting.",
                 )
                 return
             n_meters = len(self.unique_meters)
@@ -651,8 +603,8 @@ class ObsTreeSurvey(ObsTreeItemBase):
             n_meters = 0
         self.adjustment.n_meters = n_meters
 
-        # Drift may be included in the network adjustment for any or all loops. This section of code
-        # builds some dicts used later to assemble the A matrix.
+        # Drift may be included in the network adjustment for any or all loops. This
+        # section of code builds some dicts used later to assemble the A matrix.
         ndrift = 0
 
         # Temporary var to compile all delta.ls_drift tuples: (loop.name, degree of drift model)
@@ -662,10 +614,11 @@ class ObsTreeSurvey(ObsTreeItemBase):
         # (loop.name, (column relative to end of A matrix, drift degree)
         netadj_loop_keys = dict()
 
-        # dict of unique delta.ls_drift values, used to cross-reference loop name with poly. degree
-        # (the loop object only knows if the drift method is netadj, or not. The delta object stores
-        # the degree of the drift polynomial, but doesn't know if the drift correction is netadj (a
-        # delta could have a non (0,0) ls_drift value, but use some other drift corretion method.
+        # dict of unique delta.ls_drift values, used to cross-reference loop name
+        # with poly. degree (the loop object only knows if the drift method is
+        # netadj, or not. The delta object stores the degree of the drift polynomial,
+        # but doesn't know if the drift correction is netadj (a delta could have a
+        # non (0,0) ls_drift value, but use some other drift corretion method.
         loop_ls_dict = dict()
         for delta in self.adjustment.deltas:
             # If a workspace was loaded from json, need to convert list to tuple
@@ -679,31 +632,33 @@ class ObsTreeSurvey(ObsTreeItemBase):
             for lp in active_loops:
                 obstreeloop = self.get_loop_by_name(lp)
                 loop_ls_dict[obstreeloop.name] = obstreeloop.drift_method
-                if obstreeloop.drift_method == 'netadj':
+                if obstreeloop.drift_method == "netadj":
                     ls_degree = ls_drift_dict[obstreeloop.name]
                     netadj_loop_keys[obstreeloop.name] = (ndrift, ls_degree)
                     ndrift += ls_degree
         self.adjustment.loop_ls_dict = loop_ls_dict
         self.adjustment.ndrift = ndrift
         self.adjustment.netadj_loop_keys = netadj_loop_keys
-        self.adjustment.adjustmentresults.text = ''
+        self.adjustment.adjustmentresults.text = ""
 
         try:
-            self.results = numpy_inversion(
-                self.adjustment
-            )
+            self.results = numpy_inversion(self.adjustment)
         except InversionError:
             logging.exception("Inversion Error")
             MessageBox.warning("Inversion Error", str(InversionError))
-        self.match_inversion_results('numpy', self.adjustment.adjustmentresults.cal_dic)
+        self.match_inversion_results("PyLSQ", self.adjustment.adjustmentresults.cal_dic)
 
     def match_inversion_results(self, inversion_type, cal_dic=None):
         """
         Populates delta and datum table residuals from inversion results
-        :param inversion_type: 'gravnet' or 'numpy'
-        cal_dic: has an entry for each meter if a calibration coefficient was
-            calculated. Different than
-            delta.cal_coeff, which is an a priori specified coefficient.
+
+        Parameters
+        ----------
+        inversion_type : {'PyLSQ', 'numpy'}
+        cal_dic :
+            has an entry for each meter if a calibration coefficient was calculated.
+            Different than delta.cal_coeff, which is an a priori specified coefficient.
+
         """
         datum_residuals, dg_residuals = [], []
         g_dic = self.adjustment.g_dic
@@ -715,10 +670,10 @@ class ObsTreeSurvey(ObsTreeItemBase):
         for delta in self.deltas:
             if delta.checked:
                 try:
-                    if inversion_type == 'gravnet':
+                    if inversion_type == "Gravnet":
                         station1_name = delta.sta1[:6]
                         station2_name = delta.sta2[:6]
-                    elif inversion_type == 'numpy':
+                    elif inversion_type == "PyLSQ":
                         station1_name = delta.sta1
                         station2_name = delta.sta2
                     if delta.meter in cal_dic:
@@ -739,9 +694,9 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 delta.residual = -999.0
 
         for datum in self.datums:
-            if inversion_type == 'numpy':
+            if inversion_type == "PyLSQ":
                 station_name = datum.station
-            elif inversion_type == 'gravnet':
+            elif inversion_type == "Gravnet":
                 station_name = datum.station[0:6]
             if station_name in g_dic.keys():
                 adj_g1 = g_dic[station_name]
@@ -763,10 +718,14 @@ class ObsTreeSurvey(ObsTreeItemBase):
     def get_station_indices(self):
         """
         Creates a dictionary with unique (key=stationname, value=integer) pairs.
-        :return: Dict with A-matrix index for each station
+
+        Returns
+        -------
+        dict
+            Dict with A-matrix index for each station
+
         """
         station_list = []
-        sta_dic_ls = {}
         for delta in self.adjustment.deltas:
             station_list.append(delta.sta1)
             station_list.append(delta.sta2)
@@ -775,26 +734,23 @@ class ObsTreeSurvey(ObsTreeItemBase):
         sta_dic_ls = {station: i for i, station in enumerate(station_list)}
         return sta_dic_ls
 
-    def return_obstreestation(self, station_id):
-        """
-        returns ObsTreeStation object corresponding to delta_id. Used when recreating deltas from a saved workspace.
-        :param station_id: tuple, (station_name, time)
-        :return: ObsTreeStation
-        """
-        for station in self.iter_stations():
-            if station.station_name == station_id[0]:
-                if abs(station.tmean() - station_id[1]) < 0.0001:
-                    return station
-        return None
-
     def populate_delta_model(self, loop=None, clear=True):
         """
         Copy deltas from the delta_model shown on the drift tab to the model
         shown on the adjustment tab.
-        :param loop: if ObsTreeLoop, only populate deltas from the selected
-            loop; otherwise use all loops
-        :param clear: if True, clear delta table first; if not, append deltas
-        :return:
+
+        Parameters
+        ----------
+        loop : ObsTreeLoop or None
+             if ObsTreeLoop, only populate deltas from the selected loop; otherwise
+              use all loops
+        clear : bool
+            if True, clear delta table first; if not, append deltas
+
+        Returns
+        -------
+        bool
+            True if successful
         """
         if clear:
             # Clear existing list object: do not reassign [], as this breaks the
@@ -805,7 +761,6 @@ class ObsTreeSurvey(ObsTreeItemBase):
         if isinstance(loop, ObsTreeLoop):
             try:
                 for delta in loop.deltas:
-                    # if loop.delta_model.data(loop.delta_model.index(ii, 0), role=Qt.CheckStateRole) == 2:
                     self.deltas.insert(0, delta)
             except Exception as e:
                 MessageBox.warning(
@@ -822,27 +777,14 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if loop.checkState() == Qt.Checked:
                     try:
                         self.deltas += loop.deltas
-
-
-                            # # Need to create a new delta here instead of just putting the original one, from the
-                            # # drift tab, in the net adj. tab. Otherwise checking/unchecking on the net adj tab
-                            # # overrides repopulating the delta table.
-                            # if type(delta.station2) == list:
-                            #     newdelta = DeltaList(None, delta.station2)
-                            # else:
-                            #     newdelta = DeltaNormal(delta.station1, delta.station2)
-                            # newdelta.ls_drift = delta.ls_drift
-                            # newdelta.driftcorr = delta.driftcorr
-                            # newdelta.type = delta.type
-                            # newdelta.loop = delta.loop
-                            # self.delta.insert(0, newdelta)
                     except Exception as e:
                         logging.exception(e, exc_info=True)
                         # Sometimes the delta table isn't created when a workspace is loaded
 
                         MessageBox.warning(
                             "GSadjust error",
-                            "Error populating delta table. Please check the drift correction "
+                            "Error populating delta table. Please check the drift"
+                            " correction "
                             + "for survey "
                             + self.name
                             + ", loop "

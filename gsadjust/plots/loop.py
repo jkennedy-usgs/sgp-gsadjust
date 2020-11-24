@@ -1,8 +1,8 @@
 """
-gsa_plots.py
-===============
+plots/loop.py
+=============
 
-GSadjust plotting module.
+Animated map showing sequence of station observation.
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -14,28 +14,20 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-import threading
+import logging
 import time
 
 import matplotlib
 import numpy as np
-import logging
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import pyqtSlot
 from matplotlib.animation import TimedAnimation
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import num2date
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import pyqtSlot
 
 from ..threads import ThreadBase
-
-############################################################################
-# Loop animation
-# - called from right-click context menu on tree view
-# - animates stations in order they were observed
-# - appears in a separate pop-up window
-############################################################################
 
 
 class AnimationThread(ThreadBase):
@@ -60,6 +52,13 @@ class AnimationThread(ThreadBase):
 
 
 class PlotLoopAnimation(QtWidgets.QMainWindow):
+    """
+    Loop animation
+    - called from right-click context menu on tree view
+    - animates stations in order they were observed
+    - appears in a separate pop-up window
+    """
+
     def __init__(self, data):
         super(PlotLoopAnimation, self).__init__()
 
@@ -69,7 +68,6 @@ class PlotLoopAnimation(QtWidgets.QMainWindow):
 
         # Create FRAME_A
         self.FRAME_A = QtWidgets.QFrame(self)
-        # self.FRAME_A.setStyleSheet("QWidget { background-color: %s }" % QtGui.QColor(210, 210, 235, 255).name())
         self.LAYOUT_A = QtWidgets.QGridLayout()
         self.FRAME_A.setLayout(self.LAYOUT_A)
         self.setCentralWidget(self.FRAME_A)
@@ -103,7 +101,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
     def __init__(self, xlim, ylim, n):
         n_head = 10
         self.addedY, self.addedX = [], []
-        logging.debug('Matplotlib Version:' + matplotlib.__version__)
+        logging.debug("Matplotlib Version:" + matplotlib.__version__)
         self.xlim, self.ylim = xlim, ylim
         # The data
         self.n = np.linspace(0, n - 1, n)
@@ -112,20 +110,19 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
         self.ax1 = self.fig.add_subplot(111)
 
         # self.ax1 settings
-        self.ax1.set_xlabel('Longitude')
-        self.ax1.set_ylabel('Latitude')
-        # self.points_blue = plt.Line2D([], [], marker='o', linewidth=0, color='0.5')
-        self.points_blue = Line2D([], [], marker='o', linewidth=0, color='0.5')
+        self.ax1.set_xlabel("Longitude")
+        self.ax1.set_ylabel("Latitude")
+        self.points_blue = Line2D([], [], marker="o", linewidth=0, color="0.5")
         self.ax1.add_line(self.points_blue)
         self.lines_red = []
         a = list(np.logspace(1, 0, 5) / 10)
         a += [0, 0, 0, 0, 0]
         a.reverse()
         for i in range(n_head):
-            self.lines_red.append(Line2D([], [], color='red', linewidth=4, alpha=a[i]))
-        self.lines_gray = Line2D([], [], color='0.5', linewidth=1)
+            self.lines_red.append(Line2D([], [], color="red", linewidth=4, alpha=a[i]))
+        self.lines_gray = Line2D([], [], color="0.5", linewidth=1)
         self.points_red = Line2D(
-            [], [], color='red', marker='o', markeredgecolor='r', linewidth=0
+            [], [], color="red", marker="o", markeredgecolor="r", linewidth=0
         )
 
         self.ax1.add_line(self.points_red)
@@ -139,7 +136,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             0.15,
             0.95,
             "",
-            bbox={'facecolor': 'w', 'alpha': 0.5, 'pad': 5},
+            bbox={"facecolor": "w", "alpha": 0.5, "pad": 5},
             transform=self.ax1.transAxes,
             ha="center",
         )
@@ -158,7 +155,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self.points_blue,
             self.points_red,
             self.lines_gray,
-        ]  # , self.line1_tail]  #, self.line1_head]
+        ]
         for l in lines:
             l.set_data([], [])
         for l in self.lines_red:
@@ -167,7 +164,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
     def addData(self, x, value, date):
         self.addedX.append(x)
         self.addedY.append(value)
-        self.title.set_text(num2date(date).strftime('%Y-%m-%d %H:%M:%S'))
+        self.title.set_text(num2date(date).strftime("%Y-%m-%d %H:%M:%S"))
 
     def _step(self, *args):
         # Extends the _step() method for the TimedAnimation class.
@@ -178,27 +175,15 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             pass
 
     def _draw_frame(self, framedata):
-        MAP = 'winter'
-        RESFACT = 10
+
         if len(self.addedX) > 0:
             self.points_blue.set_data(self.addedX, self.addedY)
             self.points_red.set_data(self.addedX[-1], self.addedY[-1])
         if len(self.addedX) > 1:
             self.lines_gray.set_data(self.addedX, self.addedY)
-            # hrp = highResPoints(self.addedX[-2:], self.addedY[-2:])
             xHiRes, yHiRes = highResPoints(self.addedX[-2:], self.addedY[-2:], 1)
-            npointsHiRes = len(xHiRes)
-            # cm = plt.get_cmap(MAP)
-
             for idx, line in enumerate(self.lines_red):
                 line.set_data(xHiRes[idx : idx + 2], yHiRes[idx : idx + 2])
-            #
-            # self.ax1.set_color_cycle([cm(1. * i / (npointsHiRes - 1))
-            #                      for i in range(npointsHiRes - 1)])
-            # for i in range(len(self.lines_red) - 1):
-            #     self.ax1(xHiRes[i:i + 2], yHiRes[i:i + 2],
-            #              alpha=float(i) / (npointsHiRes - 1),
-            #              color=COLOR)
         # This is the drawing order
         self._drawn_artists = []
         self._drawn_artists.append(self.lines_gray)
@@ -208,14 +193,13 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self._drawn_artists.append(p)
 
 
-def highResPoints(x, y, factor=10):
-    '''
+def highResPoints(x, y):
+    """
     Take points listed in two vectors and return them at a higher
-    resolution. Create at least factor*len(x) new points that include the
-    original points and those spaced in between.
+    resolution.
 
     Returns new x and y arrays as a tuple (x,y).
-    '''
+    """
     NPOINTS = 2
     RESFACT = 5
     # r is the distance spanned between pairs of points

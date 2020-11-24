@@ -1,8 +1,8 @@
 """
-gsa_plots.py
-===============
+plots/network.py
+================
 
-GSadjust plotting module.
+Plots network graphs using the Networkx library.
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -17,10 +17,9 @@ resulting from the authorized or unauthorized use of the software.
 import matplotlib
 import networkx as nx
 import numpy as np
+from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
 
 from ..gui.messages import MessageBox
 
@@ -29,12 +28,17 @@ class PlotNetworkGraph(QtWidgets.QDialog):
     """
     Networkx plot of network. If shape == 'map', accurate coordinates must be
     present in the input file.
-    :param shape: 'circular' or 'map'
+
+    Parameters
+    ----------
+    survey
+    coords
+    shape : {'Circular', 'map'}
     """
 
-    def __init__(self, survey, coords, shape='circular', parent=None):
+    def __init__(self, survey, coords, shape="circular", parent=None):
         super(PlotNetworkGraph, self).__init__(parent)
-        self.setWindowTitle('Network graph, Survey ' + survey.name)
+        self.setWindowTitle("Network graph, Survey " + survey.name)
         self.survey = survey
         self.coords = coords
         self.shape = shape
@@ -50,8 +54,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             self.plot(edges, disabled_edge, datum_nodelist, nondatum_nodelist)
         except KeyError:
             MessageBox.warning(
-                'Plot error'
-                'Error plotting network graph (Key error)',
+                "Plot errorError plotting network graph (Key error)",
             )
 
     def get_data(self):
@@ -62,12 +65,12 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         deltas = self.survey.deltas
         if len(deltas) == 0:
             MessageBox.warning(
-                'Plot error',
-                'Delta table is empty. Unable to plot network graph',
+                "Plot error",
+                "Delta table is empty. Unable to plot network graph",
             )
         else:
             for i, delta in enumerate(deltas):
-                key = f'delta_{i}'
+                key = f"delta_{i}"
                 if delta.checked:
                     edges.add_edge(delta.sta1, delta.sta2, key=key)
                 else:
@@ -86,12 +89,12 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         return (edges, disabled_edges, datum_nodelist, nondatum_nodelist)
 
     def format_map_axis(self, ax, shape):
-        if shape == 'circular':
+        if shape == "circular":
             ax.set_xlim(-1.2, 1.2)
             ax.set_ylim(-1.2, 1.2)
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
-        elif shape == 'map':
+        elif shape == "map":
             border = 0.1
             self.figure.tight_layout()
             xrange = np.abs(self.xmax - self.xmin)
@@ -99,15 +102,15 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             ax.set_xlim(self.xmin - xrange * border, self.xmax + xrange * border)
             ax.set_ylim(self.ymin - yrange * border, self.ymax + yrange * border)
             ax.ticklabel_format(useOffset=False)
-            ax.set_xlabel('(Coordinates are not projected)')
+            ax.set_xlabel("(Coordinates are not projected)")
 
     def plot(self, edges, disabled_edges, datum_nodelist, nondatum_nodelist):
         self.figure.clear()
         H = nx.Graph(edges)
 
-        if self.shape == 'circular':
+        if self.shape == "circular":
             pos = nx.circular_layout(H)
-        elif self.shape == 'map':
+        elif self.shape == "map":
             pos = {}
             for k, v in self.coords.items():
                 pos[k] = (v[0], v[1])
@@ -117,25 +120,18 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             self.xmax = max([x[0] for x in pos.values()])
             self.ymax = max([x[1] for x in pos.values()])
 
-            # pos_label = {}
-            # y_off = 0.001  # offset on the y axis
-            #
-            # for k, v in pos.items():
-            #     pos_label[k] = (v[0], v[1] + y_off)
-
         if not nx.is_connected(H):
             gs = [H.subgraph(c) for c in nx.connected_components(H)]
             for idx, g in enumerate(gs):
                 ax = self.figure.add_subplot(1, len(gs), idx + 1)
                 nx.draw_networkx_edges(
-                    g, pos, ax=ax, width=1, alpha=0.4, node_size=0, edge_color='k'
+                    g, pos, ax=ax, width=1, alpha=0.4, node_size=0, edge_color="k"
                 )
                 nx.draw_networkx_nodes(
-                    g, pos, ax=ax, node_color='w', alpha=0.4, with_labels=True
+                    g, pos, ax=ax, node_color="w", alpha=0.4, with_labels=True
                 )
-                nx.draw_networkx_labels(g, pos, ax=ax, font_color='orange')
-                ax.set_title('Networks are disconnected!')
-                # ax.autoscale(enable=True, axis='both', tight=True)
+                nx.draw_networkx_labels(g, pos, ax=ax, font_color="orange")
+                ax.set_title("Networks are disconnected!")
                 self.format_map_axis(ax, self.shape)
         else:
             # edge width is proportional to number of delta-g's
@@ -145,7 +141,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
                 edgewidth.append(len(edges.get_edge_data(u, v)) * 2 - 1)
 
             nx.draw_networkx_edges(
-                H, pos, ax=ax, width=edgewidth, alpha=0.4, node_size=0, edge_color='k'
+                H, pos, ax=ax, width=edgewidth, alpha=0.4, node_size=0, edge_color="k"
             )
             nx.draw_networkx_edges(
                 disabled_edges,
@@ -154,7 +150,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
                 width=1,
                 alpha=0.4,
                 node_size=0,
-                edge_color='r',
+                edge_color="r",
             )
             nx.draw_networkx_nodes(
                 H,
@@ -163,7 +159,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
                 node_size=120,
                 nodelist=datum_nodelist,
                 node_color="k",
-                node_shape='^',
+                node_shape="^",
                 with_labels=True,
                 alpha=0.8,
             )
@@ -174,12 +170,11 @@ class PlotNetworkGraph(QtWidgets.QDialog):
                 node_size=120,
                 nodelist=nondatum_nodelist,
                 node_color="k",
-                node_shape='o',
+                node_shape="o",
                 with_labels=True,
                 alpha=0.3,
             )
-            nx.draw_networkx_labels(H, pos, ax=ax, font_color='r')
+            nx.draw_networkx_labels(H, pos, ax=ax, font_color="r")
             self.format_map_axis(ax, self.shape)
-            # ax.autoscale(enable=True, axis='both', tight=True)
 
         self.canvas.draw()

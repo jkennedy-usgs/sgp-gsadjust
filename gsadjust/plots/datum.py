@@ -1,8 +1,8 @@
 """
-gsa_plots.py
-===============
+plots/datum.py
+==============
 
-GSadjust plotting module.
+Plots for Datum objects.
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -17,16 +17,18 @@ resulting from the authorized or unauthorized use of the software.
 import datetime as dt
 
 import matplotlib
+from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import date2num
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
 
 
 class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
+    """
+    Plots time series of observed vs. adjusted values at datum stations.
+    """
     def __init__(self, obsTreeModel, parent=None):
         super(PlotDatumComparisonTimeSeries, self).__init__(parent)
-        self.setWindowTitle('GSadjust results')
+        self.setWindowTitle("GSadjust results")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
         layout = QtWidgets.QVBoxLayout()
@@ -58,7 +60,7 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
                         and datum.checked == 2
                     ):
                         xdata.append(
-                            date2num(dt.datetime.strptime(survey.name, '%Y-%m-%d'))
+                            date2num(dt.datetime.strptime(survey.name, "%Y-%m-%d"))
                         )
                         ydata_obs.append(datum.g)
                         ydata_adj.append(datum.g + datum.residual)
@@ -74,24 +76,25 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
         ax = self.figure.add_subplot(111)
         i = 0
         for xdata, ydata_obs, ydata_adj in zip(xdata_all, ydata_obs_all, ydata_adj_all):
-            a = ax.plot(xdata, ydata_obs, '-o', label=names[i] + '_obs')
+            a = ax.plot(xdata, ydata_obs, "-o", label=names[i] + "_obs")
             line_color = a[0].get_color()
-            b = ax.plot(xdata, ydata_adj, '--o', c=line_color, label=names[i] + '_adj')
+            b = ax.plot(xdata, ydata_adj, "--o", c=line_color, label=names[i] + "_adj")
             i += 1
         ax.legend()
-        ax.set_ylabel('Relative gravity, in \u00b5Gal')
+        ax.set_ylabel("Relative gravity, in \u00b5Gal")
         ax.xaxis_date()
         self.canvas.draw()
 
 
 class PlotDatumCompare(QtWidgets.QDialog):
     """
-    Bar plot of difference between specified datum (in datum table) and adjustment result.
+    Bar plot of difference between specified datum (in datum table) and adjustment
+    result.
     """
 
     def __init__(self, survey, parent=None):
         super(PlotDatumCompare, self).__init__(parent)
-        self.setWindowTitle('GSadjust results')
+        self.setWindowTitle("GSadjust results")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
         self.survey = survey
@@ -107,9 +110,7 @@ class PlotDatumCompare(QtWidgets.QDialog):
         for datum in survey.datums:
             for result in survey.results:
                 if result.station == datum.station:
-                    diff.append(
-                        result.g - datum.g + datum.meas_height * datum.gradient
-                        )
+                    diff.append(result.g - datum.g + datum.meas_height * datum.gradient)
                     lbl.append(datum.station)
 
         return diff, lbl
@@ -119,7 +120,7 @@ class PlotDatumCompare(QtWidgets.QDialog):
         ax = self.figure.add_subplot(111)
         ind = range(len(diff))
         ax.bar(ind, diff)
-        ax.set_title('Adjusted g minus measured g (microGal)')
+        ax.set_title("Adjusted g minus measured g (microGal)")
         ax.set_xticks(ind)
         ax.set_xticklabels(lbl)
         self.canvas.draw()

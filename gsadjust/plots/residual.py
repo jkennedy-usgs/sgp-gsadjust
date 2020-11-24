@@ -1,8 +1,8 @@
 """
-gsa_plots.py
-===============
+plots/residual.py
+=================
 
-GSadjust plotting module.
+Residual histogram plot
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -15,9 +15,8 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 import matplotlib
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class PlotDgResidualHistogram(QtWidgets.QDialog):
@@ -30,7 +29,7 @@ class PlotDgResidualHistogram(QtWidgets.QDialog):
         super(PlotDgResidualHistogram, self).__init__(parent)
         self.survey = survey
 
-        self.setWindowTitle('GSadjust results')
+        self.setWindowTitle("GSadjust results")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
 
@@ -58,9 +57,9 @@ class PlotDgResidualHistogram(QtWidgets.QDialog):
     def plot(self, rlist):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
-        ax.hist(rlist, 20, facecolor='green', alpha=0.75)
-        ax.set_title('Adjusted g minus measured g (microGal)')
-        ax.set_xlabel('Residual (microGal)')
-        ax.set_ylabel('Relative frequency')
+        ax.hist(rlist, 20, facecolor="green", alpha=0.75)
+        ax.set_title("Adjusted g minus measured g (microGal)")
+        ax.set_xlabel("Residual (microGal)")
+        ax.set_ylabel("Relative frequency")
         ax.grid()
         self.canvas.draw()

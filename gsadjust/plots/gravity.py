@@ -1,8 +1,8 @@
 """
-gsa_plots.py
+plots/gravity.py
 ===============
 
-GSadjust plotting module.
+Gravity change time-series plot.
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -16,17 +16,17 @@ resulting from the authorized or unauthorized use of the software.
 """
 import matplotlib
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5 import QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class PlotGravityChange(QtWidgets.QDialog):
     def __init__(self, dates, table, parent=None):
         super(PlotGravityChange, self).__init__(parent)
-        self.setWindowTitle('GSadjust results')
+        self.setWindowTitle("GSadjust results")
         self.setWhatsThis(
-            "Click on a line in the legend to toggle visibility. Right-click anywhere to "
-            "hide all lines. Middle-click to show all lines."
+            "Click on a line in the legend to toggle visibility. Right-click anywhere"
+            " to hide all lines. Middle-click to show all lines."
         )
         self.figure = matplotlib.figure.Figure(figsize=(10, 6), dpi=100)
         self.canvas = FigureCanvas(self.figure)
@@ -49,7 +49,7 @@ class PlotGravityChange(QtWidgets.QDialog):
         for i in range(nstations):
             xdata, ydata = [], []
             for idx, col in enumerate(table[1:ncols]):
-                if not col[i] == '-999':
+                if not col[i] == "-999":
                     if not ydata:
                         ydata.append(0)
                         ydata.append(float(col[i]))
@@ -58,9 +58,9 @@ class PlotGravityChange(QtWidgets.QDialog):
                     else:
                         ydata.append(float(col[i]) + ydata[-1])
                         xdata.append(dates[idx + 1])
-            cmap = matplotlib.cm.get_cmap('gist_ncar')
-            ax.plot(xdata, ydata, '-o', color=cmap(i / nstations), label=stations[i])
-        ax.set_ylabel('Gravity change, in µGal')
+            cmap = matplotlib.cm.get_cmap("gist_ncar")
+            ax.plot(xdata, ydata, "-o", color=cmap(i / nstations), label=stations[i])
+        ax.set_ylabel("Gravity change, in µGal")
         ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=ncol)
         self.figure.autofmt_xdate()
         return ax
@@ -68,13 +68,15 @@ class PlotGravityChange(QtWidgets.QDialog):
     def interactive_legend(self, ax=None):
         if ax is None:
             return
-            # ax = plt.gca()
         if ax.legend_ is None:
             ax.legend()
         return InteractiveLegend(ax.get_legend())
 
 
 class InteractiveLegend(object):
+    """
+    Allows clicking on the legend to show/hide lines
+    """
     def __init__(self, legend):
         self.legend = legend
         self.fig = legend.axes.figure
@@ -88,8 +90,8 @@ class InteractiveLegend(object):
         for artist in self.legend.texts + self.legend.legendHandles:
             artist.set_picker(10)  # 10 points tolerance
 
-        self.fig.canvas.mpl_connect('pick_event', self.on_pick)
-        self.fig.canvas.mpl_connect('button_press_event', self.on_click)
+        self.fig.canvas.mpl_connect("pick_event", self.on_pick)
+        self.fig.canvas.mpl_connect("button_press_event", self.on_click)
 
     def _build_lookups(self, legend):
         labels = [t.get_text() for t in legend.texts]
@@ -114,7 +116,6 @@ class InteractiveLegend(object):
     def on_pick(self, event):
         handle = event.artist
         if handle in self.lookup_artist:
-
             artist = self.lookup_artist[handle]
             artist.set_visible(not artist.get_visible())
             self.update()

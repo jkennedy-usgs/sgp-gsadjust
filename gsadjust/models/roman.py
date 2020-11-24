@@ -98,13 +98,13 @@ class RomanTableModel(QtCore.QAbstractTableModel):
         when role is acting value is Qt.Checked or Qt.Unchecked
         """
         if role == Qt.CheckStateRole and index.column() == 0:
-            datum = self.datums[index.row()]
+            datum = self._data[index.row()]
             datum.checked = value
             return True
 
         if role == Qt.EditRole:
             if index.isValid() and index.row() >= 0 and value:
-                datum = self.datums[index.row()]
+                datum = self._data[index.row()]
                 column = index.column()
 
                 if column == DATUM_STATION:

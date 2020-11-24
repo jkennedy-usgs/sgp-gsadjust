@@ -242,7 +242,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         # Set models for the tab views.
         self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
-        self.tab_adjust.datum_view.setModel(self.datum_model)
+        self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
         self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
         self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)

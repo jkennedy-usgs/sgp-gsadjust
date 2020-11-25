@@ -2,7 +2,7 @@
 plots/loop.py
 =============
 
-Animated map showing sequence of station observation.
+GSadjust plotting module.
 --------------------------------------------------------------------------------
 
 This software is preliminary, provisional, and is subject to revision. It is
@@ -14,27 +14,34 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-import logging
 import time
 
 import matplotlib
 import numpy as np
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSlot
+import logging
 from matplotlib.animation import TimedAnimation
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.dates import num2date
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import pyqtSlot
 
 from ..threads import ThreadBase
+
+
+############################################################################
+# Loop animation
+# - called from right-click context menu on tree view
+# - animates stations in order they were observed
+# - appears in a separate pop-up window
+############################################################################
 
 
 class AnimationThread(ThreadBase):
     @pyqtSlot()
     def run(self):
         data = self.args[0]
-        # Simulate some data
         n = data[0]
         y = data[1]
         dates = data[2]
@@ -52,13 +59,6 @@ class AnimationThread(ThreadBase):
 
 
 class PlotLoopAnimation(QtWidgets.QMainWindow):
-    """
-    Loop animation
-    - called from right-click context menu on tree view
-    - animates stations in order they were observed
-    - appears in a separate pop-up window
-    """
-
     def __init__(self, data):
         super(PlotLoopAnimation, self).__init__()
 
@@ -86,7 +86,6 @@ class PlotLoopAnimation(QtWidgets.QMainWindow):
 
     def addData_callbackFunc(self, data):
         x, value, date = data
-        # print("Add data: " + str(value))
         if x > -900:
             self.figure.addData(x, value, date)
         else:
@@ -175,7 +174,6 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             pass
 
     def _draw_frame(self, framedata):
-
         if len(self.addedX) > 0:
             self.points_blue.set_data(self.addedX, self.addedY)
             self.points_red.set_data(self.addedX[-1], self.addedY[-1])
@@ -193,10 +191,11 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self._drawn_artists.append(p)
 
 
-def highResPoints(x, y):
+def highResPoints(x, y, factor=10):
     """
     Take points listed in two vectors and return them at a higher
-    resolution.
+    resolution. Create at least factor*len(x) new points that include the
+    original points and those spaced in between.
 
     Returns new x and y arrays as a tuple (x,y).
     """

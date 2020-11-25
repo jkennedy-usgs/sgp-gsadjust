@@ -1427,7 +1427,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Remove all deltas from survey delta model shown on network adjustment tab.
         """
-        self.tab_adjust.delta_view.model().init_data([])
+        self.tab_adjust.delta_view.model().sourceModel().init_data([])
         self.tab_adjust.delta_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
         self.tab_adjust.results_view.update()
@@ -1450,7 +1450,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         survey.datums = []
-        self.tab_adjust.datum_view.model().init_data([])
+        self.tab_adjust.datum_view.model().sourceModel().init_data([])
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
         self.clear_adjustment_text()

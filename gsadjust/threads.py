@@ -1,12 +1,25 @@
-import sys
-import time
+"""
+threads.py
+=============
+
+Used for loop animation.
+Martin Fitzgerald, LearnPyQt
+--------------------------------------------------------------------------------
+
+This software is preliminary, provisional, and is subject to revision. It is
+being provided to meet the need for timely best science. The software has not
+received final approval by the U.S. Geological Survey (USGS). No warranty,
+expressed or implied, is made by the USGS or the U.S. Government as to the
+functionality of the software and related material nor shall the fact of release
+constitute any such warranty. The software is provided on the condition that
+neither the USGS nor the U.S. Government shall be held liable for any damages
+resulting from the authorized or unauthorized use of the software.
+"""
 
 from PyQt5.QtCore import (
     QObject,
     QRunnable,
-    Qt,
     QThread,
-    QThreadPool,
     pyqtSignal,
     pyqtSlot,
 )
@@ -65,6 +78,3 @@ class ThreadBase(QThread):
 
     def pause(self, pause=True):
         self.is_paused = pause
-
-
-# threadpool = QThreadPool()

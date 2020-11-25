@@ -71,22 +71,22 @@ from QStandardItem:
      +--+ Adjustment  |
      |  +-------------+
      |  +-------------+
-     +--+ datum_model |
+     +--+ datums      |
      |  +-------------+
      |  +-------------+
-     +--+ delta_model |
+     +--+ deltas      |
      |  +-------------+
      |  +---------------+
-     +--+ results_model |
+     +--+ results       |
      |  +---------------+
      |  +----------------------+
      |--+ Loops (ObsTreeLoop)  |
         ++---------------------+
-         |  +--------------+
-         +--+ delta_model  |
-            +--------------+
          |  +-------------+
-         +--+ tare_model  |
+         +--+ deltas      |
+            +-------------+
+         |  +-------------+
+         +--+ tares       |
             +-------------+
          |  +----------------------------+
          +--+ Stations (ObsTreeStation)  |
@@ -97,11 +97,6 @@ from QStandardItem:
 
 The Adjustment object in each ObsTreeSurvey holds the network adjustment input,
 output, and options. There is one Adjustment per Survey.
-
-The datum_model, delta_model, results_model, and tare_model are PyQt models.
-The gui is update with the respective model when a new Survey or Loop is
-selected (by double-clicking in the tree view). There is one of each table per
-Survey.
 
 """
 
@@ -121,6 +116,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 from matplotlib.dates import num2date, date2num
 
+from . import resources
 from .data import (
     ChannelList,
     Datum,
@@ -128,7 +124,6 @@ from .data import (
 )
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
-# GSadjust modules
 from .file import (
     InvalidMeterException,
     export_data,
@@ -273,7 +268,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_widget.setStyleSheet(
             "QTabBar::tab { font-size: 12pt; height: 40px; width: 250px }"
         )
-        self.tab_widget.currentChanged.connect(self.tab_changed)
 
         self.gui_treeview_widget = QtWidgets.QWidget()
         self.gui_treeview_box = QtWidgets.QVBoxLayout()
@@ -456,22 +450,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.index_current_station_loop = obstreeloop.index()
         self.index_current_station_survey = obstreesurvey.index()
         self.index_current_station = station.index()
-
-    def tab_changed(self, new_idx):
-        """
-        Updates tab plots/tables as needed. These typically aren't updated
-        unless they're visible.
-        :param new_idx: Index of newly-selected tab.
-        """
-        # if self.obsTreeModel.rowCount() > 0:
-        #     if new_idx == 0:
-        #         if self.index_current_station is not None:
-        #             self.update_data_tab()
-        #     elif new_idx == 1:
-        #         if self.index_current_loop is not None:
-        #             self.update_drift_tables_and_plots()
-        #     elif new_idx == 2:
-        #     self.update_adjust_tables()
 
     def update_data_tab(self):
         """
@@ -884,7 +862,6 @@ class MainProg(QtWidgets.QMainWindow):
             )
             saved_deltas += survey.deltas
         # For opening legacy workspaces:
-        old_workspace = False
         try:
             saved_deltas_dict = {
                 d["key"]: (d["checked"], d["adj_sd"], d["assigned_dg"])
@@ -1225,16 +1202,13 @@ class MainProg(QtWidgets.QMainWindow):
             loading a workspace.
         """
 
-        drift_method = self.obsTreeModel.itemFromIndex(
-            self.index_current_loop
-        ).drift_method
+        current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        drift_method = current_loop.drift_method
         self.tab_drift.driftmethod_combobox.setCurrentIndex(
             self.drift_lookup[drift_method]
         )
         self.tab_drift.set_drift_method(update, update_adjust_tables)
-        self.tab_drift.tare_view.model().init_data(self.obsTreeModel.itemFromIndex(
-            self.index_current_loop
-        ).tares)
+        self.tab_drift.tare_view.model().init_data(current_loop.tares)
         self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
@@ -2246,6 +2220,7 @@ class MainProg(QtWidgets.QMainWindow):
         Opens PyQt dialog to select an existing station to assign a datum value
         """
         stations = []
+        # for d in self.obsTreeModel.deltas():
         for i in range(self.obsTreeModel.invisibleRootItem().rowCount()):
             survey = self.obsTreeModel.invisibleRootItem().child(i)
             for d in survey.deltas:
@@ -2256,8 +2231,9 @@ class MainProg(QtWidgets.QMainWindow):
         station = AddDatumFromList.add_datum(station_list)
         if station:
             d = Datum(str(station))
+            survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
             survey.datums.append(d)
-            self.tab_adjust.datum_view.model().init_data(survey.datums)
+            self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
             # self.tab_adjust.datum_view.model().sourceModel().init_data(survey.datums)
             logging.info("Datum station added: {}".format(station))
             self.set_window_title_asterisk()

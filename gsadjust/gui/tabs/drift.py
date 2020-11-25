@@ -31,7 +31,7 @@ from ...data import DeltaList, DeltaNormal
 from ...drift import drift_continuous, drift_roman
 from ...models import (
     DeltaTableModel,
-    RomanTableModel,
+    SamplesTableModel,
     TareTableModel,
 )
 from ...obstree import ObsTreeLoop
@@ -77,10 +77,8 @@ class TabDrift(QtWidgets.QWidget):
         # Drift tab tables
         self.dg_avg_table = DeltaTableModel()
         self.delta_view = QtWidgets.QTableView()
-        # Hide std_for_adj and residual columns
         self.cont_label_widget = QtWidgets.QWidget()
-        self.dg_samples_model = RomanTableModel()
-        self.dg_samples_view = QtWidgets.QTableView()
+
 
         #######################################################################
         # Widgets for right-hand display of drift controls/options
@@ -102,9 +100,9 @@ class TabDrift(QtWidgets.QWidget):
             "Max. time between repeats (hh:mm)"
         )
         self.drift_screen_elapsed_time.setChecked(False)
-        self.drift_screen_elapsed_time.stateChanged.connect(self.plot_drift)
+        self.drift_screen_elapsed_time.stateChanged.connect(self.time_extent_changed)
         self.drift_time_spinner = IncrMinuteTimeEdit(QtCore.QTime(1, 0))
-        self.drift_time_spinner.timeChanged.connect(self.plot_drift)
+        self.drift_time_spinner.timeChanged.connect(self.time_extent_changed)
         self.drift_time_spinner.setDisplayFormat("hh:mm")
 
         # Widget to add horizontal-extent lines to drift-rate plot
@@ -176,7 +174,10 @@ class TabDrift(QtWidgets.QWidget):
         self.tare_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tare_view.customContextMenuRequested.connect(self.tare_context_menu)
         self.tare_view.setModel(TareTableModel())
-        self.resultsProxyModel = QtCore.QSortFilterProxyModel(self)
+        #
+        # self.tare_proxy_model = QtCore.QSortFilterProxyModel(self)
+        # self.tare_view.setModel(self.tare_proxy_model)
+        # self.tare_view.setSortingEnabled(True)
 
         self.tare_popup_menu = QtWidgets.QMenu("tare Popup Menu", self)
         self.mnDeleteTare = QtWidgets.QAction("Delete tare", self)
@@ -225,7 +226,14 @@ class TabDrift(QtWidgets.QWidget):
         self.roman_label_widget.hide()
 
         # dg table (Roman method)
-        self.dg_samples_view.setModel(self.dg_samples_model)
+        self.dg_samples_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.dg_samples_proxy_model.setSourceModel(SamplesTableModel())
+        self.dg_samples_view = QtWidgets.QTableView()
+        self.dg_samples_view.setModel(self.dg_samples_proxy_model)
+        self.dg_samples_view.setSortingEnabled(True)
+        # self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
+        # self.delta_view.setModel(self.delta_proxy_model)
+        # self.delta_view.setSortingEnabled(True)
         self.delta_view.setModel(self.dg_avg_table)
         main_hsplitter_window = QtWidgets.QSplitter(Qt.Horizontal, self)
         main_hsplitter_window.addWidget(self.dg_samples_view)
@@ -238,6 +246,8 @@ class TabDrift(QtWidgets.QWidget):
         layout_main.addWidget(main_vsplitter_window)
         self.setLayout(layout_main)
 
+        self.reset()
+
     def reset(self):
         self.driftmethod_combobox.setCurrentIndex(0)
         self.drift_polydegree_combobox.setCurrentIndex(0)
@@ -248,7 +258,7 @@ class TabDrift(QtWidgets.QWidget):
         self.axes_drift_cont_lower.figure.canvas.draw()
         self.axes_drift_single.figure.canvas.draw()
         self.delta_view.setModel(DeltaTableModel())
-        self.dg_samples_view.setModel(DeltaTableModel())
+        self.dg_samples_view.model().sourceModel().init_data([])
         self.tare_view.setModel(TareTableModel())
 
     # This section provides the right-click context menu in the continuous drift lower plot - not implemented
@@ -290,6 +300,9 @@ class TabDrift(QtWidgets.QWidget):
     #
     # def drift_cont_addpoint(self):
     #     pass
+
+    def time_extent_changed(self):
+        self.plot_drift()
 
     def show_line_label(self, event, axes):
         """
@@ -461,26 +474,20 @@ class TabDrift(QtWidgets.QWidget):
             plot data for vertical lines
         """
         # assumes stations in data are in chronological order
-        roman_dg_model = RomanTableModel()
-        deltas, vert_lines = drift_roman(data, loop_name)
+        sample_deltas, vert_lines = drift_roman(data, loop_name)
 
-        for delta in deltas:
-            roman_dg_model.insertRows(delta, 0)
         # If there is more than one delta-g between a given station pair, average them
         # Setup dict to store averages '(sta1, sta2)':[g]
         avg_dg = dict()
         unique_pairs = set()
-        for i in range(roman_dg_model.rowCount()):
-            delta = roman_dg_model.data(roman_dg_model.index(i, 0), role=Qt.UserRole)
+        for i, delta in enumerate(sample_deltas):
             delta_key1 = (delta.station1.station_name, delta.station2[0].station_name)
             delta_key2 = (delta.station2[0].station_name, delta.station1.station_name)
             if delta_key1 not in unique_pairs and delta_key2 not in unique_pairs:
                 unique_pairs.add(delta_key1)
                 avg_dg[delta_key1] = [delta]
-                for ii in range(i + 1, roman_dg_model.rowCount()):
-                    testdelta = roman_dg_model.data(
-                        roman_dg_model.index(ii, 0), role=Qt.UserRole
-                    )
+                for ii in range(i + 1, len(sample_deltas)):
+                    testdelta = sample_deltas[ii]
                     testdelta_key1 = (
                         testdelta.station1.station_name,
                         testdelta.station2[0].station_name,
@@ -497,7 +504,7 @@ class TabDrift(QtWidgets.QWidget):
             avg_deltas.append(
                 DeltaList(None, station_pair[1], loop=loop_name, driftcorr="Roman")
             )
-        return roman_dg_model, avg_deltas, vert_lines
+        return sample_deltas, avg_deltas, vert_lines
 
     @staticmethod
     def plot_tares(axes, obstreeloop):
@@ -539,9 +546,8 @@ class TabDrift(QtWidgets.QWidget):
         update : bool
             True if gui elements should be updated .
             (Better performance if they're only updated when visible)
+
         """
-        # I use update to indicate lines that are run only if the plots are visible. If the plotting and
-        # delta-g code were better separated, update wouldn't be needed.
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         offset = 0
         if type(obstreeloop) is not ObsTreeLoop:
@@ -919,14 +925,7 @@ class TabDrift(QtWidgets.QWidget):
                 self.set_width(width, method)
 
             model = self.plot_drift(update=update)
-
-            if method == "roman":
-                obstreeloop.deltas = model[1]
-            else:
-                obstreeloop.deltas = model
-
-            if update:
-                self.update_delta_model(method, model)
+            self.update_delta_model(method, model)
             # Don't want to update if only switching between loops
             if update_adjust_tables:
                 self.update_deltas_on_adj_tab(obstreeloop)
@@ -1032,7 +1031,7 @@ class TabDrift(QtWidgets.QWidget):
             if method == "roman":
                 # Hide drift correction, std_for_adj, and residual columns
                 obstreeloop.deltas = model[1]
-                self.dg_samples_view.setModel(model[0])
+                self.dg_samples_view.model().sourceModel().init_data(model[0])
                 self.delta_view.model().init_data(model[1])
                 self.show_all_columns(self.delta_view)
                 self.delta_view.hideColumn(2)

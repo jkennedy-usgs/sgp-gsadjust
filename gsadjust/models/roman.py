@@ -19,36 +19,31 @@ resulting from the authorized or unauthorized use of the software.
 """
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QVariant
-
+import datetime as dt
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
 LOOP_NAME = 0
 SURVEY_NAME = 0
 
-ROMAN_FROM, ROMAN_TO, ROMAN_DELTA = range(3)
+ROMAN_FROM, ROMAN_TO, ROMAN_DELTA, TIME = range(4)
 # Constants for column headers
-(
-    DATUM_STATION,
-    DATUM_DATE,
-    DATUM_G,
-    DATUM_SD,
-    N_SETS,
-    MEAS_HEIGHT,
-    GRADIENT,
-    DATUM_RESIDUAL,
-) = range(8)
 
 
-class RomanTableModel(QtCore.QAbstractTableModel):
+class SamplesTableModel(QtCore.QAbstractTableModel):
     """
     Model to store the individual delta-g's calculated using the Roman-method.
     Shown on the drift tab.
     """
 
-    _headers = {ROMAN_FROM: "From", ROMAN_TO: "To", ROMAN_DELTA: "Delta g"}
+    _headers = {
+        ROMAN_FROM: "From",
+        ROMAN_TO: "To",
+        ROMAN_DELTA: "Delta g",
+        TIME: "Time",
+    }
 
     def __init__(self):
-        super(RomanTableModel, self).__init__()
+        super(SamplesTableModel, self).__init__()
         self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -69,11 +64,16 @@ class RomanTableModel(QtCore.QAbstractTableModel):
         return len(self._data)
 
     def columnCount(self, parent=None):
-        return 3
+        return 4
 
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():
             delta = self._data[index.row()]
+
+            def format_datetime(date):
+                return dt.datetime.utcfromtimestamp(date * 86400.0).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
             if role == Qt.DisplayRole:
                 column = index.column()
@@ -81,6 +81,7 @@ class RomanTableModel(QtCore.QAbstractTableModel):
                     ROMAN_FROM: (str, delta.sta1),
                     ROMAN_TO: (str, delta.sta2),
                     ROMAN_DELTA: (format, delta.dg, "0.1f"),
+                    TIME: (format_datetime, delta.time()),
                 }.get(column)
                 return fn(*args)
 
@@ -92,23 +93,6 @@ class RomanTableModel(QtCore.QAbstractTableModel):
         if role == Qt.CheckStateRole and index.column() == 0:
             datum = self.datums[index.row()]
             datum.checked = value
-            return True
-
-        if role == Qt.EditRole:
-            if index.isValid() and index.row() >= 0 and value:
-                datum = self.datums[index.row()]
-                column = index.column()
-
-                if column == DATUM_STATION:
-                    datum.station = value
-                elif column == DATUM_G:
-                    datum.g = float(value)
-                elif column == DATUM_SD:
-                    datum.sd = float(value)
-                elif column == DATUM_DATE:
-                    datum.date = value
-                self.dataChanged.emit(index, index)
-
             return True
 
     def flags(self, index):

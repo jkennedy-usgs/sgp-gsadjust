@@ -46,6 +46,7 @@ class DatumTableModel(QAbstractTableModel):
     """
     Model to store Datums, shown on the adjust tab.
     """
+
     _headers = {  # As map, so do not need to be kept in order with the above.
         DATUM_STATION: "Station",
         DATUM_G: "g",
@@ -67,7 +68,6 @@ class DatumTableModel(QAbstractTableModel):
     }
 
     signal_adjust_update_required = pyqtSignal()
-    invalidate_proxy = pyqtSignal()
 
     def __init__(self):
         super(DatumTableModel, self).__init__()
@@ -166,11 +166,24 @@ class DatumTableModel(QAbstractTableModel):
                     try:
                         datum = self._data[index.row()]
                         column = index.column()
-                        attr, vartype = self._attrs.get(column, (None, None))
-                        if attr:
-                            setattr(datum, attr, vartype(value))
-                        self.dataChanged.emit(index, index, [Qt.EditRole])
-                        self.invalidate_proxy.emit()
+                        # Ideally they other columns wouldn't be editable at all, but
+                        # the user can select them and enter new values. Here we
+                        # discard them unless they're in an editable column.
+                        #
+                        # Should me able to make non-editable columns readonly using a
+                        # proxy model, e.g.
+                        # https://stackoverflow.com/questions/22886912
+                        if column in [
+                            DATUM_DATE,
+                            DATUM_G,
+                            DATUM_SD,
+                            MEAS_HEIGHT,
+                            GRADIENT,
+                        ]:
+                            attr, vartype = self._attrs.get(column, (None, None))
+                            if attr:
+                                setattr(datum, attr, vartype(value))
+                            self.dataChanged.emit(index, index, [Qt.EditRole])
                     except ValueError:
                         pass
             return True

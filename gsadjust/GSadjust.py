@@ -248,14 +248,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust = TabAdjust(self)
         self.tab_widget = QtWidgets.QTabWidget()
 
-        # Set models for the tab views.
-        self.tab_adjust.delta_view.setModel(self.delta_model)
-        # self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
-        self.tab_adjust.datum_view.setModel(self.datum_model)
-        # self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
-        # self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
-        self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
-
         # Connect signals.
         self.delta_model.signal_adjust_update_required.connect(
             self.adjust_update_required
@@ -408,6 +400,14 @@ class MainProg(QtWidgets.QMainWindow):
 
         # Highlight first tree-view item
         self.select_first_treeview_item()
+
+        # Set models for the tab views.
+        # self.tab_adjust.delta_view.setModel(self.delta_model)
+        self.tab_adjust.delta_proxy_model.setSourceModel(self.delta_model)
+        # self.tab_adjust.datum_view.setModel(self.datum_model)
+        self.tab_adjust.datum_proxy_model.setSourceModel(self.datum_model)
+        # self.datum_model.invalidate_proxy.connect(self.tab_adjust.invalidate_sort)
+        self.tab_adjust.results_proxy_model.setSourceModel(self.results_model)
 
         # Activate first tree view item
         self.activate_survey_or_loop(self.index_current_loop)

@@ -26,13 +26,6 @@ from matplotlib.dates import num2date, date2num
 TARE_DATETIME, TARE_TARE = range(2)
 
 
-def format_numeric_column(column):
-    """
-    Format fn for simple numeric columns.
-    """
-    return column + 1
-
-
 class TareTableModel(QAbstractTableModel):
     """
     Model to store tares (offsets)
@@ -157,5 +150,7 @@ class TareTableModel(QAbstractTableModel):
             return Qt.Checked
 
     def init_data(self, data):
+        self.beginResetModel()
         self._data = data
+        self.endResetModel()
         self.layoutChanged.emit()  # Refresh whole view.

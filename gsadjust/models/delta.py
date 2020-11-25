@@ -144,7 +144,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     )
 
                 def get_sd():
-                    delta.delta_edited_sd = delta.adj_sd
+                    # Temporarily store previous value for logging, if the value
+                    # is changed
+                    delta._edited_sd = delta.adj_sd
                     return delta.adj_sd
 
                 def get_g():
@@ -205,7 +207,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                             delta.adj_sd = float(value)
                             logging.info(
                                 "delta {}, adj_sd changed from {} to {}".format(
-                                    delta, delta.edited_sd, value
+                                    delta, delta._edited_sd, value
                                 )
                             )
                         if column == DELTA_G:
@@ -266,7 +268,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             return Qt.Checked
 
     def init_data(self, data):
+        self.beginResetModel()
         self._data = data
+        self.endResetModel()
         self.layoutChanged.emit()  # Refresh whole view.
 
 

@@ -1,6 +1,6 @@
 """
 utils.py
-===============
+========
 
 GSadjust utility functions
 --------------------------------------------------------------------------------
@@ -14,16 +14,7 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 
-Many of these functions involve looping over the survey > loop > station data.
-
-It's tempting to replace the for i in range... statements with __iter__
-functions in obstreemodel, obstreesurvey, etc.
-
-I tried this and it kind of worked, but it interfered with appendRows from
-PyQt = its apparently expecting the default iterator which is presumable
-inherited from QtGui.QStandardItem.
 """
-
 
 def index_or_none(l, i):
     if i not in l:
@@ -32,6 +23,19 @@ def index_or_none(l, i):
 
 
 def init_cal_coeff_dict(obstreemodel):
+    """
+    Initiate dict for storing meter calibration coefficients.
+
+    Parameters
+    ----------
+    obstreemodel : ObsTreeModel
+
+    Returns
+    -------
+    dict
+        key: Meter (str), value: float
+
+    """
     try:
         meter_list = {}
         for i in range(obstreemodel.invisibleRootItem().rowCount()):

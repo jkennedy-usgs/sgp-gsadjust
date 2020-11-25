@@ -354,20 +354,6 @@ class Menus:
             tip="Choose tide correction method",
             enabled=False,
         )
-        self.mnEditOceanLoadingCorrectionAction = self.create_action(
-            "&Ocean loading correction",
-            shortcut="Ctrl+L",
-            slot=self.mainProg.correction_ocean_loading,
-            tip="Ocean loading corrections",
-            enabled=False,
-        )
-        self.mnEditAtmosphericCorrectionAction = self.create_action(
-            "&Atmospheric correction",
-            shortcut="Ctrl+P",
-            slot=self.mainProg.correction_atmospheric,
-            tip="Apply atmospheric correction by loading a data file",
-            enabled=False,
-        )
         self.mnEditShowCoordinates = self.create_action(
             "Show station coordinates...",
             slot=self.mainProg.dialog_station_coordinates,

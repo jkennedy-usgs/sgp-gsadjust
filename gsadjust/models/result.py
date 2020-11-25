@@ -102,16 +102,6 @@ class ResultsTableModel(QtCore.QAbstractTableModel):
         sys_clip = QtWidgets.QApplication.clipboard()
         sys_clip.setText(clipboard)
 
-    def clearResults(self):
-        self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())
-        self._data = []
-        self.endRemoveRows()
-        # The ResetModel calls is necessary to remove blank rows from the table view.
-        self.beginResetModel()
-        self.endResetModel()
-        self.layoutChanged.emit()
-        return QVariant()
-
     def init_data(self, data):
         self.beginResetModel()
         self._data = data

@@ -1,6 +1,6 @@
 """
 tides/correction.py
-=================
+===================
 
 Handles tide corrections for GSadjust.
 

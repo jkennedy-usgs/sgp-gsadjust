@@ -237,7 +237,6 @@ class AdjustOptions(QtWidgets.QDialog):
         self.ao = options
         self.surveys_to_update = ""
         self.update_options = []
-        # self.drift_temp_chk = QtWidgets.QCheckBox('Model temperature drift, polynomial degree:')
         self.sigma_prefactor_chk = QtWidgets.QCheckBox(
             "Standard deviation multiplier: pre-minimum"
         )
@@ -1423,7 +1422,7 @@ class SelectAbsg(QtWidgets.QDialog):
                         )
                         datum.n_sets = d.processed
                         datum.time = d.time
-                        self.table_model.insertRows(datum, 1)
+                        self.table_model.insertRows(datum, 0)
                         self.path = path
         return files_found
 

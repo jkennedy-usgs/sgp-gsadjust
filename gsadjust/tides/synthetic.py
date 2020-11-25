@@ -1,6 +1,6 @@
 """
 tides/synthetic.py
-=================
+==================
 
 Module for tides calculations functions (solid-earth and ocean loading).
 ------------------------------------------------------------------------

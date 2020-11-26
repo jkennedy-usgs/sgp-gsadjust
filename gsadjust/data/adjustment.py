@@ -15,7 +15,7 @@ warranty. The software is provided on the condition tha neither the USGS nor the
 Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software. """
 import numpy as np
-
+import scipy
 
 class AdjustmentResults:
     """
@@ -251,6 +251,7 @@ class Adjustment:
         self.adjustmentresults.chi2 = self.VtPV[0][0]
         self.adjustmentresults.dof = self.dof
         t = np.sqrt(2 * np.log(1 / alpha))
+        # I verified this produces the same values as scipy.stats.chi2.ppf
         chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (
             1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3
         )

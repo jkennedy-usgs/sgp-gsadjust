@@ -1,6 +1,6 @@
 """
 gui/tabs/data.py
-===============
+================
 
 PyQt graphical elements on the data tab of GSadjust.
 --------------------------------------------------------------------------------
@@ -376,11 +376,11 @@ class TabData(QtWidgets.QWidget):
             )
         axe.plot(seriex, seriey, "o-", color="k", label=serie_type)
         axe.plot(seriex_selec, seriey_selec, "o-", color="b", label=serie_type)
-        axe.set_ylabel(serie_unit, size="x-small")
-        axe.set_title(serie_type, size="x-small")
+        # axe.set_ylabel(serie_unit, size="x-small")
+        # axe.set_title(serie_type, size="x-small")
         labels = axe.get_xticklabels() + axe.get_yticklabels()
-        for label in labels:
-            label.set_size("x-small")
+        # for label in labels:
+        #     label.set_size("x-small")
         axe.xaxis.set_major_formatter(xfmt)
         axe.set_xticklabels(
             axe.get_xticklabels(), rotation=30, horizontalalignment="right"

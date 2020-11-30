@@ -70,6 +70,8 @@ class TareTableModel(QAbstractTableModel):
             tare = self._data[index.row()]
 
             if role == Qt.DisplayRole or role == Qt.EditRole:
+                if role == Qt.EditRole:
+                    jeff = 1
                 column = index.column()
                 fn, *args = {
                     TARE_DATETIME: (
@@ -100,6 +102,7 @@ class TareTableModel(QAbstractTableModel):
                 tare.checked = 2
             elif value == Qt.Unchecked:
                 tare.checked = 0
+            self.dataChanged.emit(index, index)
             return True
         if role == Qt.EditRole:
             if index.isValid() and 0 <= index.row():
@@ -110,7 +113,7 @@ class TareTableModel(QAbstractTableModel):
                         try:
                             tare.datetime = date2num(value)
                         except ValueError:
-                            return
+                            return False
                     elif column == 1:
                         tare.tare = float(value)
                     self.dataChanged.emit(index, index)

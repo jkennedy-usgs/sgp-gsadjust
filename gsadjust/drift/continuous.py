@@ -246,6 +246,7 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
     yp = ypsum  # yp = yp.tolist()
     prev_station = data.pop(0)
     for station in data:
+        # If using weighted dg
         if drift_stats:
             station.assigned_sd = np.sqrt(
                 station.original_sd ** 2

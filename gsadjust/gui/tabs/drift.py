@@ -100,7 +100,7 @@ class TabDrift(QtWidgets.QWidget):
             "Max. time between repeats (hh:mm)"
         )
         self.drift_screen_elapsed_time.setChecked(False)
-        self.drift_screen_elapsed_time.stateChanged.connect(self.time_extent_changed)
+        self.drift_screen_elapsed_time.clicked.connect(self.time_extent_changed)
         self.drift_time_spinner = IncrMinuteTimeEdit(QtCore.QTime(1, 0))
         self.drift_time_spinner.timeChanged.connect(self.time_extent_changed)
         self.drift_time_spinner.setDisplayFormat("hh:mm")
@@ -114,7 +114,7 @@ class TabDrift(QtWidgets.QWidget):
 
         self.drift_plot_weighted = CustomCheckBox("Weight drift observations")
         self.drift_plot_weighted.setChecked(False)
-        self.drift_plot_weighted.stateChanged.connect(self.update_weighted)
+        self.drift_plot_weighted.clicked.connect(self.update_weighted)
 
         self.tension_slider = QtWidgets.QSlider(Qt.Horizontal)
         self.tension_slider.setRange(10, 2500)
@@ -170,9 +170,10 @@ class TabDrift(QtWidgets.QWidget):
         drift_control_sublayout.addWidget(grid_widget)
 
         self.tare_view = QtWidgets.QTableView()
-        self.tare_view.clicked.connect(self.update_tares)
+        # self.tare_view.clicked.connect(self.update_tares)
         self.tare_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tare_view.customContextMenuRequested.connect(self.tare_context_menu)
+
         self.tare_view.setModel(TareTableModel())
         #
         # self.tare_proxy_model = QtCore.QSortFilterProxyModel(self)
@@ -302,7 +303,14 @@ class TabDrift(QtWidgets.QWidget):
     #     pass
 
     def time_extent_changed(self):
-        self.plot_drift()
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(
+            self.parent.index_current_loop
+        )
+        hour = self.drift_time_spinner.dateTime().time().hour()
+        minute = self.drift_time_spinner.dateTime().time().minute()
+        obstreeloop.time_extent_time = (hour, minute)
+        obstreeloop.time_extent_check = self.drift_screen_elapsed_time.checkState()
+        self.parent.update_drift_tables_and_plots()
 
     def show_line_label(self, event, axes):
         """
@@ -452,7 +460,7 @@ class TabDrift(QtWidgets.QWidget):
         return deltas
 
     @staticmethod
-    def calc_roman_dg(data, loop_name):
+    def calc_roman_dg(data, loop_name, time_threshold=None):
         """
         Caculates delta-g between three station occupations (one station visited
         once, one station visited twice) by interpolating drift at the latter station.
@@ -474,7 +482,7 @@ class TabDrift(QtWidgets.QWidget):
             plot data for vertical lines
         """
         # assumes stations in data are in chronological order
-        sample_deltas, vert_lines = drift_roman(data, loop_name)
+        sample_deltas, vert_lines = drift_roman(data, loop_name, time_threshold)
 
         # If there is more than one delta-g between a given station pair, average them
         # Setup dict to store averages '(sta1, sta2)':[g]
@@ -772,7 +780,6 @@ class TabDrift(QtWidgets.QWidget):
                                         if vis:
                                             annot.set_visible(False)
                                     self.drift_cont_figbot.canvas.draw_idle()
-                                    # fig.canvas.draw_idle()
 
                             self.drift_cont_figbot.canvas.mpl_connect(
                                 "motion_notify_event", hover
@@ -814,7 +821,7 @@ class TabDrift(QtWidgets.QWidget):
             logging.info("Plotting Roman drift, Loop " + obstreeloop.name)
             if update:
                 self.axes_drift_single.cla()
-            deltas = self.calc_roman_dg(data, obstreeloop.name)
+            deltas = self.calc_roman_dg(data, obstreeloop.name, time_threshold)
 
             for line in plot_data:
                 if len(line[0]) > 1:
@@ -879,75 +886,92 @@ class TabDrift(QtWidgets.QWidget):
 
         """
 
+        if (
+            self.parent.index_current_loop is None
+        ):  # Prevents crashing if no data are loaded
+            return
+
         if type(update) is int:
             update = True
-        if (
-            self.parent.index_current_loop is not None
-        ):  # Prevents crashing if no data are loaded
-            obstreeloop = self.parent.obsTreeModel.itemFromIndex(
-                self.parent.index_current_loop
-            )
-            method_key = self.driftmethod_combobox.currentIndex()
 
-            inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
-            method = inv_drift_lookup[method_key]
-            logging.info("Drift method set to " + method)
-            obstreeloop.drift_method = method
+        obstreeloop = self.parent.obsTreeModel.itemFromIndex(
+            self.parent.index_current_loop
+        )
+        obstreesurvey = self.parent.obsTreeModel.itemFromIndex(
+            self.parent.index_current_survey
+        )
+        method_key = self.driftmethod_combobox.currentIndex()
 
-            # These control the visibility of different tables
-            # update is an int (index of menu item) when this function is called from the
-            # menu-item callback
-            if update:
-                width = self.drift_window.sizes()
-                if method == "continuous":
+        inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}
+        method = inv_drift_lookup[method_key]
+        logging.info("Drift method set to " + method)
+        obstreeloop.drift_method = method
+
+        # These control the visibility of different tables
+        # update is an int (index of menu item) when this function is called from the
+        # menu-item callback
+        if update:
+            width = self.drift_window.sizes()
+            if method == "continuous":
+                self.drift_polydegree_combobox.setCurrentIndex(
+                    obstreeloop.drift_cont_method
+                )
+                self.drift_cont_startendcombobox.setCurrentIndex(
+                    obstreeloop.drift_cont_startend
+                )
+                self.drift_plot_weighted.setCheckState(
+                    obstreeloop.drift_cont_weighting
+                )
+                self.drift_screen_elapsed_time.setCheckState(
+                    obstreeloop.time_extent_check
+                )
+                self.drift_time_spinner.setTime(
+                    QtCore.QTime(*obstreeloop.time_extent_time)
+                )
+                self.drift_continuous()
+            else:
+                self.disable_weighted_checkbox()
+                if method == "none":
+                    self.drift_none()
+                if method == "netadj":
                     self.drift_polydegree_combobox.setCurrentIndex(
-                        obstreeloop.drift_cont_method
+                        obstreeloop.drift_netadj_method
                     )
-                    self.drift_cont_startendcombobox.setCurrentIndex(
-                        obstreeloop.drift_cont_startend
+                    self.drift_adjust()
+                if method == "roman":
+                    self.drift_screen_elapsed_time.setCheckState(
+                        obstreeloop.time_extent_check
                     )
-                    self.drift_plot_weighted.setCheckState(
-                        obstreeloop.drift_cont_weighting
+                    self.drift_time_spinner.setTime(
+                        QtCore.QTime(*obstreeloop.time_extent_time)
                     )
-                    self.drift_continuous()
-                else:
-                    self.disable_weighted_checkbox()
-                    if method == "none":
-                        self.drift_none()
-                    if method == "netadj":
-                        self.drift_polydegree_combobox.setCurrentIndex(
-                            obstreeloop.drift_netadj_method
-                        )
-                        self.drift_adjust()
-                    if method == "roman":
-                        self.drift_roman()
+                    self.drift_roman()
 
-                self.set_width(width, method)
+            self.set_width(width, method)
 
-            model = self.plot_drift(update=update)
-            self.update_delta_model(method, model)
-            # Don't want to update if only switching between loops
-            if update_adjust_tables:
-                self.update_deltas_on_adj_tab(obstreeloop)
-            self.parent.adjust_update_required()
-            # When loading a workspace, deltas[0] will be a dict, meaning
-            # we don't want to update the adjust tables at this point.
-            #
-            # Otherwise the normal operation when the plots are update:
-            try:
-                if (
-                    type(
-                        self.parent.obsTreeModel.itemFromIndex(
-                            self.parent.index_current_survey
-                        ).deltas[0]
-                    )
-                    != dict
-                ):
-                    self.parent.update_adjust_tables()
-            except IndexError:
-                pass
-            except TypeError:
+        model = self.plot_drift(update=update)
+        self.update_delta_model(method, model)
+        # Don't want to update if only switching between loops
+        if update_adjust_tables:
+            self.update_deltas_on_adj_tab(obstreeloop)
+        self.parent.adjust_update_required()
+        # When loading a workspace, deltas[0] will be a dict, meaning
+        # we don't want to update the adjust tables at this point.
+        # Otherwise the normal operation when the plots are update:
+        try:
+            if (
+                type(
+                    self.parent.obsTreeModel.itemFromIndex(
+                        self.parent.index_current_survey
+                    ).deltas[0]
+                )
+                != dict
+            ):
                 self.parent.update_adjust_tables()
+        except IndexError:
+            pass
+        except TypeError:
+            self.parent.update_adjust_tables()
 
     def update_deltas_on_adj_tab(self, obstreeloop):
         """
@@ -974,7 +998,7 @@ class TabDrift(QtWidgets.QWidget):
                             survey.deltas.remove(delta)
                 survey.deltas += obstreeloop.deltas
                 self.parent.set_adj_sd(
-                    survey, survey.adjustment.adjustmentoptions, loop=obstreeloop.name
+                    survey, survey.adjustment.adjustmentoptions, loop=obstreeloop
                 )
         except TypeError:  # No loops with deltas
             pass
@@ -1062,22 +1086,6 @@ class TabDrift(QtWidgets.QWidget):
         if selected:
             self.tare_popup_menu.addAction(self.mnDeleteTare)
             self.tare_popup_menu.exec_(self.tare_view.mapToGlobal(point))
-
-    def update_tares(self, selected):
-        """
-        Respond to tare check/uncheck. Callback from tare_view.clicked.
-
-        Parameters
-        ----------
-        selected : PyQt indexes of selected tares
-
-        """
-        if hasattr(selected, "model"):
-            obstreeloop = self.parent.obsTreeModel.itemFromIndex(
-                self.parent.index_current_loop
-            )
-            self.parent.process_tares(obstreeloop)
-            self.set_drift_method()
 
     def drift_adjust(self):
         """

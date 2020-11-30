@@ -743,7 +743,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.datum_view.model().sourceModel().init_data([])
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
-        self.tab_adjust.stats_view.update()
+        self.clear_adjustment_text()
         self.setWindowTitle("GSadjust")
         self.update_menus()
 
@@ -1071,7 +1071,7 @@ class MainProg(QtWidgets.QMainWindow):
             logging.exception(e, exc_info=True)
 
         self.obsTreeModel.layoutChanged.emit()
-
+        self.adjust_update_not_required()
         QtWidgets.QApplication.restoreOverrideCursor()
 
     def set_window_title(self, fname):
@@ -1211,12 +1211,15 @@ class MainProg(QtWidgets.QMainWindow):
 
         """
         current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+
         drift_method = current_loop.drift_method
         self.tab_drift.driftmethod_combobox.setCurrentIndex(
             self.drift_lookup[drift_method]
         )
-        self.tab_drift.set_drift_method(update, update_adjust_tables)
         self.tab_drift.tare_view.model().init_data(current_loop.tares)
+        self.tab_drift.set_drift_method(update, update_adjust_tables)
+        # self.set_adj_sd(current_survey, current_survey.adjustment.ao, loop=current_loop)
         self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
@@ -1431,6 +1434,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.delta_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
         self.tab_adjust.results_view.update()
+        obstreesurvey = self.obsTreeModel.itemFromIndex(
+                    self.index_current_survey
+            )
+        obstreesurvey.deltas = []
         self.clear_adjustment_text()
         self.set_window_title_asterisk()
 
@@ -1441,8 +1448,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.stats_view.setModel(None)
         self.tab_adjust.stats_view.update()
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-        survey.adjustment.adjustmentresults.text = []
-        survey.adjustment.adjustmentresults.n_unknowns = 0
+        try:
+            survey.adjustment.adjustmentresults.text = []
+            survey.adjustment.adjustmentresults.n_unknowns = 0
+        except AttributeError:
+            return
 
     def clear_datum_model(self):
         """
@@ -1453,6 +1463,10 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.datum_view.model().sourceModel().init_data([])
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
+        obstreesurvey = self.obsTreeModel.itemFromIndex(
+                    self.index_current_survey
+            )
+        obstreesurvey.datums = []
         self.clear_adjustment_text()
         self.set_window_title_asterisk()
 
@@ -1461,6 +1475,10 @@ class MainProg(QtWidgets.QMainWindow):
         Remove all results from results model shown on network adjustment tab.
         """
         self.tab_adjust.results_view.model().sourceModel().init_data([])
+        obstreesurvey = self.obsTreeModel.itemFromIndex(
+                    self.index_current_survey
+            )
+        obstreesurvey.results = []
         self.update_adjust_tables()
 
     def animate_loop(self):
@@ -1650,7 +1668,7 @@ class MainProg(QtWidgets.QMainWindow):
         for idx in reversed(index):
             self.tab_drift.tare_view.model().removeRow(idx)
         self.tab_drift.tare_view.update()
-        self.tab_drift.process_tares(
+        self.process_tares(
             self.obsTreeModel.itemFromIndex(self.index_current_loop)
         )
         self.update_drift_tables_and_plots()
@@ -2076,7 +2094,7 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotGravityChange(dates, table, parent)
         plt.show()
 
-    def set_adj_sd(self, survey, ao):
+    def set_adj_sd(self, survey, ao, loop=None):
         """
         Update delta table based on parameters in net. adj. options
 
@@ -2085,11 +2103,18 @@ class MainProg(QtWidgets.QMainWindow):
         survey : ObsTreeSurvey
         ao : AdjustmentOptions
         """
-        for delta in survey.deltas:
-            try:
-                delta.adj_sd = self.calc_adj_sd(ao, delta.sd)
-            except AttributeError:
-                pass
+        if loop:
+            for delta in loop.deltas:
+                try:
+                    delta.adj_sd = self.calc_adj_sd(ao, delta.sd)
+                except AttributeError:
+                    pass
+        else:
+            for delta in survey.deltas:
+                try:
+                    delta.adj_sd = self.calc_adj_sd(ao, delta.sd)
+                except AttributeError:
+                    pass
 
     def calc_adj_sd(self, ao, sd):
         """

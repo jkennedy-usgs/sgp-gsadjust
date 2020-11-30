@@ -63,6 +63,10 @@ class ObsTreeLoop(ObsTreeItemBase):
         # If netadj method, keep track of polynomial degree
         self.drift_netadj_method = 2
 
+        # Ignore repeat observations with delta-t longer than
+        self.time_extent_check = 0
+        self.time_extent_time = (1, 0)
+
         self.comment = ""  # String that can be specified from GUI
 
         # TODO: Import comment from Burris file?
@@ -95,11 +99,14 @@ class ObsTreeLoop(ObsTreeItemBase):
                 "Loop: {}, "
                 "Drift method: {}, "
                 "Meter type: {}, "
-                "Netadj method: {}\n".format(
+                "Netadj method: {}, "
+                "Time extent filter: {}, {}\n".format(
                     self.name,
                     self.drift_method,
                     self.meter_type,
                     self.drift_netadj_method,
+                    self.time_extent_check,
+                    self.time_extent_time,
                 )
             )
 
@@ -347,14 +354,15 @@ class ObsTreeLoop(ObsTreeItemBase):
             "tares": tares_json,
             "name": self.name,
             "drift_method": self.drift_method,
-            "drift_cont_method": self.drift_cont_method,
             # If continuous model, also need to keep track of which type of model
-            "drift_cont_startend": self.drift_cont_startend,
+            "drift_cont_method": self.drift_cont_method,
             # behavior at start/end. 0: extrapolate, 1: constant
-            "drift_netadj_method": self.drift_netadj_method,
+            "drift_cont_startend": self.drift_cont_startend,
             # If netadj method, keep track of polynomial degree
-            "meter": self.meter,
+            "drift_netadj_method": self.drift_netadj_method,
             # Meter S/N, for the case where multiple meters are calibrated
+            "meter": self.meter,
+            "time_extent": self.time_extent_time,
             "comment": self.comment,
             "oper": self.oper,
             "source": self.source,

@@ -364,7 +364,7 @@ class TabData(QtWidgets.QWidget):
         """
         axe.cla()
         axe.grid(True)
-        xfmt = DateFormatter("%H:%M")
+        xfmt = DateFormatter("%H:%M:%S")
         mean_g = np.mean(seriey_selec)
         if serie_type == "Gravity" and seriey_selec:  # Plot horizontal line at mean g
             axe.plot(
@@ -376,15 +376,15 @@ class TabData(QtWidgets.QWidget):
             )
         axe.plot(seriex, seriey, "o-", color="k", label=serie_type)
         axe.plot(seriex_selec, seriey_selec, "o-", color="b", label=serie_type)
-        # axe.set_ylabel(serie_unit, size="x-small")
-        # axe.set_title(serie_type, size="x-small")
+        axe.set_ylabel(serie_unit)
+        axe.set_title(serie_type)
         labels = axe.get_xticklabels() + axe.get_yticklabels()
-        # for label in labels:
-        #     label.set_size("x-small")
+        for label in labels:
+            label.set_size("small")
         axe.xaxis.set_major_formatter(xfmt)
-        axe.set_xticklabels(
-            axe.get_xticklabels(), rotation=30, horizontalalignment="right"
-        )
+        # axe.set_xticklabels(
+        #     axe.get_xticklabels(), rotation=30, horizontalalignment="right"
+        # )
         # Scale y axis to mean +/- 10. If a larger range is needed, color the axis
         # red as a warning.
         if serie_type == "Gravity":

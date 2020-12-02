@@ -2416,12 +2416,12 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             event.accept()
 
-    @staticmethod
-    def show_help():
+    def show_help(self):
         """
         Shows compiled help file created using Dr. Explain in default browser
         """
-        webbrowser.open("file://" + os.path.realpath("./docs/index.htm"))
+        help_path = os.path.join(self.path_install, "docs", "index.htm")
+        webbrowser.open(help_path)
 
     def dialog_about(self):
         if hasattr(self, "commit"):

@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -336,35 +305,33 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">This synthetic dataset consists of a single survey with a single loop consisting of 5 stations, 11 relative-gravity observations, and no absolute-gravity observations. In GSadjust terminology, in which &quot;loop&quot; refers to all of the observations for which a single drift correction is applied, the loop consists of two visits to each station, with the first station visited 3 times. The station order is 1-2-3-4-5-1-2-3-4-5-1. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <ul class="de_list"><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; counter-reset: list-counter-3;">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Import data</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Import data</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Select &quot;Load raw Burris data...&quot; from the File menu. Open Test1.txt in the test_data/synthetic directory. Loop 0 is created.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">In this synthetic example, there is only a single &quot;observation&quot; at each station. Therefore, the plots on the data tab show only a single point instead of a time series. Each station name can be selected in the tree view to show the associated data on the Data tab.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Note that the &quot;Update delta table&quot; and &quot;Update adjustment&quot; status indicators in the bottom right are highlighted, indicating these steps have not yet been performed:</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="418" height="61" class=" de_780D01ADE8" src="img/drex_simple_example_custom.png"/></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Note that the &quot;Update adjustment&quot; status indicator in the bottom right is highlighted, indicating the adjustment have not yet been performed:</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="183" height="45" class=" de_780D01ADE8" src="img/drex_simple_example_custom.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 </li><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Apply drift correction</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Apply drift correction</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Switch to the Drift tab by clicking &quot;Drift&quot;. GSadjust displays a time series of the drift, with one line per station, starting at 0 for each station (see <a class="local_link" href="drift_tab.htm"><span class="de_2B94C39861">Drift tab</span></a> for details).</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">In this example, drift is initially negative, as indicated by downward-sloping lines, but then becomes positive, as indicated by upward-sloping lines. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">In this example, drift is initially negative, as indicated by downward-sloping lines, but gradually becomes positive, as indicated by upward-sloping lines. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Four options are available for drift correction. The &quot;None&quot; and &quot;Network adjustment&quot; options do not change the plot. Selecting the &quot;Roman&quot; option updates the plot with vertical dashed lines to show the delta-g's, and a new table is shown in the bottom right with the average delta-g's. The &quot;Continuous model&quot; option displays an additional plot that shows the drift rate over time. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">For now, proceed with the &quot;Continuous model&quot; option. Select &quot;1st order polynomial&quot; for the drift model type and &quot;Constant&quot; for the behavior at start/end. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </li><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Populate delta table</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Populate delta table</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Switch to the Network Adjustment tab. From the Adjustment menu, select &quot;Populate delta table - all surveys&quot; (because there is only one survey and one loop, the other Populate... options will have the same effect). The delta-g's from the Drift tab are copied to the table on the Network Adjustment tab.</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Note that the &quot;Update delta table&quot; status indicator in the bottom right is no longer highlighted. If the drift-correction method is change on the Drift tab, the status indicator will be highlighted and the delta table will need to be re-populated. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </li><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Add datum observation</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Add datum observation</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">For this simple example, there are no absolute-gravity observations. Instead, an arbitrary datum is applied to one of the stations. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
@@ -372,28 +339,30 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="192" height="125" class=" de_780D01ADE8" src="img/drex_simple_example_custom_2.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">Select &quot;OK&quot; to select the default, sta1 (any other station is also acceptable, but will produce different results).</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">An arbitrary gravity value and standard deviation, 50,000 +/- 5 µGal, is applied to sta1 and shown in the datum observations table. This value can be changed by double-clicking it in the datum observations table. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">An arbitrary gravity value and standard deviation, 50,000 +/- 5 µGal, is applied to sta1 and shown in the datum observations table. This value can be changed by double-clicking it in the datum observations table, as can the standard deviation, measurement height, and gradient. The datum date is an arbitrary string and has no effect on the results.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </li><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Perform adjustment</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Perform adjustment</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">From the adjustment menu, select &quot;Adjust current survey&quot; (because there is only one survey, &quot;Adjust all surveys&quot; will have the same effect). Alternatively, click the button on the <a class="local_link" href="tree_view_toolbar.htm"><span class="de_2B94C39861">tree view toolbar</span></a><span class="de_51752156DC">, or use the keyboard shortcut Ctrl+2. The adjustment will proceed using the default Numpy method.</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">From the adjustment menu, select &quot;Adjust current survey&quot; (because there is only one survey, &quot;Adjust all surveys&quot; will have the same effect). Alternatively, click the button on the <a class="local_link" href="tree_view_toolbar.htm"><span class="de_2B94C39861">tree view toolbar</span></a><span class="de_51752156DC">, or use the keyboard shortcut Ctrl+2. The adjustment will proceed using the default </span><a class="local_link" href="numpy_vs_gravnet_inversion.htm"><span class="de_2B94C39861">Numpy</span></a><span class="de_51752156DC"> method.</span></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><span class="de_51752156DC">Adjustment results (a single, best-fit gravity value at each station) are shown in the adjusted station values table at the upper right. Adjustment statistics are shown in the table at the lower right. Note that the </span><a class="local_link" href="evaluating_the_adjustment.htm"><span class="de_2B94C39861">Chi-test</span></a><span class="de_51752156DC"> was accepted, and the </span><a class="local_link" href="evaluating_the_adjustment.htm"><span class="de_2B94C39861">a posteriori standard deviation</span></a><span class="de_51752156DC"> is less than one. These indicate the adjustment was acceptable. The a posteriori standard deviation less than one indicates that the standard deviation of the observations were lower than the values shown in the relative-gravity differences and datum observations tables. </span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><span class="de_51752156DC">Adjustment results (a single, best-fit gravity value at each station) are shown in the adjusted station values table at the upper right. Adjustment statistics are shown in the table at the lower right. Note that the </span><a class="local_link" href="evaluating_the_adjustment.htm"><span class="de_2B94C39861">Chi-test</span></a><span class="de_51752156DC"> was accepted, and the </span><a class="local_link" href="evaluating_the_adjustment.htm"><span class="de_2B94C39861">a posteriori standard deviation</span></a><span class="de_51752156DC"> is near one. These indicate the adjustment was acceptable. The a posteriori standard deviation less than one indicates that the estimated standard deviation of the observations was higher than the adjustment results indicate. The delta-g standard deviations can be automatically scaled using the &quot;Scale std. dev. from results&quot; menu command or the corresponding button on the </span><a class="local_link" href="tree_view_toolbar.htm"><span class="de_2B94C39861">Tree view toolbar</span></a><span class="de_51752156DC">. After doing so the &quot;SD for adj.&quot; value shown on the delta-g table is lowered to 2.7 µGal, and the standard deviation a posteriori is 1.0</span></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><span class="de_51752156DC">Note that the &quot;Update adjustment&quot; status indicator in the bottom right is no longer highlighted. </span></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;"><span class="de_51752156DC">For this simple example, the tools for evaluating results are limited. A histogram of delta-g residuals (&quot;Plot residual histogram&quot;, or Ctrl-H) is uninformative owing to the small number of observations. Because there is only one datum observation, the adjusted value matches the observed value exactly and the &quot;Plot adjusted datum vs. measured&quot; plots only a single value of zero.</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 </li><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Export results</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Export results</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">From the Tools menu, select &quot;Write tabular data&quot;. A comma-separated value (.csv) file with the filename &quot;GSadjust_TabularData_...&quot; followed by the date is written to disk with the values shown in the adjusted station values table. Optionally, the table can be highlighted by clicking in the upper-leftmost cell, then right-clicking and selecting Copy to clipboard. Data can be pasted into Excel or a text file. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">From the Tools menu, select &quot;Write tabular data&quot;. A comma-separated value (.csv) file with the filename &quot;GSadjust_TabularData_...&quot; followed by the date is written to disk with the values shown in the adjusted station values table. Optionally, the results table can be highlighted by clicking in the upper-leftmost cell, then right-clicking and selecting Copy to clipboard. Data can be pasted into Excel or a text file. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">From the Tools menu, select &quot;Write metadata text&quot;. A text file (.txt) with the filename &quot;GSadjust_MetadataText_...&quot; is written to disk with a narrative summary of the adjustment. This text can be used in a <a class="local_link" href="metadata_export.htm"><span class="de_2B94C39861">metadata file</span></a>.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">From the Tools menu, select &quot;Write adjustment summary&quot;. A text file (.txt) with the filename &quot;GSadjust_Summary_...&quot; is written to disk showing the observations used in the adjustment and the results of the adjustment. This file includes all of the information necessary to re-create the adjustment results.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </li><li class="list-element list-counter-3" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Save the workspace</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><strong>Save the workspace</strong></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">To facilitate future re-processing or evaluation, the workspace should be saved by selecting &quot;Save workspace as...&quot; from the File menu. A file save dialog is shown; save with an appropriate filename. A &quot;.gsa&quot; extension is added if not specified. The workspace is written to file in JSON format. This file can be re-loaded into GSadjust using the &quot;Open workspace...&quot; command on the File menu. It should not be edited outside of GSadjust. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>

@@ -109,7 +109,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                 ChannelList_obj.dur,
                 ChannelList_obj.rej,
             )
-        ).reshape(len(ChannelList_obj.t), 9, order='F')
+        ).reshape(len(ChannelList_obj.t), 9, order="F")
 
     def rowCount(self, parent=None):
         return len(self.ChannelList_obj.t)
@@ -133,7 +133,7 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
                 value = self.arraydata[row][column]
 
             def format_datetime(dt):
-                return num2date(float(dt)).strftime('%Y-%m-%d %H:%M:%S')
+                return num2date(float(dt)).strftime("%Y-%m-%d %H:%M:%S")
 
             fn, *args = {
                 SCINTREX_DATE: (format_datetime, value),

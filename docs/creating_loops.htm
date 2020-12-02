@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -335,19 +304,17 @@
     </noscript>
                 <div class="description_on_page"><div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="ic"><h1><strong>Creating loops</strong></h1></div></div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Loops in GSadjust (the group of stations for which a single drift correction is applied) are created after a file is loaded. Alternatively, loops can be appended from individual data files using the &quot;Append loop to current survey...&quot; command on the File menu. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><a class="local_link" href="loops.htm"><span class="de_2B94C39861">Loops</span></a> in GSadjust (the group of stations for which a single drift correction is applied) are created after a file is loaded. Alternatively, in a campaign (workspace) with existing data loops can be appended from individual data files using the &quot;Append loop to current survey...&quot; command on the File menu. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Loops can be created based on a time-based threshold or by selecting the stations to move to a new loop. To use a time-based threshold, use the &quot;Divide selected loop...&quot; command on the Edit menu. A dialog appears to specify the time threshold:</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Loops can be created based on a time-based threshold or by selecting the stations to move to a new loop. To use a time-based threshold, use the &quot;Divide selected loop...&quot; command on the Edit menu. A dialog appears where one can specify the time threshold:</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="254" height="166" class=" de_780D01ADE8" src="img/drex_creating_loops_custom.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">If there is a gap during which no data were collected that is longer than the elapsed time specified, the data before the gap will retain the original loop name and data after the gap will be put in a new loop. If there are multiple gaps longer than the threshold (for example, if data were collected over several days with gaps each night) multiple loops will be created.</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">If there is a gap between stations longer than the elapsed time specified, the data before the gap will retain the original loop name and data after the gap will be put in a new loop. If there are multiple gaps longer than the threshold (for example, if data were collected over several days with gaps each night) multiple loops will be created.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">To create a new loop within the current Survey, select the group of stations to me moved to the new loop by selecting the first station, holding shift, and selecting the last station. This will select a group of stations to be moved. Then, right click to bring up the <a class="local_link" href="tree_view_context_menu.htm"><span class="de_2B94C39861">Data Tree View Popup menu</span></a>, and select Move station(s) to new loop. A new loop is created.</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">To create a new loop within the current Survey from selected stations, select the first station, hold down shift, then select the last station. Then, right click to show the <a class="local_link" href="tree_view_context_menu.htm"><span class="de_2B94C39861">Data Tree View Popup menu</span></a>, and select Move stations to new loop. A new loop is created.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">
-<map name="controlmapcb9aae1d_8f3f_4cf9_b2f6_4448fa48da35" id="controlmapcb9aae1d_8f3f_4cf9_b2f6_4448fa48da35">
-</map><img usemap="#controlmapcb9aae1d_8f3f_4cf9_b2f6_4448fa48da35"  alt="Creating loops" style="border: solid 0px;  " width="439" height="622" class="de_wndimg de_780D01ADE8" src="img/drex_creating_loops_screen.png"/></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="412" height="377" class=" de_780D01ADE8" src="img/drex_creating_loops_custom_2.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 </div>                                    			

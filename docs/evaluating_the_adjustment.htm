@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -347,9 +316,17 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The result of the Chi-square test ('accept' or 'reject') is shown in the bottom right of the <a class="local_link" href="network_adjustment_tab.htm"><span class="de_2B94C39861">Network adjustment tab</span></a>. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>Scaling the standard deviation</strong></h2></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">For network adjustment statistics to be accurate, the estimated standard deviations of the input data must be accurate. This can be evaluated with the standard deviation a posteriori statistic (&quot;SD a posteriori&quot;) in the least-squares statistics in the bottom right of the Network Adjustment tab. A value less than 1 indicates input standard deviation is too high; greater than one indicates input standard deviation is too low. Using the Adjustment menu &gt; Scale standard deviation from results command (or the <img  alt="" style="border: solid 0px;  " width="20" height="20" class=" de_780D01ADE8" src="img/drex_evaluating_the_adjustment_custom_2.png"/> button on the <a class="local_link" href="tree_view_toolbar.htm"><span class="de_2B94C39861">Tree View toolbar</span></a>), the standard deviation of the delta-g's is scaled automatically so that the standard deviation a posteriori statistic approaches one. See <a class="local_link" href="network_adjustment_options_dialog.htm"><span class="de_2B94C39861">adjustment options</span></a> for more information on how the scaling is applied. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 50px; text-indent: 0px;">&#160;</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Only the gravity-difference standard deviations are scaled; the datum observation standard deviations are not. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>Plots</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Two plots are useful for evaluating the adjustment. The first, shown when the &quot;Adjustment &gt; Plot residual histogram&quot; menu item is selected, is a histogram of the delta-g residuals (i.e., the difference between each observed delta-g and the adjusted delta-g). This plot should approximately follow a normal distribution, with no large outliers. The second plot, &quot;Adjustment &gt; Plot adjusted datum vs. measured&quot;, shows a bar plot of the difference between the datum observations (e.g., absolute-gravity measurements) and the adjusted values. The closer these residuals are to zero, the better the adjustment. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">For campaigns with several surveys, a time series version of the &quot;adjusted datum vs. measured&quot; plot is available. Rather than columns, this plot shows the adjusted value and measured values as separate time-series for each station.</div>
 </div>                                    			
                 			</div>
 </body>

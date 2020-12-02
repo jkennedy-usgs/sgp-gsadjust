@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -341,13 +310,13 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>ZLS (Burris)</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The Burris file is output from the ZPARSE.exe program run on a Windows computer (if using the Palm field computer), or output from UltraGrav2 software (if using the Android field computer). The file read by GSadjust is the one generated from discrete observations, and has the filename &quot;YYYYMMDD_SINGLE.txt&quot;, where YYYYMMDD indicates the date. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Burris data is a space- or comma-delimited output file from the ZPARSE.exe program run on a Windows computer (if using the Palm field computer), or output from UltraGrav2 software (if using the Android field computer). The file read by GSadjust is the &quot;single mode data&quot; file. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The Burris file may be hand-edited to, for example, remove data from previous surveys. Care should be taken if the file is edited in Excel, which will typically result in a change in the date format (from YYYY-MM-DD to MM/DD/YYYY). The date format must be changed back to the original format if this is the case. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>Scintrex (CG-3 and CG-5)</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Like the Burris output file, the Scintrex data file is space delimited. The Scintrex file will typically have a header with information such as the meter operator and the serial number. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Scintrex data files are space delimited. The Scintrex file will typically have a header with information such as the meter operator and the serial number. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>Scintrex (CG-6)</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
@@ -355,9 +324,9 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>CSV</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">In addition to the meter-specific formats described above, generic data can be imported from a comma-separated value file. The columns must be in the following order:</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">In addition to the meter-specific formats described above, generic data can be imported from a comma-delimited file. The columns must be in the following order:</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">STATION,LAT,LON,ALT,GRAV,SD,TILTX,TILTY,TEMP,TIDE,DUR,REJ,TIME,DEC.TIME,TERRAIN,DATE</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">STATION, LAT, LON, ALT, GRAV, SD, TILTX, TILTY, TEMP, TIDE, DUR, REJ, TIME, DEC.TIME, TERRAIN, DATE</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><h2><strong>Absolute gravity data</strong></h2></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>

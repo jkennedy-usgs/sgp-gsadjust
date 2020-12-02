@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -336,7 +305,7 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Datum observations are shown in the Datum table on the network adjustment tab:</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><img  alt="" style="border: solid 0px;  " width="882" height="248" class=" de_780D01ADE8" src="img/drex_datum_observations_custom.png"/></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Datum observations are the &quot;known&quot; values from which delta-g's are observed. At least one datum observation must be present for each survey to perform an adjustment. A datum observation can be an arbitrary value, such as 0 or 50000, or it can be a measured absolute-gravity value. There are three options for adding datum observations:</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Datum observations are the &quot;known&quot; values from which delta-g's are observed. At least one datum observation must be present for each survey to perform an adjustment. A datum observation can be an arbitrary value, such as 0 or 50,000, or it can be a measured absolute-gravity value. There are three options for adding datum observations:</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <ul class="de_list"><li class="list-element list-counter-7" style="color:#0000ff;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; counter-reset: list-counter-7;">
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#0000ff;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div><a class="local_link" href="adding_manually.htm"><span class="de_2B94C39861">Adding manually</span></a></div>
@@ -351,21 +320,21 @@
 <ul class="de_list"><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; counter-reset: list-counter-8;">
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Station name</div>
 </li><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Gravity (microGal)</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Gravity (µGal)</div>
 </li><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Standard deviation (microGal)</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Standard deviation (µGal)</div>
 </li><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Date</div>
 </li><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Measurement height (meters)</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Measurement height (centimeters)</div>
 </li><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Gradient (microGal/m)</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Gradient (µGal/m)</div>
 </li><li class="list-element list-counter-8" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; direction: ltr; ">
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Residual</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 24px;"><div class="list-marker" style="color:#000000;font-size:11pt;font-family:&quot;Arial&quot;; display: inline-block; direction: ltr;"></div>Residual (µGal)</div>
 </li></ul><div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The first three (name, gravity, standard deviation) are required. The station name must match exactly at least one station with a delta-g observation (names are case sensitive). The date is not used (datums are associated with the selectded survey when they are added). The measurement height and gradient are used to transfer an absolute-gravity measurement from the measaured height (about 71 cm or 131 cm for the A-10 and FG-5 absolute-gravity meters, respectively) to the land surface (i.e., the height of the relative-gravity meter). The gravity value for the respective datum measurement is increased by the amount [measurement height] * abs([gradient]) (the gradient shown in the Datum table is negative to indicate gravity decreases with elevation). Finally, the residual column in the Datum table shows the difference between the specified absolute-gravity value and the network adjusted value. If only one Datum observation is specified, the residual will be zero.&#160; </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The first three (name, gravity, standard deviation) are required. The station name must match exactly at least one station with a delta-g observation (names are case sensitive). The date is not used (datums are associated with the selected survey when they are added). The measurement height and gradient are used to transfer an absolute-gravity measurement from the measaured height (about 71 cm or 131 cm for the A-10 and FG-5 absolute-gravity meters, respectively) to the land surface (i.e., the height of the relative-gravity meter). The gravity value for the respective datum measurement is increased by the amount [measurement height] * abs([gradient]) (the gradient shown in the Datum table is negative to indicate gravity decreases with elevation). Finally, the residual column in the Datum table shows the difference between the specified absolute-gravity value and the network adjusted value. If only one Datum observation is specified, the residual will be zero.&#160; </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Any of the datum observation fields can be changed by double-clicking on the respective cell.</div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The date, g, standard deviation, measurement height, and gradient fields can be changed by double-clicking on the respective cell.</div>
 </div>                	<div class="menu_on_page">
 		<h2>The contents of Datum observations</h2>
 		<div class="m-workZone_seeAlso_itemContent">

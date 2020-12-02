@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -333,13 +302,13 @@
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust is a cross-platform graphical user interface for least-squares network adjustment of combined absolute and relative gravity surveys. The software is a product of the <a href="http://go.usa.gov/xqBnQ"><span class="de_2B94C39861">USGS Southwest Gravity Program</span></a>. The purpose of GSadjust is to facilitate the efficient processing of field gravity surveys. The program is useful for both synpotic (&quot;snapshot&quot;) gravity surveys or surveys of gravity change over time. The program does not perform gravity inversion or otherwise interpret gravity data.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The objective of network adjustment is to determine a single, best-fit gravity value at each station based on all available measurements and their respective uncertainty. Typically the measurements are relative-gravity differences between stations, observed with a relative gravimeter, and absolute-gravity measurements at individual stations, observed with an absolute gravimeter. The reason relative-gravity differences are used instead of individual relative-gravimeter observations has to do with the nature of the relative-gravimeter, which is subject to constant, random drift and occasional tares, or offsets. Usually there will be more relative-gravity observations than absolute-gravity observations, and there will be redundant data (that is, more than the minimum data necessary to determine a gravity value at each station).&#160; </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The objective of network adjustment is to determine a single, best-fit gravity value at each station based on all available measurements and their respective uncertainty. Typically the measurements are relative-gravity differences between stations, observed with a relative-gravity meter, and absolute-gravity measurements at individual stations, observed with an absolute-gravity meter. The reason relative-gravity differences are used instead of individual relative-gravity meter observations has to do with the nature of the relative-gravity meter, which is subject to constant, random drift and occasional tares, or offsets. Usually there will be more relative-gravity observations than absolute-gravity observations, and there will be redundant data (that is, more than the minimum data necessary to determine a gravity value at each station).&#160; </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Although various software packages exist for least-squares network adjustment of survey measurements, gravity networks present unique considerations not present in other methods. First, the primary instrument used in spatially-distributed measurements of the Earth's gravity field is the relative gravimeter, the zero-point of which drifts randomly and unpredictably. Plotting gravimeter drift over time is considered essential for an accurate accounting of the meter's behavior. Second, it is widely recognized that gravity measurements are susceptible to various errors and &quot;outlier&quot; measurements are not uncommon. Network adjustments often proceed iteratively, including or excluding observations based on the statistical properties of the network. For these reasons the gravity-specific graphical interface GSadjust was developed for network adjustment. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Although various software packages exist for least-squares network adjustment of survey measurements, gravity networks present unique considerations not present in other methods. First, the primary instrument used in spatially-distributed measurements of the Earth's gravity field is the relative-gravity meter, the zero-point of which drifts randomly and unpredictably. Plotting relative-gravity meter drift over time is considered essential for an accurate accounting of the meter's behavior. Second, it is widely recognized that gravity measurements are susceptible to various errors and &quot;outlier&quot; measurements are not uncommon. Network adjustments often proceed iteratively, including or excluding observations based on the statistical properties of the network. For these reasons the gravity-specific graphical interface GSadjust was developed for network adjustment. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust builds on the software PyGrav (Hector and Hinderer, 2016). Compared to PyGrav, GSadjust offers enhanced plotting and analysis of gravimeter drift, additional methods for drift correction (beyond inclusion as a parameter in the adjustment), and inclusion of absolute-gravity observations. GSadjust also offers additional functionality for network adjustment, including plotting results, enabling/disabling gravity differences, and calculating the change in gravity over time. GSadjust is written in Python 3.5 and the PyQt5 graphical user interface framework, and is public domain. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust builds on the software PyGrav (Hector and Hinderer, 2016). Compared to PyGrav, GSadjust offers enhanced plotting and analysis of relative-gravity meter drift, additional methods for drift correction (beyond inclusion as a parameter in the adjustment), and inclusion of absolute-gravity observations. GSadjust also offers additional functionality for network adjustment, including plotting results, enabling/disabling gravity differences, and calculating the change in gravity over time. GSadjust is written in Python 3 and the PyQt5 graphical user interface framework, and is public domain. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The software and related documentation on these web pages were developed in part by the U.S. Geological Survey (USGS) for use by the USGS in fulfilling its mission. The software can be used, copied, modified, and distributed without any fee or cost. Use of appropriate credit is requested. The USGS provides no warranty, expressed or implied, as to the correctness of the furnished software or the suitability for any purpose. The software has been tested, but as with any complex software, there could be undetected errors. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">The software and related documentation on these web pages were developed in part by the U.S. Geological Survey (USGS) for use by the USGS in fulfilling its mission. The software can be used, copied, modified, and distributed without any fee or cost. Appropriate credit is requested. The USGS provides no warranty, expressed or implied, as to the correctness of the furnished software or the suitability for any purpose. The software has been tested, but as with any complex software, there could be undetected errors. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the U.S. Government.</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>

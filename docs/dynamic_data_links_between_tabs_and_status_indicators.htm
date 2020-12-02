@@ -125,15 +125,7 @@
                                 <span class="b-tabs__selectorContent">Menu</span>
                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_index">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__index"></span>
-                                <span class="b-tabs__selectorContent">Index</span>
-                             </div>
     
-                            <div class="b-tabs__selectorItem m-tabs__selectorItem__unselected" id="tabSelector_search">
-                                <span class="b-tabs__selectorItemIcon b-interfaceIcon m-interfaceIcon__search"></span>
-                                <span class="b-tabs__selectorContent">Search</span>
-                            </div>
 
                         </div><!-- /b-tabs__selectorItems -->
 
@@ -213,29 +205,6 @@
                                         <div class="b-workZone__content" id="workZone_article__content">
                                             <a href="#" class="b-article__presentSideNavButton" id="presentSideNavButton"><span></span></a>
                                             <div class="b-workZone__overlay" id="workZone_article__overlay"></div>
-<div class="b-search m-search__workZone" id="searchZone">
-    <form action="#" class="b-search__form">
-        <table class="b-search__layout">
-            <tr>
-                <td class="b-search__side m-search__side__input">
-                    <div class="b-search__gap">
-                        <span class="b-interfaceIcon m-interfaceIcon__search m-interfaceIcon__search__input b-search__inputTextIcon"></span>
-                        <label id="workZone_searchInput_label" for="workZone_searchInput" class="b-search__labelPlaceholder">Search</label>
-                        <input id="workZone_searchInput" type="text" value="" class="b-search__inputText" />
-                    </div>
-                </td>
-                <td class="b-search__side m-search__side__submit">
-                    <span class="b-button b-search__button">
-                        <span class="b-button__wrapper">
-                            <span class="b-button__text"></span>
-                        </span>
-                        <input type="submit" class="b-button__submit" value="Search" id="workZone_searchSubmit" />
-                    </span>
-                </td>
-            </tr>
-        </table>
-    </form>
-</div><!-- /search -->
 
 
 <div class="b-article" id="article">
@@ -334,13 +303,13 @@
                 <div class="description_on_page"><div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;"><div class="ic"><h1><strong>Dynamic data links between tabs and status indicators</strong></h1></div></div>
 <div class="p" style="text-align: center; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust makes use of Python's object-oriented functionality to link data across the data, drift, and network adjustment tabs. If station gravity values change (by unchecking samples in the Data Table on the Data tab), the respective gravity differences relative to that station on the Drift and Network Adjustment tabs are immediately updated. This facilitates an <a class="local_link" href="workflow.htm"><span class="de_2B94C39861">iterative workflow</span></a>. </div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">GSadjust links data across the data, drift, and network adjustment tabs. If station gravity values change (by unchecking samples in the Data Table on the Data tab), the respective gravity differences relative to that station on the Drift and Network Adjustment tabs are immediately updated. This facilitates an <a class="local_link" href="workflow.htm"><span class="de_2B94C39861">iterative workflow</span></a>. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Although the gravity differences are updated, the network adjustment is <span class="de_823826CA2C">not</span> automatically repeated if station gravity values change. The user must repeat the &quot;Adjust network&quot; command on the Adjustment menu. If station gravity values have changed since the previous adjustment, a circular red indicator in the bottom right if the GSadjust window is shown. The indicator is cleared after performing the adjustment. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">Although station gravity values are updated automatically, changes to the drift correction are not. That is, <a class="local_link" href="delta_g_observations.htm"><span class="de_2B94C39861">after populating the delta table</span></a><span class="de_51752156DC">, the drift method associated with each delta will not change, even if a different drift correction method is chosen. To apply a different drift correction, the delta table must be re-populated using one of the commands on the Adjustment menu.</span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">When changes are made to the current loop drift correction method (for example, changing the type from None to Continuous, or enabling the maximum time between repeats threshold, the respective delta-g's for that loop on the Network Adjustment tab are updated immediately and the adjustment results are invalidated. If the delta-g's for that loop aren't included on the Network Adjustment tab (for example, if the delta table has not yet been populated, or was populated with only a subset of loops, not including the current loop), changing the drift correction method won't affect the deltas on the Network Adjustment tab. </div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
-<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span class="de_51752156DC">In addition to the station gravity values, the check status of each station in the left-hand tree view affects the data to be analyzed. The effect of unchecking a station differs, depending on whether the Drift tab or the Network adjustment tab is active. If the drift tab is active, unchecking a station causes it to disappear from the drift plot and from the table of gravity differences. When the delta table on the Network adjustment tab is populated, it will not include any gravity differences relative to the unchecked station. On the other hand, if the Network adjustment tab is visible when a station is unchecked, the relative-gravity differences relative to that station are disabled and shown in light gray font. Usually two relative-gravity differences will be disabled: one between the previous station and the unchecked station, and one between the unchecked station and the subsequent station. Disabled (gray) relative-gravity differences are </span><span class="de_DBF328B893">not</span><span class="de_51752156DC"> included in the Network adjustment. </span></div>
+<div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span class="de_51752156DC">In addition to the station gravity values, the check status of each station in the left-hand tree view affects the data to be analyzed. When a station is unchecked, the delta-g's that include the station are immediately removed from the Drift and Network Adjustment tabs. </span></div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;">&#160;</div>
 <div class="p" style="text-align: left; direction: ltr; margin-left: 0px; text-indent: 0px;"><span class="de_51752156DC">By disabling relative-gravity differences through unchecking one of the constituent stations, the influence of potentially bad station occupations can be rapidly assessed. </span></div>
 </div>                                    			

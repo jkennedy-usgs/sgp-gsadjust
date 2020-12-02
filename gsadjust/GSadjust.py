@@ -2563,7 +2563,7 @@ def main():
 
     # start log file
     fn = os.path.join(
-        os.path.dirname(__file__),
+        os.path.dirname(__file__),'..','..',
         "GSadjustLog_{}.txt".format(time.strftime("%Y%m%d-%H%M")),
     )
     try:
@@ -2584,7 +2584,7 @@ def main():
     splash.finish(ex)
     app.setWindowIcon(QtGui.QIcon(":/icons/app.ico"))
     if not DEBUG:
-        if ex.check_for_updates(False, parent=splash):
+        if ex.check_for_updates(False):
             ex.showMaximized()
             app.processEvents()
             app.exec_()

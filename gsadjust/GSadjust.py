@@ -354,7 +354,7 @@ class MainProg(QtWidgets.QMainWindow):
         )
 
         self.update_menus()
-        self.path_install = os.getcwd()
+        self.path_install = os.path.abspath(os.path.join(os.path.dirname(__file__),'..')) # os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
 
     def init_gui(self):

@@ -2440,7 +2440,7 @@ class MainProg(QtWidgets.QMainWindow):
             elif show_uptodate_msg:
                 logging.info("Git checked, GSadjust is up to date.")
                 msg = "GSadjust is up to date."
-                MessageBox.information(self, "No Update Needed", msg)
+                MessageBox.information("No Update Needed", msg)
                 return True
             return True
 

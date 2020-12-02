@@ -1447,11 +1447,11 @@ class MainProg(QtWidgets.QMainWindow):
         """
         self.tab_adjust.stats_view.setModel(None)
         self.tab_adjust.stats_view.update()
-        survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         try:
+            survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
             survey.adjustment.adjustmentresults.text = []
             survey.adjustment.adjustmentresults.n_unknowns = 0
-        except AttributeError:
+        except (AttributeError, TypeError):
             return
 
     def clear_datum_model(self):
@@ -2419,7 +2419,7 @@ class MainProg(QtWidgets.QMainWindow):
 
             logging.info("Checking for updates")
             repo = Repo(self.path_install)
-            if not repo.active_branch.name == "master":
+            if not repo.active_branch.name == "dev":
                 return True
             fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
             master = [f for f in fetch if f.name == "origin/master"][0]
@@ -2544,7 +2544,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
 
-DEBUG = True
+DEBUG = False
 
 
 def except_hook2(cls, exception, traceback):

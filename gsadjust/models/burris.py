@@ -123,8 +123,6 @@ class BurrisTableModel(QAbstractTableModel):
         return (
             Qt.ItemIsUserCheckable
             | Qt.ItemIsEnabled
-            | Qt.ItemIsSelectable
-            | Qt.ItemIsEditable
         )
 
     def data(self, index, role):

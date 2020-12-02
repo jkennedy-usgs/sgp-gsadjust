@@ -184,6 +184,37 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             elif role == Qt.UserRole:
                 return delta
 
+            elif role == Qt.UserRole + 1:
+                def delta_station_loop():
+                    if delta.loop is None:
+                        if type(delta.station2) == list:
+                            return delta.station2[0].loop
+                        else:
+                            return "NA"
+                    else:
+                        return delta.loop
+
+                def get_g():
+                    delta.edited_dg = delta.dg
+                    if delta.type == "assigned":
+                        return delta.assigned_dg
+                    else:
+                        return delta.dg
+
+                value = {
+                    DELTA_STATION1: delta.sta1,
+                    DELTA_STATION2: delta.sta2,
+                    LOOP: delta_station_loop(),
+                    DELTA_TIME: delta.time(),
+                    DELTA_G: get_g(),
+                    DELTA_DRIFTCORR: delta.driftcorr,
+                    DELTA_SD: delta.sd,
+                    DELTA_ADJ_SD: delta.adj_sd,
+                    DELTA_RESIDUAL: delta.residual,
+                }.get(column, None )
+
+                return value
+
     def setData(self, index, value, role):
         """
         If a row is unchecked, update the keepdata value to 0 setData launched
@@ -215,13 +246,16 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                                 self.tried_to_update_list_delta.emit()
                                 return False
                             else:
-                                delta.type = "assigned"
-                                delta.assigned_dg = float(value)
-                                logging.info(
-                                    "delta {}, g changed from {} to {}".format(
-                                        delta, delta.edited_dg, value
+                                try:
+                                    delta.type = "assigned"
+                                    delta.assigned_dg = float(value)
+                                    logging.info(
+                                        "delta {}, g changed from {} to {}".format(
+                                            delta, delta.edited_dg, value
+                                        )
                                     )
-                                )
+                                except:
+                                    return False
                         self.dataChanged.emit(index, index)
                         self.signal_adjust_update_required.emit()
                     return True

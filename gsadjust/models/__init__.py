@@ -8,3 +8,4 @@ from .roman import SamplesTableModel
 from .scintrex import ScintrexTableModel
 from .sort import CustomSortingModel
 from .tare import TareTableModel
+from .delta_proxy import CustomProxyModel

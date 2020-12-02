@@ -21,7 +21,9 @@ from ...models import (
     DeltaTableModel,
     DatumTableModel,
     ResultsTableModel,
+    CustomProxyModel,
 )
+
 
 
 ###########################################################################
@@ -34,7 +36,7 @@ class TabAdjust(QtWidgets.QWidget):
         # Delta table (top left)
         self.parent = parent
         self.delta_view = QtWidgets.QTableView()
-        self.delta_proxy_model = QtCore.QSortFilterProxyModel(self)
+        self.delta_proxy_model = CustomProxyModel()
         self.delta_model = DeltaTableModel()
         self.delta_proxy_model.setSourceModel(self.delta_model)
         self.delta_view.setModel(self.delta_proxy_model)

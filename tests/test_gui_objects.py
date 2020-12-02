@@ -126,7 +126,7 @@ def test_meter_type(qtbot, mainprog):
     def after_timeout():
         qtbot.keyClick(meter_dialog, QtCore.Qt.Key_Enter, delay=50)
     QtCore.QTimer.singleShot(1000, on_timeout)
-    QtCore.QTimer.singleShot(2000, after_timeout)
+    QtCore.QTimer.singleShot(2500, after_timeout)
     meter_dialog.exec_()
     assert meter_dialog.meter_type == 'CG6Tsoft'
 

@@ -2422,7 +2422,7 @@ class MainProg(QtWidgets.QMainWindow):
             if not repo.active_branch.name == "dev":
                 return True
             fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == "origin/dev"][0]
+            master = [f for f in fetch if f.name == "origin/master"][0]
             for f in fetch:
                 logging.info("Git fetched: {}".format(f))
             self.commit = str(repo.head.commit)[:5]
@@ -2464,7 +2464,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.path_install,
             )
             fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == "origin/dev"][0]
+            master = [f for f in fetch if f.name == "origin/master"][0]
             repo.git.reset("--hard")
             repo.git.merge(master.name)
             logging.info("Git update successful")

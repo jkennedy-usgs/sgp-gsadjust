@@ -2584,7 +2584,7 @@ def except_hook2(cls, exception, traceback):
 
 
 def main():
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+    # QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
 
     # Needed to show icon in Windows Taskbar:

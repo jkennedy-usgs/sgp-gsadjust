@@ -1338,8 +1338,8 @@ class MainProg(QtWidgets.QMainWindow):
         Writes a .grd file with two values: gradient and standard deviation.
         Only works when Roman drift method is used.
         """
-        current_loop_index = self.gui_data_treeview.selectedIndexes()[0]
-        current_loop = self.obsTreeModel.itemFromIndex(current_loop_index)
+        # current_loop_index = self.obsTreeModel.selectedIndexes()[0]
+        current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
         deltas = current_loop.deltas
         n_stations = current_loop.n_unique_stations()
 
@@ -1372,7 +1372,7 @@ class MainProg(QtWidgets.QMainWindow):
                     if filename:
                         dg_list, sd_list = [], []
                         for delta in current_loop.deltas:
-                            dg_list.append(delta.dg)
+                            dg_list.append(np.abs(delta.dg))
                             sd_list.append(delta.sd)
                         dg = np.mean(dg_list)
                         sd = np.mean(sd_list)

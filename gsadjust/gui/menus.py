@@ -408,6 +408,7 @@ class Menus:
                 self.mnEditAddTareDialog,
                 None,
                 self.mnEditVerticalGradientIntervalAction,
+                self.mnEditVerticalGradientWriteAction,
             ),
         )
 

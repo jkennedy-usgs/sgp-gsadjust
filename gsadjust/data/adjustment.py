@@ -201,7 +201,7 @@ class Adjustment:
                             f" +/- {v[1]:.6f}"
                         )
                 elif self.adjustmentoptions.specify_cal_coeff:
-                    for k, v in self.adjustmentresults.meter_cal_dict.items():
+                    for k, v in self.adjustmentoptions.meter_cal_dict.items():
                         text_out.append(
                             f"Specified calibration coefficient for meter {k}: {v:.6f}"
                         )

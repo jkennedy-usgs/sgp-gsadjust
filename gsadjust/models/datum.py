@@ -68,6 +68,7 @@ class DatumTableModel(QAbstractTableModel):
     }
 
     signal_adjust_update_required = pyqtSignal()
+    signal_datum_table_updated = pyqtSignal()
 
     def __init__(self):
         super(DatumTableModel, self).__init__()
@@ -99,7 +100,7 @@ class DatumTableModel(QAbstractTableModel):
         return len(self._data)
 
     def columnCount(self, parent=None):
-        return 8
+        return len(self._headers)
 
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():

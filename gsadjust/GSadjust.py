@@ -1713,8 +1713,7 @@ class MainProg(QtWidgets.QMainWindow):
         i = [self.tab_adjust.datum_proxy_model.mapToSource(idx) for idx in index]
         i.sort(key=lambda x: x.row(), reverse=True)
         for idx in i:
-            survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-            survey.datum_model.removeRow(idx)
+            self.tab_adjust.datum_proxy_model.sourceModel().removeRow(idx)
         self.tab_adjust.datum_view.update()
         self.set_window_title_asterisk()
 

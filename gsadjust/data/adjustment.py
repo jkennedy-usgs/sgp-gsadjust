@@ -30,6 +30,7 @@ class AdjustmentResults:
         self.max_dg_residual, self.min_dg_residual = 0, 0
         self.max_datum_residual, self.min_datum_residual = 0, 0
         self.avg_stdev = 0
+        self.SDaposteriori = 0
         self.chi2, self.chi2c = 0, 0
         self.dof = 0
         self.cal_dic, self.netadj_drift_dic = {}, {}
@@ -61,7 +62,7 @@ class AdjustmentResults:
             f"Number of relative observations:     {self.n_deltas:d}",
             f"Number of absolute observations:     {self.n_datums:d}",
             f"Degrees of freedom (nobs-nunknowns): {self.dof:d}",
-            f"SD a posteriori:                     {self.chi2 / self.dof:4f}",
+            f"SD a posteriori:                     {self.SDaposteriori:4f}",
             f"chi square value:                  {self.chi2:6.2f}",
             f"critical chi square value:         {self.chi2c:6.2f}",
             f"Chi-test {chi_result}",
@@ -250,6 +251,7 @@ class Adjustment:
         alpha = self.adjustmentoptions.alpha
         self.adjustmentresults.chi2 = self.VtPV[0][0]
         self.adjustmentresults.dof = self.dof
+        self.adjustmentresults.SDaposteriori = np.sqrt(self.VtPV[0][0]/self.dof)
         t = np.sqrt(2 * np.log(1 / alpha))
         # I verified this produces the same values as scipy.stats.chi2.ppf
         chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (

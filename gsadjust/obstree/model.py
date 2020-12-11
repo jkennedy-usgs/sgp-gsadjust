@@ -276,16 +276,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             obstreesurveys.append(obstreesurvey)
         return (obstreesurveys, coords)
 
-    def datums(self):
-        datum_list = []
-        for i in range(self.rowCount()):
-            obstreesurvey = self.itemFromIndex(self.index(i, 0))
-            for ii in range(obstreesurvey.datum_model.rowCount()):
-                idx = obstreesurvey.datum_model.index(ii, 0)
-                datum = obstreesurvey.datum_model.data(idx, role=Qt.UserRole)
-                datum_list.append(datum.station)
-        return list(set(datum_list))
-
     def surveys(self):
         survey_list = []
         for i in range(self.rowCount()):

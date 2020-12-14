@@ -554,8 +554,8 @@ class MainProg(QtWidgets.QMainWindow):
 
         if fname:
             self.settings.setValue("current_dir", os.path.dirname(fname))
-            self.open_raw_data(fname, open_type)
-            self.init_gui()
+            if self.open_raw_data(fname, open_type):
+                self.init_gui()
 
     def open_raw_data(self, fname, open_type):
         """
@@ -585,7 +585,7 @@ class MainProg(QtWidgets.QMainWindow):
             if test < 5:  # 5 = cancel  (accept/reject not working?)
                 meter_type = meter_type_dialog.meter_type
             else:
-                return
+                return False
         else:
             meter_type = open_type
             if self.obsTreeModel.invisibleRootItem().rowCount() > 0:
@@ -593,7 +593,7 @@ class MainProg(QtWidgets.QMainWindow):
                 if overwrite_tree_dialog.exec_():
                     self.workspace_clear(confirm=False)
                 else:
-                    return
+                    return False
 
         if fname:
             self.path_output = os.path.dirname(fname)
@@ -669,6 +669,8 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             QtWidgets.QApplication.restoreOverrideCursor()
             return False
+
+        return True
 
     @staticmethod
     def read_raw_data_file(fname, meter_type):

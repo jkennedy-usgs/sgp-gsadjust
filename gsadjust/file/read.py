@@ -332,6 +332,8 @@ def read_burris(fh):
                 date_temp = vals_temp[c_date].split("/")
             elif line.find("-") != -1:
                 date_temp = vals_temp[c_date].split("-")
+            else:
+                date_temp = []
             if int(date_temp[2]) > 999:
                 date_temp = [date_temp[2], date_temp[0], date_temp[1]]
             elif int(date_temp[0]) > 999:

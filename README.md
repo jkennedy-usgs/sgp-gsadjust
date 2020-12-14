@@ -1,9 +1,3 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/mb5yw6ksgwmfu18d?svg=true)](https://ci.appveyor.com/project/jkennedy-usgs/sgp-gsadjust)
-
-**This is the development branch of GSadjust. Code in this repository has not necessarily been reviewed by USGS.**
-
-**The approved preliminary software release is at** [https://github.com/usgs/sgp-gsadjust](https://github.com/usgs/sgp-gsadjust "USGS GSadjust repo")
-
 # GSadjust
 GSadjust is a cross-platform graphical interface for processing relative gravity surveys. It provides an interface for data selection, drift evaluation and correction, network adjustment, and integrating data from modern relative (Scintrex, ZLS) and absolute (Micro-g Lacoste) gravity meters. This software is a product of the USGS Southwest Gravity Program (http://go.usa.gov/xqBnQ).
 
@@ -15,7 +9,11 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 
 **Installing GSadjust**
 
-Windows: Download the [.zip](https://github.com/jkennedy-usgs/sgp-gsadjust/releases/tag/v0.99) and unzip to the folder of your choice, then launch the GSadjust shortcut.
+Windows: Download the [.zip](https://code.usgs.gov/sgp/gsadjust/releases/tag/v1.0) and unzip to the folder of your choice, then launch the GSadjust shortcut.
+
+Mac and Linux: Create a Python virtual environment using pip and the requirements.txt file. 
+
+**The development branch of GSadjust is at** [https://github.com/jkennedy-usgs/sgp-gsadjust](https://github.com/jkennedy-usgs/sgp-gsadjust "USGS GSadjust repo")
 
 ## Data selection interface
 * Select/deselect samples and stations

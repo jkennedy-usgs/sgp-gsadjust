@@ -23,7 +23,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 class PlotGravityChange(QtWidgets.QDialog):
     def __init__(self, dates, table, parent=None):
         super(PlotGravityChange, self).__init__(parent)
-        self.setWindowTitle("GSadjust results")
+        self.setWindowTitle("Gravity Change Time Series")
         self.setWhatsThis(
             "Click on a line in the legend to toggle visibility. Right-click anywhere"
             " to hide all lines. Middle-click to show all lines."

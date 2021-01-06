@@ -955,7 +955,7 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
             MessageBox.warning(
                 "Import warning",
-                "This workspaced was saved by an "
+                "This workspace was saved by an "
                 "earlier version of GSadjust. The station data and "
                 "drift options will be loaded, but not the deltas "
                 "on the adjust tab, which will need to be re-created"

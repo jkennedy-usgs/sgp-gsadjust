@@ -230,7 +230,7 @@ def export_summary(obsTreeModel, data_path):
                 )
                 for delta in loop.deltas:
                     fid.write(
-                        "{} {} {} {} {:.2f} {:.2f} {:.2f}\n".format(
+                        "{} {} {} {} {:.2f} {:.2f} {}\n".format(
                             int(delta.checked / 2),
                             delta.sta1,
                             delta.sta2,

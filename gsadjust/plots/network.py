@@ -49,12 +49,15 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
-        edges, disabled_edge, datum_nodelist, nondatum_nodelist = self.get_data()
+        self.plot_network()
+
+    def plot_network(self):
         try:
+            edges, disabled_edge, datum_nodelist, nondatum_nodelist = self.get_data()
             self.plot(edges, disabled_edge, datum_nodelist, nondatum_nodelist)
-        except KeyError:
+        except KeyError as e:
             MessageBox.warning(
-                "Plot errorError plotting network graph (Key error)",
+                "Plot error", "Error plotting network graph (Key error)",
             )
 
     def get_data(self):

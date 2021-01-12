@@ -611,7 +611,7 @@ class MainProg(QtWidgets.QMainWindow):
                     # Loads all survey data into a single loop.
                     new_loop_idx = obstreesurvey.populate(
                         self.all_survey_data,
-                        name=str(obstreesurvey.loop_count),
+                        name=self.get_new_loop_name(obstreesurvey),
                         source=os.path.basename(fname),
                     )
                 else:
@@ -1821,6 +1821,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         indexes = []
         pbar = ProgressBar(total=obstreeloop.rowCount() - 1, textmess="Divide loop")
         pbar.show()
@@ -1830,6 +1831,7 @@ class MainProg(QtWidgets.QMainWindow):
         pbar_idx = list(range(obstreeloop.rowCount()))
         pbar_idx.reverse()
         for i in range(obstreeloop.rowCount() - 1, 1, -1):
+            new_name = self.get_new_loop_name(obstreesurvey)
             station2 = obstreeloop.child(i)
             station1 = obstreeloop.child(i - 1)
             pbar.progressbar.setValue(pbar_idx[i])
@@ -1839,7 +1841,7 @@ class MainProg(QtWidgets.QMainWindow):
             if tdiff > loop_thresh:
                 for ii in range(i, obstreeloop.rowCount()):
                     indexes.append(obstreeloop.child(ii).index())
-                self.new_loop_from_indexes(indexes)
+                self.new_loop_from_indexes(indexes, new_name)
                 indexes = []
         self.index_current_loop = original_loop_index
         self.update_all_drift_plots()
@@ -1847,6 +1849,18 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
         self.set_window_title_asterisk()
+
+    def get_new_loop_name(self, survey):
+        all_int_names = []
+        for n in survey.loop_names:
+            try:
+                all_int_names.append(int(n))
+            except ValueError as e:
+                pass
+        if all_int_names:
+            return str(max(all_int_names)+1)
+        else:
+            return "0"
 
     def duplicate_station(self):
         """
@@ -1911,14 +1925,15 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Creates a new loop in tree view
         """
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         indexes = self.gui_data_treeview.selectedIndexes()
-        self.new_loop_from_indexes(indexes)
+        self.new_loop_from_indexes(indexes, self.get_new_loop_name(obstreesurvey))
         self.activate_survey_or_loop(self.index_current_loop)
         self.update_drift_tables_and_plots(update=True)
         self.update_data_tab()
         self.set_window_title_asterisk()
 
-    def new_loop_from_indexes(self, indexes):
+    def new_loop_from_indexes(self, indexes, new_loop_name):
         """
         Moves stations at the specified indexes to a new loop.
 
@@ -1931,7 +1946,6 @@ class MainProg(QtWidgets.QMainWindow):
             model = indexes[0].model()
             obstreeloop = model.itemFromIndex(indexes[0].parent())
             obstreesurvey = obstreeloop.parent()
-            new_loop_name = str(obstreesurvey.rowCount())
             # new loop, increment from loop parent
             new_obstreeloop = ObsTreeLoop(new_loop_name)
 

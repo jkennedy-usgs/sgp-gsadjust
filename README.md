@@ -9,7 +9,7 @@ Bug reports by email (jkennedy@usgs.gov) or by submitting an issue through GitHu
 
 **Installing GSadjust**
 
-Windows: Download the [.zip](https://code.usgs.gov/sgp/gsadjust/releases/tag/v1.0) and unzip to the folder of your choice, then launch the GSadjust shortcut.
+Windows: Download the [.zip](https://code.usgs.gov/sgp/gsadjust/uploads/16295922983bdd31499f92cc9f5ea4cf/GSadjust_v1.0.zip) under Releases on the left and unzip to the folder of your choice, then launch the GSadjust shortcut.
 
 Mac and Linux: Create a Python virtual environment using pip and the requirements.txt file. 
 

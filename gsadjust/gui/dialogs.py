@@ -361,8 +361,7 @@ class AdjustOptions(QtWidgets.QDialog):
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
             MessageBox.warning(
-                "Network adjustment options",
-                "Please load a survey first",
+                "Network adjustment options", "Please load a survey first",
             )
 
     def restore_default(self):
@@ -835,7 +834,7 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         elif self.btnReference.isChecked():
             ref_survey = (
-                self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + "_g"
+                    self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + "_g"
             )
             ref_col_idx = self.full_header.index(ref_survey)
             current_survey = self.surveys[self.slider.value() - 1] + "_g"
@@ -890,7 +889,7 @@ class GravityChangeMap(QtWidgets.QDialog):
             ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
             current_survey = self.surveys[self.slider.value() - 1]
             if dt.datetime.strptime(current_survey, "%Y-%m-%d") < dt.datetime.strptime(
-                ref_survey, "%Y-%m-%d"
+                    ref_survey, "%Y-%m-%d"
             ):
                 return "{} to {}".format(current_survey, ref_survey)
             else:
@@ -918,7 +917,16 @@ class GravityChangeMap(QtWidgets.QDialog):
         )
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         self.points = []
-        x, y, d, names = self.get_data()
+        try:
+            x, y, d, names = self.get_data()
+        except KeyError:
+            MessageBox.warning(
+                "Map view gravity change",
+                "Could not plot (Key error). Check that station names in the " \
+                "coordinates table match the names in the survey.",
+            )
+            return
+
         self.points = self.ax.scatter(
             x,
             y,
@@ -969,8 +977,8 @@ class GravityChangeMap(QtWidgets.QDialog):
         if self.cbBasemap.isChecked():
             self.stamen_terrain = self.cimgt.GoogleTiles(
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/"
-                + self.maps[self.drpBasemap.currentIndex()]
-                + "/MapServer/tile/{z}/{y}/{x}.jpg"
+                    + self.maps[self.drpBasemap.currentIndex()]
+                    + "/MapServer/tile/{z}/{y}/{x}.jpg"
             )
             self.ax.add_image(self.stamen_terrain, zoom)
 
@@ -1396,8 +1404,8 @@ class SelectAbsg(QtWidgets.QDialog):
         pbar.show()
         for dirname, _, fileList in os.walk(path):
             if (
-                self.load_unpublished_cb.isChecked()
-                and dirname.find("unpublished") != -1
+                    self.load_unpublished_cb.isChecked()
+                    and dirname.find("unpublished") != -1
             ):
                 continue
             else:
@@ -1432,13 +1440,13 @@ class AboutDialog(QtWidgets.QDialog):
         super(AboutDialog, self).__init__()
 
         msg1 = (
-            "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
-            + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
-            + "<br><br>Commit "
-            + version
-            + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
-            + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"
-            + '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
+                "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
+                + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
+                + "<br><br>Commit "
+                + version
+                + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
+                + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"
+                + '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
         )
         ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
 

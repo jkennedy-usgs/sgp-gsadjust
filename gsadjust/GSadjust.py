@@ -241,7 +241,6 @@ class MainProg(QtWidgets.QMainWindow):
 
     label_adjust_update_required_set = False
 
-    gui_obstreeview_popup_menu = None
     menus, selection_model = None, None
     tab_data, tab_drift, tab_adjust = None, None, None
     station_model = None
@@ -274,7 +273,9 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust = TabAdjust(self)
         self.tab_widget = QtWidgets.QTabWidget()
 
-        # Connect signals.
+        # Connect signals
+        self.obsTreeModel.signal_name_change_duplicate.connect(self.rename_error_duplicate)
+        self.obsTreeModel.signal_name_change_nondate.connect(self.rename_error_nondate)
         self.delta_model.signal_adjust_update_required.connect(
             self.adjust_update_required
         )
@@ -383,7 +384,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnLoopAnimate = self.menus.create_action(
             "Animate loop", slot=self.animate_loop
         )
-
+        self.init_popup()
         self.update_menus()
         self.path_install = os.path.abspath(os.path.join(os.path.dirname(__file__),'..')) # os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
@@ -438,6 +439,26 @@ class MainProg(QtWidgets.QMainWindow):
         # Set data plot
         self.update_data_tab()
         self.gui_data_treeview.setFocus()
+
+    def init_popup(self):
+        """
+        Right-click context menu on tree view
+        """
+        self.gui_data_treeview_popup_menu = QtWidgets.QMenu("Menu", None)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnRename)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
+        self.gui_data_treeview_popup_menu.addAction(
+            self.menus.mnVerticalGradientWriteAction
+        )
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteStation)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
 
     def toggle_logview(self):
         if self.logview.isVisible():
@@ -942,10 +963,26 @@ class MainProg(QtWidgets.QMainWindow):
             new_deltas = self.obsTreeModel.deltas()
             new_deltas_dict = {d.key: d for d in new_deltas}
 
+            # import csv
+            # with open('sdd.csv', 'w+') as output:
+            #     writer = csv.writer(output)
+            #     for key1, value in saved_deltas_dict.items():
+            #         writer.writerow([key1, value[0], value[1], value[2]])
+            # with open('ndd.csv', 'w+') as output:
+            #     writer = csv.writer(output)
+            #
+            #
+            #     for key1, value in new_deltas_dict.items():
+            #         lst = [key1]
+            #         lst += str.split(str(value))
+            #         writer.writerow(lst)
             # Update adj_sd and checked
             for key, delta in saved_deltas_dict.items():
-                new_deltas_dict[key].adj_sd = delta[1]
-                new_deltas_dict[key].checked = delta[0]
+                try:
+                    new_deltas_dict[key].adj_sd = delta[1]
+                    new_deltas_dict[key].checked = delta[0]
+                except Exception as e:
+                    continue
 
             # Create type = 'assigned' deltas
             for key, delta in saved_assigned_deltas_dict.items():
@@ -1682,6 +1719,14 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_adjust_tables()
         self.update_menus()
 
+    def rename_error_duplicate(self):
+        MessageBox.information("Duplicate name",
+                               "Please choose a unique name when renaming.")
+
+    def rename_error_nondate(self):
+        MessageBox.information("Non-date name",
+                               "Could not parse survey name. Please use the format 'YYYY-MM-DD'.")
+
     def rename(self):
         """
         Rename station; same as F2.
@@ -1725,6 +1770,7 @@ class MainProg(QtWidgets.QMainWindow):
         threshold indicates a break between loops.
         """
         # Prompt user to select time threshold
+
         loopdialog = LoopTimeThresholdDialog()
         if loopdialog.exec_():
             loop_thresh = loopdialog.dt_edit.dateTime()
@@ -1732,7 +1778,8 @@ class MainProg(QtWidgets.QMainWindow):
             # i.e., if the time set in the loop dialog is 8:00, loop thresh is a
             # Qdatetime equal to (2000,1,1,8,0).
             loop_thresh = (
-                int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
+                    float(loop_thresh.toString("H")) / 24 + float(
+                loop_thresh.toString("m")) / 1440
             )
         else:
             return
@@ -1821,7 +1868,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
-        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        obstreesurvey = obstreeloop.parent()
         indexes = []
         pbar = ProgressBar(total=obstreeloop.rowCount() - 1, textmess="Divide loop")
         pbar.show()
@@ -1993,24 +2040,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_window_title_asterisk()
 
     def treeview_context_menu(self, point):
-        """
-        Right-click context menu on tree view
-        """
-        self.gui_data_treeview_popup_menu = QtWidgets.QMenu("Menu", self)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnRename)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
-        self.gui_data_treeview_popup_menu.addAction(
-            self.menus.mnVerticalGradientWriteAction
-        )
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteStation)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
         # enable as appropriate
         indexes = self.gui_data_treeview.selectedIndexes()
 
@@ -2035,6 +2064,7 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.set_state(MENU_STATE.UNENABLE_ALL)
         else:
             self.menus.set_state(MENU_STATE.UNENABLE_ALL)
+        print('jeff')
         self.gui_data_treeview_popup_menu.exec_(
             self.gui_data_treeview.mapToGlobal(point)
         )
@@ -2264,7 +2294,9 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue("abs_g_path", selectabsg.path)
             if nds:
                 survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-                survey.datums += nds
+                for nd in nds:
+                    dc = copy.deepcopy(nd)
+                    survey.datums.append(dc)
                 self.set_window_title_asterisk()
         else:
             self.abs_import_table_model = selectabsg.table_model

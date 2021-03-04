@@ -175,6 +175,7 @@ class DatumTableModel(QAbstractTableModel):
                         # proxy model, e.g.
                         # https://stackoverflow.com/questions/22886912
                         if column in [
+                            DATUM_STATION,
                             DATUM_DATE,
                             DATUM_G,
                             DATUM_SD,

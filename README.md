@@ -15,6 +15,10 @@ Mac and Linux: Create a Python virtual environment using pip and the requirement
 
 **The development branch of GSadjust is at** [https://github.com/jkennedy-usgs/sgp-gsadjust](https://github.com/jkennedy-usgs/sgp-gsadjust "USGS GSadjust repo")
 
+**How to Cite GSadjust:**
+
+Kennedy, J., 2020, GSadjust v1.0: U.S. Geological Survey Software Release, 20 December 2020, https://doi.org/10.5066/P9YEIOU8
+
 ## Data selection interface
 * Select/deselect samples and stations
 * Plot gravity, earth tide correction, tilt, etc.

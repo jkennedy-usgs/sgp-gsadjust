@@ -493,6 +493,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                     float(meter_calib_params[1]),
                 )
         else:
+            cal_dic[self.unique_meters[0]] = (1.0, 0.0)
             # Run gravnet without calibration coefficient
             os.system(
                 "gravnet -D{} -N{} -M2 {} -F{}".format(

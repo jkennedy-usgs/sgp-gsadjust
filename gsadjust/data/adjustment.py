@@ -23,7 +23,6 @@ class AdjustmentResults:
     """
 
     def __init__(self):
-        self.meter_cal_dict = None
         self.n_deltas, self.n_deltas_notused = 0, 0
         self.n_datums, self.n_datums_notused = 0, 0
         self.n_unknowns = 0
@@ -35,6 +34,12 @@ class AdjustmentResults:
         self.dof = 0
         self.cal_dic, self.netadj_drift_dic = {}, {}
         self.text = []
+
+    def __bool__(self):
+        if self.n_deltas == 0:
+            return False
+        else:
+            return True
 
     def __str__(self):
         return_str = ""

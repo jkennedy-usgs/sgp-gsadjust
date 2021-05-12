@@ -161,7 +161,10 @@ def numpy_inversion(adjustment):
                 float(1 - adjustment.X[len(sta_dic_ls) + v]),
                 float(np.sqrt(adjustment.var[len(sta_dic_ls) + v])),
             )
-        adjustment.adjustmentresults.cal_dic = cal_dic
+    else:
+        for k, v in adjustment.meter_dic.items():
+            cal_dic[k] = (1.0, 0.0)
+    adjustment.adjustmentresults.cal_dic = cal_dic
 
     # calculate and display statistics:
     adjustment.lsq_statistics()

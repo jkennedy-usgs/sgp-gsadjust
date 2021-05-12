@@ -18,6 +18,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 from PyQt5.QtGui import QStandardItemModel
+from PyQt5.QtCore import Qt
 
 
 class MeterCalibrationModel(QStandardItemModel):
@@ -25,3 +26,14 @@ class MeterCalibrationModel(QStandardItemModel):
         super(MeterCalibrationModel, self).__init__()
         self.setColumnCount(2)
         self.setHorizontalHeaderLabels(["Meter", "Calibration factor"])
+
+    def data(self, index, role):
+        if index.isValid():
+            if role == Qt.DisplayRole:
+                column = index.column()
+                # if role == Qt.DisplayRole or role == Qt.EditRole:
+                if column == 0:
+                    return self.itemFromIndex(index).text()
+                if column == 1:
+                    return format(float(self.itemFromIndex(index).text()), "0.6f")
+

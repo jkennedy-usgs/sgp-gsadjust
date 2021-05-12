@@ -2356,11 +2356,22 @@ class MainProg(QtWidgets.QMainWindow):
             logging.info("Datum station added: {}".format(station))
             self.set_window_title_asterisk()
 
+    def build_survey_cal_dict(self, survey):
+        new_dict = {}
+        if survey.adjustment.adjustmentresults:
+            for k,v in survey.adjustment.adjustmentresults.cal_dic.items():
+                new_dict[k] = v[0]
+        else:
+            for meter in survey.unique_meters:
+                new_dict[meter] = 1.0
+        return new_dict
+
     def dialog_adjustment_properties(self):
         """
         Opens PyQt dialog to set adjustment options
         """
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        survey.adjustment.adjustmentoptions.meter_cal_dict = self.build_survey_cal_dict(survey)
         adjust_options = AdjustOptions(
             survey.__str__(), survey.adjustment.adjustmentoptions, parent=self
         )
@@ -2378,6 +2389,7 @@ class MainProg(QtWidgets.QMainWindow):
                     survey.adjustment.adjustmentoptions = ao
                     self.set_adj_sd(survey, adjust_options.ao)
             self.set_window_title_asterisk()
+            self.adjust_update_required()
 
     def dialog_tide_correction(self):
         """

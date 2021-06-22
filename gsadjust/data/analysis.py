@@ -19,13 +19,10 @@ resulting from the authorized or unauthorized use of the software.
 
 """
 
-
 import datetime as dt
 import logging
 import numpy as np
-
 from .adjustment import AdjustedStation
-
 
 class InversionError(Exception):
     pass

@@ -282,7 +282,7 @@ class DeltaNormal(DeltaBase):
             return gm2 - gm1 - self.driftcorr
         # If drift method == "netadj", self.driftcorr is a str
         except TypeError:
-            return gm2 - gm2
+            return gm2 - gm1
 
     @property
     def sta1_t(self):

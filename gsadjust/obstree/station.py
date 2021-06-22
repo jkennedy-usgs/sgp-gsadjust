@@ -23,7 +23,6 @@ import numpy as np
 from matplotlib.dates import num2date
 
 from .base import ObsTreeItemBase
-
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
 
@@ -48,6 +47,8 @@ class ObsTreeStation(ObsTreeItemBase):
         self.__dict__ = copy.deepcopy(k.__dict__)
         self.station_name = station_name
         self.station_count = station_count
+        self.stored_gmean = None
+        self.stored_tmean = None
         if hasattr(k, "checked"):
             self.setCheckState(k.checked)
 
@@ -139,14 +140,20 @@ class ObsTreeStation(ObsTreeItemBase):
 
         The try-except block handles errors when all keepdata == 0.
         """
+        if self.stored_gmean:
+            return self.stored_gmean
         g = self.grav()
         try:
-            gtmp = self._filter(g)
-            d = sum(self._weights_())
-            w = self._weights_()
-            wg = [g * w for (g, w) in zip(gtmp, w)]
-            gmean = sum(wg) / d
-            return gmean
+            if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
+                gtmp = self._filter(g)
+                self.stored_gmean  = sum(gtmp) / len(gtmp)
+                return self.stored_gmean
+            else:
+                gtmp = self._filter(g)
+                w = self._weights_()
+                wg = [g * w for (g, w) in zip(gtmp, w)]
+                self.stored_gmean = sum(wg) / sum(self._weights_())
+                return self.stored_gmean
         except:
             return -999
 
@@ -156,13 +163,20 @@ class ObsTreeStation(ObsTreeItemBase):
 
         The try-except block handles errors when all keepdata == 0.
         """
+        if self.stored_tmean:
+            return self.stored_tmean
         try:
-            ttmp = self._filter(self.t)
-            d = sum(self._weights_())
-            w = self._weights_()
-            wt = [g * w for (g, w) in zip(ttmp, w)]
-            tmean = sum(wt) / d
-            return tmean
+            if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
+                ttmp = self._filter(self.t)
+                self.stored_tmean = sum(ttmp) / len(ttmp)
+                return self.stored_tmean
+            else:
+                ttmp = self._filter(self.t)
+                d = sum(self._weights_())
+                w = self._weights_()
+                wt = [g * w for (g, w) in zip(ttmp, w)]
+                self.stored_tmean = sum(wt) / d
+                return self.stored_tmean
         except:
             return -999
 

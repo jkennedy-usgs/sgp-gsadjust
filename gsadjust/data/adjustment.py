@@ -15,7 +15,6 @@ warranty. The software is provided on the condition tha neither the USGS nor the
 Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software. """
 import numpy as np
-import scipy
 
 class AdjustmentResults:
     """

@@ -42,7 +42,7 @@ class PlotGravityChange(QtWidgets.QDialog):
         ncols = len(dates)
         nstations = len(table[0])
         stations = table[0]
-        ncol = int(np.ceil(nstations / 24))
+        ncol = min(4, int(np.ceil(nstations / 24)))
         ax = self.figure.add_subplot(111)
         right_margin = 1 - ncol / 8
         self.figure.subplots_adjust(right=right_margin)

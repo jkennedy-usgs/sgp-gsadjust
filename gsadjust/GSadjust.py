@@ -506,11 +506,13 @@ class MainProg(QtWidgets.QMainWindow):
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreeloop = obstreestation.parent()
         station = obstreestation
+        self.reset_station_cache(station)
+        self.reset_delta_cache()
         if obstreeloop.meter_type in ["CG5", "Scintrex", "CG6", "csv", "CG6Tsoft"]:
             self.station_model = ScintrexTableModel(station)
         elif obstreeloop.meter_type == "Burris":
             self.station_model = BurrisTableModel(station)
-        self.station_model.dataChanged.connect(self.update_data_tab)
+        self.station_model.dataChanged.connect(self.station_model_data_changed)
         self.station_model.signal_update_coordinates.connect(
             self.populate_station_coords
         )
@@ -524,6 +526,43 @@ class MainProg(QtWidgets.QMainWindow):
         self.index_current_station_survey = obstreeloop.parent().index()
         self.obsTreeModel.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
+
+    def station_model_data_changed(self):
+        self.update_data_tab()
+        self.reset_delta_cache()
+
+    def delta_clear(self, delta):
+        if (hasattr(delta, "time")):
+            del delta.time
+        if (hasattr(delta, "dg")):
+            del delta.dg
+        if (hasattr(delta, "sd")):
+            del delta.sd
+
+    def reset_delta_cache(self):
+        for survey in self.obsTreeModel.surveys():
+            for loop in survey.loops():
+                for delta in loop.deltas:
+                    self.delta_clear(delta)
+                    if type(delta.station2) == list:
+                        for d in delta.station2:
+                            self.delta_clear(d)
+            # for delta in survey.deltas:
+            #     self.delta_clear(delta)
+        # self.update_drift_tables_and_plots()
+        #
+        # model = self.tab_drift.plot_drift(update=False, )
+        # self.update_delta_model(method, model)
+        # # Don't want to update if only switching between loops
+        # if update_adjust_tables:
+        #     self.update_deltas_on_adj_tab(obstreeloop)
+        # self.parent.adjust_update_required()
+
+    def reset_station_cache(self, station):
+        if (hasattr(station, "gmean")):
+            del station.gmean
+        if (hasattr(station, "tmean")):
+            del station.tmean
 
     def uncheck_station(self):
         """
@@ -1281,7 +1320,6 @@ class MainProg(QtWidgets.QMainWindow):
 
         """
         current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
-        current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
         drift_method = current_loop.drift_method
         self.tab_drift.driftmethod_combobox.setCurrentIndex(
@@ -1289,7 +1327,6 @@ class MainProg(QtWidgets.QMainWindow):
         )
         self.tab_drift.tare_view.model().init_data(current_loop.tares)
         self.tab_drift.set_drift_method(update, update_adjust_tables)
-        # self.set_adj_sd(current_survey, current_survey.adjustment.ao, loop=current_loop)
         self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
@@ -1302,6 +1339,7 @@ class MainProg(QtWidgets.QMainWindow):
         selected : list
             List of selected indexes
         """
+        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         if selected.model() is not None:
             self.adjust_update_required()
             # if self.tab_widget.currentIndex() == 0:
@@ -1313,6 +1351,7 @@ class MainProg(QtWidgets.QMainWindow):
             # self.tab_adjust.delta_view.update()
         self.set_window_title_asterisk()
         self.update_menus()
+        QtWidgets.QApplication.restoreOverrideCursor()
 
     def on_obs_tree_change(self, selected):
         """
@@ -1884,7 +1923,7 @@ class MainProg(QtWidgets.QMainWindow):
             pbar.progressbar.setValue(pbar_idx[i])
             QtWidgets.QApplication.processEvents()
             # Check time difference between successive stations
-            tdiff = station2.tmean() - station1.tmean()
+            tdiff = station2.tmean - station1.tmean
             if tdiff > loop_thresh:
                 for ii in range(i, obstreeloop.rowCount()):
                     indexes.append(obstreeloop.child(ii).index())

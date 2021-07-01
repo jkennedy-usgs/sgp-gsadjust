@@ -263,7 +263,7 @@ class DeltaNormal(DeltaBase):
     def sta2(self):
         return self.station2.station_name
 
-    @property
+    @functools.cached_property
     def dg(self):
         # Roman correction: dg requires three station-observations
         gm1, gm2, = (

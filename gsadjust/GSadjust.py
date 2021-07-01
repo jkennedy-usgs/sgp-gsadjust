@@ -506,7 +506,6 @@ class MainProg(QtWidgets.QMainWindow):
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreeloop = obstreestation.parent()
         station = obstreestation
-        self.reset_delta_cache()
         self.reset_station_cache(station)
         self.reset_delta_cache()
         if obstreeloop.meter_type in ["CG5", "Scintrex", "CG6", "csv", "CG6Tsoft"]:

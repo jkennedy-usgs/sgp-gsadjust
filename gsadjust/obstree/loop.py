@@ -273,8 +273,8 @@ class ObsTreeLoop(ObsTreeItemBase):
                 station = self.child(i)
                 if self.child(i).data(role=Qt.CheckStateRole) == 2:
                     if station.station_name == unique_station:
-                        x.append(station.tmean())
-                        y.append(station.gmean())
+                        x.append(station.tmean)
+                        y.append(station.gmean)
                         y_sd.append(station.original_sd)
                         t_sd.append(station.t_stdev)
             new_x, new_y, new_y_sd, new_t_sd = [], [], [], []

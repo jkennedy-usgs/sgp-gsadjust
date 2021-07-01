@@ -800,7 +800,8 @@ class TabDrift(QtWidgets.QWidget):
                 except IndexError as e:
                     if self.drift_polydegree_combobox.currentIndex() == 1:
                         MessageBox.warning(
-                            "ErrorInsufficient drift observations for spline method",
+                            "Error",
+                            "Insufficient drift observations for spline method",
                         )
                     else:
                         MessageBox.warning("Unknown error", "Index error")
@@ -897,9 +898,7 @@ class TabDrift(QtWidgets.QWidget):
         obstreeloop = self.parent.obsTreeModel.itemFromIndex(
             self.parent.index_current_loop
         )
-        obstreesurvey = self.parent.obsTreeModel.itemFromIndex(
-            self.parent.index_current_survey
-        )
+
         method_key = self.driftmethod_combobox.currentIndex()
 
         inv_drift_lookup = {v: k for k, v in self.parent.drift_lookup.items()}

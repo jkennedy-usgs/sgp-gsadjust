@@ -17,6 +17,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 import numpy as np
+import functools
 from matplotlib.dates import num2date
 
 
@@ -193,18 +194,9 @@ class DeltaBase:
         """
         return self.sta1 + self.sta2 + self.time_string()
 
-    def time(self):
-        if isinstance(self.station2, tuple):
-            return self.sta1_t
-        elif isinstance(self.station2, list):
-            t = [delta.sta1_t for delta in self.station2]
-            return np.mean(t)
-        else:
-            return (self.sta1_t + self.sta2_t) / 2
-
     def time_string(self):
         try:
-            return num2date(self.time()).strftime("%Y-%m-%d %H:%M:%S")
+            return num2date(self.time).strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             return "-999"
 
@@ -215,7 +207,7 @@ class DeltaBase:
     @property
     def duration(self):
         if type(self.station2) is tuple:
-            return self.station2[1].tmean() - self.station2[0].tmean()
+            return self.station2[1].tmean - self.station2[0].tmean
         elif type(self.station2) is list:
             dgs = [delta.dg for delta in self.station2]
             return np.mean(dgs)
@@ -239,7 +231,7 @@ class DeltaNormal(DeltaBase):
     def meter(self):
         return self.station2.meter[0]
 
-    @property
+    @functools.cached_property
     def sd(self):
         """
         Standard deviation, calculated by summing the station S.Ds in quadrature
@@ -275,8 +267,8 @@ class DeltaNormal(DeltaBase):
     def dg(self):
         # Roman correction: dg requires three station-observations
         gm1, gm2, = (
-            self.station1.gmean(),
-            self.station2.gmean(),
+            self.station1.gmean,
+            self.station2.gmean,
         )
         try:
             return gm2 - gm1 - self.driftcorr
@@ -286,22 +278,25 @@ class DeltaNormal(DeltaBase):
 
     @property
     def sta1_t(self):
-        return self.station1.tmean()
+        return self.station1.tmean
 
     @property
     def sta2_t(self):
-        return self.station2.tmean()
+        return self.station2.tmean
 
     @property
     def duration(self):
         if type(self.station2) is tuple:
-            return self.station2[1].tmean() - self.station2[0].tmean()
+            return self.station2[1].tmean - self.station2[0].tmean
         elif type(self.station2) is list:
             dgs = [delta.dg for delta in self.station2]
             return np.mean(dgs)
         else:
             return self.sta2_t - self.sta1_t
 
+    @functools.cached_property
+    def time(self):
+        return (self.sta1_t + self.sta2_t) / 2
 
 class Delta3Point(DeltaBase):
     """Delta3Point provides a dg calculated between a station and an interpolated
@@ -330,7 +325,7 @@ class Delta3Point(DeltaBase):
     def meter(self):
         return self.station2[1].meter[0]
 
-    @property
+    @functools.cached_property
     def sd(self):
         """
         Default value. Ignored unless there is only one Delta3Point comprising a
@@ -353,17 +348,17 @@ class Delta3Point(DeltaBase):
     def sta2(self):
         return self.station2[1].station_name
 
-    @property
+    @functools.cached_property
     def dg(self):
         gm1, gm2a, gm2b, = (
-            self.station1.gmean(),
-            self.station2[1].gmean(),
-            self.station2[0].gmean(),
+            self.station1.gmean,
+            self.station2[1].gmean,
+            self.station2[0].gmean,
         )
         tm1, tm2a, tm2b = (
-            self.station1.tmean(),
-            self.station2[0].tmean(),
-            self.station2[1].tmean(),
+            self.station1.tmean,
+            self.station2[0].tmean,
+            self.station2[1].tmean,
         )
 
         sta2_dg = gm2a - gm2b
@@ -372,12 +367,15 @@ class Delta3Point(DeltaBase):
 
     @property
     def sta1_t(self):
-        return self.station1.tmean()
+        return self.station1.tmean
 
     @property
     def sta2_t(self):
-        return self.station2[0].tmean()
+        return self.station2[0].tmean
 
+    @functools.cached_property
+    def time(self):
+        return self.sta1_t
 
 class DeltaList(DeltaBase):
     """DeltaList provides a dg calculated from a list of deltas.
@@ -398,7 +396,7 @@ class DeltaList(DeltaBase):
     def meter(self):
         return self.station2[0].meter
 
-    @property
+    @functools.cached_property
     def sd(self):
         """Standard deviation determined from the standard deviation of the 3Point
         dg values.
@@ -434,7 +432,7 @@ class DeltaList(DeltaBase):
         else:
             return self.station2[0].station1.station_name
 
-    @property
+    @functools.cached_property
     def dg(self):
         # Roman correction: return average of individual deltas
         dg_all = [np.abs(delta.dg) for delta in self.station2]
@@ -442,18 +440,23 @@ class DeltaList(DeltaBase):
 
     @property
     def sta1_t(self):
-        return self.station2[0].station1.tmean()
+        return self.station2[0].station1.tmean
 
     @property
     def sta2_t(self):
-        return self.station2[0].station1.tmean()
+        return self.station2[0].station1.tmean
 
     @property
     def duration(self):
         if type(self.station2) is tuple:
-            return self.station2[1].tmean() - self.station2[0].tmean()
+            return self.station2[1].tmean - self.station2[0].tmean
         elif type(self.station2) is list:
             dgs = [delta.dg for delta in self.station2]
             return np.mean(dgs)
         else:
             return self.sta2_t - self.sta1_t
+
+    @functools.cached_property
+    def time(self):
+        t = [delta.sta1_t for delta in self.station2]
+        return np.mean(t)

@@ -18,6 +18,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 import copy
+import functools
 
 import numpy as np
 from matplotlib.dates import num2date
@@ -86,7 +87,7 @@ class ObsTreeStation(ObsTreeItemBase):
 
     @property
     def key(self):
-        return (self.station_name, self.tmean())
+        return (self.station_name, self.tmean)
 
     def grav(self):
         """
@@ -108,13 +109,13 @@ class ObsTreeStation(ObsTreeItemBase):
         Removes null values
         """
         return (
-            num2date(self.tmean()).strftime("%Y-%m-%d %H:%M:%S")
-            if self.tmean() != -999
-            else self.tmean()
+            num2date(self.tmean).strftime("%Y-%m-%d %H:%M:%S")
+            if self.tmean != -999
+            else self.tmean
         )
 
     def display_mean_stddev(self):
-        return "{:.1f} ± {:.1f}".format(self.gmean(), self.stdev())
+        return "{:.1f} ± {:.1f}".format(self.gmean, self.stdev())
 
     @property
     def display_column_map(self):
@@ -134,14 +135,13 @@ class ObsTreeStation(ObsTreeItemBase):
         """
         return [v for i, v in enumerate(d) if self.keepdata[i] == 1]
 
+    @functools.cached_property
     def gmean(self):
         """
         Average gravity value
 
         The try-except block handles errors when all keepdata == 0.
         """
-        if self.stored_gmean:
-            return self.stored_gmean
         g = self.grav()
         try:
             if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
@@ -157,14 +157,13 @@ class ObsTreeStation(ObsTreeItemBase):
         except:
             return -999
 
+    @functools.cached_property
     def tmean(self):
         """
         Average observation time.
 
         The try-except block handles errors when all keepdata == 0.
         """
-        if self.stored_tmean:
-            return self.stored_tmean
         try:
             if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
                 ttmp = self._filter(self.t)
@@ -271,10 +270,10 @@ class ObsTreeStation(ObsTreeItemBase):
 
     @property
     def summary_str(self):
-        if self.tmean() == -999:
-            tm = self.tmean()
+        if self.tmean == -999:
+            tm = self.tmean
         else:
-            tm = num2date(self.tmean()).strftime("%Y-%m-%d %H:%M:%S")
+            tm = num2date(self.tmean).strftime("%Y-%m-%d %H:%M:%S")
         if len(self.lat) == 0:
             self.lat, self.long, self.elev = [0], [0], [0]
         summary_str = "{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n".format(
@@ -285,7 +284,7 @@ class ObsTreeStation(ObsTreeItemBase):
             self.lat[0],
             self.long[0],
             self.elev[0],
-            self.gmean(),
+            self.gmean,
             self.stdev(),
         )
         return summary_str

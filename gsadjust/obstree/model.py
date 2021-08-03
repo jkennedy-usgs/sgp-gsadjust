@@ -320,10 +320,13 @@ class ObsTreeModel(QtGui.QStandardItemModel):
 
     def stations(self):
         station_list = []
+        station_name_list = []
         for obstreesurvey in self.surveys():
             for obstreeloop in obstreesurvey.loops():
                 station_list += obstreeloop.stations()
-        return list(set(station_list))
+        for s in station_list:
+            station_name_list.append(s.station_name)
+        return list(set(station_name_list))
 
     def reset_assigned_sd(self):
         """

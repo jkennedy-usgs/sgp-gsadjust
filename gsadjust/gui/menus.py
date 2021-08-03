@@ -132,6 +132,7 @@ _ENABLED_MENUS = {
         ("mnAdjPlotObservedAdjustedAbs", True),
         ("mnAdjUpdateSD", True),
         ("mnToolsShowCalCoeffTimeSeries", True),
+        ("mnToolsWaterLevelPlot", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_RESULTS: [
         ("mnAdjPlotHist", False),
@@ -142,6 +143,7 @@ _ENABLED_MENUS = {
         ("mnToolsWriteMetadataText", False),
         ("mnAdjPlotObservedAdjustedAbs", False),
         ("mnAdjUpdateSD", False),
+        ("mnToolsWaterLevelPlot", False),
     ],
     MENU_STATE.CALCULATE_CHANGE: [
         ("mnToolsComputeGravityChangeAction", True),
@@ -571,6 +573,11 @@ class Menus:
             slot=self.mainProg.show_cal_coeff,
             enabled=False,
         )
+        self.mnToolsWaterLevelPlot = self.create_action(
+            "Plot dg vs. NWIS gwl",
+            slot=self.mainProg.show_nwis_plot,
+            enabled=False
+        )
 
         self.add_actions(
             self.mnTools,
@@ -585,6 +592,8 @@ class Menus:
                 self.mnToolsWriteMetadataText,
                 self.mnToolsWriteTabularOutput,
                 self.mnToolsWriteSummary,
+                None,
+                self.mnToolsWaterLevelPlot
             ),
         )
 

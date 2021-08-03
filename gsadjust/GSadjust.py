@@ -140,6 +140,7 @@ import sys
 import time
 import traceback
 import webbrowser
+import datetime
 
 # Modules that must be installed
 import matplotlib
@@ -148,6 +149,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 from matplotlib.dates import num2date, date2num
 
+from data import nwis_get_data
+from data.waterlevel import get_wl_data
+#
 from . import resources
 from .data import (
     ChannelList,
@@ -181,7 +185,7 @@ from .gui.dialogs import (
     ShowCalCoeffs,
     TideCoordinatesDialog,
     TideCorrectionDialog,
-    VerticalGradientDialog,
+    VerticalGradientDialog, NwisChooseStation,
 )
 from .gui.logger import LoggerWidget
 from .gui.menus import MENU_STATE, Menus
@@ -203,6 +207,7 @@ from .plots import (
     PlotGravityChange,
     PlotLoopAnimation,
     PlotNetworkGraph,
+    PlotNwis,
 )
 from .tides import tide_correction_agnew, tide_correction_meter
 from .utils import (
@@ -1604,7 +1609,7 @@ class MainProg(QtWidgets.QMainWindow):
                 for station in loop.checked_stations():
                     lat.append(coords[station.station_name][1])
                     lon.append(coords[station.station_name][0])
-                    dates.append(station.tmean())
+                    dates.append(station.tmean)
                 self._plot_loop_animation = PlotLoopAnimation([lat, lon, dates])
                 self._plot_loop_animation.show()
             except Exception:
@@ -2173,6 +2178,21 @@ class MainProg(QtWidgets.QMainWindow):
             win = ShowCalCoeffs(cal_coeffs, parent=self)
             win.show()
 
+    def show_nwis_plot(self):
+        win = NwisChooseStation(self)
+        if win.exec_():
+            g_station = win.station_comboBox.currentText()
+            data = compute_gravity_change(self.obsTreeModel, table_type="list")
+            dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if sta == g_station]
+            dates = [datetime.datetime.strptime(d,'%Y-%m-%d') for d in dates_temp]
+            g = [data[1][2][idx]  for (idx, sta) in enumerate(data[1][0]) if sta == g_station]
+            sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
+                  sta == g_station]
+            nwis_data = nwis_get_data(win.nwis_station.text()) #get_wl_data(win.nwis_station.text())
+            if data:
+                plt = self.plot_nwis(nwis_data, (dates,g))
+                plt.show()
+
     def plot_network_graph_circular(self):
         """
         Show circular network graph
@@ -2208,6 +2228,11 @@ class MainProg(QtWidgets.QMainWindow):
     def plot_gravity_change(self, dates, table, parent):
         plt = PlotGravityChange(dates, table, parent)
         plt.show()
+
+    def plot_nwis(self, nwis, data):
+        plt = PlotNwis(nwis, data, parent=self)
+        return plt
+        # return
 
     def set_adj_sd(self, survey, ao, loop=None):
         """

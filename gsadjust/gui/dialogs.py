@@ -506,6 +506,45 @@ class DialogOverwrite(QtWidgets.QMessageBox):
     def onClicked(self, btn):
         self.accept()
 
+class NwisChooseStation(QtWidgets.QDialog):
+    def __init__(self, MainProg):
+        super(NwisChooseStation, self).__init__(MainProg)
+        self.station_comboBox = QtWidgets.QComboBox(self)
+        for s in sorted(MainProg.obsTreeModel.stations()):
+            self.station_comboBox.addItem(s)
+
+        layout = QtWidgets.QVBoxLayout()
+        g_station_box = QtWidgets.QHBoxLayout()
+        g_station_box_widget = QtWidgets.QWidget()
+        g_station_box.addWidget(QtWidgets.QLabel("Gravity Station"))
+        g_station_box.addWidget(self.station_comboBox)
+        g_station_box_widget.setLayout(g_station_box)
+        layout.addWidget(g_station_box_widget)
+
+        nwis_station_box = QtWidgets.QHBoxLayout()
+        nwis_station_box_widget = QtWidgets.QWidget()
+        nwis_station_box.addWidget(QtWidgets.QLabel("NWIS Station ID"))
+        self.nwis_station = QtWidgets.QLineEdit()
+        widget = nwis_station_box.addWidget(self.nwis_station)
+        nwis_station_box_widget.setLayout(nwis_station_box)
+        layout.addWidget(nwis_station_box_widget)
+
+        ok_button = QtWidgets.QPushButton("Ok")
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+
+        # Button box
+        button_box = QtWidgets.QHBoxLayout()
+        button_box.addStretch(1)
+        button_box.addWidget(cancel_button)
+        button_box.addWidget(ok_button)
+        button_widget = QtWidgets.QWidget()
+        button_widget.setLayout(button_box)
+
+        layout.addWidget(button_widget)
+        self.setLayout(layout)
+
 
 class GravityChangeTable(QtWidgets.QDialog):
     """

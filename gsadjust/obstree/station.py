@@ -48,13 +48,14 @@ class ObsTreeStation(ObsTreeItemBase):
         self.__dict__ = copy.deepcopy(k.__dict__)
         self.station_name = station_name
         self.station_count = station_count
-        self.stored_gmean = None
-        self.stored_tmean = None
         if hasattr(k, "checked"):
             self.setCheckState(k.checked)
 
     def __str__(self):
         return self.station_name
+
+    def __hash__(self):
+        return (self.__dict__)
 
     def _weights_(self):
         """
@@ -146,14 +147,12 @@ class ObsTreeStation(ObsTreeItemBase):
         try:
             if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
                 gtmp = self._filter(g)
-                self.stored_gmean  = sum(gtmp) / len(gtmp)
-                return self.stored_gmean
+                return sum(gtmp) / len(gtmp)
             else:
                 gtmp = self._filter(g)
                 w = self._weights_()
                 wg = [g * w for (g, w) in zip(gtmp, w)]
-                self.stored_gmean = sum(wg) / sum(self._weights_())
-                return self.stored_gmean
+                return sum(wg) / sum(self._weights_())
         except:
             return -999
 

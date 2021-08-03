@@ -34,7 +34,7 @@ constitute any such warranty. The software is provided on the condition tha
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
-from . import adjustment, analysis, channel, correction, datum, delta, tare, nwis, waterlevel
+from . import adjustment, analysis, channel, correction, datum, delta, tare, nwis
 from .adjustment import (
     AdjustedStation,
     Adjustment,
@@ -51,4 +51,3 @@ from .delta import (
 )
 from .tare import Tare
 from .nwis import nwis_get_data
-from .waterlevel import get_wl_data

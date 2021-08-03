@@ -150,7 +150,6 @@ from PyQt5.QtCore import QSettings, Qt
 from matplotlib.dates import num2date, date2num
 
 from data import nwis_get_data
-from data.waterlevel import get_wl_data
 #
 from . import resources
 from .data import (
@@ -2188,7 +2187,8 @@ class MainProg(QtWidgets.QMainWindow):
             g = [data[1][2][idx]  for (idx, sta) in enumerate(data[1][0]) if sta == g_station]
             sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
                   sta == g_station]
-            nwis_data = nwis_get_data(win.nwis_station.text()) #get_wl_data(win.nwis_station.text())
+            nwis_station = win.nwis_station.text()[:16]
+            nwis_data = nwis_get_data(nwis_station) #get_wl_data(win.nwis_station.text())
             if data:
                 plt = self.plot_nwis(nwis_data, (dates,g))
                 plt.show()

@@ -23,8 +23,9 @@ resulting from the authorized or unauthorized use of the software.
 import datetime as dt
 import logging
 import os
-
+from math import sin, cos, sqrt, atan2, radians, asin
 import numpy as np
+import requests
 from PyQt5 import QtCore, QtGui, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -509,8 +510,13 @@ class DialogOverwrite(QtWidgets.QMessageBox):
 class NwisChooseStation(QtWidgets.QDialog):
     def __init__(self, MainProg):
         super(NwisChooseStation, self).__init__(MainProg)
+        self.stations = MainProg.obsTreeModel.stations()
+        self.coords = MainProg.obsTreeModel.station_coords
+        self.init_gui()
+
+    def init_gui(self):
         self.station_comboBox = QtWidgets.QComboBox(self)
-        for s in sorted(MainProg.obsTreeModel.stations()):
+        for s in sorted(self.stations):
             self.station_comboBox.addItem(s)
 
         layout = QtWidgets.QVBoxLayout()
@@ -525,7 +531,11 @@ class NwisChooseStation(QtWidgets.QDialog):
         nwis_station_box_widget = QtWidgets.QWidget()
         nwis_station_box.addWidget(QtWidgets.QLabel("NWIS Station ID"))
         self.nwis_station = QtWidgets.QLineEdit()
-        widget = nwis_station_box.addWidget(self.nwis_station)
+        btn_search_nwis = QtWidgets.QToolButton()
+        btn_search_nwis.setIcon(QtGui.QIcon(":/icons/mag.png"))
+        btn_search_nwis.clicked.connect(self.search_nwis)
+        nwis_station_box.addWidget(self.nwis_station)
+        nwis_station_box.addWidget(btn_search_nwis)
         nwis_station_box_widget.setLayout(nwis_station_box)
         layout.addWidget(nwis_station_box_widget)
 
@@ -545,6 +555,56 @@ class NwisChooseStation(QtWidgets.QDialog):
         layout.addWidget(button_widget)
         self.setLayout(layout)
 
+    def search_nwis(self):
+        degree_buffer = 0.2
+        ID_dict = {}
+        try:
+            coords = self.coords[self.station_comboBox.currentText()]
+            lon_min = coords[0] - degree_buffer
+            lon_max = coords[0] + degree_buffer
+            lat_min = coords[1] - degree_buffer
+            lat_max = coords[1] + degree_buffer
+            nwis_URL = "https://waterservices.usgs.gov/nwis/site/?format=rdb&bBox=" \
+                  f"{lon_min:.5f},{lat_min:.5f},{lon_max:.5f},{lat_max:.5f}" \
+                  "&outputDataTypeCd=gw&siteType" \
+                  "=GW&siteStatus=all&hasDataTypeCd=gw"
+            r = requests.get(nwis_URL)
+
+            nwis_data = r.text.split('\n')
+            for nwis_line in nwis_data:
+                line_elems = nwis_line.split('\t')
+                # Need to test for null strings because it's possible for there to be a date without a measurement.
+                try:  # the rdb format has changed; parsing by '\t' barely works with the fixed-width fields
+                    if line_elems[0] == u'USGS':  # Doesn't work for other agency codes
+                        if line_elems[4] != '':
+                            lat = float(line_elems[4])
+                            lon = float(line_elems[5])
+                            ID_dict[line_elems[1]] = (self.calc_distance(lat,
+                                                                        lon,
+                                                                        coords[1],
+                                                                        coords[0]),
+                                                        line_elems[21],
+                                                        line_elems[22])
+                except:
+                    continue
+            closest_nwis = min(ID_dict, key=ID_dict.get)
+            nwis_string =  f"{closest_nwis}: {ID_dict[closest_nwis][0]:.0f} m," \
+                           f" {ID_dict[closest_nwis][1]} - {ID_dict[closest_nwis][2]}"
+            self.nwis_station.setText(nwis_string)
+
+        except:
+            self.nwis_station.setText("No nearby stations")
+
+    def calc_distance(self, lat1, lon1, lat2, lon2):
+        R = 6373000
+        dlon = radians(lon2) - radians(lon1)
+        dlat = radians(lat2) - radians(lat1)
+
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        distance_haversine_formula = R * c
+        return distance_haversine_formula
 
 class GravityChangeTable(QtWidgets.QDialog):
     """

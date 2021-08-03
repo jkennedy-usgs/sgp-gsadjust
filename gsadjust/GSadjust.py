@@ -1604,7 +1604,7 @@ class MainProg(QtWidgets.QMainWindow):
                 for station in loop.checked_stations():
                     lat.append(coords[station.station_name][1])
                     lon.append(coords[station.station_name][0])
-                    dates.append(station.tmean())
+                    dates.append(station.tmean)
                 self._plot_loop_animation = PlotLoopAnimation([lat, lon, dates])
                 self._plot_loop_animation.show()
             except Exception:

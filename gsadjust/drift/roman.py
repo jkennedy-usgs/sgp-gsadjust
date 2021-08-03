@@ -69,7 +69,7 @@ def drift_roman(data, loop_name, time_threshold=None):
                     stations.append(station)
             iter_stations = iter(stations)
             first_station = next(iter_stations)
-            initial_xy = [(first_station.tmean, first_station.gmean())]
+            initial_xy = [(first_station.tmean, first_station.gmean)]
             for station in iter_stations:
                 if (station.tmean - first_station.tmean) * 1440 > time_threshold:
                     initial_xy.append((station.tmean, station.gmean))

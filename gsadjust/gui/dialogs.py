@@ -31,7 +31,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.dates import date2num
 from matplotlib.figure import Figure
-
+from collections import defaultdict, OrderedDict
 from .messages import MessageBox
 from .utils import copy_cells_to_clipboard
 from .widgets import IncrMinuteTimeEdit, ProgressBar
@@ -539,12 +539,14 @@ class NwisChooseStation(QtWidgets.QDialog):
         nwis_station_box_widget.setLayout(nwis_station_box)
         layout.addWidget(nwis_station_box_widget)
 
+        self.createTable()
+        layout.addWidget(self.tableWidget)
+        # Button box
         ok_button = QtWidgets.QPushButton("Ok")
         ok_button.clicked.connect(self.accept)
         cancel_button = QtWidgets.QPushButton("Cancel")
         cancel_button.clicked.connect(self.close)
 
-        # Button box
         button_box = QtWidgets.QHBoxLayout()
         button_box.addStretch(1)
         button_box.addWidget(cancel_button)
@@ -554,10 +556,11 @@ class NwisChooseStation(QtWidgets.QDialog):
 
         layout.addWidget(button_widget)
         self.setLayout(layout)
+        self.resize(600, 700)
 
     def search_nwis(self):
         degree_buffer = 0.2
-        ID_dict = {}
+        ID_dict = defaultdict(list)
         try:
             coords = self.coords[self.station_comboBox.currentText()]
             lon_min = coords[0] - degree_buffer
@@ -575,27 +578,38 @@ class NwisChooseStation(QtWidgets.QDialog):
                 line_elems = nwis_line.split('\t')
                 # Need to test for null strings because it's possible for there to be a date without a measurement.
                 try:  # the rdb format has changed; parsing by '\t' barely works with the fixed-width fields
-                    if line_elems[0] == u'USGS':  # Doesn't work for other agency codes
-                        if line_elems[4] != '':
-                            lat = float(line_elems[4])
-                            lon = float(line_elems[5])
-                            ID_dict[line_elems[1]] = (self.calc_distance(lat,
-                                                                        lon,
-                                                                        coords[1],
-                                                                        coords[0]),
-                                                        line_elems[21],
-                                                        line_elems[22])
+                    if line_elems[0] == u'USGS' and line_elems[13] != '72019':  # Doesn't work for other agency codes
+                        lat = float(line_elems[4])
+                        lon = float(line_elems[5])
+                        distance = self.calc_distance(lat,
+                                                     lon,
+                                                     coords[1],
+                                                     coords[0])
+                        ID_dict[line_elems[1]] = [f"{distance:.0f}",
+                                                  line_elems[21],
+                                                  line_elems[22]]
                 except:
                     continue
-            closest_nwis = min(ID_dict, key=ID_dict.get)
-            nwis_string =  f"{closest_nwis}: {ID_dict[closest_nwis][0]:.0f} m," \
-                           f" {ID_dict[closest_nwis][1]} - {ID_dict[closest_nwis][2]}"
+            if len(ID_dict) == 0:
+                self.nwis_station.setText("No stations found")
+            ID_dict = OrderedDict(sorted(ID_dict.items(), key=lambda x: int(x[1][0])))
+            self.populateTable(ID_dict)
+            nwis_string = next(iter(ID_dict.items()))[0]
+            # closest_nwis = min(ID_dict, key=lambda x: x[0])
+            # nwis_string = f"{closest_nwis}: {ID_dict[closest_nwis][0]:.0f} m," \
+            #                f" {ID_dict[closest_nwis][1]} - {ID_dict[closest_nwis][2]}"
             self.nwis_station.setText(nwis_string)
 
         except:
-            self.nwis_station.setText("No nearby stations")
+            self.nwis_station.setText("Error")
 
     def calc_distance(self, lat1, lon1, lat2, lon2):
+        """
+
+        Returns
+        -------
+        object
+        """
         R = 6373000
         dlon = radians(lon2) - radians(lon1)
         dlat = radians(lat2) - radians(lat1)
@@ -605,6 +619,42 @@ class NwisChooseStation(QtWidgets.QDialog):
 
         distance_haversine_formula = R * c
         return distance_haversine_formula
+
+    def populateTable(self, ID_dict):
+        self.tableWidget.setRowCount(len(ID_dict))
+        row = 0
+        for k, v in ID_dict.items():
+            item = QtWidgets.QTableWidgetItem(k)
+            item.setFlags(QtCore.Qt.ItemIsUserCheckable |
+                              QtCore.Qt.ItemIsEnabled)
+            if row == 0:
+                item.setCheckState(QtCore.Qt.Checked)
+            else:
+                item.setCheckState(QtCore.Qt.Unchecked)
+
+            self.tableWidget.setItem(row, 0, item)
+
+            for idx, content in enumerate(v):
+                item = QtWidgets.QTableWidgetItem(str(content))
+                item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+                self.tableWidget.setItem(row, idx+1, item)
+            row += 1
+
+    # Create table
+    def createTable(self):
+        self.tableWidget = QtWidgets.QTableWidget()
+
+        # Row count
+        self.tableWidget.setRowCount(0)
+
+        # Column count
+        self.tableWidget.setColumnCount(4)
+        # Table will fit the screen horizontally
+        self.tableWidget.horizontalHeader().setStretchLastSection(True)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Stretch)
+
+        self.tableWidget.setHorizontalHeaderLabels(["Station", "Distance (m)", "First data", "Last data"])
 
 class GravityChangeTable(QtWidgets.QDialog):
     """

@@ -149,13 +149,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 from matplotlib.dates import num2date, date2num
 
-from data import nwis_get_data
 #
 from . import resources
 from .data import (
     ChannelList,
     Datum,
     Tare,
+    nwis_get_data
 )
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction

@@ -2186,7 +2186,7 @@ class MainProg(QtWidgets.QMainWindow):
                     nwis_station = item.text()
                     break
             else:
-                nwis_station = win.nwis_station.text()[:16]
+                nwis_station = win.nwis_station_line_edit.text()[:16]
             g_station = win.station_comboBox.currentText()
             data = compute_gravity_change(self.obsTreeModel, table_type="list")
             dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if sta == g_station]

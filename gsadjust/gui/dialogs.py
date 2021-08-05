@@ -533,11 +533,11 @@ class NwisChooseStation(QtWidgets.QDialog):
         nwis_station_box = QtWidgets.QHBoxLayout()
         nwis_station_box_widget = QtWidgets.QWidget()
         nwis_station_box.addWidget(QtWidgets.QLabel("NWIS Station ID"))
-        self.nwis_station = QtWidgets.QLineEdit()
+        self.nwis_station_line_edit = QtWidgets.QLineEdit()
         btn_search_nwis = QtWidgets.QToolButton()
         btn_search_nwis.setIcon(QtGui.QIcon(":/icons/mag.png"))
-        btn_search_nwis.clicked.connect(self.search_nwis)
-        nwis_station_box.addWidget(self.nwis_station)
+        btn_search_nwis.clicked.connect(self.search_for_nwis_stations)
+        nwis_station_box.addWidget(self.nwis_station_line_edit)
         nwis_station_box.addWidget(btn_search_nwis)
         nwis_station_box_widget.setLayout(nwis_station_box)
         layout.addWidget(nwis_station_box_widget)
@@ -561,70 +561,16 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.setLayout(layout)
         self.resize(630, 700)
 
-    def search_nwis(self):
-        degree_buffer = 0.2
-        ID_dict = defaultdict(list)
+    def search_for_nwis_stations(self):
+        coords = self.coords[self.station_comboBox.currentText()]
+        ID_dict = search_nwis(coords)
         try:
-            coords = self.coords[self.station_comboBox.currentText()]
-            lon_min = coords[0] - degree_buffer
-            lon_max = coords[0] + degree_buffer
-            lat_min = coords[1] - degree_buffer
-            lat_max = coords[1] + degree_buffer
-            nwis_URL = "https://waterservices.usgs.gov/nwis/site/?format=rdb&bBox=" \
-                  f"{lon_min:.5f},{lat_min:.5f},{lon_max:.5f},{lat_max:.5f}" \
-                  "&outputDataTypeCd=gw&siteType" \
-                  "=GW&siteStatus=all&hasDataTypeCd=gw"
-            r = requests.get(nwis_URL)
-
-            nwis_data = r.text.split('\n')
-            for nwis_line in nwis_data:
-                line_elems = nwis_line.split('\t')
-
-                # Need to test for null strings because it's possible for there to be a date without a measurement.
-                try:  # the rdb format has changed; parsing by '\t' barely works with the fixed-width fields
-
-                    if line_elems[0] == u'USGS' and line_elems[13] != '72019':  # Doesn't work for other agency codes
-                        lat = float(line_elems[4])
-                        lon = float(line_elems[5])
-                        distance = self.calc_distance(lat,
-                                                     lon,
-                                                     coords[1],
-                                                     coords[0])
-                        ID_dict[line_elems[1]] = [line_elems[2],
-                                                  f"{distance:.0f}",
-                                                  line_elems[21],
-                                                  line_elems[22]]
-                except:
-                    continue
-            if len(ID_dict) == 0:
-                self.nwis_station.setText("No stations found")
-            ID_dict = OrderedDict(sorted(ID_dict.items(), key=lambda x: int(x[1][1])))
             self.populateTable(ID_dict)
             nwis_string = next(iter(ID_dict.items()))[0]
-            # closest_nwis = min(ID_dict, key=lambda x: x[0])
-            # nwis_string = f"{closest_nwis}: {ID_dict[closest_nwis][0]:.0f} m," \
-            #                f" {ID_dict[closest_nwis][1]} - {ID_dict[closest_nwis][2]}"
-            self.nwis_station.setText(nwis_string)
-
+            self.nwis_station_line_edit.setText(nwis_string)
         except:
-            self.nwis_station.setText("Error")
+            self.nwis_station_line_edit.setText("Error")
 
-    def calc_distance(self, lat1, lon1, lat2, lon2):
-        """
-
-        Returns
-        -------
-        object
-        """
-        R = 6373000
-        dlon = radians(lon2) - radians(lon1)
-        dlat = radians(lat2) - radians(lat1)
-
-        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        distance_haversine_formula = R * c
-        return distance_haversine_formula
 
     def populateTable(self, ID_dict):
         self.tableWidget.setRowCount(len(ID_dict))
@@ -637,16 +583,15 @@ class NwisChooseStation(QtWidgets.QDialog):
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
-            item.setData(LastStateRole, item.checkState())
             self.tableWidget.setItem(row, 0, item)
 
             for idx, content in enumerate(v):
                 item = QtWidgets.QTableWidgetItem(str(content))
-                item.setData(LastStateRole, item.checkState())
                 item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
                 self.tableWidget.setItem(row, idx+1, item)
             row += 1
         self.tableWidget.cellChanged.connect(self.onCellChanged)
+        self.tableWidget.setSortingEnabled(True)
 
     # Create table
     def createTable(self):
@@ -673,19 +618,19 @@ class NwisChooseStation(QtWidgets.QDialog):
         item = self.tableWidget.item(row, column)
         # lastState = item.data(LastStateRole)
 
-        if column == 0:
-            currentState = item.checkState()
-            # if currentState != lastState:
-            print("changed: ")
+        if column != 0:
+            return
+
+        currentState = item.checkState()
+        try:
             if currentState == QtCore.Qt.Checked:
-                print("checked")
+                self.nwis_station_line_edit.setText(item.text())
                 for row_idx in range(self.tableWidget.rowCount()):
                     if row_idx != row:
                         temp_item = self.tableWidget.item(row_idx, 0)
                         temp_item.setCheckState(QtCore.Qt.Unchecked)
-                else:
-                    print("unchecked")
-                # item.setData(LastStateRole, currentState)
+        except:
+            return
 
 class GravityChangeTable(QtWidgets.QDialog):
     """

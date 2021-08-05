@@ -2180,17 +2180,24 @@ class MainProg(QtWidgets.QMainWindow):
     def show_nwis_plot(self):
         win = NwisChooseStation(self)
         if win.exec_():
+            for row_idx in range(win.tableWidget.rowCount()):
+                item = win.tableWidget.item(row_idx, 0)
+                if item.checkState() == 2:
+                    nwis_station = item.text()
+                    break
+            else:
+                nwis_station = win.nwis_station.text()[:16]
             g_station = win.station_comboBox.currentText()
             data = compute_gravity_change(self.obsTreeModel, table_type="list")
             dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if sta == g_station]
             dates = [datetime.datetime.strptime(d,'%Y-%m-%d') for d in dates_temp]
-            g = [data[1][2][idx]  for (idx, sta) in enumerate(data[1][0]) if sta == g_station]
+            g = [data[1][2][idx] for (idx, sta) in enumerate(data[1][0]) if sta == g_station]
             sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
                   sta == g_station]
-            nwis_station = win.nwis_station.text()[:16]
+
             nwis_data = nwis_get_data(nwis_station) #get_wl_data(win.nwis_station.text())
             if data:
-                plt = self.plot_nwis(nwis_data, (dates,g))
+                plt = self.plot_nwis(nwis_station, g_station, nwis_data, (dates,g))
                 plt.show()
 
     def plot_network_graph_circular(self):
@@ -2229,8 +2236,8 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotGravityChange(dates, table, parent)
         plt.show()
 
-    def plot_nwis(self, nwis, data):
-        plt = PlotNwis(nwis, data, parent=self)
+    def plot_nwis(self, nwis_station, g_station, nwis, data):
+        plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
         return plt
         # return
 

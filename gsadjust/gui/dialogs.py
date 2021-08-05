@@ -39,6 +39,7 @@ from ..data import Datum, analysis
 from ..file import a10
 from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
+from ..data.nwis import search_nwis
 
 
 class CoordinatesTable(QtWidgets.QDialog):
@@ -507,7 +508,9 @@ class DialogOverwrite(QtWidgets.QMessageBox):
     def onClicked(self, btn):
         self.accept()
 
+
 class NwisChooseStation(QtWidgets.QDialog):
+
     def __init__(self, MainProg):
         super(NwisChooseStation, self).__init__(MainProg)
         self.stations = MainProg.obsTreeModel.stations()
@@ -556,7 +559,7 @@ class NwisChooseStation(QtWidgets.QDialog):
 
         layout.addWidget(button_widget)
         self.setLayout(layout)
-        self.resize(600, 700)
+        self.resize(630, 700)
 
     def search_nwis(self):
         degree_buffer = 0.2
@@ -576,8 +579,10 @@ class NwisChooseStation(QtWidgets.QDialog):
             nwis_data = r.text.split('\n')
             for nwis_line in nwis_data:
                 line_elems = nwis_line.split('\t')
+
                 # Need to test for null strings because it's possible for there to be a date without a measurement.
                 try:  # the rdb format has changed; parsing by '\t' barely works with the fixed-width fields
+
                     if line_elems[0] == u'USGS' and line_elems[13] != '72019':  # Doesn't work for other agency codes
                         lat = float(line_elems[4])
                         lon = float(line_elems[5])
@@ -585,14 +590,15 @@ class NwisChooseStation(QtWidgets.QDialog):
                                                      lon,
                                                      coords[1],
                                                      coords[0])
-                        ID_dict[line_elems[1]] = [f"{distance:.0f}",
+                        ID_dict[line_elems[1]] = [line_elems[2],
+                                                  f"{distance:.0f}",
                                                   line_elems[21],
                                                   line_elems[22]]
                 except:
                     continue
             if len(ID_dict) == 0:
                 self.nwis_station.setText("No stations found")
-            ID_dict = OrderedDict(sorted(ID_dict.items(), key=lambda x: int(x[1][0])))
+            ID_dict = OrderedDict(sorted(ID_dict.items(), key=lambda x: int(x[1][1])))
             self.populateTable(ID_dict)
             nwis_string = next(iter(ID_dict.items()))[0]
             # closest_nwis = min(ID_dict, key=lambda x: x[0])
@@ -631,14 +637,16 @@ class NwisChooseStation(QtWidgets.QDialog):
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
-
+            item.setData(LastStateRole, item.checkState())
             self.tableWidget.setItem(row, 0, item)
 
             for idx, content in enumerate(v):
                 item = QtWidgets.QTableWidgetItem(str(content))
+                item.setData(LastStateRole, item.checkState())
                 item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
                 self.tableWidget.setItem(row, idx+1, item)
             row += 1
+        self.tableWidget.cellChanged.connect(self.onCellChanged)
 
     # Create table
     def createTable(self):
@@ -648,13 +656,36 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.tableWidget.setRowCount(0)
 
         # Column count
-        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setColumnCount(5)
         # Table will fit the screen horizontally
         self.tableWidget.horizontalHeader().setStretchLastSection(True)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Stretch)
+        # self.tableWidget.horizontalHeader().setSectionResizeMode(
+        #     QtWidgets.QHeaderView.Stretch)
+        self.tableWidget.setColumnWidth(0, 120)
+        self.tableWidget.setColumnWidth(1, 180)
+        self.tableWidget.setColumnWidth(2, 80)
+        self.tableWidget.setColumnWidth(3, 90)
+        self.tableWidget.setColumnWidth(4, 90)
 
-        self.tableWidget.setHorizontalHeaderLabels(["Station", "Distance (m)", "First data", "Last data"])
+        self.tableWidget.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data"])
+
+    def onCellChanged(self, row, column):
+        item = self.tableWidget.item(row, column)
+        # lastState = item.data(LastStateRole)
+
+        if column == 0:
+            currentState = item.checkState()
+            # if currentState != lastState:
+            print("changed: ")
+            if currentState == QtCore.Qt.Checked:
+                print("checked")
+                for row_idx in range(self.tableWidget.rowCount()):
+                    if row_idx != row:
+                        temp_item = self.tableWidget.item(row_idx, 0)
+                        temp_item.setCheckState(QtCore.Qt.Unchecked)
+                else:
+                    print("unchecked")
+                # item.setData(LastStateRole, currentState)
 
 class GravityChangeTable(QtWidgets.QDialog):
     """

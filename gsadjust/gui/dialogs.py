@@ -611,7 +611,6 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.tableWidget.setColumnWidth(2, 80)
         self.tableWidget.setColumnWidth(3, 90)
         self.tableWidget.setColumnWidth(4, 90)
-
         self.tableWidget.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data"])
 
     def onCellChanged(self, row, column):

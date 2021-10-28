@@ -28,7 +28,7 @@ presentation_style = False
 
 if consistent_date_axes:
     x_min = datetime.datetime(2016, 1, 1)
-    x_max = datetime.datetime(2021, 1, 1)
+    x_max = datetime.datetime(2021, 10, 1)
 
 
 def func(x, pos):
@@ -175,6 +175,8 @@ class PlotNwis(QtWidgets.QDialog):
             (idx_closest_pos,) = np.nonzero(delta == closest_pos)[0]
             gap = np.absolute(closest_neg) + closest_pos
             return idx_closest_neg, idx_closest_pos, gap
+        else:
+            return -999,-999,9999999
 
     @staticmethod
     def interpolate_gap(data, idx_neg, idx_pos, g_date):

@@ -140,7 +140,7 @@ def parse_continuous_data(nwis_data):
             # depends on what other parameters are output. Search for it here
             if line_elems[0] == u'agency_cd':
                 gwl_cont_index = \
-                [idx for idx, s in enumerate(line_elems) if '72019_00003' in s][0]
+                [idx for idx, s in enumerate(line_elems) if '72019_00002' in s][0]
                 gwl_disc_index = \
                 [idx for idx, s in enumerate(line_elems) if '72019_00011' in s][0]
             elif line_elems[0] == "#" and line_elems[1] == "USGS":

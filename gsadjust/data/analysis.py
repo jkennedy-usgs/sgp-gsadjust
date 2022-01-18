@@ -257,7 +257,9 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                 g_header.append(survey.name + "_g")
                 g_header.append(survey.name + "_sd")
                 for adj_station in survey.results:
-                    if adj_station.station[:6] == station[:6]:
+                    # This might break on gravnet output where station names are
+                    # truncated to 6 characters
+                    if adj_station.station == station:
                         station_g.append("{:0.1f}".format(adj_station.g))
                         station_g.append("{:0.1f}".format(adj_station.sd))
                         break

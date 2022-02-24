@@ -131,17 +131,21 @@ class CoordinatesTable(QtWidgets.QDialog):
                 s = clipboard.text()
                 rows = s.split("\n")
                 for idx, r in enumerate(rows):
-                    if r != "":
-                        elems = r.split("\t")
-                        table_item_station = QtWidgets.QTableWidgetItem(elems[0])
-                        table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
-                        table_item_long = QtWidgets.QTableWidgetItem(elems[2])
-                        table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
-                        self.table.setItem(idx, 0, table_item_station)
-                        self.table.setItem(idx, 1, table_item_lat)
-                        self.table.setItem(idx, 2, table_item_long)
-                        self.table.setItem(idx, 3, table_item_elev)
-
+                    if r == "":
+                        continue
+                    elems = r.split("\t")
+                    table_item_station = QtWidgets.QTableWidgetItem(elems[0])
+                    table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
+                    table_item_long = QtWidgets.QTableWidgetItem(elems[2])
+                    table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
+                    if idx >= self.table.rowCount():
+                        self.table.insertRow(idx)
+                    self.table.setItem(idx, 0, table_item_station)
+                    self.table.setItem(idx, 1, table_item_lat)
+                    self.table.setItem(idx, 2, table_item_long)
+                    self.table.setItem(idx, 3, table_item_elev)
+                while idx < self.table.rowCount():
+                    self.table.removeRow(self.table.rowCount() - 1)
     def coords(self):
         """
         Puts table coordinates into a dict.

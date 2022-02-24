@@ -140,7 +140,7 @@ import sys
 import time
 import traceback
 import webbrowser
-
+from html import escape
 # Modules that must be installed
 import matplotlib
 import numpy as np
@@ -304,6 +304,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_treeview_widget = QtWidgets.QWidget()
         self.gui_treeview_box = QtWidgets.QVBoxLayout()
         self.gui_data_treeview = QtWidgets.QTreeView()
+        self.gui_findbox = QtWidgets.QLineEdit()
+        self.gui_findbox.textEdited.connect(self.showCurrentText)
 
         self.qtaction_move_station_up = QtWidgets.QAction(
             QtGui.QIcon(":/icons/up.png"), "Move survey up", self
@@ -341,6 +343,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_toolbar.addAction(self.menus.mnAdjUpdateSD)
 
         self.gui_treeview_box.addWidget(self.gui_toolbar)
+        self.gui_treeview_box.addWidget(self.gui_findbox)
         self.gui_treeview_box.addWidget(self.gui_data_treeview)
         self.gui_treeview_widget.setLayout(self.gui_treeview_box)
 
@@ -389,6 +392,23 @@ class MainProg(QtWidgets.QMainWindow):
         self.path_install = os.path.abspath(os.path.join(os.path.dirname(__file__),'..')) # os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
 
+    def showCurrentText(self, text):
+        allitems = self.obsTreeModel.findItems("",
+                                    QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+        if text != '':
+            selected_items = self.obsTreeModel.findItems(text, QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+            for item in allitems:
+                try:
+                    d = item.display_name() if item in selected_items else False
+                except AttributeError:
+                    d = False
+                item.setHighlight(d)
+        else:
+            for item in allitems:
+                item.setHighlight(False)
+
+        self.obsTreeModel.layoutChanged.emit()
+
     def init_gui(self):
         """
         Called after loading a data file.
@@ -414,7 +434,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.customContextMenuRequested.connect(
             self.treeview_context_menu
         )
-        self.gui_data_treeview.setItemDelegate(BoldDelegate(self))
+        self.gui_data_treeview.setItemDelegate(HTMLDelegate(self))
         self.gui_data_treeview.doubleClicked.connect(self.activate_survey_or_loop)
         self.gui_data_treeview.setObjectName("data")
         self.gui_data_treeview.setEditTriggers(QtWidgets.QTreeView.EditKeyPressed)
@@ -2637,6 +2657,87 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue("results_table_column_widths", None)
         if self.settings.value("data_table_column_widths") is None:
             self.settings.setValue("data_table_column_widths", None)
+
+
+class HTMLDelegate(QtWidgets.QStyledItemDelegate):
+    # from https://stackoverflow.com/questions/51613638/highlight-search-results-in-
+    # qtablewidgetselect-and-highlight-that-text-or-chara
+
+    def __init__(self, parent=None):
+        super(HTMLDelegate, self).__init__(parent)
+        self.doc = QtGui.QTextDocument(self)
+
+    def paint(self, painter, option, index):
+        try:
+            highlight = index.model().itemFromIndex(index).highlight
+        except AttributeError as e:
+            highlight = False
+        painter.save()
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+        res = ""
+        color = QtGui.QColor("orange")
+        if highlight:
+            res = """<p style="background-color:{};">{}</p>""".format(
+                color.name(QtGui.QColor.HexRgb),escape(highlight)
+            )
+
+        # This code would allow character-by-character coloring. However, you can't
+        # change the background color char-by-char without spans for each char.
+        # Much easier to just highlight the whole cell.
+        # if substring:
+        #     ss = options.text.split(substring)
+        #     substrings = [s if s == '' else s + "p__tag" for s in ss]
+        #     res = """<font color={}>{}</font>""".format(
+        #         color.name(QtGui.QColor.HexRgb), substring
+        #     ).join(list(map(escape, substrings)))
+        #     res = res.replace('p__tag', '</p>')
+        #     # res += "</p"
+        else:
+            res = escape(options.text)
+        self.doc.setHtml(res)
+
+        # Not sure how much of the following is necessary
+        options.text = ""
+        style = (
+            QtWidgets.QApplication.style()
+            if options.widget is None
+            else options.widget.style()
+        )
+        style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, options, painter)
+
+        ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
+        if option.state & QtWidgets.QStyle.State_Selected:
+            ctx.palette.setColor(
+                QtGui.QPalette.Text,
+                option.palette.color(
+                    QtGui.QPalette.Active, QtGui.QPalette.HighlightedText
+                ),
+            )
+        else:
+            ctx.palette.setColor(
+                QtGui.QPalette.Text,
+                option.palette.color(QtGui.QPalette.Active, QtGui.QPalette.Text),
+            )
+
+        textRect = style.subElementRect(QtWidgets.QStyle.SE_ItemViewItemText, options)
+
+        if index.column() != 0:
+            textRect.adjust(5, 0, 0, 0)
+
+        constant = 4
+        margin = (option.rect.height() - options.fontMetrics.height()) // 2
+        margin = margin - constant
+        textRect.setTop(textRect.top() + margin)
+
+        painter.translate(textRect.topLeft())
+        painter.setClipRect(textRect.translated(-textRect.topLeft()))
+        self.doc.documentLayout().draw(painter, ctx)
+
+        painter.restore()
+
+    # def sizeHint(self, option, index):
+    #     return QtCore.QSize(self.doc.idealWidth(), self.doc.size().height())
 
 
 class BoldDelegate(QtWidgets.QStyledItemDelegate):

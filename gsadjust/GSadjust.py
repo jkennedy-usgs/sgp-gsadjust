@@ -1180,21 +1180,21 @@ class MainProg(QtWidgets.QMainWindow):
             # If a loop:
             if type(item) == ObsTreeLoop:
                 if self.previous_loop is not None:
-                    self.previous_loop.fontweight = QtGui.QFont.Normal
+                    self.previous_loop.fontweight = "normal" # QtGui.QFont.Normal
                     self.previous_loop.cellcolor = Qt.white
                 self.previous_loop = item
                 item.cellcolor = Qt.lightGray
-                item.fontweight = QtGui.QFont.Bold
+                item.fontweight = "bold" #QtGui.QFont.Bold
                 self.index_current_loop = index
                 self.update_drift_tables_and_plots(update_adjust_tables=False)
 
             # If a survey
             elif type(item) == ObsTreeSurvey:
                 if self.previous_survey is not None:
-                    self.previous_survey.fontweight = QtGui.QFont.Normal
+                    self.previous_survey.fontweight = "normal" #QtGui.QFont.Normal
                 self.previous_survey = item
                 self.index_current_survey = index
-                item.fontweight = QtGui.QFont.Bold
+                item.fontweight = "bold" # QtGui.QFont.Bold
                 self.update_adjust_tables()
         except Exception as e:
             logging.exception(e, exc_info=True)
@@ -2668,20 +2668,32 @@ class HTMLDelegate(QtWidgets.QStyledItemDelegate):
         self.doc = QtGui.QTextDocument(self)
 
     def paint(self, painter, option, index):
+        m = index.model().itemFromIndex(index)
+        # decide here if item should be bold and set font weight to bold if needed
+        if not hasattr(m, "fontweight"):
+            setattr(m, "fontweight", "normal")
+            # option.font.setWeight(QtGui.QFont.Normal)
+            m.cellcolor = Qt.white
+        elif type(m.fontweight) == int:
+            m.fontweight = "normal"
+        # else:
+        #     option.font.setWeight(m.fontweight)
+        # painter.fillRect(option.rect, m.cellcolor)
+        # QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
         try:
-            highlight = index.model().itemFromIndex(index).highlight
+            highlight = m.highlight
         except AttributeError as e:
             highlight = False
+
         painter.save()
         options = QtWidgets.QStyleOptionViewItem(option)
         self.initStyleOption(options, index)
         res = ""
         color = QtGui.QColor("orange")
         if highlight:
-            res = """<p style="background-color:{};">{}</p>""".format(
-                color.name(QtGui.QColor.HexRgb),escape(highlight)
+            res = """<p style="font-weight:{}; background-color:{};">{}</p>""".format(
+                m.fontweight, color.name(QtGui.QColor.HexRgb), escape(highlight)
             )
-
         # This code would allow character-by-character coloring. However, you can't
         # change the background color char-by-char without spans for each char.
         # Much easier to just highlight the whole cell.
@@ -2694,7 +2706,9 @@ class HTMLDelegate(QtWidgets.QStyledItemDelegate):
         #     res = res.replace('p__tag', '</p>')
         #     # res += "</p"
         else:
-            res = escape(options.text)
+            res = """<p style="font-weight:{};">{}</p>""".format(
+                m.fontweight, options.text
+            )
         self.doc.setHtml(res)
 
         # Not sure how much of the following is necessary

@@ -82,6 +82,7 @@ class A10:
         pol_tag = re.compile(r"Polar")
 
         version_tag = re.compile(r"Version")
+        version = 0
 
         # Apparently using a delta file is optional, it's not always written to the
         # .project file.
@@ -96,6 +97,7 @@ class A10:
 
         # This deals with multi-line comments
         comment_tag = re.compile(r"Comments")
+        comments = ""
 
         for line in project_file:
             # Change up some text in the g file to make it easier to parse
@@ -217,7 +219,6 @@ class A10:
 
             if comment_tag_found is not None:
                 in_comments = 1
-                comments = ""
 
         data_array.append(comments)
 

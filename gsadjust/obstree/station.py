@@ -96,7 +96,7 @@ class ObsTreeStation(ObsTreeItemBase):
 
         Returns
         -------
-        list
+        list8
             list of gravity samples at a station (floats)
         """
         data = [a - b + c for (a, b, c) in zip(self.raw_grav, self.tare, self.etc)]

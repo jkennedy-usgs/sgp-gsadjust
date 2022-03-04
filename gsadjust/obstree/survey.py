@@ -336,6 +336,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 if adj_type == "PyLSQ":
                     logging.info("Numpy inversion, Survey: {}".format(self.name))
                     self.start_numpy_inversion()
+                    self.add_nonnetwork_datums()
                 elif adj_type == "Gravnet":
                     logging.info("Gravnet inversion, Survey: {}".format(self.name))
                     self.gravnet_inversion()
@@ -355,6 +356,24 @@ class ObsTreeSurvey(ObsTreeItemBase):
             except Exception as e:
                 logging.exception(e, exc_info=True)
                 MessageBox.warning("GSadjust", "Unknown inversion error")
+
+    def get_datum_average(self, datums, station):
+        station_datums = [d for d in datums if d.station == station]
+        vals, sd = [], []
+        for d in station_datums:
+            vals.append(d.g - d.meas_height * d.gradient)
+            sd.append(d.sd)
+        return np.mean(vals), np.sqrt(sum(map(lambda x:x*x,sd)))
+
+    def add_nonnetwork_datums(self):
+        results_stations = [r.station for r in self.results]
+        for datum in self.datums:
+            if datum.station not in results_stations:
+                g, sd = self.get_datum_average(self.datums, datum.station)
+                temp_station = AdjustedStation(datum.station,
+                                               g,
+                                               sd)
+                self.results.append(temp_station)
 
     def gravnet_inversion(self):
         """

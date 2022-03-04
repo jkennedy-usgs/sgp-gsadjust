@@ -318,15 +318,20 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             delta_list += obstreesurvey.deltas
         return delta_list
 
-    def stations(self):
+    def treeview_stations(self):
         station_list = []
-        station_name_list = []
-        for obstreesurvey in self.surveys():
+        for obstreesurvey in self.checked_surveys():
             for obstreeloop in obstreesurvey.loops():
                 station_list += obstreeloop.stations()
-        for s in station_list:
-            station_name_list.append(s.station_name)
-        return list(set(station_name_list))
+        names = [ s.station_name for s in station_list]
+        return list(set(names))
+
+    def results_stations(self):
+        station_list = []
+        for obstreesurvey in self.checked_surveys():
+            stations = [adjsta.station for adjsta in obstreesurvey.results]
+        station_list += stations
+        return list(set(station_list))
 
     def reset_assigned_sd(self):
         """
@@ -352,11 +357,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         str
             filename (same as input)
         """
-        surveys = []
-        for i in range(self.rowCount()):
-            obstreesurvey = self.itemFromIndex(self.index(i, 0))
-            surveys.append(obstreesurvey)
-        workspace_data = [surveys, self.station_coords]
+        workspace_data = [self.surveys(), self.station_coords]
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
         logging.info("Saving JSON workspace to {}".format(fname))

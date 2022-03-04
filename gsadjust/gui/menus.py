@@ -395,6 +395,11 @@ class Menus:
             slot=self.mainProg.divide_by_height,
             enabled=True,
         )
+        self.mnEditWSsettings = self.create_action(
+            "Workspace settings...",
+            slot=self.mainProg.ws_settings,
+            enabled=True
+        )
         # add actions to menu
         self.add_actions(
             self.mnEdit,
@@ -411,6 +416,8 @@ class Menus:
                 None,
                 self.mnEditVerticalGradientIntervalAction,
                 self.mnEditVerticalGradientWriteAction,
+                None,
+                # self.mnEditWSsettings
             ),
         )
 

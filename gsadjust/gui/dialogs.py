@@ -23,6 +23,7 @@ resulting from the authorized or unauthorized use of the software.
 import datetime as dt
 import logging
 import os
+import datetime
 from math import sin, cos, sqrt, atan2, radians, asin
 import numpy as np
 import requests
@@ -39,8 +40,9 @@ from ..data import Datum, analysis
 from ..file import a10
 from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
-from ..data.nwis import search_nwis
-
+from ..data.nwis import search_nwis, nwis_get_data
+from ..data.analysis import compute_gravity_change
+from ..plots import PlotNwis
 
 class CoordinatesTable(QtWidgets.QDialog):
     """
@@ -513,16 +515,46 @@ class NwisChooseStation(QtWidgets.QDialog):
 
     def __init__(self, MainProg):
         super(NwisChooseStation, self).__init__(MainProg)
-        self.stations = MainProg.obsTreeModel.stations()
+        self.obstreemodel = MainProg.obsTreeModel
+        self.stations = MainProg.obsTreeModel.treeview_stations()
         self.coords = MainProg.obsTreeModel.station_coords
         self.init_gui()
 
     def init_gui(self):
+        self.setWindowTitle("Groundwater level/storage-change comparison")
         self.station_comboBox = QtWidgets.QComboBox(self)
         for s in sorted(self.stations):
             self.station_comboBox.addItem(s)
 
         layout = QtWidgets.QVBoxLayout()
+
+        criteria_box = QtWidgets.QVBoxLayout()
+        criteria_box_parent = QtWidgets.QWidget()
+
+        interpolate_threshold_box = QtWidgets.QHBoxLayout()
+        interpolate_threshold_box.addWidget(QtWidgets.QLabel("Interpolate gaps less than (days):"))
+        self.threshold_spinbox = QtWidgets.QSpinBox()
+        self.threshold_spinbox.setValue(30)
+        interpolate_threshold_box.addWidget(self.threshold_spinbox)
+        criteria_box.addLayout(interpolate_threshold_box)
+
+        gwl_timelag_box = QtWidgets.QHBoxLayout()
+        gwl_timelag_box.addWidget(QtWidgets.QLabel("Time lag for groundwater levels (days):"))
+        self.timelag_spinbox = QtWidgets.QSpinBox()
+        self.timelag_spinbox.setValue(0)
+        self.timelag_spinbox.setMinimum(-365)
+        gwl_timelag_box.addWidget(self.timelag_spinbox)
+        criteria_box.addLayout(gwl_timelag_box)
+
+        find_optimal_timelag_box = QtWidgets.QHBoxLayout()
+        find_optimal_timelag_box.addWidget(QtWidgets.QLabel("Find optimal timelag (maximize r<sup>2</sup>)"))
+        self.cb_find_optimal = QtWidgets.QCheckBox()
+        find_optimal_timelag_box.addWidget(self.cb_find_optimal)
+        criteria_box.addLayout(find_optimal_timelag_box)
+
+        criteria_box_parent.setLayout(criteria_box)
+        layout.addWidget(criteria_box_parent)
+
         g_station_box = QtWidgets.QHBoxLayout()
         g_station_box_widget = QtWidgets.QWidget()
         g_station_box.addWidget(QtWidgets.QLabel("Gravity Station"))
@@ -544,9 +576,10 @@ class NwisChooseStation(QtWidgets.QDialog):
 
         self.createTable()
         layout.addWidget(self.tableWidget)
+
         # Button box
         ok_button = QtWidgets.QPushButton("Ok")
-        ok_button.clicked.connect(self.accept)
+        ok_button.clicked.connect(self.process)
         cancel_button = QtWidgets.QPushButton("Cancel")
         cancel_button.clicked.connect(self.close)
 
@@ -561,6 +594,49 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.setLayout(layout)
         self.resize(630, 700)
 
+    def process(self):
+        if self.nwis_station_line_edit.text() == '':
+            MessageBox.warning("Invalid NWIS station", "Please enter an NWIS station ID")
+            return
+        for row_idx in range(self.tableWidget.rowCount()):
+            item = self.tableWidget.item(row_idx, 0)
+            if item.checkState() == 2:
+                nwis_station = item.text()
+                break
+        else:
+            nwis_station = self.nwis_station_line_edit.text()[:16]
+        g_station = self.station_comboBox.currentText()
+        data = compute_gravity_change(self.obstreemodel, table_type="list")
+        dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if
+                      sta == g_station]
+        dates = [datetime.datetime.strptime(d, '%Y-%m-%d') for d in dates_temp]
+        g = [data[1][2][idx] for (idx, sta) in enumerate(data[1][0]) if
+             sta == g_station]
+        sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
+              sta == g_station]
+
+        nwis_data = nwis_get_data(nwis_station)
+        if self.timelag_spinbox.text() != 0 and not self.cb_find_optimal.isChecked():
+            t_offset = int(self.timelag_spinbox.text()) * -1
+            nwis_data['continuous_x'] = [
+                a + datetime.timedelta(t_offset) for a in
+                nwis_data['continuous_x']]
+            nwis_data['discrete_x'] = [
+                a + datetime.timedelta(t_offset) for a in
+                nwis_data['discrete_x']]
+        else:
+            t_offset = None
+        if data:
+            optimize = self.cb_find_optimal.isChecked()
+            plt = PlotNwis(nwis_station, g_station, nwis_data, (dates, g),
+                           t_offset=t_offset, optimize=optimize, parent=self)
+            plt.show()
+
+    # def plot_nwis(self, nwis_station, g_station, nwis, data):
+    #     plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
+    #     return plt
+        # return
+
     def search_for_nwis_stations(self):
         coords = self.coords[self.station_comboBox.currentText()]
         ID_dict = search_nwis(coords)
@@ -570,7 +646,6 @@ class NwisChooseStation(QtWidgets.QDialog):
             self.nwis_station_line_edit.setText(nwis_string)
         except:
             self.nwis_station_line_edit.setText("Error")
-
 
     def populateTable(self, ID_dict):
         self.tableWidget.setRowCount(len(ID_dict))
@@ -907,25 +982,29 @@ class GravityChangeMap(QtWidgets.QDialog):
         if hasattr(self, "points"):
             self.cb.remove()
             self.points.remove()
-            x, y, d, name = self.get_data()
-            clim = self.get_color_lims(self.table)
-            self.points = self.ax.scatter(
-                x,
-                y,
-                c=d,
-                s=200,
-                vmin=clim[0],
-                vmax=clim[1],
-                cmap="RdBu",
-                picker=5,
-                zorder=10,
-            )
-            self.cb = self.figure.colorbar(self.points)
-            self.set_cb_label()
-            self.points.name = name
-            self.slider_label.setText(self.get_name())
-            self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
-            self.canvas.draw()
+            try:
+                x, y, d, name = self.get_data()
+                clim = self.get_color_lims(self.table)
+                self.points = self.ax.scatter(
+                    x,
+                    y,
+                    c=d,
+                    s=200,
+                    vmin=clim[0],
+                    vmax=clim[1],
+                    cmap="RdBu",
+                    picker=5,
+                    zorder=10,
+                )
+                self.cb = self.figure.colorbar(self.points)
+                self.set_cb_label()
+                self.points.name = name
+                self.slider_label.setText(self.get_name())
+                self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
+                self.canvas.draw()
+            except TypeError as e:
+                # Probably a missing coordinate
+                return
 
     def get_datenums(self, full_header):
         obs_idxs, obs_dates = [], []
@@ -949,12 +1028,16 @@ class GravityChangeMap(QtWidgets.QDialog):
             for sta_idx, sta in enumerate(stations):
                 datum = float(data[sta_idx])
                 if datum > -998:
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    if self.cbUnits.isChecked():
-                        datum /= 41.9
-                    value.append(datum)
-                    name.append(sta)
+                    try:
+                        x.append(self.coords[sta][0])
+                        y.append(self.coords[sta][1])
+                        if self.cbUnits.isChecked():
+                            datum /= 41.9
+                        value.append(datum)
+                        name.append(sta)
+                    except KeyError as e:
+                        MessageBox.critical("Error",f"Coordinates for station {sta} not found")
+                        return None
 
         elif self.btnReference.isChecked():
             ref_survey = (
@@ -1532,30 +1615,31 @@ class SelectAbsg(QtWidgets.QDialog):
                     and dirname.find("unpublished") != -1
             ):
                 continue
-            else:
-                for name in fileList:
-                    pbar.progressbar.setValue(ctr)
-                    QtWidgets.QApplication.processEvents()
+            for name in fileList:
+                pbar.progressbar.setValue(ctr)
+                QtWidgets.QApplication.processEvents()
 
-                    if ".project.txt" in name:
-                        ctr += 1
-                        if ctr > 100:
-                            ctr = 1
-                        files_found = True
-                        d = a10.A10(os.path.join(dirname, name))
-                        datum = Datum(
-                            d.stationname,
-                            g=float(d.gravity),
-                            sd=float(d.setscatter),
-                            date=d.date,
-                            meas_height=float(d.transferht),
-                            gradient=float(d.gradient),
-                            checked=0,
-                        )
-                        datum.n_sets = d.processed
-                        datum.time = d.time
-                        self.table_model.insertRows(datum, 0)
-                        self.path = path
+                if ".project.txt" not in name:
+                    continue
+                ctr += 1
+                if ctr > 100:
+                    ctr = 1
+                files_found = True
+                d = a10.A10(os.path.join(dirname, name))
+                datum = Datum(
+                    d.stationname,
+                    g=float(d.gravity),
+                    sd=float(d.setscatter),
+                    date=d.date,
+                    meas_height=float(d.transferht),
+                    gradient=float(d.gradient),
+                    checked=0,
+                )
+                datum.coord = [d.long, d.lat, d.elev]
+                datum.n_sets = d.processed
+                datum.time = d.time
+                self.table_model.insertRows(datum, 0)
+                self.path = path
         return files_found
 
 
@@ -1616,6 +1700,61 @@ class ShowCalCoeffs(QtWidgets.QDialog):
         self.setLayout(vlayout)
         self.resize(self.sizeHint())
 
+
+class PreferencesDialog(QtWidgets.QDialog):
+    """
+    Dialog to show all preferences
+    """
+
+    def __init__(self, settings):
+        super(PreferencesDialog, self).__init__()
+        self.left = 100
+        self.top = 100
+        self.width = 400
+        self.height = 200
+        self.settings = settings
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("GSadjust Preferences")
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        layout = QtWidgets.QVBoxLayout()
+
+        include_datums = QtWidgets.QHBoxLayout()
+        include_datums.addWidget(QtWidgets.QLabel("Include non-network datums in results"))
+        include_datums.addStretch(1)
+        self.cb_include_datums = QtWidgets.QCheckBox()
+        if self.settings.value("include_all_datums_in_results"):
+            self.cb_include_datums.setChecked(True)
+        else:
+            self.cb_include_datums.setChecked(False)
+        include_datums.addWidget(self.cb_include_datums)
+        layout.addLayout(include_datums)
+        layout.addStretch(1)
+
+        # Button box
+        ok_button = QtWidgets.QPushButton("Ok")
+        ok_button.clicked.connect(self.set_settings)
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+
+        button_box = QtWidgets.QHBoxLayout()
+        button_box.addStretch(1)
+        button_box.addWidget(cancel_button)
+        button_box.addWidget(ok_button)
+        button_widget = QtWidgets.QWidget()
+        button_widget.setLayout(button_box)
+
+        layout.addWidget(button_widget)
+        self.setLayout(layout)
+
+    def set_settings(self):
+        if self.cb_include_datums.isChecked():
+            self.settings.setValue("include_all_datums_in_results", True)
+        else:
+            self.settings.setValue("include_all_datums_in_results", False)
+        self.close()
 
 class DialogApplyTimeCorrection(QtWidgets.QDialog):
     """

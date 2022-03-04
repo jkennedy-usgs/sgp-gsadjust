@@ -62,9 +62,6 @@ def nwis_get_data(nwis_ID):
     :param gravity_station_ID: gravity station name (e.g., RM109)
     :return: Dictionary with fields 'continuous_x', 'continuous_y', 'discrete_x', and 'discrete 'y'
     """
-
-
-
     out_dic = dict()
     name_dic = dict()
     # rdb_meas retrieval is preferred, it returns both discrete and continuous measurements.

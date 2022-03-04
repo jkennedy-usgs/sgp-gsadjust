@@ -140,6 +140,7 @@ import sys
 import time
 import traceback
 import webbrowser
+from html import escape
 import datetime
 
 # Modules that must be installed
@@ -147,6 +148,7 @@ import matplotlib
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
+from PyQt5.QtGui import QPalette, QColor
 from matplotlib.dates import num2date, date2num
 
 #
@@ -184,7 +186,9 @@ from .gui.dialogs import (
     ShowCalCoeffs,
     TideCoordinatesDialog,
     TideCorrectionDialog,
-    VerticalGradientDialog, NwisChooseStation,
+    VerticalGradientDialog,
+    NwisChooseStation,
+    PreferencesDialog,
 )
 from .gui.logger import LoggerWidget
 from .gui.menus import MENU_STATE, Menus
@@ -206,7 +210,6 @@ from .plots import (
     PlotGravityChange,
     PlotLoopAnimation,
     PlotNetworkGraph,
-    PlotNwis,
 )
 from .tides import tide_correction_agnew, tide_correction_meter
 from .utils import (
@@ -253,6 +256,7 @@ class MainProg(QtWidgets.QMainWindow):
     def __init__(self, splash=None):
         super(MainProg, self).__init__()
 
+        # These are settings relevant to the program, not specific to a workspace
         self.settings = QSettings("SGP", "GSADJUST")
         self.init_settings()
         self.settings.sync()
@@ -308,6 +312,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_treeview_widget = QtWidgets.QWidget()
         self.gui_treeview_box = QtWidgets.QVBoxLayout()
         self.gui_data_treeview = QtWidgets.QTreeView()
+        self.gui_findbox = QtWidgets.QLineEdit()
+        self.gui_findbox.textEdited.connect(self.showCurrentText)
 
         self.qtaction_move_station_up = QtWidgets.QAction(
             QtGui.QIcon(":/icons/up.png"), "Move survey up", self
@@ -345,6 +351,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_toolbar.addAction(self.menus.mnAdjUpdateSD)
 
         self.gui_treeview_box.addWidget(self.gui_toolbar)
+        self.gui_treeview_box.addWidget(self.gui_findbox)
         self.gui_treeview_box.addWidget(self.gui_data_treeview)
         self.gui_treeview_widget.setLayout(self.gui_treeview_box)
 
@@ -393,6 +400,23 @@ class MainProg(QtWidgets.QMainWindow):
         self.path_install = os.path.abspath(os.path.join(os.path.dirname(__file__),'..')) # os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
 
+    def showCurrentText(self, text):
+        allitems = self.obsTreeModel.findItems("",
+                                    QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+        if text != '':
+            selected_items = self.obsTreeModel.findItems(text, QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+            for item in allitems:
+                try:
+                    d = item.display_name() if item in selected_items else False
+                except AttributeError:
+                    d = False
+                item.setHighlight(d)
+        else:
+            for item in allitems:
+                item.setHighlight(False)
+
+        self.obsTreeModel.layoutChanged.emit()
+
     def init_gui(self):
         """
         Called after loading a data file.
@@ -418,7 +442,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.customContextMenuRequested.connect(
             self.treeview_context_menu
         )
-        self.gui_data_treeview.setItemDelegate(BoldDelegate(self))
+        self.gui_data_treeview.setItemDelegate(HTMLDelegate(self))
         self.gui_data_treeview.doubleClicked.connect(self.activate_survey_or_loop)
         self.gui_data_treeview.setObjectName("data")
         self.gui_data_treeview.setEditTriggers(QtWidgets.QTreeView.EditKeyPressed)
@@ -463,6 +487,12 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteStation)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
+
+    def ws_settings(self):
+        dlg = PreferencesDialog(self.settings)
+        if dlg.exec_():
+            self.settings = dlg.settings
+            self.settings.sync()
 
     def toggle_logview(self):
         if self.logview.isVisible():
@@ -1164,21 +1194,21 @@ class MainProg(QtWidgets.QMainWindow):
             # If a loop:
             if type(item) == ObsTreeLoop:
                 if self.previous_loop is not None:
-                    self.previous_loop.fontweight = QtGui.QFont.Normal
+                    self.previous_loop.fontweight = "normal" # QtGui.QFont.Normal
                     self.previous_loop.cellcolor = Qt.white
                 self.previous_loop = item
                 item.cellcolor = Qt.lightGray
-                item.fontweight = QtGui.QFont.Bold
+                item.fontweight = "bold" #QtGui.QFont.Bold
                 self.index_current_loop = index
                 self.update_drift_tables_and_plots(update_adjust_tables=False)
 
             # If a survey
             elif type(item) == ObsTreeSurvey:
                 if self.previous_survey is not None:
-                    self.previous_survey.fontweight = QtGui.QFont.Normal
+                    self.previous_survey.fontweight = "normal" #QtGui.QFont.Normal
                 self.previous_survey = item
                 self.index_current_survey = index
-                item.fontweight = QtGui.QFont.Bold
+                item.fontweight = "bold" # QtGui.QFont.Bold
                 self.update_adjust_tables()
         except Exception as e:
             logging.exception(e, exc_info=True)
@@ -1275,6 +1305,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.delta_model.init_data(survey.deltas)
             self.datum_model.init_data(survey.datums)
             self.results_model.init_data(survey.results)
+
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
                 stats_model.setColumnCount(2)
@@ -2195,7 +2226,7 @@ class MainProg(QtWidgets.QMainWindow):
             sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
                   sta == g_station]
 
-            nwis_data = nwis_get_data(nwis_station) #get_wl_data(win.nwis_station.text())
+            nwis_data = nwis_get_data(nwis_station)
             if data:
                 plt = self.plot_nwis(nwis_station, g_station, nwis_data, (dates,g))
                 plt.show()
@@ -2236,10 +2267,6 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotGravityChange(dates, table, parent)
         plt.show()
 
-    def plot_nwis(self, nwis_station, g_station, nwis, data):
-        plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
-        return plt
-        # return
 
     def set_adj_sd(self, survey, ao, loop=None):
         """
@@ -2368,6 +2395,9 @@ class MainProg(QtWidgets.QMainWindow):
                 for nd in nds:
                     dc = copy.deepcopy(nd)
                     survey.datums.append(dc)
+                # Add coordinates
+                if nd.station not in self.obsTreeModel.station_coords.keys():
+                    self.obsTreeModel.station_coords[nd.station] = nd.coord
                 self.set_window_title_asterisk()
         else:
             self.abs_import_table_model = selectabsg.table_model
@@ -2669,6 +2699,103 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue("results_table_column_widths", None)
         if self.settings.value("data_table_column_widths") is None:
             self.settings.setValue("data_table_column_widths", None)
+        if self.settings.value("include_all_datums_in_results") is None:
+            self.settings.setValue("include_all_datums_in_results", True)
+
+
+class HTMLDelegate(QtWidgets.QStyledItemDelegate):
+    # from https://stackoverflow.com/questions/51613638/highlight-search-results-in-
+    # qtablewidgetselect-and-highlight-that-text-or-chara
+
+    def __init__(self, parent=None):
+        super(HTMLDelegate, self).__init__(parent)
+        self.doc = QtGui.QTextDocument(self)
+
+    def paint(self, painter, option, index):
+        m = index.model().itemFromIndex(index)
+        # decide here if item should be bold and set font weight to bold if needed
+        if not hasattr(m, "fontweight"):
+            setattr(m, "fontweight", "normal")
+            # option.font.setWeight(QtGui.QFont.Normal)
+            m.cellcolor = Qt.white
+        elif type(m.fontweight) == int:
+            m.fontweight = "normal"
+        # else:
+        #     option.font.setWeight(m.fontweight)
+        # painter.fillRect(option.rect, m.cellcolor)
+        # QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
+        try:
+            highlight = m.highlight
+        except AttributeError as e:
+            highlight = False
+
+        painter.save()
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+        res = ""
+        color = QtGui.QColor("orange")
+        if highlight:
+            res = """<p style="font-weight:{}; background-color:{};">{}</p>""".format(
+                m.fontweight, color.name(QtGui.QColor.HexRgb), escape(highlight)
+            )
+        # This code would allow character-by-character coloring. However, you can't
+        # change the background color char-by-char without spans for each char.
+        # Much easier to just highlight the whole cell.
+        # if substring:
+        #     ss = options.text.split(substring)
+        #     substrings = [s if s == '' else s + "p__tag" for s in ss]
+        #     res = """<font color={}>{}</font>""".format(
+        #         color.name(QtGui.QColor.HexRgb), substring
+        #     ).join(list(map(escape, substrings)))
+        #     res = res.replace('p__tag', '</p>')
+        #     # res += "</p"
+        else:
+            res = """<p style="font-weight:{};">{}</p>""".format(
+                m.fontweight, options.text
+            )
+        self.doc.setHtml(res)
+
+        # Not sure how much of the following is necessary
+        options.text = ""
+        style = (
+            QtWidgets.QApplication.style()
+            if options.widget is None
+            else options.widget.style()
+        )
+        style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, options, painter)
+
+        ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
+        if option.state & QtWidgets.QStyle.State_Selected:
+            ctx.palette.setColor(
+                QtGui.QPalette.Text,
+                option.palette.color(
+                    QtGui.QPalette.Active, QtGui.QPalette.HighlightedText
+                ),
+            )
+        else:
+            ctx.palette.setColor(
+                QtGui.QPalette.Text,
+                option.palette.color(QtGui.QPalette.Active, QtGui.QPalette.Text),
+            )
+
+        textRect = style.subElementRect(QtWidgets.QStyle.SE_ItemViewItemText, options)
+
+        if index.column() != 0:
+            textRect.adjust(5, 0, 0, 0)
+
+        constant = 4
+        margin = (option.rect.height() - options.fontMetrics.height()) // 2
+        margin = margin - constant
+        textRect.setTop(textRect.top() + margin)
+
+        painter.translate(textRect.topLeft())
+        painter.setClipRect(textRect.translated(-textRect.topLeft()))
+        self.doc.documentLayout().draw(painter, ctx)
+
+        painter.restore()
+
+    # def sizeHint(self, option, index):
+    #     return QtCore.QSize(self.doc.idealWidth(), self.doc.size().height())
 
 
 class BoldDelegate(QtWidgets.QStyledItemDelegate):
@@ -2716,6 +2843,24 @@ def except_hook2(cls, exception, traceback):
 def main():
     # QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     app = QtWidgets.QApplication(sys.argv)
+    app.setStyle("Fusion")
+
+    # Now use a palette to switch to dark colors:
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.WindowText, Qt.white)
+    palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ToolTipBase, Qt.black)
+    palette.setColor(QPalette.ToolTipText, Qt.white)
+    palette.setColor(QPalette.Text, Qt.white)
+    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ButtonText, Qt.white)
+    palette.setColor(QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.HighlightedText, Qt.black)
+    app.setPalette(palette)
 
     # Needed to show icon in Windows Taskbar:
     import ctypes

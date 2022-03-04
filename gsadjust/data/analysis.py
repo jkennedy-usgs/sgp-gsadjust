@@ -208,20 +208,21 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
     )
     logging.info("Calculating gravity change")
     first = True
-    unique_station_names = set()
-    unique_stations = list()
-    for survey in obstreemodel.checked_surveys():
-        for ii in range(survey.rowCount()):
-            loop = survey.child(ii)
-            for iii in range(loop.rowCount()):
-                station = loop.child(iii)
-                unique_station_names.add(station.station_name)
-                unique_stations.append(station)
-    unique_station_names = sorted(unique_station_names)
+    # unique_station_names = set()
+    # for survey in obstreemodel.checked_surveys():
+    #     for ii in range(survey.rowCount()):
+    #         loop = survey.child(ii)
+    #         for iii in range(loop.rowCount()):
+    #             station = loop.child(iii)
+    #             unique_station_names.add(station.station_name)
+    unique_station_names = obstreemodel.results_stations()
     out_table_iteration, out_table_cumulative = [], []
     header1, header2 = [], []
     lat, lon, elev, all_g = [], [], [], []
     dates, header = [], []
+
+    # Simple list of Station, Date, g, sd
+    # Copied from results table on NA tab
     if table_type == "list":
         date_col, station_col, sd_col = [], [], []
         for survey in obstreemodel.checked_surveys():
@@ -235,6 +236,7 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
         table = [station_col, date_col, all_g, sd_col]
         return header, table, dates
 
+    # get station coordinate and g/sd data to later append to dg table
     if table_type == "full":
         for station in unique_station_names:
             station_g = []

@@ -18,6 +18,7 @@ import matplotlib
 import networkx as nx
 import numpy as np
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
 
@@ -49,6 +50,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
+        self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
         self.plot_network()
 
     def plot_network(self):
@@ -57,7 +59,7 @@ class PlotNetworkGraph(QtWidgets.QDialog):
             self.plot(edges, disabled_edge, datum_nodelist, nondatum_nodelist)
         except KeyError as e:
             MessageBox.warning(
-                "Plot error", "Error plotting network graph (Key error)",
+                "Plot error", f"Error plotting network graph: {e.args[0]}",
             )
 
     def get_data(self):

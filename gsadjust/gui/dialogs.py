@@ -520,7 +520,7 @@ class NwisChooseStation(QtWidgets.QDialog):
     def __init__(self, MainProg):
         super(NwisChooseStation, self).__init__(MainProg)
         self.obstreemodel = MainProg.obsTreeModel
-        self.stations = MainProg.obsTreeModel.treeview_stations()
+        self.stations = MainProg.obsTreeModel.results_stations()
         self.coords = MainProg.obsTreeModel.station_coords
         self.init_gui()
 
@@ -1030,18 +1030,20 @@ class GravityChangeMap(QtWidgets.QDialog):
             data = self.table[self.slider.value()]
             stations = self.table[0]
             for sta_idx, sta in enumerate(stations):
-                datum = float(data[sta_idx])
-                if datum > -998:
-                    try:
-                        x.append(self.coords[sta][0])
-                        y.append(self.coords[sta][1])
-                        if self.cbUnits.isChecked():
-                            datum /= 41.9
-                        value.append(datum)
-                        name.append(sta)
-                    except KeyError as e:
-                        MessageBox.critical("Error",f"Coordinates for station {sta} not found")
-                        return None
+                try:
+                    datum = float(data[sta_idx])
+                except ValueError as e:
+                    continue
+                try:
+                    x.append(self.coords[sta][0])
+                    y.append(self.coords[sta][1])
+                    if self.cbUnits.isChecked():
+                        datum /= 41.9
+                    value.append(datum)
+                    name.append(sta)
+                except KeyError as e:
+                    MessageBox.critical("Error",f"Coordinates for station {sta} not found")
+                    return None
 
         elif self.btnReference.isChecked():
             ref_survey = (
@@ -1052,20 +1054,22 @@ class GravityChangeMap(QtWidgets.QDialog):
             current_col_idx = self.full_header.index(current_survey)
             for r in self.full_table:
                 sta = r[0]
-                ref_g = float(r[ref_col_idx])
-                surv_g = float(r[current_col_idx])
-                if ref_g > -998 and surv_g > -998:
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    if current_survey < ref_survey:
-                        datum = ref_g - surv_g
-                    else:
-                        datum = surv_g - ref_g
-                    if self.cbUnits.isChecked():
-                        value.append(datum / 41.9)
-                    else:
-                        value.append(datum)
-                    name.append(sta)
+                try:
+                    ref_g = float(r[ref_col_idx])
+                    surv_g = float(r[current_col_idx])
+                except ValueError as e:
+                    continue
+                x.append(self.coords[sta][0])
+                y.append(self.coords[sta][1])
+                if current_survey < ref_survey:
+                    datum = ref_g - surv_g
+                else:
+                    datum = surv_g - ref_g
+                if self.cbUnits.isChecked():
+                    value.append(datum / 41.9)
+                else:
+                    value.append(datum)
+                name.append(sta)
 
         elif self.btnTrend.isChecked():
             obs_dates, obs_idxs = self.get_datenums(self.full_header)
@@ -1229,23 +1233,25 @@ class GravityChangeMap(QtWidgets.QDialog):
     def get_axis_lims_from_data(self, coords):
         ratio = 1.2  # width to height
         margin = 0.25
-        x, y = [], []
-        for c in coords.values():
-            x.append(c[0])
-            y.append(c[1])
 
-        xrange = abs(max(x) - min(x))
-        yrange = abs(max(y) - min(y))
+        X, Y, z = zip(*coords.values())
+
+        n = 3
+        X = [x for x in X if abs(x - np.mean(X)) < np.std(X) * n]
+        Y = [x for x in Y if abs(x - np.mean(Y)) < np.std(Y) * n]
+
+        xrange = abs(max(X) - min(X))
+        yrange = abs(max(Y) - min(Y))
 
         if xrange > yrange:
             yrange = xrange / ratio
         else:
             xrange = yrange / ratio
 
-        xmin = min(x) - xrange * margin
-        xmax = max(x) + xrange * margin
-        ymin = min(y) - yrange * margin
-        ymax = max(y) + yrange * margin
+        xmin = min(X) - xrange * margin
+        xmax = max(X) + xrange * margin
+        ymin = min(Y) - yrange * margin
+        ymax = max(Y) + yrange * margin
 
         return xmin, xmax, ymin, ymax
 

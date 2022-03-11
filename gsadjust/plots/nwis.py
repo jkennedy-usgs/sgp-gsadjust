@@ -105,6 +105,7 @@ class PlotNwis(QtWidgets.QDialog):
     def find_best_offset(self):
         offsets = range(60)
         best_r2, best_offset = 0, 0
+        best_x, best_y = self.get_sy_data(self.nwis_data, self.grav_data)
         for offset in offsets:
             # offset *= -1
             trial_nwis = copy.copy(self.nwis_data)

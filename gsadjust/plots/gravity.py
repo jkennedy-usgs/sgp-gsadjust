@@ -49,15 +49,18 @@ class PlotGravityChange(QtWidgets.QDialog):
         for i in range(nstations):
             xdata, ydata = [], []
             for idx, col in enumerate(table[1:ncols]):
-                if not col[i] == "-999":
-                    if not ydata:
-                        ydata.append(0)
-                        ydata.append(float(col[i]))
-                        xdata.append(dates[idx])
-                        xdata.append(dates[idx + 1])
-                    else:
-                        ydata.append(float(col[i]) + ydata[-1])
-                        xdata.append(dates[idx + 1])
+                try:
+                    Y = float(col[i])
+                except ValueError as e:
+                    continue
+                if not ydata:
+                    ydata.append(0)
+                    ydata.append(Y)
+                    xdata.append(dates[idx])
+                    xdata.append(dates[idx + 1])
+                else:
+                    ydata.append(Y + ydata[-1])
+                    xdata.append(dates[idx + 1])
             cmap = matplotlib.cm.get_cmap("gist_ncar")
             ax.plot(xdata, ydata, "-o", color=cmap(i / nstations), label=stations[i])
         ax.set_ylabel("Gravity change, in µGal")

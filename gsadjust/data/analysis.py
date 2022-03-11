@@ -266,8 +266,8 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                         station_g.append("{:0.1f}".format(adj_station.sd))
                         break
                 else:
-                    station_g.append("-999")
-                    station_g.append("-999")
+                    station_g.append("")
+                    station_g.append("")
             all_g.append(station_g)
 
     for survey in obstreemodel.checked_surveys():
@@ -337,13 +337,13 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                             / 41.9
                         )
                         if np.isnan(var):
-                            diff_cumulative_sd.append("-999")
+                            diff_cumulative_sd.append("")
                         else:
                             diff_cumulative_sd.append("{:0.2f}".format(var))
                 else:
-                    diff_cumulative.append("-999")
+                    diff_cumulative.append("")
                     if table_type == "full":
-                        diff_cumulative_sd.append("-999")  # for sd column
+                        diff_cumulative_sd.append("")  # for sd column
                 if iteration_station is not None and compare_station is not None:
                     if table_type == "simple":
                         diff_iteration.append(
@@ -360,13 +360,13 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                             / 41.9
                         )
                         if np.isnan(var):
-                            diff_iteration_sd.append("-999")
+                            diff_iteration_sd.append("")
                         else:
                             diff_iteration_sd.append("{:0.2f}".format(var))
                 else:
-                    diff_iteration.append("-999")
+                    diff_iteration.append("")
                     if table_type == "full":
-                        diff_iteration_sd.append("-999")  # for sd column
+                        diff_iteration_sd.append("")  # for sd column
             out_table_iteration.append(diff_iteration)
             out_table_cumulative.append(diff_cumulative)
             if table_type == "full":

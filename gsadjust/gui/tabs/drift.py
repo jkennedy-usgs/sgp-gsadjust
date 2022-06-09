@@ -765,7 +765,7 @@ class TabDrift(QtWidgets.QWidget):
                             annot.set_visible(False)
 
                             def update_annot(ind):
-                                x, y = ln[0].get_data()
+                                x, y = ln[0].get_g_data()
                                 annot.xy = (x[ind["ind"][0]], y[ind["ind"][0]])
 
                             def hover(event):

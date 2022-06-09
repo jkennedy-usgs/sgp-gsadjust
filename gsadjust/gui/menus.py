@@ -105,6 +105,7 @@ _ENABLED_MENUS = {
         ("mnAdjImportAbsFull", True),
         ("mnAdjImportAbsDatabase", True),
         ("mnAdjClearDatumTable", True),
+        ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.ACTIVE_WORKSPACE: [
         ("mnFileSaveWorkspace", True),
@@ -115,7 +116,6 @@ _ENABLED_MENUS = {
     MENU_STATE.SURVEY_HAS_DELTAS: [
         ("mnToolsNGCircular", True),
         ("mnToolsNGMap", True),
-        ("mnToolsComputeGravityChangeAction", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_DELTAS: [
         ("mnToolsNGCircular", False),
@@ -133,6 +133,7 @@ _ENABLED_MENUS = {
         ("mnAdjUpdateSD", True),
         ("mnToolsShowCalCoeffTimeSeries", True),
         ("mnToolsWaterLevelPlot", True),
+        ("mnToolsComputeGravityChangeAction", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_RESULTS: [
         ("mnAdjPlotHist", False),
@@ -144,6 +145,7 @@ _ENABLED_MENUS = {
         ("mnAdjPlotObservedAdjustedAbs", False),
         ("mnAdjUpdateSD", False),
         ("mnToolsWaterLevelPlot", False),
+        ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.CALCULATE_CHANGE: [
         ("mnToolsComputeGravityChangeAction", True),

@@ -4,11 +4,12 @@ get_nwis_data Retrieve groundwater-level data from the USGS National Water Infor
 """
 from dateutil import parser
 import requests
+import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 from collections import OrderedDict, defaultdict
 from math import radians, sin, cos, atan2, sqrt
-# import string
+from scipy.interpolate import interp1d
 
 
 def plot_wells(cross_ref_file, site_IDs):
@@ -93,6 +94,7 @@ def nwis_get_data(nwis_ID):
     #     print('No NWIS data found for site {}'.format(gravity_station_ID))
     return out_dic
 
+
 def parse_discrete_data(nwis_data):
     discrete_x, discrete_y = [], []
     continuous_x, continuous_y = [], []
@@ -124,6 +126,7 @@ def parse_discrete_data(nwis_data):
         except Exception as e:
             continue
     return continuous_x, continuous_y, discrete_x, discrete_y
+
 
 def parse_continuous_data(nwis_data):
     discrete_x, discrete_y = [], []
@@ -160,6 +163,7 @@ def parse_continuous_data(nwis_data):
         except Exception as e:
             continue
     return continuous_x, continuous_y, discrete_x, discrete_y
+
 
 def search_nwis(coords):
     degree_buffer = 0.1
@@ -218,8 +222,99 @@ def calc_distance(lat1, lon1, lat2, lon2):
     return distance_haversine_formula
 
 
-if __name__ == "__main__":
-    plot_wells('SiteIDcrossref.csv', ['T2-S2','AAC-17','PK-1','T1-S5','324421114482101'])
+def get_gwls_for_date_and_coords(date, coords):
+    url = 'https://waterservices.usgs.gov/nwis/dv/?format=rdb&bBox=' + \
+          f'{coords[0]:0.3f},{coords[2]:.3f},{coords[1]:.3f},{coords[3]:.3f}' + \
+          f'&startDT={date}&endDT={date}' + \
+          '&parameterCd=72019&statisticCd=00003&siteType=GW&siteStatus=all'
+
+    s = requests.get(url, verify=False).text.split('\n')
+    data = []
+    for line in s:
+        if line[:4] == 'USGS':
+            data.append(line.split('\t'))
+    df1 = np.array(data)
+    return df1
+
+
+def get_gwl_change(dates, coords):
+    CONVERT_TO_METERS = True
+    df1 = get_gwls_for_date_and_coords(dates[0], coords)
+    df2 = get_gwls_for_date_and_coords(dates[1], coords)
+
+    out, lat, lon = dict(), dict(), dict()
+    stations = []
+    for idx, station in enumerate(df1[:, 1]):
+        try:
+            d1 = float(df1[df1[:, 1] == station, 3])
+            d2 = float(df2[df2[:, 1] == station, 3])
+            # Subtracting depths to groundwater, hence d1 - d2 (not s2 - d1)
+            if CONVERT_TO_METERS:
+                out[station] = (d1 - d2) * .3048
+            else:
+                out[station] = d1 - d2
+            stations.append(station)
+            lat[station] = float(station[:2]) + float(station[2:4]) / 60 + float(
+                station[4:6]) / 3600
+            lon[station] = -1 * (float(station[6:9]) + float(station[9:11]) / 60 + float(
+                station[11:13]) / 3600)
+        except:
+            continue
+
+    return stations, list(out.values()), list(lat.values()), list(lon.values())
+
+
+def filter_ts(nd, window):
+    try:
+        ts = smooth(np.array(nd['continuous_y']), window_len=window)
+        nd['continuous_y'] = ts
+        # plt.plot(v['continuous_x'], v['continuous_y'])
+        # plt.plot(v['continuous_x'], ts)
+        # plt.title(k)
+        # plt.show()
+    except:
+        pass
+    try:
+        x = np.array([toTimestamp(x) for x in (nd['discrete_x'])])
+        F = interp1d(x, nd['discrete_y'])
+        interpx = np.arange(x[0], x[-1],
+                            1)
+        interpy = F(interpx)
+        # plt.plot(interpx, interpy)
+        ts = smooth(interpy, window_len=window, window='flat')
+        nd['discrete_x'] = [datetime.datetime.fromtimestamp(x*86400) for x in interpx]
+        nd['discrete_y'] = ts
+        # plt.plot(v['discrete_x'], v['discrete_y'])
+        # plt.plot(interpx, ts)
+        # plt.title(k)
+        # plt.show()
+    except:
+        pass
+    return nd
+
+
+def toTimestamp(d):
+    return ((d - datetime.datetime(1970, 1, 1)) / datetime.timedelta(seconds=1)) / 86400
+
+
+def smooth(x, window_len=11, window='hanning'):
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+    if window_len < 3:
+        return x
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError(
+            "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+    s = np.r_[2 * x[0] - x[window_len - 1::-1], x, 2 * x[-1] - x[-1:-window_len:-1]]
+    if window == 'flat':  # moving average
+        w = np.ones(window_len, 'd')
+    else:
+        w = eval('np.' + window + '(window_len)')
+    y = np.convolve(w / w.sum(), s, mode='same')
+    return y[window_len:-window_len + 1]
+
 
 # Wrote this and didn't need it, to get station name from header.
 #

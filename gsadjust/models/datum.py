@@ -142,7 +142,10 @@ class DatumTableModel(QAbstractTableModel):
         ChannelList object is 0, it is unchecked
         """
         if datum.checked == 0:
+            # return Qt.PartiallyChecked
             return Qt.Unchecked
+        elif datum.checked == 1:
+            return Qt.PartiallyChecked
         else:
             return Qt.Checked
 
@@ -153,10 +156,18 @@ class DatumTableModel(QAbstractTableModel):
         """
         if role == Qt.CheckStateRole and index.column() == 0:
             datum = self._data[index.row()]
-            if value == Qt.Checked:
+            if datum.checked == 0:
+                datum.checked = 1
+            elif datum.checked == 1:
                 datum.checked = 2
-            elif value == Qt.Unchecked:
+            elif datum.checked == 2:
                 datum.checked = 0
+            # if value == Qt.Checked:
+            #     datum.checked = 0
+            # elif value == Qt.Unchecked:
+            #     datum.checked = 1
+            # elif value == Qt.PartiallyChecked:
+            #     datum.checked = 2
             self.dataChanged.emit(index, index, [])
             self.signal_adjust_update_required.emit()
             return True
@@ -200,6 +211,7 @@ class DatumTableModel(QAbstractTableModel):
             | Qt.ItemIsEnabled
             | Qt.ItemIsSelectable
             | Qt.ItemIsEditable
+            | Qt.ItemIsTristate
         )
 
     def clearDatums(self):

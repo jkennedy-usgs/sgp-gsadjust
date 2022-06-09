@@ -18,6 +18,7 @@ import matplotlib
 import numpy as np
 from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
 
 
 class PlotGravityChange(QtWidgets.QDialog):
@@ -30,9 +31,12 @@ class PlotGravityChange(QtWidgets.QDialog):
         )
         self.figure = matplotlib.figure.Figure(figsize=(10, 6), dpi=100)
         self.canvas = FigureCanvas(self.figure)
+        self.toolbar = Toolbar(self.canvas, self)
         layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
+        table = [list(i) for i in zip(*table)]
         ax = self.plot(dates, table)
 
         self.leg = self.interactive_legend(ax)

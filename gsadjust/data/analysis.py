@@ -234,7 +234,8 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                 all_g.append(adj_station.g)
                 sd_col.append(adj_station.sd)
         table = [station_col, date_col, all_g, sd_col]
-        return header, table, dates
+        table = [list(i) for i in zip(*table)]
+        return header, sorted(table, key=lambda x: x[0].lower()), dates
 
     # get station coordinate and g/sd data to later append to dg table
     if table_type == "full":
@@ -386,7 +387,9 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
         else:
             header = ["station"] + header1 + header2
             table = out_table
-        return header, table, dates
+        # transpose table
+        table = [list(i) for i in zip(*table)]
+        return header, sorted(table, key=lambda x: x[0].lower()), dates
     elif table_type == "full":
         # transpose table
         g = [list(i) for i in zip(*all_g)]
@@ -409,4 +412,4 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
             table += out_table_cumulative
         # transpose back
         table = [list(i) for i in zip(*table)]
-        return header, table, dates
+        return header, sorted(table, key=lambda x: x[0].lower()), dates

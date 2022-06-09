@@ -141,6 +141,11 @@ class ObsTreeSurvey(ObsTreeItemBase):
         )
 
     @property
+    def unique_datum_names(self):
+        datum_names = [d.station for d in self.datums]
+        return set(datum_names)
+
+    @property
     def unique_meters(self):
         """
         Get unique relative gravimeters used in a survey.
@@ -302,7 +307,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                     adjustmentresults.n_deltas_notused += 1
 
             for datum in self.datums:
-                if datum.checked:  # Checkbox checked
+                if datum.checked == 2:  # Checkbox checked
                     # account for vertical gradient
                     datum = copy.copy(datum)
                     if hasattr(datum, "gradient"):
@@ -363,17 +368,21 @@ class ObsTreeSurvey(ObsTreeItemBase):
         for d in station_datums:
             vals.append(d.g - d.meas_height * d.gradient)
             sd.append(d.sd)
-        return np.mean(vals), np.sqrt(sum(map(lambda x:x*x,sd)))
+        if len(vals) > 0:
+            return np.mean(vals), np.sqrt(sum(map(lambda x: x*x, sd)) / len(sd))
+        else:
+            return None, None
 
     def add_nonnetwork_datums(self):
-        results_stations = [r.station for r in self.results]
-        for datum in self.datums:
-            if datum.station not in results_stations:
-                g, sd = self.get_datum_average(self.datums, datum.station)
-                temp_station = AdjustedStation(datum.station,
-                                               g,
-                                               sd)
-                self.results.append(temp_station)
+        stations_in_adjustment = [r.station for r in self.results]
+        for station in self.unique_datum_names:
+            if station not in stations_in_adjustment:
+                g, sd = self.get_datum_average(self.datums, station)
+                if g:
+                    temp_station = AdjustedStation(station,
+                                                   g,
+                                                   sd)
+                    self.results.append(temp_station)
 
     def gravnet_inversion(self):
         """
@@ -708,7 +717,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
                     delta.residual = adj_dg - cal_adj_dg
                     dg_residuals.append(delta.residual)
                 except KeyError:
-                    MessageBox.warning("Key error", "Key error")
+                    MessageBox.warning("Key error", delta)
                     return
             else:
                 delta.residual = -999.0
@@ -718,12 +727,15 @@ class ObsTreeSurvey(ObsTreeItemBase):
                 station_name = datum.station
             elif inversion_type == "Gravnet":
                 station_name = datum.station[0:6]
-            if station_name in g_dic.keys():
+            # For the adjustment statistics, only include datum residuals for datums
+            # that were in the adjustment
+            if datum.checked == 2:
                 adj_g1 = g_dic[station_name]
                 residual = adj_g1 - (datum.g - datum.meas_height * datum.gradient)
                 datum_residuals.append(residual)
             else:
                 residual = -999
+            # But in the GUI report the residuals for all datums
             datum.residual = residual
 
         self.adjustment.adjustmentresults.min_dg_residual = np.min(np.abs(dg_residuals))

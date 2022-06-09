@@ -67,7 +67,7 @@ def export_metadata(obsTreeModel, data_path):
     with open(filename, 'w') as fid:
         fid.write(
             "Attribute accuracy is evaluated from the least-squares network adjustment"
-            " results. "
+            " results.\n"
         )
         fid.writelines(lines)
 

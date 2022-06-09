@@ -217,6 +217,7 @@ from .utils import (
 )
 
 matplotlib.use("qt5agg")
+matplotlib.rcParams['svg.fonttype'] = 'none'
 
 DOWN = 1
 UP = -1

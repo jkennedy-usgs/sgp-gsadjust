@@ -20,6 +20,7 @@ import numpy as np
 from numpy import ceil
 from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.dates as mdates
 import matplotlib.ticker as tkr
 import copy
@@ -59,8 +60,10 @@ class PlotNwis(QtWidgets.QDialog):
         self.setWindowTitle("Gravity - Groundwater level comparison")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
+        self.toolbar = NavigationToolbar(self.canvas, self)
 
         layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 

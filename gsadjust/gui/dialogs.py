@@ -20,29 +20,24 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-import datetime as dt
+
 import logging
 import os
 import datetime
-from math import sin, cos, sqrt, atan2, radians, asin
-import numpy as np
-import requests
+
 from PyQt5 import QtCore, QtGui, QtWidgets
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.dates import date2num
-from matplotlib.figure import Figure
-from collections import defaultdict, OrderedDict
 from .messages import MessageBox
 from .utils import copy_cells_to_clipboard
 from .widgets import IncrMinuteTimeEdit, ProgressBar
+from .map import GravityChangeMap
 from ..data import Datum, analysis
 from ..file import a10
 from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
 from ..utils import init_cal_coeff_dict
-from ..data.nwis import search_nwis, nwis_get_data
+from ..data.nwis import search_nwis, nwis_get_data, filter_ts
 from ..data.analysis import compute_gravity_change
 from ..plots import PlotNwis
+
 
 class CoordinatesTable(QtWidgets.QDialog):
     """
@@ -556,9 +551,23 @@ class NwisChooseStation(QtWidgets.QDialog):
         find_optimal_timelag_box.addWidget(self.cb_find_optimal)
         criteria_box.addLayout(find_optimal_timelag_box)
 
+        filter_data_box = QtWidgets.QHBoxLayout()
+        filter_data_box.addWidget(QtWidgets.QLabel("Filter groundwater-level data"))
+        self.cb_filter_data = QtWidgets.QCheckBox()
+        filter_data_box.addWidget(self.cb_filter_data)
+        criteria_box.addLayout(filter_data_box)
+
+        filter_edit_box = QtWidgets.QHBoxLayout()
+        filter_edit_box.addWidget(QtWidgets.QLabel("Window (days):"))
+        self.filter_spinbox = QtWidgets.QSpinBox()
+        self.filter_spinbox.setMaximum(2000)
+        self.filter_spinbox.setValue(700)
+        filter_edit_box.addWidget(self.filter_spinbox)
+        criteria_box.addLayout(filter_edit_box)
+
         criteria_box_parent.setLayout(criteria_box)
         layout.addWidget(criteria_box_parent)
-
+        layout.addStretch()
         g_station_box = QtWidgets.QHBoxLayout()
         g_station_box_widget = QtWidgets.QWidget()
         g_station_box.addWidget(QtWidgets.QLabel("Gravity Station"))
@@ -610,16 +619,20 @@ class NwisChooseStation(QtWidgets.QDialog):
         else:
             nwis_station = self.nwis_station_line_edit.text()[:16]
         g_station = self.station_comboBox.currentText()
-        data = compute_gravity_change(self.obstreemodel, table_type="list")
-        dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if
-                      sta == g_station]
-        dates = [datetime.datetime.strptime(d, '%Y-%m-%d') for d in dates_temp]
-        g = [data[1][2][idx] for (idx, sta) in enumerate(data[1][0]) if
-             sta == g_station]
-        sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
-              sta == g_station]
+        header, data, _ = compute_gravity_change(self.obstreemodel, table_type="list")
+        # transpose table
+        # data = [list(i) for i in zip(*data)]
+        # dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if
+        #               sta == g_station]
+        dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for
+                 station, date, g, s in data if station == g_station]
+        g = [g for station, date, g, sd in data if station == g_station]
+        # sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
+        #       sta == g_station]
 
         nwis_data = nwis_get_data(nwis_station)
+        if self.cb_filter_data.isChecked():
+            nwis_data = filter_ts(nwis_data, int(self.filter_spinbox.text()))
         if self.timelag_spinbox.text() != 0 and not self.cb_find_optimal.isChecked():
             t_offset = int(self.timelag_spinbox.text()) * -1
             nwis_data['continuous_x'] = [
@@ -631,10 +644,13 @@ class NwisChooseStation(QtWidgets.QDialog):
         else:
             t_offset = None
         if data:
-            optimize = self.cb_find_optimal.isChecked()
-            plt = PlotNwis(nwis_station, g_station, nwis_data, (dates, g),
-                           t_offset=t_offset, optimize=optimize, parent=self)
-            plt.show()
+            try:
+                optimize = self.cb_find_optimal.isChecked()
+                plt = PlotNwis(nwis_station, g_station, nwis_data, (dates, g),
+                               t_offset=t_offset, optimize=optimize, parent=self)
+                plt.show()
+            except IndexError as e:
+                pass
 
     # def plot_nwis(self, nwis_station, g_station, nwis, data):
     #     plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
@@ -822,438 +838,6 @@ class GravityChangeTable(QtWidgets.QDialog):
                 ' Geos and Proj libraries. Please install with homebrew ("brew install'
                 ' geos proj").',
             )
-
-
-class GravityChangeMap(QtWidgets.QDialog):
-    """
-    Map window for showing gravity-change results
-
-    Parameters
-    ----------
-    table
-    header
-    coords
-    full_table
-    full_header
-
-    """
-
-    station_label = None
-    try:
-        import cartopy.crs as ccrs
-        import cartopy.io.img_tiles as cimgt
-    except ImportError as e:
-        logging.info(e)
-
-    def __init__(self, table, header, coords, full_table, full_header, parent=None):
-        super(GravityChangeMap, self).__init__(parent)
-        # a figure instance to plot on
-        self.table = table
-        self.header = header
-        self.coords = coords
-        self.full_table = full_table
-        self.full_header = full_header
-        self.figure = Figure(figsize=(10, 8))
-        self.n_surveys = (len(self.table) - 1) / 2
-        self.surveys = self.get_survey_dates(header)
-        self.axlim = self.get_axis_lims_from_data(coords)
-
-        # this is the Canvas Widget that displays the `figure`
-        # it takes the `figure` instance as a parameter to __init__
-        self.canvas_widget = QtWidgets.QWidget()
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas.setParent(self.canvas_widget)
-        # this is the Navigation widget
-        # it takes the Canvas widget and a parent
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        # self.toolbar._actions['zoom'].changed.connect(self.update_plot)
-        self.time_widget = QtWidgets.QWidget()
-        self.btnIncremental = QtWidgets.QRadioButton("Incremental", self)
-        self.btnIncremental.setChecked(True)
-        self.btnReference = QtWidgets.QRadioButton("Change relative to", self)
-        self.drpReference = QtWidgets.QComboBox()
-        self.btnTrend = QtWidgets.QRadioButton("Trend", self)
-        self.btnIncremental.toggled.connect(self.plot)
-        self.btnReference.toggled.connect(self.plot)
-        self.drpReference.currentIndexChanged.connect(self.plot)
-        self.btnTrend.toggled.connect(self.plot)
-        bbox = QtWidgets.QHBoxLayout()
-        bbox.addWidget(self.btnIncremental)
-        bbox.addSpacing(10)
-        bbox.addWidget(self.btnReference)
-        bbox.addWidget(self.drpReference)
-        bbox.addSpacing(10)
-        bbox.addWidget(self.btnTrend)
-        bbox.addStretch(1)
-        self.time_widget.setLayout(bbox)
-
-        self.basemap_widget = QtWidgets.QWidget()
-        self.cbBasemap = QtWidgets.QCheckBox("Show Basemap", self)
-        self.cbBasemap.setChecked(False)
-        self.cbBasemap.stateChanged.connect(self.plot)
-        self.drpBasemap = QtWidgets.QComboBox()
-        self.drpBasemap.currentIndexChanged.connect(self.plot)
-        self.sliderResolution = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sliderResolution.setMinimum(5)
-        self.sliderResolution.setMaximum(17)
-        self.sliderResolution.setValue(12)
-        btnRefresh = QtWidgets.QPushButton("Refresh")
-        btnRefresh.clicked.connect(self.resolution_slider_changed)
-        bbox = QtWidgets.QHBoxLayout()
-        bbox.addWidget(self.cbBasemap)
-        bbox.addSpacing(10)
-        bbox.addWidget(self.drpBasemap)
-        bbox.addSpacing(40)
-        bbox.addWidget(QtWidgets.QLabel("Resolution"))
-        bbox.addWidget(self.sliderResolution)
-        bbox.addSpacing(10)
-        bbox.addWidget(btnRefresh)
-        bbox.addStretch(1)
-        self.basemap_widget.setLayout(bbox)
-
-        self.units_widget = QtWidgets.QWidget()
-        self.cbUnits = QtWidgets.QCheckBox("Show change in meters of water", self)
-        self.cbUnits.setChecked(False)
-        self.cbUnits.stateChanged.connect(self.plot)
-        self.sliderColorRange = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sliderColorRange.valueChanged.connect(self.update_plot)
-        self.sliderColorRange.setMinimum(1)
-        self.sliderColorRange.setMaximum(15)
-        self.sliderColorRange.setValue(100)
-        self.sliderColorRange.resize(100, 20)
-        self.sliderColorRange.setTickInterval(10)
-        bbox = QtWidgets.QHBoxLayout()
-        bbox.addWidget(self.cbUnits)
-        bbox.addSpacing(40)
-        bbox.addWidget(QtWidgets.QLabel("Color range"))
-        bbox.addWidget(self.sliderColorRange)
-        bbox.addStretch(1)
-        self.units_widget.setLayout(bbox)
-
-        # Date slider
-        self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.slider.valueChanged.connect(self.update_plot)
-        self.slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-
-        self.slider_label = QtWidgets.QLabel(self.header[1])
-        # set the layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(self.toolbar)
-        layout.addWidget(self.time_widget)
-        layout.addWidget(self.basemap_widget)
-        layout.addWidget(self.units_widget)
-        layout.addStretch(1)
-        layout.addWidget(self.canvas)
-        layout.addWidget(self.slider_label)
-        self.setWindowTitle("Gravity Change Map")
-        layout.addWidget(self.slider)
-        layout.addStretch(1)
-        self.setLayout(layout)
-
-        for s in self.surveys:
-            self.drpReference.addItem(s)
-
-        self.maps = [
-            "NatGeo_World_Map",
-            "USA_Topo_Maps",
-            "World_Imagery",
-            "World_Shaded_Relief",
-            "World_Street_Map",
-            "World_Topo_Map",
-        ]
-
-        for map in self.maps:
-            self.drpBasemap.addItem(map)
-        self.plot()
-
-    def resolution_slider_changed(self):
-        if self.cbBasemap.isChecked():
-            self.plot()
-
-    def get_survey_dates(self, header):
-        dates = []
-        first = True
-        for title in header:
-            if first:
-                first = False
-                continue
-            d = title.split("_to_")
-            dates.append(d[0])
-            dates.append(d[1])
-        return sorted(list(set(dates)))
-
-    def update_plot(self):
-        if hasattr(self, "points"):
-            self.cb.remove()
-            self.points.remove()
-            try:
-                x, y, d, name = self.get_data()
-                clim = self.get_color_lims(self.table)
-                self.points = self.ax.scatter(
-                    x,
-                    y,
-                    c=d,
-                    s=200,
-                    vmin=clim[0],
-                    vmax=clim[1],
-                    cmap="RdBu",
-                    picker=5,
-                    zorder=10,
-                )
-                self.cb = self.figure.colorbar(self.points)
-                self.set_cb_label()
-                self.points.name = name
-                self.slider_label.setText(self.get_name())
-                self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
-                self.canvas.draw()
-            except TypeError as e:
-                # Probably a missing coordinate
-                return
-
-    def get_datenums(self, full_header):
-        obs_idxs, obs_dates = [], []
-        for item in full_header:
-            if item[-2:] == "_g":
-                try:
-                    obs_dates.append(
-                        date2num(dt.datetime.strptime(item[:-2], "%Y-%m-%d"))
-                    )
-                    obs_idxs.append(full_header.index(item))
-                except:
-                    pass
-        return obs_dates, obs_idxs
-
-    def get_data(self):
-        x, y, value, name = [], [], [], []
-
-        if self.btnIncremental.isChecked():
-            data = self.table[self.slider.value()]
-            stations = self.table[0]
-            for sta_idx, sta in enumerate(stations):
-                try:
-                    datum = float(data[sta_idx])
-                except ValueError as e:
-                    continue
-                try:
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    if self.cbUnits.isChecked():
-                        datum /= 41.9
-                    value.append(datum)
-                    name.append(sta)
-                except KeyError as e:
-                    MessageBox.critical("Error",f"Coordinates for station {sta} not found")
-                    return None
-
-        elif self.btnReference.isChecked():
-            ref_survey = (
-                    self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + "_g"
-            )
-            ref_col_idx = self.full_header.index(ref_survey)
-            current_survey = self.surveys[self.slider.value() - 1] + "_g"
-            current_col_idx = self.full_header.index(current_survey)
-            for r in self.full_table:
-                sta = r[0]
-                try:
-                    ref_g = float(r[ref_col_idx])
-                    surv_g = float(r[current_col_idx])
-                except ValueError as e:
-                    continue
-                x.append(self.coords[sta][0])
-                y.append(self.coords[sta][1])
-                if current_survey < ref_survey:
-                    datum = ref_g - surv_g
-                else:
-                    datum = surv_g - ref_g
-                if self.cbUnits.isChecked():
-                    value.append(datum / 41.9)
-                else:
-                    value.append(datum)
-                name.append(sta)
-
-        elif self.btnTrend.isChecked():
-            obs_dates, obs_idxs = self.get_datenums(self.full_header)
-            for r in self.full_table:
-                sta = r[0]
-                X = []
-                Y = [float(r[idx]) for idx in obs_idxs if float(r[idx]) > -998]
-                for idx, obs_idx in enumerate(obs_idxs):
-                    if float(r[obs_idx]) > -998:
-                        X.append(obs_dates[idx])
-                if len(X) > 1:
-                    z = np.polyfit(X, Y, 1)
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    uGal_per_year = z[0] * 365.25
-                    if self.cbUnits.isChecked():
-                        value.append(uGal_per_year / 41.9)
-                    else:
-                        value.append(uGal_per_year)
-                    name.append(sta)
-
-        return x, y, value, name
-
-    def get_name(self):
-        if self.btnTrend.isChecked():
-            title = "{} to {}".format(self.surveys[0], self.surveys[-1])
-            return title
-        elif self.btnIncremental.isChecked():
-            name = self.header[self.slider.value()]
-            return name.replace("_", " ")
-        elif not self.btnIncremental.isChecked():
-            ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
-            current_survey = self.surveys[self.slider.value() - 1]
-            if dt.datetime.strptime(current_survey, "%Y-%m-%d") < dt.datetime.strptime(
-                    ref_survey, "%Y-%m-%d"
-            ):
-                return "{} to {}".format(current_survey, ref_survey)
-            else:
-                return "{} to {}".format(ref_survey, current_survey)
-
-    def plot(self):
-        clim = self.get_color_lims(self.table)
-
-        if self.btnTrend.isChecked():
-            self.slider.setEnabled(False)
-        if self.btnIncremental.isChecked():
-            self.slider.setEnabled(True)
-            self.slider.setRange(1, self.n_surveys)
-        elif not self.btnIncremental.isChecked():
-            self.slider.setEnabled(True)
-            self.slider.setRange(1, self.n_surveys + 1)
-
-        self.figure.clf()
-        self.ax = self.figure.add_subplot(
-            1,
-            1,
-            1,
-            position=[0.15, 0.15, 0.75, 0.75],
-            projection=self.ccrs.PlateCarree(),
-        )
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        self.points = []
-        try:
-            x, y, d, names = self.get_data()
-        except KeyError:
-            MessageBox.warning(
-                "Map view gravity change",
-                "Could not plot (Key error). Check that station names in the " \
-                "coordinates table match the names in the survey.",
-            )
-            return
-
-        self.points = self.ax.scatter(
-            x,
-            y,
-            c=d,
-            s=200,
-            vmin=clim[0],
-            vmax=clim[1],
-            cmap="RdBu",
-            picker=5,
-            zorder=10,
-        )
-        self.points.name = names
-
-        QtWidgets.QApplication.restoreOverrideCursor()
-        self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
-        self.cb = self.figure.colorbar(self.points)
-        self.ax.set_xlabel("Distance, in meters", fontsize=16)
-        self.set_cb_label()
-        self.ax.set_extent(self.axlim)
-        self.show_background(self.sliderResolution.value())
-        self.ax.callbacks.connect("xlim_changed", self.on_lims_change)
-        self.ax.callbacks.connect("ylim_changed", self.on_lims_change)
-        self.slider_label.setText(self.get_name())
-
-        # refresh canvas
-        self.figure.canvas.mpl_connect("pick_event", self.show_point_label)
-        self.canvas.draw()
-
-    def set_cb_label(self):
-        if self.btnTrend.isChecked():
-            if not self.cbUnits.isChecked():
-                self.cb.set_label("Gravity trend, in µGal/yr", fontsize=16)
-            else:
-                self.cb.set_label("Gravity trend, in meters of water/yr", fontsize=16)
-        else:
-            if not self.cbUnits.isChecked():
-                self.cb.set_label("Gravity change, in µGal", fontsize=16)
-            elif self.cbUnits.isChecked():
-                self.cb.set_label(
-                    "Aquifer-storage change,\n in meters of water", fontsize=16
-                )
-
-    def on_lims_change(self, axes):
-        self.axlim = self.ax.get_extent()
-        return
-
-    def show_background(self, zoom):
-        if self.cbBasemap.isChecked():
-            self.stamen_terrain = self.cimgt.GoogleTiles(
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/"
-                    + self.maps[self.drpBasemap.currentIndex()]
-                    + "/MapServer/tile/{z}/{y}/{x}.jpg"
-            )
-            self.ax.add_image(self.stamen_terrain, zoom)
-
-    def show_point_label(self, event):
-        """
-        Shows the station name in the upper left of the drift plot when a
-        line is clicked.
-
-        Parameters
-        ----------
-        event : Matplotlib event
-        axes : Current axes
-            Differs for none|netadj|roman vs continuous
-
-        """
-
-        thispoint = event.artist
-        if self.station_label is not None:
-            self.station_label.set_text("")
-        self.station_label = self.ax.text(
-            0.1,
-            0.95,
-            thispoint.name[event.ind[0]],
-            horizontalalignment="center",
-            verticalalignment="center",
-            transform=self.ax.transAxes,
-        )
-        self.canvas.draw()
-
-    def get_color_lims(self, table):
-        slider_val = self.sliderColorRange.value() * 10
-        clim = (slider_val * -1, slider_val)
-        if self.cbUnits.isChecked():
-            clim = (clim[0] / 41.9, clim[1] / 41.9)
-        return clim
-
-    def get_axis_lims_from_data(self, coords):
-        ratio = 1.2  # width to height
-        margin = 0.25
-
-        X, Y, z = zip(*coords.values())
-
-        n = 3
-        X = [x for x in X if abs(x - np.mean(X)) < np.std(X) * n]
-        Y = [x for x in Y if abs(x - np.mean(Y)) < np.std(Y) * n]
-
-        xrange = abs(max(X) - min(X))
-        yrange = abs(max(Y) - min(Y))
-
-        if xrange > yrange:
-            yrange = xrange / ratio
-        else:
-            xrange = yrange / ratio
-
-        xmin = min(X) - xrange * margin
-        xmax = max(X) + xrange * margin
-        ymin = min(Y) - yrange * margin
-        ymax = max(Y) + yrange * margin
-
-        return xmin, xmax, ymin, ymax
 
 
 class VerticalGradientDialog(QtWidgets.QInputDialog):

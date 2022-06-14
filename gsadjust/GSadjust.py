@@ -2212,8 +2212,8 @@ class MainProg(QtWidgets.QMainWindow):
     def show_nwis_plot(self):
         win = NwisChooseStation(self)
         if win.exec_():
-            for row_idx in range(win.tableWidget.rowCount()):
-                item = win.tableWidget.item(row_idx, 0)
+            for row_idx in range(win.tableWidgetNWIS.rowCount()):
+                item = win.tableWidgetNWIS.item(row_idx, 0)
                 if item.checkState() == 2:
                     nwis_station = item.text()
                     break

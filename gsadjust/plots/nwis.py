@@ -49,14 +49,18 @@ class PlotNwis(QtWidgets.QDialog):
     """
 
     def __init__(self, nwis_station, g_station, nwis_data, g_data,
-                 t_offset=None, optimize=False, parent=None):
+                 t_offset=None, optimize=False,
+                 t_threshold=0, rising='all',
+                 parent=None):
         super(PlotNwis, self).__init__(parent)
         self.nwis_data = nwis_data
         self.grav_data = g_data
         self.nwis_station = nwis_station
         self.g_station = g_station
         self.t_offset = t_offset
+        self.t_threshold = datetime.timedelta(days=t_threshold)
         self.optimize = optimize
+        self.rising = rising
         self.setWindowTitle("Gravity - Groundwater level comparison")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
@@ -141,16 +145,19 @@ class PlotNwis(QtWidgets.QDialog):
         if self.nwis_data["continuous_x"]:
             nwis_x = self.nwis_data["continuous_x"]
             nwis_y = self.nwis_data["continuous_y"]
-        else:
-            nwis_x = self.nwis_data["discrete_x"]
-            nwis_y = self.nwis_data["discrete_y"]
-
-        if self.meters:  # NWIS default is feet
-            nwis_y = [meas * 0.3048 for meas in nwis_y]
-        try:
+            if self.meters:  # NWIS default is feet
+                nwis_y = [meas * 0.3048 for meas in nwis_y]
             ax2.plot(nwis_x, nwis_y)
-        except:
-            return
+        if self.nwis_data["discrete_x"]:
+            nwis_x_discrete = self.nwis_data["discrete_x"]
+            nwis_y_discrete = self.nwis_data["discrete_y"]
+            if self.meters:  # NWIS default is feet
+                nwis_y_discrete = [meas * 0.3048 for meas in nwis_y_discrete]
+            ax2.plot(nwis_x_discrete,
+                     nwis_y_discrete,
+                     "s",
+                     color=(0.12156, 0.46667, 0.705882))
+
         ax2.invert_yaxis()
 
         # Remove scientific notation from axes labels
@@ -215,11 +222,11 @@ class PlotNwis(QtWidgets.QDialog):
             return -999, -999, datetime.timedelta(days=1000000)
 
     @staticmethod
-    def interpolate_gap(data, idx_neg, idx_pos, g_date):
-        x1 = data["continuous_x"][idx_neg]
-        x2 = data["continuous_x"][idx_pos]
-        y1 = data["continuous_y"][idx_neg]
-        y2 = data["continuous_y"][idx_pos]
+    def interpolate_gap(data_x, data_y, idx_neg, idx_pos, g_date):
+        x1 = data_x[idx_neg]
+        x2 = data_x[idx_pos]
+        y1 = data_y[idx_neg]
+        y2 = data_y[idx_pos]
 
         x1 = x1.toordinal()
         x2 = x2.toordinal()
@@ -235,9 +242,9 @@ class PlotNwis(QtWidgets.QDialog):
             datetime.timedelta(days=1000000),
         )
         # If within a threshold, just take the nearest data point
-        noninterpolate_threshold = datetime.timedelta(days=5)
+        noninterpolate_threshold = datetime.timedelta(days=2)
         # Otherwise, interpolate a value if there is data within interpolate_threshold
-        interpolate_threshold = datetime.timedelta(days=50)
+        # interpolate_threshold = datetime.timedelta(days=50)
 
         if (
             nwis_data["continuous_x"] is None
@@ -290,17 +297,19 @@ class PlotNwis(QtWidgets.QDialog):
                     disc_gap,
                 ) = self.find_gap(delta_disc)
             if (
-                cont_gap < disc_gap and cont_gap < interpolate_threshold
+                cont_gap < disc_gap and cont_gap < self.t_threshold
             ):  # interpolate the data type with the smaller gap
                 interp_dtw = self.interpolate_gap(
-                    nwis_data,
+                    nwis_data['continuous_x'],
+                    nwis_data['continuous_y'],
                     idx_closest_neg_cont,
                     idx_closest_pos_cont,
                     g_date,
                 )
-            elif disc_gap < cont_gap and disc_gap < interpolate_threshold:
+            elif disc_gap < cont_gap and disc_gap < self.t_threshold:
                 interp_dtw = self.interpolate_gap(
-                    nwis_data,
+                    nwis_data['discrete_x'],
+                    nwis_data['discrete_y'],
                     idx_closest_neg_disc,
                     idx_closest_pos_disc,
                     g_date,
@@ -312,7 +321,43 @@ class PlotNwis(QtWidgets.QDialog):
         if len(plot_y) > 1:
             plot_y = [(y - plot_y[0]) / 41.9 for y in plot_y]
             plot_x = [(x - plot_x[0]) * -0.3048 for x in plot_x] # Negative to convert depth-to-water to elevation
-        return (plot_x, plot_y)
+
+        fx, fy = self.parse_rise_or_fall(plot_x, plot_y)
+        return fx, fy
+
+    def parse_rise_or_fall(self, plot_x, plot_y):
+        fx, fy = [], []
+        if self.rising == 'all':
+            return plot_x, plot_y
+
+        for idx, val in enumerate(plot_x[1:]):
+            if self.rising == 'rise':
+                if val - plot_x[0] > 0:
+                    fx.append(plot_x[idx])
+                    fx.append(val)
+                    fy.append(plot_y[idx])
+                    fy.append(plot_y[idx+1])
+            elif self.rising == 'fall':
+                if val - plot_x[0] < 0:
+                    fx.append(plot_x[idx])
+                    fx.append(val)
+                    fy.append(plot_y[idx])
+                    fy.append(plot_y[idx+1])
+
+        # This should maintain order, vs. coverting to a set
+        fx, fy = self.remove_dups(fx, fy)
+        return fx, fy
+
+    def remove_dups(self, lst_x, lst_y):
+        new_x, new_y, prev_item = [], [], None
+        new_x += lst_x[:2]
+        new_y += lst_y[:2]
+        eps = 0.000001
+        for idx, item in enumerate(lst_x[2:], start=2):
+            if abs(lst_x[idx] - new_x[-1]) > eps and abs(lst_x[idx] - new_y[-1]) > eps:
+                new_x.append(lst_x[idx])
+                new_y.append(lst_y[idx])
+        return new_x, new_y
 
     def plot_sy(self, ax, plot_x, plot_y):
         if presentation_style:
@@ -343,10 +388,10 @@ class PlotNwis(QtWidgets.QDialog):
             ax.text(
                 0.70,
                 0.17,
-                "Sy = %0.2f ± %0.02f" % (poly[0], np.sqrt(cov[0, 0])),
+                "SY = %0.2f ± %0.02f" % (poly[0], np.sqrt(cov[0, 0])),
                 transform=ax.transAxes,
             )
-            ax.text(0.75, 0.12, "r^2 = %0.2f" % r2, transform=ax.transAxes)
+            ax.text(0.75, 0.10, "r² = %0.2f" % r2, transform=ax.transAxes)
             if self.t_offset:
                 ax.set_title("Specific Yield, GWL time offset: {} days".format(
                     abs(self.t_offset)

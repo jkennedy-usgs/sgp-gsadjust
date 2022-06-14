@@ -524,7 +524,7 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.station_comboBox = QtWidgets.QComboBox(self)
         for s in sorted(self.stations):
             self.station_comboBox.addItem(s)
-
+        self.station_comboBox.currentIndexChanged.connect(self.populateGravTable)
         layout = QtWidgets.QVBoxLayout()
 
         criteria_box = QtWidgets.QVBoxLayout()
@@ -565,16 +565,39 @@ class NwisChooseStation(QtWidgets.QDialog):
         filter_edit_box.addWidget(self.filter_spinbox)
         criteria_box.addLayout(filter_edit_box)
 
-        criteria_box_parent.setLayout(criteria_box)
-        layout.addWidget(criteria_box_parent)
-        layout.addStretch()
+        divider = QtWidgets.QFrame()
+        divider.setFrameShape(QtWidgets.QFrame.HLine)
+        criteria_box.addWidget(divider)
+
+        # Consider all water-level changes, only rising, or only falling
+        bg = QtWidgets.QButtonGroup()
+        self.button_all = QtWidgets.QRadioButton("All groundwater levels")
+        self.button_rising = QtWidgets.QRadioButton("Rising groundwater level only")
+        self.button_falling = QtWidgets.QRadioButton("Falling groundwater level only")
+        bg.addButton(self.button_all)
+        bg.addButton(self.button_rising)
+        bg.addButton(self.button_falling)
+        self.button_all.setChecked(True)
+
+        button_box = QtWidgets.QVBoxLayout()
+        button_box.addWidget(self.button_all)
+        button_box.addWidget(self.button_rising)
+        button_box.addWidget(self.button_falling)
+        criteria_box.addLayout(button_box)
+        criteria_box.addWidget(divider)
+
         g_station_box = QtWidgets.QHBoxLayout()
-        g_station_box_widget = QtWidgets.QWidget()
         g_station_box.addWidget(QtWidgets.QLabel("Gravity Station"))
         g_station_box.addWidget(self.station_comboBox)
-        g_station_box_widget.setLayout(g_station_box)
-        layout.addWidget(g_station_box_widget)
+        criteria_box.addLayout(g_station_box)
 
+        criteria_box_parent.setLayout(criteria_box)
+        layout.addWidget(criteria_box_parent)
+
+        self.createGravTable()
+        layout.addWidget(self.tableWidgetGrav)
+
+        layout.addStretch()
         nwis_station_box = QtWidgets.QHBoxLayout()
         nwis_station_box_widget = QtWidgets.QWidget()
         nwis_station_box.addWidget(QtWidgets.QLabel("NWIS Station ID"))
@@ -587,8 +610,8 @@ class NwisChooseStation(QtWidgets.QDialog):
         nwis_station_box_widget.setLayout(nwis_station_box)
         layout.addWidget(nwis_station_box_widget)
 
-        self.createTable()
-        layout.addWidget(self.tableWidget)
+        self.createNWISTable()
+        layout.addWidget(self.tableWidgetNWIS)
 
         # Button box
         ok_button = QtWidgets.QPushButton("Ok")
@@ -607,26 +630,21 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.setLayout(layout)
         self.resize(630, 700)
 
+        self.populateGravTable()
+
     def process(self):
         if self.nwis_station_line_edit.text() == '':
             MessageBox.warning("Invalid NWIS station", "Please enter an NWIS station ID")
             return
-        for row_idx in range(self.tableWidget.rowCount()):
-            item = self.tableWidget.item(row_idx, 0)
+        for row_idx in range(self.tableWidgetNWIS.rowCount()):
+            item = self.tableWidgetNWIS.item(row_idx, 0)
             if item.checkState() == 2:
                 nwis_station = item.text()
                 break
         else:
             nwis_station = self.nwis_station_line_edit.text()[:16]
         g_station = self.station_comboBox.currentText()
-        header, data, _ = compute_gravity_change(self.obstreemodel, table_type="list")
-        # transpose table
-        # data = [list(i) for i in zip(*data)]
-        # dates_temp = [data[1][1][idx] for (idx, sta) in enumerate(data[1][0]) if
-        #               sta == g_station]
-        dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for
-                 station, date, g, s in data if station == g_station]
-        g = [g for station, date, g, sd in data if station == g_station]
+        dates, g = self.get_checked_data()
         # sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
         #       sta == g_station]
 
@@ -643,14 +661,41 @@ class NwisChooseStation(QtWidgets.QDialog):
                 nwis_data['discrete_x']]
         else:
             t_offset = None
-        if data:
+        if dates:
             try:
+                if self.button_all.isChecked():
+                    rise_or_fall = 'all'
+                elif self.button_rising.isChecked():
+                    rise_or_fall = 'rise'
+                elif self.button_falling.isChecked():
+                    rise_or_fall = 'fall'
                 optimize = self.cb_find_optimal.isChecked()
                 plt = PlotNwis(nwis_station, g_station, nwis_data, (dates, g),
-                               t_offset=t_offset, optimize=optimize, parent=self)
+                               t_offset=t_offset, optimize=optimize,
+                               t_threshold=int(self.threshold_spinbox.text()),
+                               rising=rise_or_fall,
+                               parent=self)
                 plt.show()
             except IndexError as e:
                 pass
+
+    def get_checked_data(self):
+        dates, g = [], []
+        for r in range(self.tableWidgetGrav.rowCount()):
+            item = self.tableWidgetGrav.item(r, 0)
+            if item.checkState() == 2:
+                d = self.tableWidgetGrav.item(r, 1)
+                dates.append(datetime.datetime.strptime(d.text(), "%Y-%m-%d"))
+                g_val = self.tableWidgetGrav.item(r, 2)
+                g.append(float(g_val.text()))
+        return dates, g
+
+    def get_g_data(self, g_station):
+        header, data, _ = compute_gravity_change(self.obstreemodel, table_type="list")
+        dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for
+                 station, date, g, s in data if station == g_station]
+        g = [g for station, date, g, sd in data if station == g_station]
+        return data, dates, g
 
     # def plot_nwis(self, nwis_station, g_station, nwis, data):
     #     plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
@@ -668,7 +713,7 @@ class NwisChooseStation(QtWidgets.QDialog):
             self.nwis_station_line_edit.setText("Error")
 
     def populateTable(self, ID_dict):
-        self.tableWidget.setRowCount(len(ID_dict))
+        self.tableWidgetNWIS.setRowCount(len(ID_dict))
         row = 0
         for k, v in ID_dict.items():
             item = QtWidgets.QTableWidgetItem(k)
@@ -678,38 +723,83 @@ class NwisChooseStation(QtWidgets.QDialog):
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
-            self.tableWidget.setItem(row, 0, item)
+            self.tableWidgetNWIS.setItem(row, 0, item)
 
             for idx, content in enumerate(v):
                 item = QtWidgets.QTableWidgetItem(str(content))
                 item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-                self.tableWidget.setItem(row, idx+1, item)
+                self.tableWidgetNWIS.setItem(row, idx + 1, item)
             row += 1
-        self.tableWidget.cellChanged.connect(self.onCellChanged)
-        self.tableWidget.setSortingEnabled(True)
+        self.tableWidgetNWIS.cellChanged.connect(self.onCellChanged)
+        self.tableWidgetNWIS.setSortingEnabled(True)
+
+    def populateGravTable(self):
+        self.tableWidgetGrav.clearContents()
+        row = 0
+        g_station = self.station_comboBox.currentText()
+        data, dates, g = self.get_g_data(g_station)
+        dg = [(x-g[0])/41.9 for x in g]
+        self.tableWidgetGrav.setRowCount(len(dates))
+        for idx, v in enumerate(dates):
+            item = QtWidgets.QTableWidgetItem(g_station)
+            item.setFlags(QtCore.Qt.ItemIsUserCheckable |
+                              QtCore.Qt.ItemIsEnabled)
+            item.setCheckState(QtCore.Qt.Checked)
+            self.tableWidgetGrav.setItem(row, 0, item)
+
+            item = QtWidgets.QTableWidgetItem(str(v.strftime('%Y-%m-%d')))
+            self.tableWidgetGrav.setItem(row, 1, item)
+            item = QtWidgets.QTableWidgetItem(f"{g[idx]:0.1f}")
+            self.tableWidgetGrav.setItem(row, 2, item)
+            item = QtWidgets.QTableWidgetItem(f"{dg[idx]:0.2f}")
+            self.tableWidgetGrav.setItem(row, 3, item)
+                # item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+                # self.tableWidgetNWIS.setItem(row, idx + 1, item)
+            row += 1
+        self.tableWidgetGrav.setSortingEnabled(True)
 
     # Create table
-    def createTable(self):
-        self.tableWidget = QtWidgets.QTableWidget()
+    def createNWISTable(self):
+        self.tableWidgetNWIS = QtWidgets.QTableWidget()
 
         # Row count
-        self.tableWidget.setRowCount(0)
+        self.tableWidgetNWIS.setRowCount(0)
 
         # Column count
-        self.tableWidget.setColumnCount(5)
+        self.tableWidgetNWIS.setColumnCount(5)
         # Table will fit the screen horizontally
-        self.tableWidget.horizontalHeader().setStretchLastSection(True)
+        self.tableWidgetNWIS.horizontalHeader().setStretchLastSection(True)
         # self.tableWidget.horizontalHeader().setSectionResizeMode(
         #     QtWidgets.QHeaderView.Stretch)
-        self.tableWidget.setColumnWidth(0, 120)
-        self.tableWidget.setColumnWidth(1, 180)
-        self.tableWidget.setColumnWidth(2, 80)
-        self.tableWidget.setColumnWidth(3, 90)
-        self.tableWidget.setColumnWidth(4, 90)
-        self.tableWidget.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data"])
+        self.tableWidgetNWIS.setColumnWidth(0, 120)
+        self.tableWidgetNWIS.setColumnWidth(1, 180)
+        self.tableWidgetNWIS.setColumnWidth(2, 80)
+        self.tableWidgetNWIS.setColumnWidth(3, 90)
+        self.tableWidgetNWIS.setColumnWidth(4, 90)
+        self.tableWidgetNWIS.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data"])
+
+
+    def createGravTable(self):
+        self.tableWidgetGrav = QtWidgets.QTableWidget()
+
+        # Row count
+        self.tableWidgetGrav.setRowCount(10)
+
+        # Column count
+        self.tableWidgetGrav.setColumnCount(5)
+        # Table will fit the screen horizontally
+        self.tableWidgetGrav.horizontalHeader().setStretchLastSection(True)
+        # self.tableWidget.horizontalHeader().setSectionResizeMode(
+        #     QtWidgets.QHeaderView.Stretch)
+        self.tableWidgetGrav.setColumnWidth(0, 100)
+        self.tableWidgetGrav.setColumnWidth(1, 100)
+        self.tableWidgetGrav.setColumnWidth(2, 100)
+        self.tableWidgetGrav.setColumnWidth(3, 100)
+        self.tableWidgetGrav.setHorizontalHeaderLabels(["Station", "Date", "g", "Storage change", ""])
+
 
     def onCellChanged(self, row, column):
-        item = self.tableWidget.item(row, column)
+        item = self.tableWidgetNWIS.item(row, column)
         # lastState = item.data(LastStateRole)
 
         if column != 0:
@@ -719,9 +809,9 @@ class NwisChooseStation(QtWidgets.QDialog):
         try:
             if currentState == QtCore.Qt.Checked:
                 self.nwis_station_line_edit.setText(item.text())
-                for row_idx in range(self.tableWidget.rowCount()):
+                for row_idx in range(self.tableWidgetNWIS.rowCount()):
                     if row_idx != row:
-                        temp_item = self.tableWidget.item(row_idx, 0)
+                        temp_item = self.tableWidgetNWIS.item(row_idx, 0)
                         temp_item.setCheckState(QtCore.Qt.Unchecked)
         except:
             return

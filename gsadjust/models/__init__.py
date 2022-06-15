@@ -9,3 +9,5 @@ from .scintrex import ScintrexTableModel
 from .sort import CustomSortingModel
 from .tare import TareTableModel
 from .delta_proxy import CustomProxyModel
+from .delta_proxy import CustomDatumProxyModel
+from .delta_proxy import CheckBoxDelegate

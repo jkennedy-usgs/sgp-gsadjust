@@ -22,6 +22,8 @@ from ...models import (
     DatumTableModel,
     ResultsTableModel,
     CustomProxyModel,
+    CustomDatumProxyModel,
+    CheckBoxDelegate
 )
 
 
@@ -53,10 +55,14 @@ class TabAdjust(QtWidgets.QWidget):
         self.datum_view = QtWidgets.QTableView()
         self.datum_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.datum_view.customContextMenuRequested.connect(self.datum_context_menu)
-        self.datum_proxy_model = QtCore.QSortFilterProxyModel(self)
         self.datum_model = DatumTableModel()
+        self.datum_proxy_model = CustomDatumProxyModel()
+
+
         self.datum_proxy_model.setSourceModel(self.datum_model)
         self.datum_view.setModel(self.datum_proxy_model)
+        delegate = CheckBoxDelegate(None)
+        self.datum_view.setItemDelegateForColumn(0, delegate)
         self.datum_view.setSortingEnabled(True)
 
         self.datum_popup_menu = QtWidgets.QMenu("Datum Popup Menu", self)

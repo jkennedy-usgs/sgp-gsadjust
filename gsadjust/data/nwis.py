@@ -3,7 +3,7 @@ get_nwis_data Retrieve groundwater-level data from the USGS National Water Infor
 
 """
 from dateutil import parser
-import requests
+import requests, json
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
@@ -166,7 +166,7 @@ def parse_continuous_data(nwis_data):
 
 
 def search_nwis(coords):
-    degree_buffer = 0.1
+    degree_buffer = 0.01
     ID_dict = defaultdict(list)
     try:
         lon_min = coords[0] - degree_buffer
@@ -192,10 +192,12 @@ def search_nwis(coords):
                                                  lon,
                                                  coords[1],
                                                  coords[0])
+                    depth = get_site_property(int(line_elems[1]), prop='wellDepth')
                     ID_dict[line_elems[1]] = [line_elems[2],
                                               f"{distance:.0f}",
                                               line_elems[21],
-                                              line_elems[22]]
+                                              line_elems[22],
+                                              depth]
             except:
                 continue
     except:
@@ -314,6 +316,20 @@ def smooth(x, window_len=11, window='hanning'):
         w = eval('np.' + window + '(window_len)')
     y = np.convolve(w / w.sum(), s, mode='same')
     return y[window_len:-window_len + 1]
+
+
+def get_site_property(ID, prop='monitoringLocationAltitudeLandSurface'):
+    usgs_endpoint = r'https://labs.waterdata.usgs.gov/api/observations/collections'
+    geo_json = requests.get('/'.join([usgs_endpoint,
+                                      'monitoring-locations',
+                                      'items',
+                                      f'USGS-{ID}']))
+    station = json.loads(geo_json.text)
+    station_prop = station['properties'][prop]
+    if station_prop:
+        return station_prop
+    else:
+        return ""
 
 
 # Wrote this and didn't need it, to get station name from header.

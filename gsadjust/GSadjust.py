@@ -211,7 +211,7 @@ from .plots import (
     PlotLoopAnimation,
     PlotNetworkGraph,
 )
-from .tides import tide_correction_agnew, tide_correction_meter
+from .tides import tide_correction_meter
 from .utils import (
     init_station_coords_dict,
 )
@@ -381,6 +381,7 @@ class MainProg(QtWidgets.QMainWindow):
             "Loop properties...", slot=self.properties_loop
         )
         self.menus.mnRename = self.menus.create_action("Rename", slot=self.rename)
+        self.menus.mnTides = self.menus.create_action("Update tides", slot=self.tide)
         self.menus.mnDeleteStation = self.menus.create_action(
             "Delete station(s)", slot=self.delete_station
         )
@@ -475,6 +476,7 @@ class MainProg(QtWidgets.QMainWindow):
         """
         self.gui_data_treeview_popup_menu = QtWidgets.QMenu("Menu", None)
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnRename)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnTides)
         self.gui_data_treeview_popup_menu.addSeparator()
         self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
         self.gui_data_treeview_popup_menu.addSeparator()
@@ -1813,6 +1815,15 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.edit(index, trigger, event)
         self.set_window_title_asterisk()
 
+    def tide(self):
+        indexes = self.gui_data_treeview.selectedIndexes()
+        index = indexes[0]
+        item = index.model().itemFromIndex(index)
+        trigger = self.gui_data_treeview.EditKeyPressed
+        event = None
+        self.dialog_tide_correction(item)
+
+
     def delete_tare(self):
         """
         Called when user right-clicks a tare and selects delete from the context menu
@@ -2139,7 +2150,6 @@ class MainProg(QtWidgets.QMainWindow):
                 self.menus.set_state(MENU_STATE.UNENABLE_ALL)
         else:
             self.menus.set_state(MENU_STATE.UNENABLE_ALL)
-        print('jeff')
         self.gui_data_treeview_popup_menu.exec_(
             self.gui_data_treeview.mapToGlobal(point)
         )
@@ -2264,8 +2274,8 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotDgResidualHistogram(survey, self)
         plt.show()
 
-    def plot_gravity_change(self, dates, table, parent):
-        plt = PlotGravityChange(dates, table, parent)
+    def plot_gravity_change(self, table, parent):
+        plt = PlotGravityChange(table, parent)
         plt.show()
 
 
@@ -2493,13 +2503,16 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_window_title_asterisk()
             self.adjust_update_required()
 
-    def dialog_tide_correction(self):
+    def dialog_tide_correction(self, item=None):
         """
         Opens PyQt dialog to specify correction type
         """
         tide_correction_dialog = TideCorrectionDialog()
         tide_correction_dialog.msg.exec_()
-        correction_type = tide_correction_dialog.correction_type
+        try:
+            correction_type = tide_correction_dialog.correction_type
+        except AttributeError:  # User clicked close button
+            return
         if correction_type == "Cancel":
             return
         elif correction_type == "Meter-supplied":
@@ -2535,12 +2548,18 @@ class MainProg(QtWidgets.QMainWindow):
 
             tc = TideCoordinatesDialog(lat, lon, elev)
             if tc.exec_():
-                tide_correction_agnew(
-                    self,
+                item.update_tide(
                     float(tc.lat.text()),
                     float(tc.lon.text()),
                     float(tc.elev.text()),
-                )
+                    correction_type)
+                # tide_correction_agnew(
+                #     self,
+                #     float(tc.lat.text()),
+                #     float(tc.lon.text()),
+                #     float(tc.elev.text()),
+                #     item=item
+                # )
             self.adjust_update_required()
         self.update_data_tab()
 

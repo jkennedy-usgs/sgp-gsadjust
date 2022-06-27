@@ -192,6 +192,11 @@ class ObsTreeLoop(ObsTreeItemBase):
                 for iiii in range(len(item.station)):
                     item.station[iiii] = to_name
 
+    def update_tide(self, *args, **kwargs):
+        for i in range(self.rowCount()):
+            item = self.child(i, 0)
+            item.update_tide(*args, **kwargs)
+
     def populate(self, data):
         """
         Populate loop dictionary using data passed as an option. For now, only

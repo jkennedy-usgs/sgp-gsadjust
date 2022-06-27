@@ -35,25 +35,6 @@ def use_meter_tide_correction(MainProg):
     tide_correction_meter(MainProg.campaigndata)
 
 
-def launch_agnew(cwin, MainProg):
-    """
-    Launch the Agnew tide correction
-    """
-    MainProg.campaigndata.tide_lat = float(cwin.latEdit.text())
-    MainProg.campaigndata.tide_lon = float(cwin.lonEdit.text())
-    MainProg.campaigndata.tide_alt = float(cwin.elevEdit.text())
-
-    # apply tide correction
-    MainProg.tide_popup.close()
-    tide_correction_agnew(
-        MainProg,
-        MainProg.campaigndata.tide_lat,
-        MainProg.campaigndata.tide_lon,
-        MainProg.campaigndata.tide_alt,
-    )
-    MainProg.update_data_tab()
-
-
 def tide_correction_meter(MainProg):
     """
     Function for using internal CG5 tide correction option.
@@ -68,30 +49,33 @@ def tide_correction_meter(MainProg):
                 station.etc = station.meter_etc
 
 
-def tide_correction_agnew(MainProg, lat, lon, alt):
-    """
-    Apply Agnew tide correction.
-
-    - Agnew, D.C., 2007, 3.06 - Earth Tides, in Schubert, G. ed.,
-    Treatise on Geophysics, Amsterdam, Elsevier, p. 163–195.
-    - Agnew, D.C., 2012, SPOTL: Some Programs for Ocean-Tide Loading
-
-    """
-    logging.info("New tide correction, Lat: %f Long: %f Elevation: %f ", lat, lon, alt)
-    for i in range(MainProg.obsTreeModel.invisibleRootItem().rowCount()):
-        survey = MainProg.obsTreeModel.invisibleRootItem().child(i)
-        for ii in range(survey.rowCount()):
-            loop = survey.child(ii)
-            for iii in range(loop.rowCount()):
-                station = loop.child(iii)
-                tides = (
-                    np.round(
-                        np.array([earth_tide(lat, lon, t) for t in station.t]) * 10000
-                    )
-                    / 10000.0
-                )
-                tides *= 1000  # convert milligal to microgal
-                station.etc = tides.tolist()
+# def tide_correction_agnew(MainProg, lat, lon, alt, item):
+#     """
+#     Apply Agnew tide correction.
+#
+#     - Agnew, D.C., 2007, 3.06 - Earth Tides, in Schubert, G. ed.,
+#     Treatise on Geophysics, Amsterdam, Elsevier, p. 163–195.
+#     - Agnew, D.C., 2012, SPOTL: Some Programs for Ocean-Tide Loading
+#
+#     """
+#     logging.info("New tide correction, Lat: %f Long: %f Elevation: %f ", lat, lon, alt)
+#     if type(item) == obsTreeLoop:
+#
+#     for i in range(MainProg.obsTreeModel.invisibleRootItem().rowCount()):
+#         survey = MainProg.obsTreeModel.invisibleRootItem().child(i)
+#         for ii in range(survey.rowCount()):
+#             loop = survey.child(ii)
+#             for iii in range(loop.rowCount()):
+#                 station = loop.child(iii)
+#
+#                 tides = (
+#                     np.round(
+#                         np.array([earth_tide(lat, lon, t) for t in station.t]) * 10000
+#                     )
+#                     / 10000.0
+#                 )
+#                 tides *= 1000  # convert milligal to microgal
+#                 station.etc = tides.tolist()
 
 
 def ocean_correction_agnew(self, amp, phases, lon):

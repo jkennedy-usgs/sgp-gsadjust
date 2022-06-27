@@ -25,6 +25,8 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as tkr
 import copy
 
+from ..gui.messages import MessageBox
+
 consistent_date_axes = True
 presentation_style = False
 
@@ -102,6 +104,9 @@ class PlotNwis(QtWidgets.QDialog):
             plot_x, plot_y, self.t_offset = self.find_best_offset()
         else:
             plot_x, plot_y = self.get_sy_data(self.nwis_data, self.grav_data)
+        if plot_x is None:
+            MessageBox.critical("Error",
+                                f"Error retrieving plot data")
         ax = self.figure.add_subplot(212)
         self.plot_sy(ax, plot_x, plot_y)
         self.figure.subplots_adjust(
@@ -110,7 +115,8 @@ class PlotNwis(QtWidgets.QDialog):
         self.canvas.draw()
 
     def find_best_offset(self):
-        offsets = range(60)
+        offsets = range(120)
+        offsets = [o - 60 for o in offsets]
         best_r2, best_offset = 0, 0
         best_x, best_y = self.get_sy_data(self.nwis_data, self.grav_data)
         for offset in offsets:
@@ -125,6 +131,8 @@ class PlotNwis(QtWidgets.QDialog):
                 poly, cov = np.polyfit(plot_x, plot_y, 1, cov=True)
             except TypeError as e:
                 continue
+            except ValueError as e:
+                return None, None, None
             r2 = np.corrcoef(plot_x, plot_y)[0, 1] ** 2
             if r2 > best_r2:
                 best_r2 = r2

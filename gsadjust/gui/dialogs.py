@@ -32,7 +32,11 @@ from .widgets import IncrMinuteTimeEdit, ProgressBar
 from .map import GravityChangeMap
 from ..data import Datum, analysis
 from ..file import a10
-from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
+from ..models import (DatumTableModel,
+                      GravityChangeModel,
+                      MeterCalibrationModel,
+                      CheckBoxDelegate
+                      )
 from ..utils import init_cal_coeff_dict
 from ..data.nwis import search_nwis, nwis_get_data, filter_ts
 from ..data.analysis import compute_gravity_change
@@ -145,6 +149,7 @@ class CoordinatesTable(QtWidgets.QDialog):
                     self.table.setItem(idx, 3, table_item_elev)
                 while idx < self.table.rowCount():
                     self.table.removeRow(self.table.rowCount() - 1)
+
     def coords(self):
         """
         Puts table coordinates into a dict.
@@ -628,7 +633,7 @@ class NwisChooseStation(QtWidgets.QDialog):
 
         layout.addWidget(button_widget)
         self.setLayout(layout)
-        self.resize(630, 700)
+        self.resize(750, 700)
 
         self.populateGravTable()
 
@@ -766,7 +771,7 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.tableWidgetNWIS.setRowCount(0)
 
         # Column count
-        self.tableWidgetNWIS.setColumnCount(5)
+        self.tableWidgetNWIS.setColumnCount(6)
         # Table will fit the screen horizontally
         self.tableWidgetNWIS.horizontalHeader().setStretchLastSection(True)
         # self.tableWidget.horizontalHeader().setSectionResizeMode(
@@ -776,7 +781,7 @@ class NwisChooseStation(QtWidgets.QDialog):
         self.tableWidgetNWIS.setColumnWidth(2, 80)
         self.tableWidgetNWIS.setColumnWidth(3, 90)
         self.tableWidgetNWIS.setColumnWidth(4, 90)
-        self.tableWidgetNWIS.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data"])
+        self.tableWidgetNWIS.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data", "Well depth (ft)"])
 
 
     def createGravTable(self):
@@ -863,9 +868,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         btn_map.clicked.connect(self.map_change_window)
         btn_plot = QtWidgets.QPushButton("Plot")
         btn_plot.clicked.connect(
-            lambda state, x=(self.dates, self.table): MainProg.plot_gravity_change(
-                x[0], x[1], self
-            )
+            lambda: MainProg.plot_gravity_change(self.list_table, self)
         )
         btn1 = QtWidgets.QPushButton("Copy to clipboard")
         btn1.clicked.connect(lambda: copy_cells_to_clipboard(self.table_view))
@@ -1165,14 +1168,14 @@ class SelectAbsg(QtWidgets.QDialog):
         self.splitter_window = QtWidgets.QSplitter(QtCore.Qt.Horizontal, self)
         self.tree_model = QtWidgets.QDirModel()
         self.tree = QtWidgets.QTreeView()
-        self.table_model = DatumTableModel()
         self.tree_model.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
         self.table = QtWidgets.QTableView()
 
         self.ProxyModel = QtCore.QSortFilterProxyModel()
+
         self.table.setModel(self.ProxyModel)
         self.table.setSortingEnabled(True)
-        self.init_ui()
+
         if datum_table_model is not None:
             self.table_model = datum_table_model
             for i in range(self.table_model.rowCount()):
@@ -1180,15 +1183,20 @@ class SelectAbsg(QtWidgets.QDialog):
                 self.table_model.setData(
                     idx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole
                 )
-            self.ProxyModel.setSourceModel(self.table_model)
-            QtWidgets.QApplication.processEvents()
+        else:
+            self.table_model = DatumTableModel()
+        self.ProxyModel.setSourceModel(self.table_model)
+        delegate = CheckBoxDelegate(None)
+        self.table.setItemDelegateForColumn(0, delegate)
+        QtWidgets.QApplication.processEvents()
+        self.init_ui()
 
     def export_and_close(self):
         for i in range(self.ProxyModel.rowCount()):
             ndi = self.ProxyModel.index(i, 0)
             nd = self.ProxyModel.data(ndi, role=QtCore.Qt.UserRole)
             chk = self.ProxyModel.data(ndi, role=QtCore.Qt.CheckStateRole)
-            if chk == 2:
+            if chk == 2 or chk == 1:
                 self.new_datums.append(nd)
         self.accept()
 
@@ -1233,7 +1241,7 @@ class SelectAbsg(QtWidgets.QDialog):
         button_box_right.addWidget(self.cancel_button)
         button_box_right.addWidget(self.ok_button)
 
-        self.ProxyModel.setSourceModel(self.table_model)
+        # self.ProxyModel.setSourceModel(self.table_model)
         self.tree.resizeColumnToContents(0)
 
         # Hide file size, date modified columns

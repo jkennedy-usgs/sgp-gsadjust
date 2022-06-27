@@ -14,6 +14,8 @@ constitute any such warranty. The software is provided on the condition that
 neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
+import datetime
+
 import matplotlib
 import numpy as np
 from PyQt5 import QtWidgets
@@ -22,7 +24,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Toolbar
 
 
 class PlotGravityChange(QtWidgets.QDialog):
-    def __init__(self, dates, table, parent=None):
+    def __init__(self, table, parent=None):
         super(PlotGravityChange, self).__init__(parent)
         self.setWindowTitle("Gravity Change Time Series")
         self.setWhatsThis(
@@ -37,12 +39,39 @@ class PlotGravityChange(QtWidgets.QDialog):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
         table = [list(i) for i in zip(*table)]
-        ax = self.plot(dates, table)
+        ax = self.plot(table)
 
         self.leg = self.interactive_legend(ax)
         self.canvas.draw()
 
-    def plot(self, dates, table):
+    def plot(self, table):
+        stations = sorted(list(set(table[0])), key=str.lower)
+        nstations = len(stations)
+        ncol = min(4, int(np.ceil(nstations / 24)))
+        ax = self.figure.add_subplot(111)
+        right_margin = 1 - ncol / 8
+        self.figure.subplots_adjust(right=right_margin)
+
+        cmap = matplotlib.cm.get_cmap("gist_ncar")
+        i = 0
+        for s in stations:
+            s_data, s_date = [], []
+            for idx, r in enumerate(table[0]):
+                if r == s:
+                    s_date.append(datetime.datetime.strptime(table[1][idx],'%Y-%m-%d'))
+                    s_data.append(table[2][idx])
+            s_data = [x - s_data[0] for x in s_data]
+            s_date = list(zip(*(sorted(zip(s_date, s_data)))))[0]
+            s_data = list(zip(*(sorted(zip(s_date, s_data)))))[1]
+            ax.plot(s_date, s_data, "-o", color=cmap(i / nstations), label=stations[i])
+            i += 1
+
+        ax.set_ylabel("Gravity change, in µGal")
+        ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=ncol)
+        self.figure.autofmt_xdate()
+        return ax
+
+    def old_plot(self, dates, table):
         ncols = len(dates)
         nstations = len(table[0])
         stations = table[0]

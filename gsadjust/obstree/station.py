@@ -24,6 +24,8 @@ import numpy as np
 from matplotlib.dates import num2date
 
 from .base import ObsTreeItemBase
+from ..tides.synthetic import earth_tide
+
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
 
@@ -85,6 +87,17 @@ class ObsTreeStation(ObsTreeItemBase):
                 if self.keepdata[i] == 1
             ]
             return w
+
+    def update_tide(self, lat, lon, elev, correction_type):
+        if correction_type == 'Agnew':
+            tides = (
+                    np.round(
+                        np.array([earth_tide(lat, lon, t) for t in self.t]) * 10000
+                    )
+                    / 10000.0
+            )
+            tides *= 1000  # convert milligal to microgal
+            self.etc = tides.tolist()
 
     @property
     def key(self):

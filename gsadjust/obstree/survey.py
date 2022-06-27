@@ -213,6 +213,12 @@ class ObsTreeSurvey(ObsTreeItemBase):
             loop = self.child(i, 0)
             loop.rename(from_name, to_name)
 
+    def update_tide(self, *args, **kwargs):
+        for i in range(self.rowCount()):
+            loop = self.child(i, 0)
+            loop.update_tide(*args, **kwargs)
+
+
     def populate(self, survey_data, name="0", source="NA"):
         """
         Called from open_raw_data. Loads all survey_data into a single loop.

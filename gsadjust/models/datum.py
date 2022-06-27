@@ -199,6 +199,9 @@ class DatumTableModel(QAbstractTableModel):
         if role == Qt.UserRole:
             self._data[index.row()] = value
             self.dataChanged.emit(index, index, [])
+            return True
+
+        return True
 
     def flags(self, index):
         return (

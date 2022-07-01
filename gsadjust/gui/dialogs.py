@@ -515,13 +515,14 @@ class DialogOverwrite(QtWidgets.QMessageBox):
         self.accept()
 
 
-class NwisChooseStation(QtWidgets.QDialog):
+class PlotGravityAndWLs(QtWidgets.QDialog):
 
     def __init__(self, MainProg):
-        super(NwisChooseStation, self).__init__(MainProg)
+        super(PlotGravityAndWLs, self).__init__(MainProg)
         self.obstreemodel = MainProg.obsTreeModel
         self.stations = MainProg.obsTreeModel.results_stations()
         self.coords = MainProg.obsTreeModel.station_coords
+        self.setWindowModality(QtCore.Qt.NonModal)
         self.init_gui()
 
     def init_gui(self):
@@ -539,6 +540,8 @@ class NwisChooseStation(QtWidgets.QDialog):
         interpolate_threshold_box.addWidget(QtWidgets.QLabel("Interpolate gaps less than (days):"))
         self.threshold_spinbox = QtWidgets.QSpinBox()
         self.threshold_spinbox.setValue(30)
+        self.threshold_spinbox.setMaximum(1000)
+        self.threshold_spinbox.setMinimum(0)
         interpolate_threshold_box.addWidget(self.threshold_spinbox)
         criteria_box.addLayout(interpolate_threshold_box)
 
@@ -1333,6 +1336,30 @@ class SelectAbsg(QtWidgets.QDialog):
                 self.table_model.insertRows(datum, 0)
                 self.path = path
         return files_found
+
+
+class DialogUpdateDatums(QtWidgets.QMessageBox):
+    """
+    Dialog to confirm workspace overwrite
+    """
+
+    def __init__(self, dlg_text):
+        super(DialogUpdateDatums, self).__init__()
+        self.overwrite = False
+        self.setText("\n".join(dlg_text))
+        self.setWindowTitle("GSadjust")
+
+        ok_button = QtWidgets.QPushButton("Update")
+        ok_button.clicked.connect(self.onClicked)
+
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+        self.addButton(cancel_button, 0)
+        self.addButton(ok_button, 1)
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def onClicked(self, btn):
+        self.accept()
 
 
 class AboutDialog(QtWidgets.QDialog):

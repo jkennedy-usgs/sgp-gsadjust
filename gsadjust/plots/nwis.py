@@ -17,6 +17,7 @@ resulting from the authorized or unauthorized use of the software.
 import matplotlib
 import datetime
 import numpy as np
+import numpy.linalg
 from numpy import ceil
 from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -32,7 +33,7 @@ presentation_style = False
 
 if consistent_date_axes:
     x_min = datetime.datetime(2016, 1, 1)
-    x_max = datetime.datetime(2021, 10, 1)
+    x_max = datetime.datetime(2022, 10, 1)
 
 
 def func(x, pos):
@@ -376,13 +377,9 @@ class PlotNwis(QtWidgets.QDialog):
             #                     left=0.25, right=0.85)
 
         try:  # Sometimes polyfit fails, even if there's 3 points?
-
-
-
             poly, cov = np.polyfit(plot_x, plot_y, 1, cov=True)
             r2 = np.corrcoef(plot_x, plot_y)[0, 1] ** 2
             line_x = np.linspace(min(plot_x) - 0.2, max(plot_x) + 0.2, 10)
-
 
             p = np.poly1d(poly)
             line_y = p(line_x)
@@ -407,5 +404,5 @@ class PlotNwis(QtWidgets.QDialog):
             else:
                 ax.set_title("Specific Yield")
 
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError, numpy.linalg.LinAlgError) as e:
             print(e)

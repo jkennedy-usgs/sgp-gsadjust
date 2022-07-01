@@ -62,3 +62,7 @@ class Datum:
             f"{in_use} {self.station} {self.date} {self.g:.2f} {self.sd:.2f}"
             f" {self.residual:.2f}"
         )
+
+    @property
+    def key(self):
+        return self.station+self.date

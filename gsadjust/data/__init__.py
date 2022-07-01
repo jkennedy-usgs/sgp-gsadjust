@@ -50,4 +50,4 @@ from .delta import (
     create_delta_by_type,
 )
 from .tare import Tare
-from .nwis import nwis_get_data, search_nwis, get_site_property
+from .nwis import nwis_get_data, search_nwis, get_site_property, plot_hydrograph_with_gravity

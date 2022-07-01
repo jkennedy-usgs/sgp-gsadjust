@@ -169,6 +169,7 @@ from .file import (
     file_reader,
     import_abs_g_complete,
     import_abs_g_simple,
+    a10,
 )
 from .gui.dialogs import (
     AboutDialog,
@@ -187,8 +188,9 @@ from .gui.dialogs import (
     TideCoordinatesDialog,
     TideCorrectionDialog,
     VerticalGradientDialog,
-    NwisChooseStation,
+    PlotGravityAndWLs,
     PreferencesDialog,
+    DialogUpdateDatums,
 )
 from .gui.logger import LoggerWidget
 from .gui.menus import MENU_STATE, Menus
@@ -2220,8 +2222,8 @@ class MainProg(QtWidgets.QMainWindow):
             win.show()
 
     def show_nwis_plot(self):
-        win = NwisChooseStation(self)
-        if win.exec_():
+        win = PlotGravityAndWLs(self)
+        if win.show():
             for row_idx in range(win.tableWidgetNWIS.rowCount()):
                 item = win.tableWidgetNWIS.item(row_idx, 0)
                 if item.checkState() == 2:
@@ -2379,6 +2381,99 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_window_title_asterisk()
         else:
             return
+
+    def dialog_update_datums(self):
+        """
+        Update existing datums from .project.txt files at user-specified path.
+
+        Useful for when the database has been updated, e.g., a laser correction
+        applied.
+        """
+        path = QtWidgets.QFileDialog.getExistingDirectory(self,
+                                                          self.settings.value("abs_g_path"),
+                                                          )
+        dlg_text = []
+        reload_data = True
+        if hasattr(self,"abs_update_path"):
+            if self.abs_update_path == path:
+                reply = QtWidgets.QMessageBox.question(self, 'GSadjust',
+                                                   "Re-use previous datums from this directory?",
+                                                   QtWidgets.QMessageBox.Yes |
+                                                   QtWidgets.QMessageBox.No,
+                                                   QtWidgets.QMessageBox.No)
+
+                if reply == QtWidgets.QMessageBox.Yes:
+                    datums = self.abs_update_list
+                    reload_data = False
+        if reload_data:
+            datums = dict()
+            n_files = 100
+            pbar = ProgressBar(total=n_files, textmess="Scanning directory...")
+            ctr = 1
+            pbar.show()
+            for dirname, _, fileList in os.walk(path):
+                if dirname.find("unpublished") != -1:
+                    continue
+                for name in fileList:
+                    pbar.progressbar.setValue(ctr)
+                    QtWidgets.QApplication.processEvents()
+
+                    if ".project.txt" not in name:
+                        continue
+                    ctr += 1
+                    if ctr > 100:
+                        ctr = 1
+                    d = a10.A10(os.path.join(dirname, name))
+                    datum = Datum(
+                        d.stationname,
+                        g=float(d.gravity),
+                        sd=float(d.setscatter),
+                        date=d.date,
+                        meas_height=float(d.transferht),
+                        gradient=float(d.gradient),
+                        checked=0,
+                    )
+                    datum.coord = [d.long, d.lat, d.elev]
+                    datum.n_sets = d.processed
+                    datum.time = d.time
+                    # self.table_model.insertRows(datum, 0)
+                    # self.path = path
+                    #
+                    if datum.key in datums.keys():
+                        datums[datum.key].append(datum)
+                    else:
+                        datums[datum.key] = [datum]
+        current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        datums_to_delete, datums_to_add = [], []
+        datums_to_update = dict()
+        current_survey_datums = current_survey.datums
+        for d in current_survey_datums:
+            if current_survey_datums.count(d) > 1:
+                dlg_text.append(f'Duplicate {k} datums, skipping')
+                continue
+            elif d.key in datums.keys():
+                k = d.key
+                if len(datums[k]) > 1:
+                    dlg_text.append(f"More than one A10 value for {k}, skipping")
+                elif d.g != datums[k][0].g:
+                    datums_to_update[k] = (datums[k][0].g, datums[k][0].sd, datums[k][0].gradient)
+                    # datums_to_delete.append(d)
+                    # datums_to_add.append(datums[k][0])
+                    dlg_text.append(f'{k} will update from {d.g:.1f} to {datums[k][0].g:.1f}')
+                else:
+                    dlg_text.append(f'{k} identical, no update')
+        dialog = DialogUpdateDatums(dlg_text)
+        self.abs_update_list = datums
+        self.abs_update_path = path
+        if dialog.exec_():
+            for d in datums_to_update:
+                for d1 in current_survey_datums:
+                    if d1.key == d:
+                        d1.g = datums_to_update[d][0]
+                        d1.sd = datums_to_update[d][1]
+                        d1.gradient = datums_to_update[d][2]
+
+        return True
 
     def dialog_import_abs_g_direct(self):
         """

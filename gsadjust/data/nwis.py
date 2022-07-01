@@ -12,6 +12,35 @@ from math import radians, sin, cos, atan2, sqrt
 from scipy.interpolate import interp1d
 
 
+def plot_hydrograph_with_gravity(site_id, dates):
+    fig, ax = plt.subplots()
+    well_data = nwis_get_data(site_id)
+
+    if well_data['continuous_x']:
+        ydata_meters = [x * 0.3048 for x in well_data['continuous_y']]
+        ax.plot(well_data['continuous_x'], ydata_meters, label=site_id, linewidth=0.5)
+    if well_data['discrete_x']:
+        ydata_meters = [x * 0.3048 for x in well_data['discrete_y']]
+        ax.plot(well_data['discrete_x'], ydata_meters, 'k.', label=site_id)
+    ax.invert_yaxis()
+    ax.set_ylabel("Depth to groundwater (meters)")
+    ylim = ax.get_ylim()
+    d1 = datetime.datetime.strptime(dates[0], '%Y-%m-%d')
+    d2 = datetime.datetime.strptime(dates[1], '%Y-%m-%d')
+    ax.plot([d1, d1], ylim, 'k')
+    ax.plot([d2, d2], ylim, 'k')
+    ax.set_ylim(ylim)
+    plt.title(site_id)
+    # for tick in ax.get_xticklabels():
+    #     tick.set_fontname("Times New Roman")
+    # for tick in ax.get_yticklabels():
+    #     tick.set_fontname("Times New Roman")
+    # L = plt.legend()
+    # plt.setp(L.texts, family='Times New Roman')
+    # plt.xlim([datetime.datetime(2006,1,1,0,0,0), datetime.datetime(2019,1,1,0,0,0)])
+    plt.show()
+
+
 def plot_wells(cross_ref_file, site_IDs):
     fig, ax = plt.subplots()
     for well in site_IDs:
@@ -69,14 +98,14 @@ def nwis_get_data(nwis_ID):
     today = datetime.datetime.today().strftime('%Y-%m-%d')
     nwis_URL = 'http://nwis.waterdata.usgs.gov/nwis/dv?cb_72019=on&format=rdb_meas' + \
                f'&site_no={nwis_ID}' + \
-               '&referred_module=gw&period=&begin_date=1999-10-01&end_date=%s' % today
+               '&referred_module=gw&period=&begin_date=2010-10-01&end_date=%s' % today
     # print('Retrieving rdb data for {} from {}'.format(grav_ID, nwis_URL))
     r = requests.get(nwis_URL)
     # If there is continuous data, it will start with '# ----... WARNING ---...'
     nwis_data = r.text.split('\n')
     if nwis_data[-2].split()[0] != "agency_cd":
         c_x, c_y, d_x, d_y = parse_continuous_data(nwis_data)
-    else:
+    if len(d_x) == 0:
         # if no continuous data, retrieve discrete data
         nwis_URL: str = f'https://nwis.waterdata.usgs.gov/nwis/gwlevels/?site_no={nwis_ID}' + \
                    '&format=rdb_meas'
@@ -166,7 +195,7 @@ def parse_continuous_data(nwis_data):
 
 
 def search_nwis(coords):
-    degree_buffer = 0.01
+    degree_buffer = 0.02
     ID_dict = defaultdict(list)
     try:
         lon_min = coords[0] - degree_buffer
@@ -185,7 +214,7 @@ def search_nwis(coords):
 
             # Need to test for null strings because it's possible for there to be a date without a measurement.
             try:  # the rdb format has changed; parsing by '\t' barely works with the fixed-width fields
-                if line_elems[0] == u'USGS' and line_elems[13] != '72019':  # Doesn't work for other agency codes
+                if line_elems[0] == u'USGS' and line_elems[13] == '72019':  # Doesn't work for other agency codes
                     lat = float(line_elems[4])
                     lon = float(line_elems[5])
                     distance = calc_distance(lat,
@@ -224,46 +253,86 @@ def calc_distance(lat1, lon1, lat2, lon2):
     return distance_haversine_formula
 
 
-def get_gwls_for_date_and_coords(date, coords):
+def get_gwls_for_date_and_coords(date, coords, buffer=365):
+    dt = datetime.datetime.strptime(date, '%Y-%m-%d')
+    window_end = (dt + datetime.timedelta(days=buffer)).strftime('%Y-%m-%d')
+    window_start = (dt - datetime.timedelta(days=buffer)).strftime('%Y-%m-%d')
+
+    # Get DVs
     url = 'https://waterservices.usgs.gov/nwis/dv/?format=rdb&bBox=' + \
           f'{coords[0]:0.3f},{coords[2]:.3f},{coords[1]:.3f},{coords[3]:.3f}' + \
-          f'&startDT={date}&endDT={date}' + \
-          '&parameterCd=72019&statisticCd=00003&siteType=GW&siteStatus=all'
+          f'&startDT={window_start}&endDT={window_end}' + \
+          '&parameterCd=72019&statisticCd=00002&siteType=GW&siteStatus=all'
+          # Anza project only publishes statisticCd=00002 (minimum)
+          # Albuquerque project publishes 00001,00002,00003 (max, min, mean)
 
     s = requests.get(url, verify=False).text.split('\n')
     data = []
     for line in s:
         if line[:4] == 'USGS':
             data.append(line.split('\t'))
+
+    # get gwlevels
+    url = r'https://waterservices.usgs.gov/nwis/gwlevels/?format=rdb&bBox=' + \
+          f'{coords[0]:0.3f},{coords[2]:.3f},{coords[1]:.3f},{coords[3]:.3f}' + \
+          f'&startDT={window_start}&endDT={window_end}&parameterCd=72019'
+    s = requests.get(url, verify=False).text.split('\n')
+    for line in s:
+        if line[:4] == 'USGS':
+            line_elems = line.split('\t')
+            data.append([line_elems[0],
+                         line_elems[1],
+                         line_elems[3],
+                         line_elems[6],
+                         'A'])
+
     df1 = np.array(data)
+
     return df1
 
 
-def get_gwl_change(dates, coords):
+def get_gwl_change(dates, coords, **kwargs):
     CONVERT_TO_METERS = True
-    df1 = get_gwls_for_date_and_coords(dates[0], coords)
-    df2 = get_gwls_for_date_and_coords(dates[1], coords)
+    df1 = get_gwls_for_date_and_coords(dates[0], coords, **kwargs)
+    df2 = get_gwls_for_date_and_coords(dates[1], coords, **kwargs)
 
-    out, lat, lon = dict(), dict(), dict()
-    stations = []
-    for idx, station in enumerate(df1[:, 1]):
+    out, lat, lon = dict(), dict(), dict(),
+    date1, date2 = dict(), dict()
+    stations = np.unique(df1[:,1])
+    stations2 = np.unique(df2[:,1])
+    for station in stations:
+        if station not in stations2:
+            continue
         try:
-            d1 = float(df1[df1[:, 1] == station, 3])
-            d2 = float(df2[df2[:, 1] == station, 3])
-            # Subtracting depths to groundwater, hence d1 - d2 (not s2 - d1)
+            wl1, d1 = get_closest_wl(df1[df1[:, 1] == station, :], dates[0])
+            wl2, d2 = get_closest_wl(df2[df2[:, 1] == station, :], dates[1])
+            if d1 == d2:
+                continue
+            # Subtracting depths to groundwater, hence wl1 - wl2 (not wl2 - wl1)
             if CONVERT_TO_METERS:
-                out[station] = (d1 - d2) * .3048
+                out[station] = (wl1 - wl2) * .3048
             else:
-                out[station] = d1 - d2
-            stations.append(station)
+                out[station] = wl1 - wl2
             lat[station] = float(station[:2]) + float(station[2:4]) / 60 + float(
                 station[4:6]) / 3600
             lon[station] = -1 * (float(station[6:9]) + float(station[9:11]) / 60 + float(
                 station[11:13]) / 3600)
+            date1[station] = d1
+            date2[station] = d2
         except:
             continue
 
-    return stations, list(out.values()), list(lat.values()), list(lon.values())
+    return out.keys(), out, lat, lon, date1, date2
+
+
+def get_closest_wl(df, date):
+    a = np.array([datetime.datetime.strptime(x, '%Y-%m-%d') for x in df[:, 2]])
+    d = datetime.datetime.strptime(date, '%Y-%m-%d')
+    b = np.absolute(a - d)
+    index_of_min = np.argmin(b)
+    closest_wl = df[index_of_min, 3]
+    closest_date = df[index_of_min, 2]
+    return float(closest_wl), closest_date
 
 
 def filter_ts(nd, window):

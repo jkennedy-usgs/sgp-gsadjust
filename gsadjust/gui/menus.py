@@ -70,7 +70,6 @@ _ENABLED_MENUS = {
         ("mnAdjImportAbsSimple", False),
         ("mnAdjImportAbsFull", False),
         ("mnAdjImportAbsDatabase", False),
-        ("mnAdjClearDatumTable", False),
         ("mnAdjPlotHist", False),
         ("mnAdjPlotCompareDatum", False),
         ("mnAdjPlotObservedAdjustedAbs", False),
@@ -91,6 +90,7 @@ _ENABLED_MENUS = {
         ("mnEditShowCoordinates", True),
         ("mnEditLoadCoordinates", True),
         ("mnAdjClearDatumTable", True),
+        ("mnAdjUpdateDatums", True),
         ("mnAdjUpdateDeltas", True),
         ("mnAdjUpdateDeltasCurrentSurvey", True),
         ("mnAdjOptions", True),
@@ -104,7 +104,6 @@ _ENABLED_MENUS = {
         ("mnAdjImportAbsSimple", True),
         ("mnAdjImportAbsFull", True),
         ("mnAdjImportAbsDatabase", True),
-        ("mnAdjClearDatumTable", True),
         ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.ACTIVE_WORKSPACE: [
@@ -507,6 +506,11 @@ class Menus:
             slot=self.mainProg.dialog_import_abs_g_direct,
             enabled=True,
         )
+        self.mnAdjUpdateDatums = self.create_action(
+            "Update datums from directory...",
+            slot=self.mainProg.dialog_update_datums,
+            enabled=False,
+        )
         self.mnAdjClearDatumTable = self.create_action(
             "Clear datum table", slot=self.mainProg.clear_datum_model, enabled=False
         )
@@ -551,6 +555,7 @@ class Menus:
                 self.mnAdjImportAbsFull,
                 self.mnAdjImportAbsDatabase,
                 self.mnAdjClearDatumTable,
+                self.mnAdjUpdateDatums,
                 None,
                 self.mnAdjPlotHist,
                 self.mnAdjPlotCompareDatum,

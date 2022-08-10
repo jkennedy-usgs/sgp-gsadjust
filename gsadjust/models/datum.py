@@ -192,6 +192,7 @@ class DatumTableModel(QAbstractTableModel):
                             if attr:
                                 setattr(datum, attr, vartype(value))
                             self.dataChanged.emit(index, index, [Qt.EditRole])
+                            self.signal_adjust_update_required.emit()
                     except ValueError:
                         pass
             return True

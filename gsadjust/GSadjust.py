@@ -220,7 +220,8 @@ from .utils import (
 
 matplotlib.use("qt5agg")
 matplotlib.rcParams['svg.fonttype'] = 'none'
-
+matplotlib.rcParams['pdf.fonttype'] = 'type3'
+matplotlib.rcParams['savefig.dpi'] = 2000
 DOWN = 1
 UP = -1
 DIRECTIONS = (UP, DOWN)

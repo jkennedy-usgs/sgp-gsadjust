@@ -29,7 +29,7 @@ def list_of_deltas():
     :return:
     """
     delta_list = []
-    fname = './tests/test_workspace1.gsa'
+    fname = 'test_workspace1.gsa'
     # app = GSadjust.MainProg()
     # app.workspace_open(fname)
     ots, dms, _ = gsadjust.MainProg.obsTreeModel.load_workspace(fname)
@@ -78,7 +78,7 @@ def test_threestations_fixture(request):
 
 @pytest.fixture
 def channellist():
-    fname = './tests/channellist_burris_single.p'
+    fname = 'channellist_burris_single.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -92,7 +92,7 @@ def obstreestation():
 
 @pytest.fixture
 def obstreesurvey():
-    filename = './tests/test_BurrisData.txt'
+    filename = 'test_BurrisData.txt'
     meter_type = 'Burris'
     survey = ObsTreeSurvey('2020-05-11')
     assert type(survey) is ObsTreeSurvey
@@ -137,7 +137,7 @@ def obstreemodel_with_results(obstreesurvey_with_results):
 
 @pytest.fixture
 def mainprog():
-    fname = './tests/test_workspace10.gsa'
+    fname = 'test_workspace10.gsa'
     # app = QtWidgets.QApplication(sys.argv)
     mp = gsadjust.GSadjust.MainProg()
     mp.workspace_clear(confirm=False)

@@ -1,6 +1,5 @@
 import os
 import gsadjust
-
 import pytest
 
 from gsadjust.file.write import export_metadata, export_data, export_summary

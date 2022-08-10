@@ -195,7 +195,7 @@ def parse_continuous_data(nwis_data):
 
 
 def search_nwis(coords):
-    degree_buffer = 0.02
+    degree_buffer = 0.01
     ID_dict = defaultdict(list)
     try:
         lon_min = coords[0] - degree_buffer

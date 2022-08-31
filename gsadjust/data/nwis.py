@@ -88,9 +88,7 @@ def get_NWIS_ID(cross_ref_file, gravity_station_ID):
 def nwis_get_data(nwis_ID):
     """Gets NWIS groundwater-level data via REST API
     
-    :param cross_ref_file: csv-separated file with [gravitystation name], [USGS 15-digit ID]
-    :param gravity_station_ID: gravity station name (e.g., RM109)
-    :return: Dictionary with fields 'continuous_x', 'continuous_y', 'discrete_x', and 'discrete 'y'
+    :param nwis_ID: USGS 15-digit ID
     """
     out_dic = dict()
     name_dic = dict()
@@ -291,8 +289,7 @@ def get_gwls_for_date_and_coords(date, coords, buffer=365):
     return df1
 
 
-def get_gwl_change(dates, coords, **kwargs):
-    CONVERT_TO_METERS = True
+def get_gwl_change(dates, coords, convert=False, **kwargs):
     df1 = get_gwls_for_date_and_coords(dates[0], coords, **kwargs)
     df2 = get_gwls_for_date_and_coords(dates[1], coords, **kwargs)
 
@@ -309,7 +306,7 @@ def get_gwl_change(dates, coords, **kwargs):
             if d1 == d2:
                 continue
             # Subtracting depths to groundwater, hence wl1 - wl2 (not wl2 - wl1)
-            if CONVERT_TO_METERS:
+            if convert:
                 out[station] = (wl1 - wl2) * .3048
             else:
                 out[station] = wl1 - wl2
@@ -389,15 +386,18 @@ def smooth(x, window_len=11, window='hanning'):
 
 def get_site_property(ID, prop='monitoringLocationAltitudeLandSurface'):
     usgs_endpoint = r'https://labs.waterdata.usgs.gov/api/observations/collections'
-    geo_json = requests.get('/'.join([usgs_endpoint,
-                                      'monitoring-locations',
-                                      'items',
-                                      f'USGS-{ID}']))
-    station = json.loads(geo_json.text)
-    station_prop = station['properties'][prop]
-    if station_prop:
-        return station_prop
-    else:
+    try:
+        geo_json = requests.get('/'.join([usgs_endpoint,
+                                          'monitoring-locations',
+                                          'items',
+                                          f'USGS-{ID}']))
+        station = json.loads(geo_json.text)
+        station_prop = station['properties'][prop]
+        if station_prop:
+            return station_prop
+        else:
+            return ""
+    except json.decoder.JSONDecodeError as e:
         return ""
 
 

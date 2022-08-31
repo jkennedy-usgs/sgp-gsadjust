@@ -2,9 +2,9 @@ var constShowTimeout = 300;
 var constHideTimeout = 750;
 var ShowNum = 0;
 var HideNum = 0;
-var TShowTime = new Array();
-var THideTime = new Array();
-var Positioned = new Array();
+var TShowTime = [];
+var THideTime = [];
+var Positioned = [];
 var divRightPadding = 100;
 var epsilon = 30;
 var eventClientX, eventClientY, eventPageX, eventPageY;
@@ -27,7 +27,7 @@ function TMouseOutF(objid) {
 
 function getAreaSize(el) {
 	var curBrowser = getBrowserType();
-	var area = new Object;
+	var area = {};
 	if (curBrowser.indexOf('MSIE') != -1) {
 		area.width = el.scrollWidth;
 		area.height = el.scrollHeight;
@@ -48,7 +48,7 @@ function getAreaSize(el) {
 
 function getVisibleArea() {
 	var curBrowser = getBrowserType();
-	var visArea = new Object;
+	var visArea = {};
 	if (curBrowser.indexOf('MSIE') != -1) {
 		visArea.left = document.documentElement.scrollLeft;
 		visArea.top = document.documentElement.scrollTop;

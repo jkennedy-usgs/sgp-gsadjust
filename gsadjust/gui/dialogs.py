@@ -32,11 +32,12 @@ from .widgets import IncrMinuteTimeEdit, ProgressBar
 from .map import GravityChangeMap
 from ..data import Datum, analysis
 from ..file import a10
-from ..models import (DatumTableModel,
-                      GravityChangeModel,
-                      MeterCalibrationModel,
-                      CheckBoxDelegate
-                      )
+from ..models import (
+    DatumTableModel,
+    GravityChangeModel,
+    MeterCalibrationModel,
+    CheckBoxDelegate,
+)
 from ..utils import init_cal_coeff_dict
 from ..data.nwis import search_nwis, nwis_get_data, filter_ts
 from ..data.analysis import compute_gravity_change
@@ -369,7 +370,8 @@ class AdjustOptions(QtWidgets.QDialog):
             self.setWindowModality(QtCore.Qt.ApplicationModal)
         else:
             MessageBox.warning(
-                "Network adjustment options", "Please load a survey first",
+                "Network adjustment options",
+                "Please load a survey first",
             )
 
     def restore_default(self):
@@ -516,7 +518,6 @@ class DialogOverwrite(QtWidgets.QMessageBox):
 
 
 class PlotGravityAndWLs(QtWidgets.QDialog):
-
     def __init__(self, MainProg):
         super(PlotGravityAndWLs, self).__init__(MainProg)
         self.obstreemodel = MainProg.obsTreeModel
@@ -537,7 +538,9 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         criteria_box_parent = QtWidgets.QWidget()
 
         interpolate_threshold_box = QtWidgets.QHBoxLayout()
-        interpolate_threshold_box.addWidget(QtWidgets.QLabel("Interpolate gaps less than (days):"))
+        interpolate_threshold_box.addWidget(
+            QtWidgets.QLabel("Interpolate gaps less than (days):")
+        )
         self.threshold_spinbox = QtWidgets.QSpinBox()
         self.threshold_spinbox.setValue(30)
         self.threshold_spinbox.setMaximum(1000)
@@ -546,7 +549,9 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         criteria_box.addLayout(interpolate_threshold_box)
 
         gwl_timelag_box = QtWidgets.QHBoxLayout()
-        gwl_timelag_box.addWidget(QtWidgets.QLabel("Time lag for groundwater levels (days):"))
+        gwl_timelag_box.addWidget(
+            QtWidgets.QLabel("Time lag for groundwater levels (days):")
+        )
         self.timelag_spinbox = QtWidgets.QSpinBox()
         self.timelag_spinbox.setValue(0)
         self.timelag_spinbox.setMinimum(-365)
@@ -554,7 +559,9 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         criteria_box.addLayout(gwl_timelag_box)
 
         find_optimal_timelag_box = QtWidgets.QHBoxLayout()
-        find_optimal_timelag_box.addWidget(QtWidgets.QLabel("Find optimal timelag (maximize r<sup>2</sup>)"))
+        find_optimal_timelag_box.addWidget(
+            QtWidgets.QLabel("Find optimal time lag (maximize r<sup>2</sup>)")
+        )
         self.cb_find_optimal = QtWidgets.QCheckBox()
         find_optimal_timelag_box.addWidget(self.cb_find_optimal)
         criteria_box.addLayout(find_optimal_timelag_box)
@@ -641,8 +648,10 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         self.populateGravTable()
 
     def process(self):
-        if self.nwis_station_line_edit.text() == '':
-            MessageBox.warning("Invalid NWIS station", "Please enter an NWIS station ID")
+        if self.nwis_station_line_edit.text() == "":
+            MessageBox.warning(
+                "Invalid NWIS station", "Please enter an NWIS station ID"
+            )
             return
         for row_idx in range(self.tableWidgetNWIS.rowCount()):
             item = self.tableWidgetNWIS.item(row_idx, 0)
@@ -661,28 +670,34 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
             nwis_data = filter_ts(nwis_data, int(self.filter_spinbox.text()))
         if self.timelag_spinbox.text() != 0 and not self.cb_find_optimal.isChecked():
             t_offset = int(self.timelag_spinbox.text()) * -1
-            nwis_data['continuous_x'] = [
-                a + datetime.timedelta(t_offset) for a in
-                nwis_data['continuous_x']]
-            nwis_data['discrete_x'] = [
-                a + datetime.timedelta(t_offset) for a in
-                nwis_data['discrete_x']]
+            nwis_data["continuous_x"] = [
+                a + datetime.timedelta(t_offset) for a in nwis_data["continuous_x"]
+            ]
+            nwis_data["discrete_x"] = [
+                a + datetime.timedelta(t_offset) for a in nwis_data["discrete_x"]
+            ]
         else:
             t_offset = None
         if dates:
             try:
                 if self.button_all.isChecked():
-                    rise_or_fall = 'all'
+                    rise_or_fall = "all"
                 elif self.button_rising.isChecked():
-                    rise_or_fall = 'rise'
+                    rise_or_fall = "rise"
                 elif self.button_falling.isChecked():
-                    rise_or_fall = 'fall'
+                    rise_or_fall = "fall"
                 optimize = self.cb_find_optimal.isChecked()
-                plt = PlotNwis(nwis_station, g_station, nwis_data, (dates, g),
-                               t_offset=t_offset, optimize=optimize,
-                               t_threshold=int(self.threshold_spinbox.text()),
-                               rising=rise_or_fall,
-                               parent=self)
+                plt = PlotNwis(
+                    nwis_station,
+                    g_station,
+                    nwis_data,
+                    (dates, g),
+                    t_offset=t_offset,
+                    optimize=optimize,
+                    t_threshold=int(self.threshold_spinbox.text()),
+                    rising=rise_or_fall,
+                    parent=self,
+                )
                 plt.show()
             except IndexError as e:
                 pass
@@ -700,33 +715,38 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
 
     def get_g_data(self, g_station):
         header, data, _ = compute_gravity_change(self.obstreemodel, table_type="list")
-        dates = [datetime.datetime.strptime(date, '%Y-%m-%d') for
-                 station, date, g, s in data if station == g_station]
+        dates = [
+            datetime.datetime.strptime(date, "%Y-%m-%d")
+            for station, date, g, s in data
+            if station == g_station
+        ]
         g = [g for station, date, g, sd in data if station == g_station]
         return data, dates, g
 
     # def plot_nwis(self, nwis_station, g_station, nwis, data):
     #     plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
     #     return plt
-        # return
+    # return
 
     def search_for_nwis_stations(self):
         coords = self.coords[self.station_comboBox.currentText()]
         ID_dict = search_nwis(coords)
-        try:
-            self.populateTable(ID_dict)
-            nwis_string = next(iter(ID_dict.items()))[0]
-            self.nwis_station_line_edit.setText(nwis_string)
-        except:
-            self.nwis_station_line_edit.setText("Error")
+        if len(ID_dict) > 0:
+            try:
+                self.populateTable(ID_dict)
+                nwis_string = next(iter(ID_dict.items()))[0]
+                self.nwis_station_line_edit.setText(nwis_string)
+            except:
+                self.nwis_station_line_edit.setText("Error")
+        else:
+            self.nwis_station_line_edit.setText("No stations found")
 
     def populateTable(self, ID_dict):
         self.tableWidgetNWIS.setRowCount(len(ID_dict))
         row = 0
         for k, v in ID_dict.items():
             item = QtWidgets.QTableWidgetItem(k)
-            item.setFlags(QtCore.Qt.ItemIsUserCheckable |
-                              QtCore.Qt.ItemIsEnabled)
+            item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
             if row == 0:
                 item.setCheckState(QtCore.Qt.Checked)
             else:
@@ -746,23 +766,22 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         row = 0
         g_station = self.station_comboBox.currentText()
         data, dates, g = self.get_g_data(g_station)
-        dg = [(x-g[0])/41.9 for x in g]
+        dg = [(x - g[0]) / 41.9 for x in g]
         self.tableWidgetGrav.setRowCount(len(dates))
         for idx, v in enumerate(dates):
             item = QtWidgets.QTableWidgetItem(g_station)
-            item.setFlags(QtCore.Qt.ItemIsUserCheckable |
-                              QtCore.Qt.ItemIsEnabled)
+            item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
             item.setCheckState(QtCore.Qt.Checked)
             self.tableWidgetGrav.setItem(row, 0, item)
 
-            item = QtWidgets.QTableWidgetItem(str(v.strftime('%Y-%m-%d')))
+            item = QtWidgets.QTableWidgetItem(str(v.strftime("%Y-%m-%d")))
             self.tableWidgetGrav.setItem(row, 1, item)
             item = QtWidgets.QTableWidgetItem(f"{g[idx]:0.1f}")
             self.tableWidgetGrav.setItem(row, 2, item)
             item = QtWidgets.QTableWidgetItem(f"{dg[idx]:0.2f}")
             self.tableWidgetGrav.setItem(row, 3, item)
-                # item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-                # self.tableWidgetNWIS.setItem(row, idx + 1, item)
+            # item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            # self.tableWidgetNWIS.setItem(row, idx + 1, item)
             row += 1
         self.tableWidgetGrav.setSortingEnabled(True)
 
@@ -784,8 +803,16 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         self.tableWidgetNWIS.setColumnWidth(2, 80)
         self.tableWidgetNWIS.setColumnWidth(3, 90)
         self.tableWidgetNWIS.setColumnWidth(4, 90)
-        self.tableWidgetNWIS.setHorizontalHeaderLabels(["Station", "Name", "Distance (m)", "First data", "Last data", "Well depth (ft)"])
-
+        self.tableWidgetNWIS.setHorizontalHeaderLabels(
+            [
+                "Station",
+                "Name",
+                "Distance (m)",
+                "First data",
+                "Last data",
+                "Well depth (ft)",
+            ]
+        )
 
     def createGravTable(self):
         self.tableWidgetGrav = QtWidgets.QTableWidget()
@@ -803,8 +830,9 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
         self.tableWidgetGrav.setColumnWidth(1, 100)
         self.tableWidgetGrav.setColumnWidth(2, 100)
         self.tableWidgetGrav.setColumnWidth(3, 100)
-        self.tableWidgetGrav.setHorizontalHeaderLabels(["Station", "Date", "g", "Storage change", ""])
-
+        self.tableWidgetGrav.setHorizontalHeaderLabels(
+            ["Station", "Date", "g", "Storage change", ""]
+        )
 
     def onCellChanged(self, row, column):
         item = self.tableWidgetNWIS.item(row, column)
@@ -823,6 +851,7 @@ class PlotGravityAndWLs(QtWidgets.QDialog):
                         temp_item.setCheckState(QtCore.Qt.Unchecked)
         except:
             return
+
 
 class GravityChangeTable(QtWidgets.QDialog):
     """
@@ -1306,8 +1335,8 @@ class SelectAbsg(QtWidgets.QDialog):
         pbar.show()
         for dirname, _, fileList in os.walk(path):
             if (
-                    self.load_unpublished_cb.isChecked()
-                    and dirname.find("unpublished") != -1
+                self.load_unpublished_cb.isChecked()
+                and dirname.find("unpublished") != -1
             ):
                 continue
             for name in fileList:
@@ -1367,15 +1396,15 @@ class AboutDialog(QtWidgets.QDialog):
         super(AboutDialog, self).__init__()
 
         msg1 = (
-                "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
-                + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
-                + "<br><br>Commit "
-                + version
-                + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
-                + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"
-                + '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
+            "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
+            + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
+            + "<br><br>Commit "
+            + version
+            + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
+            + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"
+            + '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
         )
-        ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
+        QtWidgets.QMessageBox.about(None, "GSadust", msg1)
 
 
 class ShowCalCoeffs(QtWidgets.QDialog):
@@ -1441,7 +1470,9 @@ class PreferencesDialog(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout()
 
         include_datums = QtWidgets.QHBoxLayout()
-        include_datums.addWidget(QtWidgets.QLabel("Include non-network datums in results"))
+        include_datums.addWidget(
+            QtWidgets.QLabel("Include non-network datums in results")
+        )
         include_datums.addStretch(1)
         self.cb_include_datums = QtWidgets.QCheckBox()
         if self.settings.value("include_all_datums_in_results"):
@@ -1474,6 +1505,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         else:
             self.settings.setValue("include_all_datums_in_results", False)
         self.close()
+
 
 class DialogApplyTimeCorrection(QtWidgets.QDialog):
     """

@@ -310,7 +310,7 @@
 
         $.ajax(ajaxopts);
       }
-    };
+    }
 
     function getNormalizedParams(params) {
         if (params === null) return null;

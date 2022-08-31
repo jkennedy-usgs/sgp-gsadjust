@@ -140,7 +140,7 @@ class PlotNwis(QtWidgets.QDialog):
                 best_offset = offset
                 best_x, best_y = plot_x, plot_y
 
-        return (best_x, best_y, best_offset * -1)
+        return best_x, best_y, best_offset * -1
 
 
     def plot_wl_and_g(self, ax, grav_x, grav_y, a10sd):

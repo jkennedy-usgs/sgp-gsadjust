@@ -544,7 +544,7 @@ def read_cg6tsoft(fh):
                 all_survey_data.rej.append(-999)
 
         except (IndexError, ValueError) as e:
-            logging.exception("Error loading CG6TSoft file %s, at line %d", fname, i)
+            logging.exception("Error loading CG6TSoft file at line %d", i)
             logging.info("LINE: %s", line)
             e.i = i
             e.line = orig_line

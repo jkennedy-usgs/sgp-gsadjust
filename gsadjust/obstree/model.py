@@ -296,7 +296,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     [obstreeloop, QtGui.QStandardItem("0"), QtGui.QStandardItem("0")]
                 )
             obstreesurveys.append(obstreesurvey)
-        return (obstreesurveys, coords)
+        return obstreesurveys, coords
 
     def survey_names(self):
         surveys = []

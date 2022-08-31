@@ -57,7 +57,7 @@ class ObsTreeStation(ObsTreeItemBase):
         return self.station_name
 
     def __hash__(self):
-        return (self.__dict__)
+        return self.__dict__
 
     def _weights_(self):
         """
@@ -101,7 +101,7 @@ class ObsTreeStation(ObsTreeItemBase):
 
     @property
     def key(self):
-        return (self.station_name, self.tmean)
+        return self.station_name, self.tmean
 
     def grav(self):
         """

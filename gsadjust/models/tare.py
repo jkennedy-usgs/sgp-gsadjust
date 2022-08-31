@@ -123,7 +123,7 @@ class TareTableModel(QAbstractTableModel):
 
     def deleteTare(self, idx):
         self.beginRemoveRows(idx, 0, 1)
-        self.endRemoveRows
+        self.endRemoveRows()
 
     def clearTares(self):
         self.beginRemoveRows(self.index(0, 0), 0, self.rowCount())

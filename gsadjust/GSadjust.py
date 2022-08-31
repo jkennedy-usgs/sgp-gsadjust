@@ -572,11 +572,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.reset_delta_cache()
 
     def delta_clear(self, delta):
-        if (hasattr(delta, "time")):
+        if hasattr(delta, "time"):
             del delta.time
-        if (hasattr(delta, "dg")):
+        if hasattr(delta, "dg"):
             del delta.dg
-        if (hasattr(delta, "sd")):
+        if hasattr(delta, "sd"):
             del delta.sd
 
     def reset_delta_cache(self):
@@ -599,9 +599,9 @@ class MainProg(QtWidgets.QMainWindow):
         # self.parent.adjust_update_required()
 
     def reset_station_cache(self, station):
-        if (hasattr(station, "gmean")):
+        if hasattr(station, "gmean"):
             del station.gmean
-        if (hasattr(station, "tmean")):
+        if hasattr(station, "tmean"):
             del station.tmean
 
     def uncheck_station(self):
@@ -649,13 +649,15 @@ class MainProg(QtWidgets.QMainWindow):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
             caption="Open file",
             directory=self.settings.value("current_dir"),
-            filter="Data files (*.csv *.txt)",
+            filter="Data files (*.csv *.txt *.dat *.tsf)",
         )
 
         if fname:
+            self.workspace_savename = None
             self.settings.setValue("current_dir", os.path.dirname(fname))
             if self.open_raw_data(fname, open_type):
-                self.init_gui()
+                if open_type != 'loop' and open_type != 'survey':
+                    self.init_gui()
 
     def open_raw_data(self, fname, open_type):
         """
@@ -1151,31 +1153,23 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
         elif populate_type == "selectedloop":
             selected_idx = self.gui_data_treeview.selectedIndexes()
-            # There may be one, or multiple loops selected. If only one is
-            # selected, we'll populate the delta table based on the
-            # currentLoopIndex (which will be in bold but not necessarily highlighted).
-            if len(selected_idx) >= 4:
-                selected_items = []
-                for i in selected_idx:
-                    selected_items.append(self.obsTreeModel.itemFromIndex(i))
-                # selected_items will contain 3 entries for every tree view
-                # item (one for the name, plus 2 for
-                # g and std. dev. First, decimate to just the name entries
-                selected_items = selected_items[::3]
-                loops = [item for item in selected_items if type(item) == ObsTreeLoop]
-                first = True
-                for loop in loops:
-                    self.update_loop_drift_plots(loop)
-                    survey = loop.parent()
-                    if first:
-                        table_updated = survey.populate_delta_model(loop, clear=True)
-                        first = False
-                    else:
-                        table_updated = survey.populate_delta_model(loop, clear=False)
-            else:
-                loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+            selected_items = []
+            for i in selected_idx:
+                selected_items.append(self.obsTreeModel.itemFromIndex(i))
+            # selected_items will contain 3 entries for every tree view
+            # item (one for the name, plus 2 for
+            # g and std. dev. First, decimate to just the name entries
+            selected_items = selected_items[::3]
+            loops = [item for item in selected_items if type(item) == ObsTreeLoop]
+            first = True
+            for loop in loops:
+                self.update_loop_drift_plots(loop)
                 survey = loop.parent()
-                table_updated = survey.populate_delta_model(loop, clear=True)
+                if first:
+                    table_updated = survey.populate_delta_model(loop, clear=True)
+                    first = False
+                else:
+                    table_updated = survey.populate_delta_model(loop, clear=False)
             self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
         if table_updated:

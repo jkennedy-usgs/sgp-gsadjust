@@ -39,5 +39,5 @@ class ObsTreeItemBase(QtGui.QStandardItem):
         self.cellcolor = Qt.white
         self.highlight = ''
     #
-    def setHighlight(self, bool):
-        self.highlight = bool
+    def setHighlight(self, bool_highlight):
+        self.highlight = bool_highlight

@@ -56,7 +56,7 @@ def test_twostations_fixture(request):
     obstreesurvey = ObsTreeSurvey('test')
     obstreesurvey.populate(cl, name='0')
     loop = obstreesurvey.child(0)
-    return (loop.child(0), loop.child(1))
+    return loop.child(0), loop.child(1)
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def test_threestations_fixture(request):
     obstreesurvey = ObsTreeSurvey('test')
     obstreesurvey.populate(cl, name='0')
     loop = obstreesurvey.child(0)
-    return (loop.child(idxs[0]), loop.child(idxs[1]), loop.child(idxs[2]))
+    return loop.child(idxs[0]), loop.child(idxs[1]), loop.child(idxs[2])
 
 
 @pytest.fixture

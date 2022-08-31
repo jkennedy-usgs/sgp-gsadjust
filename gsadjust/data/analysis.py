@@ -147,7 +147,6 @@ def numpy_inversion(adjustment):
                     sd_all.append(sd)
                 except Exception:
                     raise InversionError("Bad variance in results.")
-                    return
     adjustment.adjustmentresults.avg_stdev = np.mean(sd_all)
 
     # Retrieve calibration coefficient(s)

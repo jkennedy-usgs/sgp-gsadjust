@@ -2734,6 +2734,10 @@ class MainProg(QtWidgets.QMainWindow):
         bool
             whether or not to start GSadjust (True=yes)
         """
+        # Ignore updating if running in the debugger
+        # (comment-out if trying to debug this section)
+        if sys.gettrace() is not None:
+            return True
         try:
             gitpath = (
                 os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"
@@ -2741,34 +2745,35 @@ class MainProg(QtWidgets.QMainWindow):
             os.environ["PATH"] += os.pathsep + gitpath
             from git import Repo
 
-            logging.info("Checking for updates")
             repo = Repo(self.path_install)
             logging.info(f"Current branch:{repo.active_branch.name}")
-            # Ignore updating if running in the debugger
-            if sys.gettrace() is not None:
+            ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_pub'
+            with repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd):
+                #repo.remotes.origin.fetch()
+                logging.info("Checking for updates")
+
+                fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
+                master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
+                logging.info(f"Git fetched: {repo.head.commit}")
+                # Commit hash is displayed in about dialog
+                self.commit = str(repo.head.commit)[:5]
+                if repo.head.commit != master.commit:
+                    msg = (
+                        "An update is available for GSadjust.\nWould you like to install"
+                        " now?"
+                    )
+                    confirm = MessageBox.question(
+                        "Update Available",
+                        msg,
+                    )
+                    if confirm == QtWidgets.QMessageBox.Yes:
+                        return self.update_from_github()
+                elif show_uptodate_msg:
+                    logging.info("Git checked, GSadjust is up to date.")
+                    msg = "GSadjust is up to date."
+                    MessageBox.information("No Update Needed", msg)
+                    return True
                 return True
-            fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
-            logging.info(f"Git fetched: {repo.head.commit}")
-            # Commit hash is displayed in about dialog
-            self.commit = str(repo.head.commit)[:5]
-            if repo.head.commit != master.commit:
-                msg = (
-                    "An update is available for GSadjust.\nWould you like to install"
-                    " now?"
-                )
-                confirm = MessageBox.question(
-                    "Update Available",
-                    msg,
-                )
-                if confirm == QtWidgets.QMessageBox.Yes:
-                    return self.update_from_github()
-            elif show_uptodate_msg:
-                logging.info("Git checked, GSadjust is up to date.")
-                msg = "GSadjust is up to date."
-                MessageBox.information("No Update Needed", msg)
-                return True
-            return True
 
         except BaseException as e:
             logging.info("Git update failed: {}".format(e))

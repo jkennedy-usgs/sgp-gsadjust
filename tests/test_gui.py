@@ -15,6 +15,7 @@ import pytestqt
 def test_gui(qtbot, monkeypatch):
     # Not sure why, but need to store and restore the path after this test
     pwd = os.getcwd()
+    print(pwd)
     window = gsadjust.GSadjust.MainProg()
     # window.show()
     qtbot.addWidget(window)

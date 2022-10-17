@@ -55,8 +55,8 @@ class DeltaBase:
 
     Three types of deltas implemented as subclasses.
     DeltaNormal ('normal'): calculated between two stations (g2 - g1)
-    Delta3Point ('three_point'): calculated between one station, and an interpolated value
-        betweeen two stations (Roman method).  self.station2 is a tuple with two
+    Delta3Point ('three_point'): calculated between one station, and an interpolated
+        value between two stations (Roman method).  self.station2 is a tuple with two
         stations, self.station1 is a single station.
     DeltaList ('list'): a delta is calculated from a list of deltas. Used with the Roman
         method to average three-point deltas. self.station2 is a list.
@@ -64,8 +64,8 @@ class DeltaBase:
 
     3 standard deviation values are relevant:
     1) sd: from the drift correction method. This value is always shown on the Drift tab
-    2) adj_sd: from a combination of the drift correction sd value and the options set under
-        adjustment options (e.g., additive and multiplicative factors)
+    2) adj_sd: from a combination of the drift correction sd value and the options set
+        under adjustment options (e.g., additive and multiplicative factors)
     3) assigned_sd: assigned by the user
 
     Either (2) or (3) is used in the network adjustment (i.e., shown on the Network
@@ -298,6 +298,7 @@ class DeltaNormal(DeltaBase):
     def time(self):
         return (self.sta1_t + self.sta2_t) / 2
 
+
 class Delta3Point(DeltaBase):
     """Delta3Point provides a dg calculated between a station and an interpolated
     value at a second station.
@@ -376,6 +377,7 @@ class Delta3Point(DeltaBase):
     @functools.cached_property
     def time(self):
         return self.sta1_t
+
 
 class DeltaList(DeltaBase):
     """DeltaList provides a dg calculated from a list of deltas.

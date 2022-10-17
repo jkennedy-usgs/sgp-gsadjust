@@ -19,9 +19,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant, pyqtSignal, QEvent
-from PyQt5 import QtWidgets
-
+from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant, pyqtSignal
 from .utils import format_numeric_column
 
 # Constants for column headers
@@ -41,7 +39,6 @@ from .utils import format_numeric_column
 class tempStation:
     def __init__(self, station):
         self.__dict__ = station
-
 
 
 # noinspection PyUnresolvedReferences

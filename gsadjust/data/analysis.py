@@ -24,6 +24,7 @@ import logging
 import numpy as np
 from .adjustment import AdjustedStation
 
+
 class InversionError(Exception):
     pass
 
@@ -83,7 +84,7 @@ def numpy_inversion(adjustment):
         delta_keys.append(delta.__hash__())
         dg = delta.dg if delta.type != "assigned" else delta.assigned_dg
         Obs[row] = dg * delta.cal_coeff
-        P[row, row] = 1.0 / (delta.adj_sd ** 2)
+        P[row, row] = 1.0 / (delta.adj_sd**2)
         A[row, sta_dic_ls[delta.sta1]] = -1
         A[row, sta_dic_ls[delta.sta2]] = 1
 
@@ -118,7 +119,7 @@ def numpy_inversion(adjustment):
     i = 0
     for datum in adjustment.datums:
         A[n_rel_obs + i, sta_dic_ls[datum.station]] = 1
-        P[n_rel_obs + i, n_rel_obs + i] = 1.0 / datum.sd ** 2
+        P[n_rel_obs + i, n_rel_obs + i] = 1.0 / datum.sd**2
         Obs[n_rel_obs + i] = datum.g
         i += 1
 
@@ -190,7 +191,8 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
 
     """
 
-    # Check that all values are positive (it should work either way, but it avoids confusion)
+    # Check that all values are positive (it should work either way, but it avoids
+    # confusion)
     # for i in range(obstreemodel.invisibleRootItem().rowCount()):
     #     survey = obstreemodel.invisibleRootItem().child(i)
     #     for ii in range(survey.results_model.rowCount()):
@@ -207,19 +209,13 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
     )
     logging.info("Calculating gravity change")
     first = True
-    # unique_station_names = set()
-    # for survey in obstreemodel.checked_surveys():
-    #     for ii in range(survey.rowCount()):
-    #         loop = survey.child(ii)
-    #         for iii in range(loop.rowCount()):
-    #             station = loop.child(iii)
-    #             unique_station_names.add(station.station_name)
     unique_station_names = obstreemodel.results_stations()
     out_table_iteration, out_table_cumulative = [], []
     header1, header2 = [], []
     lat, lon, elev, all_g = [], [], [], []
     dates, header = [], []
-
+    diff_cumulative, diff_cumulative_sd = [], []
+    diff_iteration, diff_iteration_sd = [], []
     # Simple list of Station, Date, g, sd
     # Copied from results table on NA tab
     if table_type == "list":
@@ -262,8 +258,8 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                     # This might break on gravnet output where station names are
                     # truncated to 6 characters
                     if adj_station.station == station:
-                        station_g.append("{:0.1f}".format(adj_station.g))
-                        station_g.append("{:0.1f}".format(adj_station.sd))
+                        station_g.append("{:0.2f}".format(adj_station.g))
+                        station_g.append("{:0.2f}".format(adj_station.sd))
                         break
                 else:
                     station_g.append("")
@@ -277,7 +273,7 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
         if table_type == "full":
             diff_cumulative_sd, diff_iteration_sd = [], []
         if first:
-            # Calculate both the between-survey change and the change from the initial survey
+            # Calculate both the between-survey change and change from initial survey
             initial_survey = survey.results
             iteration_reference = initial_survey
             reference_name = survey.name
@@ -320,53 +316,18 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
                 else:
                     # If we get to the end without breaking, set it to None.
                     compare_station = None
+                dg, dg_sd = calc_difference(
+                    initial_station, compare_station, table_type,
+                )
+                diff_cumulative.append(dg)
+                diff_cumulative_sd.append(dg_sd)
+                dg, dg_sd = calc_difference(
+                    iteration_station, compare_station, table_type
+                )
+                diff_iteration.append(dg)
+                diff_iteration_sd.append(dg_sd)
 
-                if initial_station is not None and compare_station is not None:
-                    if table_type == "simple":
-                        diff_cumulative.append(
-                            "{:0.1f}".format(compare_station.g - initial_station.g)
-                        )
-                    elif table_type == "full":
-                        diff_cumulative.append(
-                            "{:0.2f}".format(
-                                (compare_station.g - initial_station.g) / 41.9
-                            )
-                        )
-                        var = (
-                            np.sqrt(compare_station.sd ** 2 + initial_station.sd ** 2)
-                            / 41.9
-                        )
-                        if np.isnan(var):
-                            diff_cumulative_sd.append("")
-                        else:
-                            diff_cumulative_sd.append("{:0.2f}".format(var))
-                else:
-                    diff_cumulative.append("")
-                    if table_type == "full":
-                        diff_cumulative_sd.append("")  # for sd column
-                if iteration_station is not None and compare_station is not None:
-                    if table_type == "simple":
-                        diff_iteration.append(
-                            "{:0.1f}".format(compare_station.g - iteration_station.g)
-                        )
-                    elif table_type == "full":
-                        diff_iteration.append(
-                            "{:0.2f}".format(
-                                (compare_station.g - iteration_station.g) / 41.9
-                            )
-                        )
-                        var = (
-                            np.sqrt(compare_station.sd ** 2 + iteration_station.sd ** 2)
-                            / 41.9
-                        )
-                        if np.isnan(var):
-                            diff_iteration_sd.append("")
-                        else:
-                            diff_iteration_sd.append("{:0.2f}".format(var))
-                else:
-                    diff_iteration.append("")
-                    if table_type == "full":
-                        diff_iteration_sd.append("")  # for sd column
+
             out_table_iteration.append(diff_iteration)
             out_table_cumulative.append(diff_cumulative)
             if table_type == "full":
@@ -412,3 +373,17 @@ def compute_gravity_change(obstreemodel, table_type="simple"):
         # transpose back
         table = [list(i) for i in zip(*table)]
         return header, sorted(table, key=lambda x: x[0].lower()), dates
+
+
+def calc_difference(station, compare_station, table_type):
+    # Table formatting (decimal places) is handled in GravityChangeModel
+    dg, dg_sd = "", ""
+    if station is not None and compare_station is not None:
+        if table_type == "simple":
+            dg = compare_station.g - station.g
+        elif table_type == "full":
+            dg = (compare_station.g - station.g) / 41.9
+            var = np.sqrt(compare_station.sd**2 + station.sd**2) / 41.9
+            if np.isnan(var):
+                dg_sd = -999.
+    return dg, dg_sd

@@ -78,8 +78,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-                try:  # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
-                    # after deleting a survey
+                # Was getting "AttributeError: 'QStandardItem' object has no attribute
+                # 'display_column_map'" after deleting a survey
+                try:
                     fn, *args = m.display_column_map.get(
                         column, (format_numeric_column, column)
                     )
@@ -125,7 +126,6 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             if rename_type == "Loop":
                 loop = item.parent()
                 loop.rename(old_name, new_name)
-
 
             if rename_type == "Survey":
                 loop = item.parent()
@@ -323,7 +323,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         for obstreesurvey in self.checked_surveys():
             for obstreeloop in obstreesurvey.loops():
                 station_list += obstreeloop.stations()
-        names = [ s.station_name for s in station_list]
+        names = [s.station_name for s in station_list]
         return list(set(names))
 
     def results_stations(self):

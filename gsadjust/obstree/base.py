@@ -35,9 +35,9 @@ class ObsTreeItemBase(QtGui.QStandardItem):
         )
 
         self.setCheckState(Qt.Checked)
-        self.fontweight = "normal" #QtGui.QFont.Normal
+        self.fontweight = "normal"
         self.cellcolor = Qt.white
         self.highlight = ''
-    #
+
     def setHighlight(self, bool_highlight):
         self.highlight = bool_highlight

@@ -121,7 +121,7 @@ def earth_tide(theta, lamda, gtime):
     iget = [0, 0, 0, 0, 0, 0, 0]  # ' !!!
     ispc = [0, 0, 0, 0]  # ' !!!
     ntw = [1, 0, 0]  # ' !!!
-    ioptn = 't'
+    ioptn = "t"
     ielement = 0
     # 	data statements for input and output unit numbers (on terminal I/O)
     inun = 5
@@ -201,18 +201,18 @@ def sph(grlat, elong, ht):
     cthet = np.cos(gcclat)
     sthet = np.sin(gcclat)
     # geocentric radius
-    radn = 1 - f * (cthet ** 2) * (1 + 1.5 * f * (sthet ** 2))
+    radn = 1 - f * (cthet**2) * (1 + 1.5 * f * (sthet**2))
     # formulae for g are from jeffreys, 4.022 and 4.023
     g = gn * (
         1
         + f
         - 1.5 * rm
         + f * (f - (27 / 14) * rm)
-        + (2.5 * rm - f - f * (f - (39 / 14) * rm)) * (cthet ** 2)
+        + (2.5 * rm - f - f * (f - (39 / 14) * rm)) * (cthet**2)
         - (f / 2) * (7 * f - 15.0 * rm) * ((cthet * sthet) ** 2)
     )
     # free air correction
-    g = g - g * (2.0 * ht * (1.0 + f + rm - 2.0 * f * (cthet ** 2)) / ae)
+    g = g - g * (2.0 * ht * (1.0 + f + rm - 2.0 * f * (cthet**2)) / ae)
 
     # Conversion Here for Globals
     cth = cthet
@@ -279,7 +279,7 @@ def ephem(t):
         ls = hs + shmp * es * (2.0 + 2.5 * es * chmp)
         sls = np.sin(ls)
         cz = sinw * sls
-        sz = np.sqrt(1.0 - cz ** 2)
+        sz = np.sqrt(1.0 - cz**2)
         psis = math.atan2(cosw * sls, np.cos(ls))
         rbarr = 1.0 + es * (chmp + es * (chmp - shmp) * (chmp + shmp))
         ll = psis - psig
@@ -351,7 +351,7 @@ def ephem(t):
     # ...convert from celestial lat and long according to explan suppl of
     # ......na and le page 26
     cz = cosmla * sinmln * sinw + sinmla * cosw
-    sz = np.sqrt(1.0 - cz ** 2)
+    sz = np.sqrt(1.0 - cz**2)
     at1 = cosmla * sinmln * cosw - sinmla * sinw
     at2 = cosmla * cosmln
     ram = math.atan2(at1, at2)
@@ -395,8 +395,8 @@ def elastd(ntw):
     global h, k, l
     # Simulated common block azimut with strainmeter and tiltmeter azimuths
     global azt, azs
-    # Simulated common block bpos with lunar and solar colat and long, lunar sine parallax,
-    # and solar distance
+    # Simulated common block bpos with lunar and solar colat and long, lunar sine
+    # parallax, and solar distance
     global dsz, dcz, dsl, dcl, ssz, scz, ssl, scl, dpar, sdist
 
     coor = [dsz, dcz, dsl, dcl, ssz, scz, ssl, scl]
@@ -423,13 +423,13 @@ def elastd(ntw):
         #  dc gravity tide is also known as the Honkasalo correction
         #  **note that the love numbers for an elastic earth are used
         #  in computing the dc tide as well.eq
-        gdc = -3.0481e-7 * (3 * cth ** 2 - 1.0) * dele[0] * radn
+        gdc = -3.0481e-7 * (3 * cth**2 - 1.0) * dele[0] * radn
         tnsdc = -9.1445e-7 * cth * sth * dim[0] * radn / gl
         etdc = -1.555e-8 * (
-            h[0] * (3.0 * cth ** 2 - 1.0) - 6.0 * l[0] * (2.0 * cth ** 2 - 1.0)
+            h[0] * (3.0 * cth**2 - 1.0) - 6.0 * l[0] * (2.0 * cth**2 - 1.0)
         )
-        eldc = -1.555e-8 * (h[0] * (3.0 * cth ** 2 - 1.0) - 6.0 * l[0] * cth ** 2)
-        potdc = 0.0992064 * (1.0 - 3 * cth ** 2)
+        eldc = -1.555e-8 * (h[0] * (3.0 * cth**2 - 1.0) - 6.0 * l[0] * cth**2)
+        potdc = 0.0992064 * (1.0 - 3 * cth**2)
         re = 1.0 / (radn * a)
 
     # zero out arrays

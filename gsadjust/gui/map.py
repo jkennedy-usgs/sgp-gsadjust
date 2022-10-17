@@ -12,6 +12,27 @@ import logging
 from .messages import MessageBox
 from ..data.nwis import get_gwl_change, plot_hydrograph_with_gravity
 
+GWL_HEADERS = {
+    "feet": [
+        "Station",
+        "Latitude",
+        "Longitude",
+        "GWL change (ft)",
+        "From",
+        "To",
+        "",
+    ],
+    "meters": [
+        "Station",
+        "Latitude",
+        "Longitude",
+        "GWL change (m)",
+        "From",
+        "To",
+        "",
+    ],
+}
+
 
 class GravityChangeMap(QtWidgets.QDialog):
     """
@@ -119,7 +140,9 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.basemap_widget.setLayout(bbox2)
 
         self.units_widget = QtWidgets.QWidget()
-        self.cbUnits = QtWidgets.QCheckBox("Show change in meters of water", self)
+        self.cbUnits = QtWidgets.QCheckBox(
+            "Show change as thickness of free-standing water", self
+        )
         self.cbUnits.setChecked(False)
         self.cbUnits.stateChanged.connect(self.plot)
         self.sliderColorRange = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -153,7 +176,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         self.gwl_datewindow = QtWidgets.QSpinBox()
 
         btnRefresh2 = QtWidgets.QPushButton("Refresh")
-        btnRefresh2.clicked.connect(self.plot)
+        btnRefresh2.clicked.connect(self.refresh_keep_limits)
         bbox3 = QtWidgets.QHBoxLayout()
         bbox3.setContentsMargins(0, 0, 0, 0)
         bbox3.addWidget(self.cbWaterlevels)
@@ -292,7 +315,6 @@ class GravityChangeMap(QtWidgets.QDialog):
         return sorted(list(set(dates)))
 
     def update_plot(self):
-
         try:
             self.slider.setEnabled(False)
             self.plot_g()
@@ -312,7 +334,6 @@ class GravityChangeMap(QtWidgets.QDialog):
             self.slider.setEnabled(True)
         except TypeError as e:
             # Probably a missing coordinate
-            j = 1
             return
 
     def plot_g(self):
@@ -347,13 +368,28 @@ class GravityChangeMap(QtWidgets.QDialog):
             cmap="RdBu",
             picker=5,
             zorder=10,
+            edgecolors="k",
         )
+        extent = self.ax.get_extent()
+        x_extent = extent[1] - extent[0]
+        y_extent = extent[3] - extent[2]
+        rect = (y_extent / x_extent) * 1.1
+
         if getattr(self, "Colorbar")[0].isChecked():  # Bottom
             self.g_cb = self.figure.colorbar(
-                self.points, orientation="horizontal", ax=self.ax
+                self.points,
+                orientation="horizontal",
+                ax=self.ax,
+                shrink=min(rect, 1),
+                aspect=20 * 0.7,
             )
         else:
-            self.g_cb = self.figure.colorbar(self.points, ax=self.ax)
+            self.g_cb = self.figure.colorbar(
+                self.points,
+                ax=self.ax,
+                shrink=min(rect, 1),
+                aspect=20 * 0.7,
+            )
         # self.g_cb = self.figure.colorbar(self.points, ax=self.ax)
         self.set_g_cb_label()
         self.points.names = names
@@ -390,12 +426,23 @@ class GravityChangeMap(QtWidgets.QDialog):
             zorder=10,
         )
         if self.wl_cb is None:
+            extent = self.ax.get_extent()
+            x_extent = extent[1] - extent[0]
+            y_extent = extent[3] - extent[2]
+            rect = (y_extent / x_extent) * 1.1
             if getattr(self, "Colorbar")[0].isChecked():  # Bottom
                 self.wl_cb = self.figure.colorbar(
-                    self.wl_points, orientation="horizontal"
+                    self.wl_points,
+                    orientation="horizontal",
+                    shrink=min(rect, 1),
+                    aspect=20 * 0.7,
                 )
             else:
-                self.wl_cb = self.figure.colorbar(self.wl_points)
+                self.wl_cb = self.figure.colorbar(
+                    self.wl_points,
+                    shrink=min(rect, 1),
+                    aspect=20 * 0.7,
+                )
         self.wl_cb.mappable.set_clim(vmin=clim[0], vmax=clim[1])
         self.set_wl_cb_label()
         self.wl_points.names = names
@@ -441,14 +488,14 @@ class GravityChangeMap(QtWidgets.QDialog):
                     x.append(self.coords[sta][0])
                     y.append(self.coords[sta][1])
                     if self.cbUnits.isChecked():
-                        datum /= 41.9
+                        if getattr(self, "Units")[0].isChecked():  # Miles
+                            datum /= 12.77
+                        else:
+                            datum /= 41.9
                     value.append(datum)
                     name.append(sta)
                 except KeyError as e:
-                    MessageBox.critical(
-                        "Error", f"Coordinates for station {sta} not found"
-                    )
-                    return None
+                    raise
 
         elif self.btnReference.isChecked():
             ref_survey = (
@@ -472,7 +519,10 @@ class GravityChangeMap(QtWidgets.QDialog):
                 else:
                     datum = surv_g - ref_g
                 if self.cbUnits.isChecked():
-                    value.append(datum / 41.9)
+                    if getattr(self, "Units")[0].isChecked():  # Miles
+                        value.append(datum / 12.77)
+                    else:
+                        value.append(datum / 41.9)
                 else:
                     value.append(datum)
                 name.append(sta)
@@ -481,11 +531,14 @@ class GravityChangeMap(QtWidgets.QDialog):
             obs_dates, obs_idxs = self.get_datenums(self.full_header)
             for r in self.full_table:
                 sta = r[0]
-                X = []
-                Y = [float(r[idx]) for idx in obs_idxs if float(r[idx]) > -998]
+                X, Y = [], []
                 for idx, obs_idx in enumerate(obs_idxs):
-                    if float(r[obs_idx]) > -998:
-                        X.append(obs_dates[idx])
+                    try:
+                        if float(r[obs_idx]) > -998:
+                            X.append(obs_dates[idx])
+                            Y.append(float(r[obs_idx]))
+                    except ValueError:  # Nulls are either -999 or empty string
+                        continue
                 if len(X) < 1:
                     continue
                 z = np.polyfit(X, Y, 1)
@@ -516,6 +569,11 @@ class GravityChangeMap(QtWidgets.QDialog):
                 return "{} to {}".format(current_survey, ref_survey)
             else:
                 return "{} to {}".format(ref_survey, current_survey)
+
+    def refresh_keep_limits(self):
+        lims = self.ax.get_extent()
+        self.plot()
+        self.ax.set_extent(lims)
 
     def plot(self):
         if self.btnTrend.isChecked():
@@ -621,29 +679,9 @@ class GravityChangeMap(QtWidgets.QDialog):
             )
             self.gwl_table.setCellWidget(idx, 6, self.plot_buttons[-1])
             if getattr(self, "Units")[0].isChecked():  # miles
-                self.gwl_table.setHorizontalHeaderLabels(
-                    [
-                        "Station",
-                        "Latitude",
-                        "Longitude",
-                        "GWL change (ft)",
-                        "From",
-                        "To",
-                        "",
-                    ]
-                )
+                self.gwl_table.setHorizontalHeaderLabels(GWL_HEADERS["feet"])
             else:
-                self.gwl_table.setHorizontalHeaderLabels(
-                    [
-                        "Station",
-                        "Latitude",
-                        "Longitude",
-                        "GWL change (m)",
-                        "From",
-                        "To",
-                        "",
-                    ]
-                )
+                self.gwl_table.setHorizontalHeaderLabels(GWL_HEADERS["meters"])
             self.gwl_table.setColumnWidth(0, 120)
 
     def gwl_table_checked(self, item):
@@ -664,26 +702,34 @@ class GravityChangeMap(QtWidgets.QDialog):
                 self.g_cb.set_label("Gravity trend, in µGal/yr", fontsize=fs)
             else:
                 self.g_cb.set_label("Gravity trend, in meters of water/yr", fontsize=fs)
+            return
+
+        if not self.cbUnits.isChecked():
+            self.g_cb.set_label("Gravity change, in µGal", fontsize=fs)
+            return
+
+        if getattr(self, "Units")[0].isChecked():  # Miles
+            self.g_cb.set_label(
+                "Aquifer-storage change,\n in feet of water", fontsize=fs
+            )
         else:
-            if not self.cbUnits.isChecked():
-                self.g_cb.set_label("Gravity change, in µGal", fontsize=fs)
-            elif self.cbUnits.isChecked():
-                self.g_cb.set_label(
-                    "Aquifer-storage change,\n in meters of water", fontsize=fs
-                )
+            self.g_cb.set_label(
+                "Aquifer-storage change,\n in meters of water", fontsize=fs
+            )
 
     def set_wl_cb_label(self):
         if getattr(self, "Style")[0].isChecked():  # Powerpoint
             fs = 16
         else:
             fs = 12
-        if getattr(self, "Units")[0].isChecked():  # P
+        if getattr(self, "Units")[0].isChecked():  # Miles
             self.wl_cb.set_label("Groundwater-level change, in feet", fontsize=fs)
         else:
             self.wl_cb.set_label("Groundwater-level change, in meters", fontsize=fs)
 
     def on_lims_change(self, axes):
         self.axlim = self.ax.get_extent()
+        self.update_plot()
         return
 
     def show_background(self, zoom):
@@ -714,11 +760,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         Parameters
         ----------
         event : Matplotlib event
-        axes : Current axes
-            Differs for none|netadj|roman vs continuous
-
         """
-
         thispoint = event.artist
         station_label = thispoint.names[event.ind[0]]
         old_station_label = ""
@@ -749,7 +791,10 @@ class GravityChangeMap(QtWidgets.QDialog):
         slider_val = self.sliderColorRange.value() * 10
         clim = (slider_val * -1, slider_val)
         if self.cbUnits.isChecked():
-            clim = (clim[0] / 41.9, clim[1] / 41.9)
+            if getattr(self, "Units")[0].isChecked():  # Miles
+                clim = (clim[0] / 12.77, clim[1] / 12.77)
+            else:
+                clim = (clim[0] / 41.9, clim[1] / 41.9)
         return clim
 
     def get_gwl_color_lims(self):
@@ -783,6 +828,26 @@ class GravityChangeMap(QtWidgets.QDialog):
 
         return xmin, xmax, ymin, ymax
 
+    def get_xlocs(self, bar_xs_primary, bar_xs_secondary, length, length_mi):
+        x_locs_btm = [
+            bar_xs_secondary[0],
+            bar_xs_secondary[0] + (bar_xs_secondary[1] - bar_xs_secondary[0]) * 0.25,
+            bar_xs_secondary[0] + (bar_xs_secondary[1] - bar_xs_secondary[0]) * 0.5,
+            bar_xs_secondary[1],
+        ]
+        x_labels_top = [0, length * 0.25, length * 0.5, length]
+        x_labels_btm = [0, length_mi * 0.25, length_mi * 0.5, length_mi]
+        # Offset to match the left end with the mile scale bar
+        x_locs_btm = [x - (bar_xs_secondary[0] - bar_xs_primary[0]) for x in x_locs_btm]
+        x_locs_top = [
+            bar_xs_primary[0],
+            bar_xs_primary[0] + (bar_xs_primary[1] - bar_xs_primary[0]) * 0.25,
+            bar_xs_primary[0] + (bar_xs_primary[1] - bar_xs_primary[0]) * 0.5,
+            bar_xs_primary[1],
+        ]
+
+        return x_locs_btm, x_locs_top, x_labels_btm, x_labels_top
+
     def scale_bar(
         self,
         ax,
@@ -813,7 +878,7 @@ class GravityChangeMap(QtWidgets.QDialog):
         # The figure is in degree units, but the scale bar is in meter units, so I
         # couldn't figure out a good way to set a constant length for the scale bar
         # ticks (If specified as a constant, their length would vary depending on the
-        # map scale. Here they are set to 1/50 the x-axis length.
+        # map scale). Here they are set to 1/50 the x-axis length.
         sb_ticklength = (x1 - x0) / 50
         # Calculate a scale bar length if none has been given
         # (Theres probably a more pythonic way of rounding the number but this works)
@@ -858,113 +923,77 @@ class GravityChangeMap(QtWidgets.QDialog):
                     horizontalalignment="center",
                     verticalalignment="bottom",
                 )
-        else:  # Print style
-            # If in feet, the miles scale bar is longer and goes on top. if in m, the km
-            # scale bar is longer and goes on top.
-            if getattr(self, "Units")[0].isChecked():  # Feet
-                length_mi = np.ceil(length * 0.6213)
-                bar_xs_primary = [
-                    (sbx - length_mi * 500) * 1.6093,
-                    (sbx + length_mi * 500) * 1.6093,
-                ]
-                bar_xs_secondary = bar_xs_km
-                # Generate the x coordinate for the ends of the scalebar
-                x_locs_btm = [
-                    bar_xs_secondary[0],
-                    bar_xs_secondary[0]
-                    + (bar_xs_secondary[1] - bar_xs_secondary[0]) * 0.25,
-                    bar_xs_secondary[0]
-                    + (bar_xs_secondary[1] - bar_xs_secondary[0]) * 0.5,
-                    bar_xs_secondary[1],
-                ]
-                x_labels_btm = [0, length * 0.25, length * 0.5, length]
-                x_labels_top = [0, length_mi * 0.25, length_mi * 0.5, length_mi]
-                # Offset to match the left end with the mile scale bar
-                x_locs_btm = [
-                    x - (bar_xs_secondary[0] - bar_xs_primary[0]) for x in x_locs_btm
-                ]
-                x_locs_top = [
-                    bar_xs_primary[0],
-                    bar_xs_primary[0] + (bar_xs_primary[1] - bar_xs_primary[0]) * 0.25,
-                    bar_xs_primary[0] + (bar_xs_primary[1] - bar_xs_primary[0]) * 0.5,
-                    bar_xs_primary[1],
-                ]
-            else:  # Meters; km scale bar on top
-                length_mi = np.floor(length * 0.6213)
-                bar_xs_primary = [(sbx - length * 500), (sbx + length * 500)]
-                bar_xs_secondary = [
-                    (sbx - length_mi * 500) * 1.6093,
-                    (sbx + length_mi * 500) * 1.6093,
-                ]
-                x_locs_btm = [
-                    bar_xs_secondary[0],
-                    bar_xs_secondary[0]
-                    + (bar_xs_secondary[1] - bar_xs_secondary[0]) * 0.25,
-                    bar_xs_secondary[0]
-                    + (bar_xs_secondary[1] - bar_xs_secondary[0]) * 0.5,
-                    bar_xs_secondary[1],
-                ]
-                x_labels_top = [0, length * 0.25, length * 0.5, length]
-                x_labels_btm = [0, length_mi * 0.25, length_mi * 0.5, length_mi]
-                # Offset to match the left end with the mile scale bar
-                x_locs_btm = [
-                    x - (bar_xs_secondary[0] - bar_xs_primary[0]) for x in x_locs_btm
-                ]
-                x_locs_top = [
-                    bar_xs_primary[0],
-                    bar_xs_primary[0] + (bar_xs_primary[1] - bar_xs_primary[0]) * 0.25,
-                    bar_xs_primary[0] + (bar_xs_primary[1] - bar_xs_primary[0]) * 0.5,
-                    bar_xs_primary[1],
-                ]
+            return
 
-            y_locs_down = [sby - sb_ticklength, sby]
-            y_locs_up = [sby + sb_ticklength, sby]
-            for xl in x_locs_btm:
-                ax.plot(
-                    [xl, xl], y_locs_down, transform=tmc, color="k", linewidth=linewidth
-                )
-            for xl in x_locs_top:
-                ax.plot(
-                    [xl, xl], y_locs_up, transform=tmc, color="k", linewidth=linewidth
-                )
+        # Print style
+        # If in feet, the miles scale bar is longer and goes on top. if in m, the km
+        # scale bar is longer and goes on top.
+        if getattr(self, "Units")[0].isChecked():  # Feet
+            length_mi = np.ceil(length * 0.6213)
+            bar_xs_primary = [
+                (sbx - length_mi * 500) * 1.6093,
+                (sbx + length_mi * 500) * 1.6093,
+            ]
+            bar_xs_secondary = bar_xs_km
+            # Generate the x coordinate for the ends of the scalebar
+
+        else:  # Meters; km scale bar on top
+            length_mi = np.floor(length * 0.6213)
+            bar_xs_primary = [(sbx - length * 500), (sbx + length * 500)]
+            bar_xs_secondary = [
+                (sbx - length_mi * 500) * 1.6093,
+                (sbx + length_mi * 500) * 1.6093,
+            ]
+        x_locs_btm, x_locs_top, x_labels_btm, x_labels_top = self.get_xlocs(
+            bar_xs_primary, bar_xs_secondary, length, length_mi
+        )
+
+        y_locs_down = [sby - sb_ticklength, sby]
+        y_locs_up = [sby + sb_ticklength, sby]
+        for xl in x_locs_btm:
             ax.plot(
-                bar_xs_primary,
-                [sby, sby],
-                transform=tmc,
-                color="k",
-                linewidth=linewidth,
+                [xl, xl], y_locs_down, transform=tmc, color="k", linewidth=linewidth
             )
+        for xl in x_locs_top:
+            ax.plot([xl, xl], y_locs_up, transform=tmc, color="k", linewidth=linewidth)
+        ax.plot(
+            bar_xs_primary,
+            [sby, sby],
+            transform=tmc,
+            color="k",
+            linewidth=linewidth,
+        )
 
-            # Add labels
-            text_offset = (
-                sb_ticklength + sb_ticklength * 0.1
-            )  # Needs to be in meters, relative to the tick length.
-            units1 = ""
-            units2 = ""
-            for idx, x in enumerate(x_labels_top):
-                if idx == len(x_labels_top) - 1:
-                    if getattr(self, "Units")[0].isChecked():  # Feet
-                        units1 = " MI"
-                        units2 = " KM"
-                    else:
-                        units1 = " KM"
-                        units2 = " MI"
-                if x % 1 < 0.01:
-                    x = int(x)
-                if x_labels_btm[idx] % 1 < 0.01:
-                    x_labels_btm[idx] = int(x_labels_btm[idx])
-                ax.text(
-                    x_locs_top[idx],
-                    sby + text_offset,
-                    str(x) + units1,
-                    transform=tmc,
-                    horizontalalignment="center",
-                )
-                ax.text(
-                    x_locs_btm[idx],
-                    sby - text_offset,
-                    str(x_labels_btm[idx]) + units2,
-                    transform=tmc,
-                    verticalalignment="top",
-                    horizontalalignment="center",
-                )
+        # Add labels
+        text_offset = (
+            sb_ticklength + sb_ticklength * 0.1
+        )  # Needs to be in meters, relative to the tick length.
+        units1 = ""
+        units2 = ""
+        for idx, x in enumerate(x_labels_top):
+            if idx == len(x_labels_top) - 1:
+                if getattr(self, "Units")[0].isChecked():  # Feet
+                    units1 = " MI"
+                    units2 = " KM"
+                else:
+                    units1 = " KM"
+                    units2 = " MI"
+            if x % 1 < 0.01:
+                x = int(x)
+            if x_labels_btm[idx] % 1 < 0.01:
+                x_labels_btm[idx] = int(x_labels_btm[idx])
+            ax.text(
+                x_locs_top[idx],
+                sby + text_offset,
+                str(x) + units1,
+                transform=tmc,
+                horizontalalignment="center",
+            )
+            ax.text(
+                x_locs_btm[idx],
+                sby - text_offset,
+                str(x_labels_btm[idx]) + units2,
+                transform=tmc,
+                verticalalignment="top",
+                horizontalalignment="center",
+            )

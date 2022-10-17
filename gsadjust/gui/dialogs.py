@@ -97,7 +97,6 @@ class CoordinatesTable(QtWidgets.QDialog):
 
         self.table.setSortingEnabled(True)
         self.table.resizeColumnsToContents()
-        # self.adjustSize()
 
         vlayout.addWidget(button_box)
         self.setLayout(vlayout)
@@ -133,7 +132,11 @@ class CoordinatesTable(QtWidgets.QDialog):
             if e.key() == QtCore.Qt.Key_V:
                 clipboard = QtWidgets.QApplication.clipboard()
                 s = clipboard.text()
-                rows = s.split("\n")
+                rows = s.split("\n")[:-1]  # Excel includes trailing "\n"
+                # Check the clipboard is the right number of columns. The number of rows
+                # can be different: rows will be added or deleted as needed.
+                if len(rows[0].split('\t')) != 4:
+                    return
                 for idx, r in enumerate(rows):
                     if r == "":
                         continue
@@ -148,8 +151,9 @@ class CoordinatesTable(QtWidgets.QDialog):
                     self.table.setItem(idx, 1, table_item_lat)
                     self.table.setItem(idx, 2, table_item_long)
                     self.table.setItem(idx, 3, table_item_elev)
-                while idx < self.table.rowCount():
-                    self.table.removeRow(self.table.rowCount() - 1)
+                # Delete excesss rows
+                while idx < self.table.rowCount() - 1:
+                    self.table.removeRow(self.table.rowCount())
 
     def coords(self):
         """
@@ -358,7 +362,7 @@ class AdjustOptions(QtWidgets.QDialog):
             grid.addWidget(self.alpha_text, 7, 0)
             grid.addWidget(self.alpha_edit, 7, 1)
 
-            # This isn't working? Column 1 always seems to be stretching, regardless of the vales
+            # This isn't working? Column 1 always seems to be stretching
             grid.setColumnStretch(0, 1)
             grid.setColumnStretch(1, 0)
             gridwidget.setLayout(grid)
@@ -921,16 +925,6 @@ class GravityChangeTable(QtWidgets.QDialog):
         self.setLayout(layout)
         self.setWindowTitle("Gravity Change")
         self.setGeometry(200, 200, 600, 800)
-
-    @classmethod
-    def show_full_table(cls, index, MainProg):
-        MainProg.popup.close()
-        cls(MainProg, table_type="full")
-
-    @classmethod
-    def show_simple_table(cls, index, MainProg):
-        MainProg.popup.close()
-        cls(MainProg, table_type="simple")
 
     def table_changed(self, index):
         if self.type_comboBox.itemText(index) == "simple dg":

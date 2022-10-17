@@ -58,7 +58,7 @@ class PlotGravityChange(QtWidgets.QDialog):
             s_data, s_date = [], []
             for idx, r in enumerate(table[0]):
                 if r == s:
-                    s_date.append(datetime.datetime.strptime(table[1][idx],'%Y-%m-%d'))
+                    s_date.append(datetime.datetime.strptime(table[1][idx], "%Y-%m-%d"))
                     s_data.append(table[2][idx])
             s_data = [x - s_data[0] for x in s_data]
             s_date = list(zip(*(sorted(zip(s_date, s_data)))))[0]
@@ -113,6 +113,7 @@ class InteractiveLegend(object):
     """
     Allows clicking on the legend to show/hide lines
     """
+
     def __init__(self, legend):
         self.legend = legend
         self.fig = legend.axes.figure

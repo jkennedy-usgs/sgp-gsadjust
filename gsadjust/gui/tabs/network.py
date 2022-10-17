@@ -23,9 +23,8 @@ from ...models import (
     ResultsTableModel,
     CustomProxyModel,
     CustomDatumProxyModel,
-    CheckBoxDelegate
+    CheckBoxDelegate,
 )
-
 
 
 ###########################################################################
@@ -57,7 +56,6 @@ class TabAdjust(QtWidgets.QWidget):
         self.datum_view.customContextMenuRequested.connect(self.datum_context_menu)
         self.datum_model = DatumTableModel()
         self.datum_proxy_model = CustomDatumProxyModel()
-
 
         self.datum_proxy_model.setSourceModel(self.datum_model)
         self.datum_view.setModel(self.datum_proxy_model)

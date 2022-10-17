@@ -1,7 +1,8 @@
-import sys, os
+import sys
+import os
 
 code_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(code_path,'..'))
+sys.path.insert(0, os.path.join(code_path, '..'))
 sys.path.insert(0, code_path)
 
 import pytest
@@ -14,7 +15,7 @@ from gsadjust.gui.tabs import drift
 
 @pytest.fixture
 def test_channellist_fixture(request):
-    fname = request.param  #'channellist_testobj.p'
+    fname = request.param  # 'channellist_testobj.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -23,9 +24,10 @@ def test_channellist_fixture(request):
 @pytest.fixture
 def list_of_deltas():
     """
-    Deltas can't just be loaded from a pickle file, because they contain ObsTreeStation objects (pyqt objects can't be
-    pickled). Instead, load deltas from a workspace. It's a bit circular, because we have to assume the deltas were
-    created correctly in the first place.
+    Deltas can't just be loaded from a pickle file, because they contain ObsTreeStation
+    objects (pyqt objects can't be pickled). Instead, load deltas from a workspace.
+    It's a bit circular, because we have to assume the deltas were created correctly in
+    the first place.
     :return:
     """
     delta_list = []

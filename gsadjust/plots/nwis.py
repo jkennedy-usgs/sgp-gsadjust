@@ -51,10 +51,18 @@ class PlotNwis(QtWidgets.QDialog):
     specific yield plot (storage vs. gwl change, bottom)
     """
 
-    def __init__(self, nwis_station, g_station, nwis_data, g_data,
-                 t_offset=None, optimize=False,
-                 t_threshold=0, rising='all',
-                 parent=None):
+    def __init__(
+        self,
+        nwis_station,
+        g_station,
+        nwis_data,
+        g_data,
+        t_offset=None,
+        optimize=False,
+        t_threshold=0,
+        rising="all",
+        parent=None,
+    ):
         super(PlotNwis, self).__init__(parent)
         self.nwis_data = nwis_data
         self.grav_data = g_data
@@ -73,7 +81,7 @@ class PlotNwis(QtWidgets.QDialog):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
-
+        self.canvas.mpl_connect('key_press_event', self.add_figure_to_clipboard)
         self.convert_to_water = False
         self.meters = True
         self.a10sd = 5.0
@@ -106,8 +114,7 @@ class PlotNwis(QtWidgets.QDialog):
         else:
             plot_x, plot_y = self.get_sy_data(self.nwis_data, self.grav_data)
         if plot_x is None:
-            MessageBox.critical("Error",
-                                f"Error retrieving plot data")
+            MessageBox.critical("Error", f"Error retrieving plot data")
         ax = self.figure.add_subplot(212)
         self.plot_sy(ax, plot_x, plot_y)
         self.figure.subplots_adjust(
@@ -123,10 +130,12 @@ class PlotNwis(QtWidgets.QDialog):
         for offset in offsets:
             # offset *= -1
             trial_nwis = copy.copy(self.nwis_data)
-            trial_nwis['continuous_x'] = [a + datetime.timedelta(offset) for a in
-                                          self.nwis_data['continuous_x']]
-            trial_nwis['discrete_x'] = [a + datetime.timedelta(offset) for a in
-                                          self.nwis_data['discrete_x']]
+            trial_nwis["continuous_x"] = [
+                a + datetime.timedelta(offset) for a in self.nwis_data["continuous_x"]
+            ]
+            trial_nwis["discrete_x"] = [
+                a + datetime.timedelta(offset) for a in self.nwis_data["discrete_x"]
+            ]
             plot_x, plot_y = self.get_sy_data(trial_nwis, self.grav_data)
             try:
                 poly, cov = np.polyfit(plot_x, plot_y, 1, cov=True)
@@ -141,7 +150,6 @@ class PlotNwis(QtWidgets.QDialog):
                 best_x, best_y = plot_x, plot_y
 
         return best_x, best_y, best_offset * -1
-
 
     def plot_wl_and_g(self, ax, grav_x, grav_y, a10sd):
         ax.errorbar(grav_x, grav_y, yerr=a10sd, fmt="kd")
@@ -162,10 +170,12 @@ class PlotNwis(QtWidgets.QDialog):
             nwis_y_discrete = self.nwis_data["discrete_y"]
             if self.meters:  # NWIS default is feet
                 nwis_y_discrete = [meas * 0.3048 for meas in nwis_y_discrete]
-            ax2.plot(nwis_x_discrete,
-                     nwis_y_discrete,
-                     "s",
-                     color=(0.12156, 0.46667, 0.705882))
+            ax2.plot(
+                nwis_x_discrete,
+                nwis_y_discrete,
+                "s",
+                color=(0.12156, 0.46667, 0.705882),
+            )
 
         ax2.invert_yaxis()
 
@@ -178,8 +188,9 @@ class PlotNwis(QtWidgets.QDialog):
         ax.xaxis.set_major_formatter(myFmt)
 
         if not consistent_date_axes:
-            # Adjust ticks so they fall on Jan 1 and extend past the range of the data. If there
-            # are data in January and December, add another year so that there is plenty of space.
+            # Adjust ticks so they fall on Jan 1 and extend past the range of the data.
+            # If there are data in January and December, add another year so that there
+            # is plenty of space.
             start_month = self.grav_data[0][0].month
             start_year = self.grav_data[0][0].year
             end_month = self.grav_data[0][-1].month
@@ -244,6 +255,14 @@ class PlotNwis(QtWidgets.QDialog):
         interpolated_dtw = p(g_date.toordinal())
         return interpolated_dtw
 
+    def add_figure_to_clipboard(self, event):
+        if event.key == "ctrl+c":
+            pixmap = self.canvas.grab()
+            QtWidgets.QApplication.clipboard().setPixmap(pixmap)
+            # with io.BytesIO() as buffer:
+            #     fig.savefig(buffer)
+            #     QApplication.clipboard().setImage(QImage.fromData(buffer.getvalue()))
+
     def get_sy_data(self, nwis_data, grav_data):
         plot_x, plot_y = [], []
         min_delta_cont, min_delta_disc = (
@@ -255,10 +274,7 @@ class PlotNwis(QtWidgets.QDialog):
         # Otherwise, interpolate a value if there is data within interpolate_threshold
         # interpolate_threshold = datetime.timedelta(days=50)
 
-        if (
-            nwis_data["continuous_x"] is None
-                and nwis_data["discrete_x"] is None
-        ):
+        if nwis_data["continuous_x"] is None and nwis_data["discrete_x"] is None:
             return
 
         # Iterate through the gravity values for a given station
@@ -275,13 +291,15 @@ class PlotNwis(QtWidgets.QDialog):
 
             # check threshold
             if (
-                min_delta_cont < noninterpolate_threshold and min_delta_cont < min_delta_disc
+                min_delta_cont < noninterpolate_threshold
+                and min_delta_cont < min_delta_disc
             ):
                 plot_x.append(nwis_data["continuous_y"][closest_cont_idx])
                 plot_y.append(grav_data[1][g_idx])
                 continue
             elif (
-                min_delta_disc < noninterpolate_threshold and min_delta_disc < min_delta_cont
+                min_delta_disc < noninterpolate_threshold
+                and min_delta_disc < min_delta_cont
             ):
                 plot_x.append(nwis_data["discrete_y"][closest_disc_idx])
                 plot_y.append(grav_data[1][g_idx])
@@ -309,16 +327,16 @@ class PlotNwis(QtWidgets.QDialog):
                 cont_gap < disc_gap and cont_gap < self.t_threshold
             ):  # interpolate the data type with the smaller gap
                 interp_dtw = self.interpolate_gap(
-                    nwis_data['continuous_x'],
-                    nwis_data['continuous_y'],
+                    nwis_data["continuous_x"],
+                    nwis_data["continuous_y"],
                     idx_closest_neg_cont,
                     idx_closest_pos_cont,
                     g_date,
                 )
             elif disc_gap < cont_gap and disc_gap < self.t_threshold:
                 interp_dtw = self.interpolate_gap(
-                    nwis_data['discrete_x'],
-                    nwis_data['discrete_y'],
+                    nwis_data["discrete_x"],
+                    nwis_data["discrete_y"],
                     idx_closest_neg_disc,
                     idx_closest_pos_disc,
                     g_date,
@@ -329,29 +347,31 @@ class PlotNwis(QtWidgets.QDialog):
 
         if len(plot_y) > 1:
             plot_y = [(y - plot_y[0]) / 41.9 for y in plot_y]
-            plot_x = [(x - plot_x[0]) * -0.3048 for x in plot_x] # Negative to convert depth-to-water to elevation
+            plot_x = [
+                (x - plot_x[0]) * -0.3048 for x in plot_x
+            ]  # Negative to convert depth-to-water to elevation
 
         fx, fy = self.parse_rise_or_fall(plot_x, plot_y)
         return fx, fy
 
     def parse_rise_or_fall(self, plot_x, plot_y):
         fx, fy = [], []
-        if self.rising == 'all':
+        if self.rising == "all":
             return plot_x, plot_y
 
         for idx, val in enumerate(plot_x[1:]):
-            if self.rising == 'rise':
+            if self.rising == "rise":
                 if val - plot_x[0] > 0:
                     fx.append(plot_x[idx])
                     fx.append(val)
                     fy.append(plot_y[idx])
-                    fy.append(plot_y[idx+1])
-            elif self.rising == 'fall':
+                    fy.append(plot_y[idx + 1])
+            elif self.rising == "fall":
                 if val - plot_x[0] < 0:
                     fx.append(plot_x[idx])
                     fx.append(val)
                     fy.append(plot_y[idx])
-                    fy.append(plot_y[idx+1])
+                    fy.append(plot_y[idx + 1])
 
         # This should maintain order, vs. coverting to a set
         fx, fy = self.remove_dups(fx, fy)
@@ -387,7 +407,8 @@ class PlotNwis(QtWidgets.QDialog):
             ax.plot(line_x, line_y)
 
             ax.set_ylabel(
-                "Change in water storage,\nmeters of free-standing water\n(from gravity data)"
+                "Change in water storage,\nmeters of free-standing water\n(from gravity"
+                " data)"
             )
             ax.set_xlabel("Change in groundwater level (meters)")
             ax.text(
@@ -398,9 +419,11 @@ class PlotNwis(QtWidgets.QDialog):
             )
             ax.text(0.75, 0.10, "r² = %0.2f" % r2, transform=ax.transAxes)
             if self.t_offset:
-                ax.set_title("Specific Yield, GWL time offset: {} days".format(
-                    abs(self.t_offset)
-                ))
+                ax.set_title(
+                    "Specific Yield, GWL time offset: {} days".format(
+                        abs(self.t_offset)
+                    )
+                )
             else:
                 ax.set_title("Specific Yield")
 

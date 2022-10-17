@@ -167,7 +167,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
         return [self.child(i) for i in range(self.rowCount())]
 
     def loops_with_deltas(self):
-        # When loading a workspace, self.deltas is a list of dicts, not a list of deltas.
+        # When loading a workspace, self.deltas is a list of dicts, not a list of deltas
         # Can't predict which order they'll be in.
         loops = []
         if len(self.deltas) > 0:
@@ -374,7 +374,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
             vals.append(d.g - d.meas_height * d.gradient)
             sd.append(d.sd)
         if len(vals) > 0:
-            return np.mean(vals), np.sqrt(sum(map(lambda x: x*x, sd)) / len(sd))
+            return np.mean(vals), np.sqrt(sum(map(lambda x: x * x, sd)) / len(sd))
         else:
             return None, None
 
@@ -384,14 +384,13 @@ class ObsTreeSurvey(ObsTreeItemBase):
             if station not in stations_in_adjustment:
                 g, sd = self.get_datum_average(self.datums, station)
                 if g:
-                    temp_station = AdjustedStation(station,
-                                                   g,
-                                                   sd)
+                    temp_station = AdjustedStation(station, g, sd)
                     self.results.append(temp_station)
 
     def gravnet_inversion(self):
         """
-        Writes input files for Gravnet.exe, runs the executable, and reads in the results
+        Writes input files for Gravnet.exe, runs the executable, and reads in the
+        results
         """
         # TODO: method could probably be made static
 
@@ -641,7 +640,7 @@ class ObsTreeSurvey(ObsTreeItemBase):
         # section of code builds some dicts used later to assemble the A matrix.
         ndrift = 0
 
-        # Temporary var to compile all delta.ls_drift tuples: (loop.name, degree of drift model)
+        # Temporary var to compile all delta.ls_drift tuples: (loop.name, drift degree)
         ls_drift_list = []
 
         # dict of tuples, used to identify column of drift observation in A matrix:
@@ -816,13 +815,12 @@ class ObsTreeSurvey(ObsTreeItemBase):
                         self.deltas += loop.deltas
                     except Exception as e:
                         logging.exception(e, exc_info=True)
-                        # Sometimes the delta table isn't created when a workspace is loaded
-
+                        # Sometimes the delta table isn't created when a workspace is
+                        # loaded
                         MessageBox.warning(
                             "GSadjust error",
                             "Error populating delta table. Please check the drift"
-                            " correction "
-                            + "for survey "
+                            " correction for survey "
                             + self.name
                             + ", loop "
                             + loop.name,

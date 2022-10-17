@@ -214,7 +214,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_SD: delta.sd,
                     DELTA_ADJ_SD: delta.adj_sd,
                     DELTA_RESIDUAL: delta.residual,
-                }.get(column, None )
+                }.get(column, None)
 
                 return value
 

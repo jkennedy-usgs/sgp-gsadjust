@@ -58,7 +58,7 @@ def tide_correction_meter(MainProg):
 #     - Agnew, D.C., 2012, SPOTL: Some Programs for Ocean-Tide Loading
 #
 #     """
-#     logging.info("New tide correction, Lat: %f Long: %f Elevation: %f ", lat, lon, alt)
+#     logging.info("New tide correction, Lat: %f Long: %f Elev: %f ", lat, lon, alt)
 #     if type(item) == obsTreeLoop:
 #
 #     for i in range(MainProg.obsTreeModel.invisibleRootItem().rowCount()):
@@ -97,7 +97,8 @@ def ocean_correction_agnew(self, amp, phases, lon):
 
     # if any(self.t):
     #     # get tides and round to µgal level
-    #     tides = np.round(np.array([ocean_loading(t, amp, phases, lon) for t in self.t]) * 1000) / 1000.
+    #     tides = np.round(np.array([ocean_loading(t, amp, phases, lon)
+    #     for t in self.t]) * 1000) / 1000.
     #     g = self.grav()
     #     self.corr_g = [g[i] + tides[i] for i in range(len(self.t))]
     # self.grav = self.corr_g

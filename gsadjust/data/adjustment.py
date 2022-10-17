@@ -16,6 +16,7 @@ Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software. """
 import numpy as np
 
+
 class AdjustmentResults:
     """
     Object to store least-squares adjustment statistics.
@@ -255,11 +256,11 @@ class Adjustment:
         alpha = self.adjustmentoptions.alpha
         self.adjustmentresults.chi2 = self.VtPV[0][0]
         self.adjustmentresults.dof = self.dof
-        self.adjustmentresults.SDaposteriori = np.sqrt(self.VtPV[0][0]/self.dof)
+        self.adjustmentresults.SDaposteriori = np.sqrt(self.VtPV[0][0] / self.dof)
         t = np.sqrt(2 * np.log(1 / alpha))
         # I verified this produces the same values as scipy.stats.chi2.ppf
-        chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (
-            1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3
+        chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t**2) / (
+            1 + 1.432788 * t + 0.189269 * t**2 + 0.001308 * t**3
         )
         dof = float(self.dof)
         self.adjustmentresults.chi2c = (

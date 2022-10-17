@@ -49,8 +49,10 @@ class CustomDatumProxyModel(QtCore.QSortFilterProxyModel):
 
 class CheckBoxDelegate(QtWidgets.QItemDelegate):
     """
-    A delegate that places a fully functioning QCheckBox cell of the column to which it's applied.
+    A delegate that places a fully functioning QCheckBox cell of the column to which
+    it's applied.
     """
+
     def __init__(self, parent):
         QtWidgets.QItemDelegate.__init__(self, parent)
 
@@ -68,23 +70,26 @@ class CheckBoxDelegate(QtWidgets.QItemDelegate):
         self.drawCheck(painter, option, option.rect, checkstate)
 
     def editorEvent(self, event, model, option, index):
-        '''
+        """
         Change the data in the model and the state of the checkbox
-        if the user presses the left mousebutton and this cell is editable. Otherwise do nothing.
-        '''
+        if the user presses the left mousebutton and this cell is editable. Otherwise
+        do nothing.
+        """
         if not int(index.flags() & Qt.ItemIsEditable) > 0:
             return False
 
-        if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+        if (
+            event.type() == QEvent.MouseButtonRelease
+            and event.button() == Qt.LeftButton
+        ):
             # Change the checkbox-state
             self.setModelData(None, model, index)
             return True
 
         return False
 
-
-    def setModelData (self, editor, model, index):
-        '''
+    def setModelData(self, editor, model, index):
+        """
         The user wanted to change the old state in the opposite.
-        '''
+        """
         model.setData(index, 1 if int(index.data()) == 0 else 0, Qt.EditRole)

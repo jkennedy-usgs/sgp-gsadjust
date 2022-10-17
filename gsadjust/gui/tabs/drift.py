@@ -79,7 +79,6 @@ class TabDrift(QtWidgets.QWidget):
         self.delta_view = QtWidgets.QTableView()
         self.cont_label_widget = QtWidgets.QWidget()
 
-
         #######################################################################
         # Widgets for right-hand display of drift controls/options
         #######################################################################
@@ -262,7 +261,8 @@ class TabDrift(QtWidgets.QWidget):
         self.dg_samples_view.model().sourceModel().init_data([])
         self.tare_view.setModel(TareTableModel())
 
-    # This section provides the right-click context menu in the continuous drift lower plot - not implemented
+    # This section provides the right-click context menu in the continuous drift lower
+    # plot - not implemented
     # def drift_newpoint_picked(self, event):
     #     if event.button == 3:
     #         self.drift_rate_context_menu()
@@ -273,21 +273,23 @@ class TabDrift(QtWidgets.QWidget):
     #
     # def drift_rate_context_menu(self, from_pick=False):
     #     """
-    #     Not functional (other than showing the menu). Should allow points to be excluded, or artificial points added,
-    #     to the continuous drift correction.
+    #     Not functional (other than showing the menu). Should allow points to be
+    #     excluded, or artificial points added, to the continuous drift correction.
     #     :param from_pick: Boolean, True if a point was picked
     #     """
     #     if from_pick:
     #         add = QtWidgets.QAction(QtGui.QIcon(""), "Add point to drift model", self,
     #                                 triggered=self.drift_cont_addpoint,
     #                                 enabled=False)
-    #         remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
+    #         remove = QtWidgets.QAction(QtGui.QIcon(""),
+    #                                    "Remove point from model", self,
     #                                    triggered=self.drift_cont_removepoint)
     #         self.popup_menu.addAction(remove)
     #     else:
     #         add = QtWidgets.QAction(QtGui.QIcon(""), "Add point to drift model", self,
     #                                 triggered=self.drift_cont_addpoint)
-    #         remove = QtWidgets.QAction(QtGui.QIcon(""), "Remove point from model", self,
+    #         remove = QtWidgets.QAction(QtGui.QIcon(""),
+    #                                    "Remove point from model", self,
     #                                    triggered=self.drift_cont_removepoint,
     #                                    enabled=False)
     #
@@ -474,6 +476,8 @@ class TabDrift(QtWidgets.QWidget):
             List of stations
         loop_name : str
             Loop name, stored in the delta objects to be created
+        time_threshold : int
+            criteria for excluding repeat observations (maximum minutes between repeats)
 
         Returns
         -------
@@ -862,7 +866,7 @@ class TabDrift(QtWidgets.QWidget):
 
         Parameters
         ----------
-        delta_view : QTableView
+        view : QTableView
 
         """
         model = view.model()
@@ -918,9 +922,7 @@ class TabDrift(QtWidgets.QWidget):
                 self.drift_cont_startendcombobox.setCurrentIndex(
                     obstreeloop.drift_cont_startend
                 )
-                self.drift_plot_weighted.setCheckState(
-                    obstreeloop.drift_cont_weighting
-                )
+                self.drift_plot_weighted.setCheckState(obstreeloop.drift_cont_weighting)
                 self.drift_screen_elapsed_time.setCheckState(
                     obstreeloop.time_extent_check
                 )
@@ -1226,6 +1228,6 @@ class CustomCheckBox(QtWidgets.QCheckBox):
 
 class CustomComboBox(QtWidgets.QComboBox):
     def __init__(self, *args, **kwargs):
-        super(CustomCheckBox, self).__init__(*args, **kwargs)
+        super(CustomComboBox, self).__init__(*args, **kwargs)
 
     update_drift_plots = QtCore.pyqtSignal()

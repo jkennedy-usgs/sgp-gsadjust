@@ -89,12 +89,10 @@ class ObsTreeStation(ObsTreeItemBase):
             return w
 
     def update_tide(self, lat, lon, elev, correction_type):
-        if correction_type == 'Agnew':
+        if correction_type == "Agnew":
             tides = (
-                    np.round(
-                        np.array([earth_tide(lat, lon, t) for t in self.t]) * 10000
-                    )
-                    / 10000.0
+                np.round(np.array([earth_tide(lat, lon, t) for t in self.t]) * 10000)
+                / 10000.0
             )
             tides *= 1000  # convert milligal to microgal
             self.etc = tides.tolist()

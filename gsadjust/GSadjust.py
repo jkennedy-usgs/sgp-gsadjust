@@ -2739,16 +2739,18 @@ class MainProg(QtWidgets.QMainWindow):
         # if sys.gettrace() is not None:
         #     return True
         try:
+
             gitpath = (
-                os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"
+                os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\MinGit\\cmd\\git.exe"
             )
-            os.environ["PATH"] += os.pathsep + gitpath
+            os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = gitpath
+            # os.environ["PATH"] = gitpath + os.pathsep + os.environ["PATH"]
             from git import Repo
 
             repo = Repo(self.path_install)
             logging.info(f"Current branch:{repo.active_branch.name}")
-            ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_pub'
-            with repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd):
+            # ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_'
+            with repo.git.custom_environment():#GIT_SSH_COMMAND=ssh_cmd):
                 logging.info("Checking for updates")
 
                 fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()

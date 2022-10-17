@@ -2749,7 +2749,6 @@ class MainProg(QtWidgets.QMainWindow):
             logging.info(f"Current branch:{repo.active_branch.name}")
             ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_pub'
             with repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd):
-                #repo.remotes.origin.fetch()
                 logging.info("Checking for updates")
 
                 fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
@@ -2767,7 +2766,7 @@ class MainProg(QtWidgets.QMainWindow):
                         msg,
                     )
                     if confirm == QtWidgets.QMessageBox.Yes:
-                        return self.update_from_github()
+                        return self.update_from_github(repo)
                 elif show_uptodate_msg:
                     logging.info("Git checked, GSadjust is up to date.")
                     msg = "GSadjust is up to date."
@@ -2783,21 +2782,14 @@ class MainProg(QtWidgets.QMainWindow):
                 MessageBox.information("Update results", msg)
             return True  # Update didn't work, start GSadjust anyway
 
-    def update_from_github(self):
+    def update_from_github(self, repo):
         """
         Merge the latest version into the local repo
         """
 
         try:
-            from git import Repo
-
-            repo = Repo(
-                self.path_install,
-            )
-            fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == "origin/master"][0]
             repo.git.reset("--hard")
-            repo.git.merge(master.name)
+            repo.git.merge(repo.active_branch.name)
             logging.info("Git update successful")
             msg = (
                 "Updated successfully downloaded from GitHub. Please\nrestart GSadjust."

@@ -2736,8 +2736,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         # Ignore updating if running in the debugger
         # (comment-out if trying to debug this section)
-        if sys.gettrace() is not None:
-            return True
+        # if sys.gettrace() is not None:
+        #     return True
         try:
             gitpath = (
                 os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"

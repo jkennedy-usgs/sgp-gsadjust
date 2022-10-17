@@ -5,6 +5,7 @@ environment:
     - PYTHON: "C:\\Python38-x64"
       PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "64"
+      MINICONDA: "C:\\Miniconda3"
 
 init: 
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
@@ -29,10 +30,12 @@ install:
 
   - python -m pip install -r requirements_test.txt
   # shapely and cartopy are installed differently on windows vs linux
-  - curl -fsS -o Shapely-1.7.1-cp38-cp38-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Shapely-1.7.1-cp38-cp38-win_amd64.whl"
-  - curl -fsS -o Cartopy-0.20.0-cp38-cp38-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Cartopy-0.18.0-cp38-cp38-win_amd64.whl"
-  - pip install Shapely-1.7.1-cp38-cp38-win_amd64.whl
-  - pip install Cartopy-0.20.0-cp38-cp38-win_amd64.whl
+  #- curl -fsS -o Shapely-1.7.1-cp38-cp38-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Shapely-1.7.1-cp38-cp38-win_amd64.whl"
+  #- curl -fsS -o Cartopy-0.20.0-cp38-cp38-win_amd64.whl "ftp://ftpext.usgs.gov/pub/wr/az/flagstaff/jkennedy/GSadjust/Cartopy-0.18.0-cp38-cp38-win_amd64.whl"
+  #- pip install Shapely-1.7.1-cp38-cp38-win_amd64.whl
+  #- pip install Cartopy-0.20.0-cp38-cp38-win_amd64.whl
+  - conda install -c conda-forge shapely=1.7.1 -y
+  - conda install -c conda-forge cartopy=0.20.0 -y
   - pwd
 
 test_script: 

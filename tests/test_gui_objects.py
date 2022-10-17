@@ -214,7 +214,7 @@ def test_adjustmentoptions_dialog(qtbot, mainprog):
 
 def test_selectabsg(qtbot, mainprog):
     sa = SelectAbsg(
-        os.path.join("..", "test_data", "field", "Absolute"), parent=mainprog
+        os.path.join("test_data", "field", "Absolute"), parent=mainprog
     )
     sa.show()
     sa.load_button.click()

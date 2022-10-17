@@ -80,7 +80,7 @@ def test_threestations_fixture(request):
 
 @pytest.fixture
 def channellist():
-    fname = 'channellist_burris_single.p'
+    fname = r'.\tests\channellist_burris_single.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -94,7 +94,7 @@ def obstreestation():
 
 @pytest.fixture
 def obstreesurvey():
-    filename = 'test_BurrisData.txt'
+    filename = r'.\tests\test_BurrisData.txt'
     meter_type = 'Burris'
     survey = ObsTreeSurvey('2020-05-11')
     assert type(survey) is ObsTreeSurvey
@@ -139,7 +139,7 @@ def obstreemodel_with_results(obstreesurvey_with_results):
 
 @pytest.fixture
 def mainprog():
-    fname = 'test_workspace10.gsa'
+    fname = r'.\tests\test_workspace10.gsa'
     # app = QtWidgets.QApplication(sys.argv)
     mp = gsadjust.GSadjust.MainProg()
     mp.workspace_clear(confirm=False)

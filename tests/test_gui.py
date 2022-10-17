@@ -23,7 +23,7 @@ def test_gui(qtbot, monkeypatch):
     qtbot.wait(1000)
 
     # Open data
-    window.open_raw_data(r".\test_BurrisData2.txt", "Burris")
+    window.open_raw_data(r".\tests\test_BurrisData2.txt", "Burris")
     window.init_gui()
     assert window.obsTreeModel.rowCount() == 1
 

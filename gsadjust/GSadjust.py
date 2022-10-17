@@ -2743,8 +2743,9 @@ class MainProg(QtWidgets.QMainWindow):
 
             logging.info("Checking for updates")
             repo = Repo(self.path_install)
+            logging.info(f"Current branch:{repo.active_branch.name}")
             # Ignore updating if running in the debugger
-            if sys.gettrace() is None:
+            if sys.gettrace() is not None:
                 return True
             fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
             master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]

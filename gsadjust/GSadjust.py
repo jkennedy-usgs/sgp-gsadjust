@@ -256,6 +256,7 @@ class MainProg(QtWidgets.QMainWindow):
         super(MainProg, self).__init__()
 
         # These are settings relevant to the program, not specific to a workspace
+        self.commit = None
         self.settings = QSettings("SGP", "GSADJUST")
         self.init_settings()
         self.settings.sync()
@@ -2742,12 +2743,13 @@ class MainProg(QtWidgets.QMainWindow):
 
             logging.info("Checking for updates")
             repo = Repo(self.path_install)
-            if not repo.active_branch.name == "master":
+            # Ignore updating if running in the debugger
+            if sys.gettrace() is None:
                 return True
             fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == "origin/master"][0]
-            for f in fetch:
-                logging.info("Git fetched: {}".format(f))
+            master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
+            logging.info(f"Git fetched: {repo.head.commit}")
+            # Commit hash is displayed in about dialog
             self.commit = str(repo.head.commit)[:5]
             if repo.head.commit != master.commit:
                 msg = (

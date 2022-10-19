@@ -1,7 +1,8 @@
-import sys, os
+import sys
+import os
 
 code_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(code_path,'..'))
+sys.path.insert(0, os.path.join(code_path, '..'))
 sys.path.insert(0, code_path)
 
 import pytest
@@ -14,7 +15,7 @@ from gsadjust.gui.tabs import drift
 
 @pytest.fixture
 def test_channellist_fixture(request):
-    fname = request.param  #'channellist_testobj.p'
+    fname = request.param  # 'channellist_testobj.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -23,13 +24,14 @@ def test_channellist_fixture(request):
 @pytest.fixture
 def list_of_deltas():
     """
-    Deltas can't just be loaded from a pickle file, because they contain ObsTreeStation objects (pyqt objects can't be
-    pickled). Instead, load deltas from a workspace. It's a bit circular, because we have to assume the deltas were
-    created correctly in the first place.
+    Deltas can't just be loaded from a pickle file, because they contain ObsTreeStation
+    objects (pyqt objects can't be pickled). Instead, load deltas from a workspace.
+    It's a bit circular, because we have to assume the deltas were created correctly in
+    the first place.
     :return:
     """
     delta_list = []
-    fname = './tests/test_workspace1.gsa'
+    fname = 'test_workspace1.gsa'
     # app = GSadjust.MainProg()
     # app.workspace_open(fname)
     ots, dms, _ = gsadjust.MainProg.obsTreeModel.load_workspace(fname)
@@ -56,7 +58,7 @@ def test_twostations_fixture(request):
     obstreesurvey = ObsTreeSurvey('test')
     obstreesurvey.populate(cl, name='0')
     loop = obstreesurvey.child(0)
-    return (loop.child(0), loop.child(1))
+    return loop.child(0), loop.child(1)
 
 
 @pytest.fixture
@@ -73,12 +75,12 @@ def test_threestations_fixture(request):
     obstreesurvey = ObsTreeSurvey('test')
     obstreesurvey.populate(cl, name='0')
     loop = obstreesurvey.child(0)
-    return (loop.child(idxs[0]), loop.child(idxs[1]), loop.child(idxs[2]))
+    return loop.child(idxs[0]), loop.child(idxs[1]), loop.child(idxs[2])
 
 
 @pytest.fixture
 def channellist():
-    fname = './tests/channellist_burris_single.p'
+    fname = r'.\tests\channellist_burris_single.p'
     with open(fname, "rb") as f:
         cl = pickle.load(f)
     return cl
@@ -92,7 +94,7 @@ def obstreestation():
 
 @pytest.fixture
 def obstreesurvey():
-    filename = './tests/test_BurrisData.txt'
+    filename = r'.\tests\test_BurrisData.txt'
     meter_type = 'Burris'
     survey = ObsTreeSurvey('2020-05-11')
     assert type(survey) is ObsTreeSurvey
@@ -137,7 +139,7 @@ def obstreemodel_with_results(obstreesurvey_with_results):
 
 @pytest.fixture
 def mainprog():
-    fname = './tests/test_workspace10.gsa'
+    fname = r'.\tests\test_workspace10.gsa'
     # app = QtWidgets.QApplication(sys.argv)
     mp = gsadjust.GSadjust.MainProg()
     mp.workspace_clear(confirm=False)

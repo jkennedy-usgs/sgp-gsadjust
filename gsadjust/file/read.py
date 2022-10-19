@@ -192,8 +192,9 @@ def read_cg5(fh):
                         oper = vals_temp[-1]
                 continue
 
-            # parse string line first with respect to '/' characters (used in the date format),
-            # then with ':' (used for the time display), eventually with the classic ' '
+            # parse string line first with respect to '/' characters (used in the date
+            # format), then with ':' (used for the time display), eventually with the
+            # classic ' '
             vals_temp1 = line.split("/")
             vals_temp2 = vals_temp1[0].split(":")
             vals_temp3 = vals_temp2[0].split()
@@ -544,7 +545,7 @@ def read_cg6tsoft(fh):
                 all_survey_data.rej.append(-999)
 
         except (IndexError, ValueError) as e:
-            logging.exception("Error loading CG6TSoft file %s, at line %d", fname, i)
+            logging.exception("Error loading CG6TSoft file at line %d", i)
             logging.info("LINE: %s", line)
             e.i = i
             e.line = orig_line
@@ -604,13 +605,11 @@ def import_abs_g_complete(fname):
                         sd=float(parts[s_idx]),
                         date=parts[d_idx],
                         meas_height=float(parts[th_idx]),
-                        gradient=gr
+                        gradient=gr,
                     )
                     datums.append(datum)
             except ValueError:
-                logging.exception(
-                    "Error loading absolute gravity data from %s", fname
-                )
+                logging.exception("Error loading absolute gravity data from %s", fname)
                 return []
     return datums
 

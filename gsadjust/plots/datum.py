@@ -28,7 +28,7 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
     """
     def __init__(self, obsTreeModel, parent=None):
         super(PlotDatumComparisonTimeSeries, self).__init__(parent)
-        self.setWindowTitle("GSadjust results")
+        self.setWindowTitle("Datum Comparison Time Series")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
         layout = QtWidgets.QVBoxLayout()
@@ -64,8 +64,9 @@ class PlotDatumComparisonTimeSeries(QtWidgets.QDialog):
                         )
                         ydata_obs.append(datum.g)
                         ydata_adj.append(datum.g + datum.residual)
-            ydata_obs = [i - ydata_obs[0] for i in ydata_obs]
-            ydata_adj = [i - ydata_adj[0] for i in ydata_adj]
+            first_obs = ydata_obs[0]
+            ydata_obs = [i - first_obs for i in ydata_obs]
+            ydata_adj = [i - first_obs for i in ydata_adj]
             xdata_all.append(xdata)
             ydata_obs_all.append(ydata_obs)
             ydata_adj_all.append(ydata_adj)
@@ -94,7 +95,7 @@ class PlotDatumCompare(QtWidgets.QDialog):
 
     def __init__(self, survey, parent=None):
         super(PlotDatumCompare, self).__init__(parent)
-        self.setWindowTitle("GSadjust results")
+        self.setWindowTitle("Datum Residuals")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
         self.survey = survey

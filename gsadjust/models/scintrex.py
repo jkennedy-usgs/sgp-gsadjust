@@ -176,7 +176,6 @@ class ScintrexTableModel(QtCore.QAbstractTableModel):
             return Qt.Checked
 
     def setData(self, index, value, role, silent=False):
-        # type: (object, object, object) -> object
         """
         if a row is unchecked, update the keepdata value to 0 setData launched
         when role is acting value is Qt.Checked or Qt.Unchecked

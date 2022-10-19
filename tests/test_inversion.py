@@ -1,24 +1,24 @@
-import sys, os
-
+import sys
+import os
 import pytest
 
 
 def test_numpy_inversion(obstreesurvey):
     import numpy as np
 
-    # Test problem from Adjustment Computations Spatial Data Analysis, Ghilani and Wolf, Wiley
+    # Test problem from Adj. Computations Spatial Data Analysis, Ghilani and Wolf, Wiley
     # ftp://doc.nit.ac.ir/civil/m.abbaszadeh/Theory%20of%20Errors%20and%20Adjustment/
     # ebooksclub.org__Adjustment_Computations__Spatial_Data_Analysis.pdf
     A = [[1, 0, 0], [-1, 1, 0], [0, -1, 1], [0, 0, -1], [-1, 0, 1], [0, 1, 0]]
     obstreesurvey.adjustment.A = np.array(A)
 
     P = [
-        [1 / 0.006 ** 2, 0, 0, 0, 0, 0],
-        [0, 1 / 0.004 ** 2, 0, 0, 0, 0],
-        [0, 0, 1 / 0.005 ** 2, 0, 0, 0],
-        [0, 0, 0, 1 / 0.003 ** 2, 0, 0],
-        [0, 0, 0, 0, 1 / 0.004 ** 2, 0],
-        [0, 0, 0, 0, 0, 1 / 0.012 ** 2],
+        [1 / 0.006**2, 0, 0, 0, 0, 0],
+        [0, 1 / 0.004**2, 0, 0, 0, 0],
+        [0, 0, 1 / 0.005**2, 0, 0, 0],
+        [0, 0, 0, 1 / 0.003**2, 0, 0],
+        [0, 0, 0, 0, 1 / 0.004**2, 0],
+        [0, 0, 0, 0, 0, 1 / 0.012**2],
     ]
     obstreesurvey.adjustment.P = np.array(P)
 

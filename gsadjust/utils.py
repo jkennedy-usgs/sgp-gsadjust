@@ -16,10 +16,11 @@ resulting from the authorized or unauthorized use of the software.
 
 """
 
-def index_or_none(l, i):
-    if i not in l:
+
+def index_or_none(lst, i):
+    if i not in lst:
         return None
-    return l.index(i)
+    return lst.index(i)
 
 
 def init_cal_coeff_dict(obstreemodel):
@@ -47,6 +48,7 @@ def init_cal_coeff_dict(obstreemodel):
         return meter_list
     except Exception:
         return None
+
 
 def init_station_coords_dict(obstreemodel):
     """

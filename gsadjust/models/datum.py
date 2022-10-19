@@ -20,11 +20,11 @@ resulting from the authorized or unauthorized use of the software.
 """
 
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant, pyqtSignal
-
 from .utils import format_numeric_column
 
 # Constants for column headers
 (
+    CHECKED,
     DATUM_STATION,
     DATUM_DATE,
     DATUM_G,
@@ -33,7 +33,7 @@ from .utils import format_numeric_column
     MEAS_HEIGHT,
     GRADIENT,
     DATUM_RESIDUAL,
-) = range(8)
+) = range(9)
 
 
 class tempStation:
@@ -46,8 +46,12 @@ class DatumTableModel(QAbstractTableModel):
     """
     Model to store Datums, shown on the adjust tab.
     """
+    def __init__(self):
+        super(DatumTableModel, self).__init__()
+        self._data = []
 
     _headers = {  # As map, so do not need to be kept in order with the above.
+        CHECKED: "Include",
         DATUM_STATION: "Station",
         DATUM_G: "g",
         DATUM_SD: "Std. dev.",
@@ -69,10 +73,6 @@ class DatumTableModel(QAbstractTableModel):
 
     signal_adjust_update_required = pyqtSignal()
     signal_datum_table_updated = pyqtSignal()
-
-    def __init__(self):
-        super(DatumTableModel, self).__init__()
-        self._data = []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
@@ -115,6 +115,7 @@ class DatumTableModel(QAbstractTableModel):
                         return "NA"
 
                 fn, *args = {
+                    CHECKED: (self.checkState, datum),
                     DATUM_SD: (format, datum.sd, "0.2f"),
                     DATUM_G: (format, datum.g, "8.1f"),
                     DATUM_STATION: (str, datum.station),
@@ -142,28 +143,27 @@ class DatumTableModel(QAbstractTableModel):
         ChannelList object is 0, it is unchecked
         """
         if datum.checked == 0:
+            # return Qt.PartiallyChecked
             return Qt.Unchecked
+        elif datum.checked == 1:
+            return Qt.PartiallyChecked
         else:
             return Qt.Checked
 
-    def setData(self, index, value, role):
-        """
-        If a row is unchecked, update the keepdata value to 0 setData launched
-        when role is acting value is Qt.Checked or Qt.Unchecked
-        """
-        if role == Qt.CheckStateRole and index.column() == 0:
-            datum = self._data[index.row()]
-            if value == Qt.Checked:
-                datum.checked = 2
-            elif value == Qt.Unchecked:
-                datum.checked = 0
-            self.dataChanged.emit(index, index, [])
-            self.signal_adjust_update_required.emit()
-            return True
+    def setCheckState(self, datum):
+        if datum.checked == 0:
+            datum.checked = 1
+        elif datum.checked == 1:
+            datum.checked = 2
+        elif datum.checked == 2:
+            datum.checked = 0
+        self.signal_adjust_update_required.emit()
+        return True
 
+    def setData(self, index, value, role):
         if role == Qt.EditRole:
             if index.isValid() and 0 <= index.row():
-                if value:
+                if value is not None:
                     try:
                         datum = self._data[index.row()]
                         column = index.column()
@@ -174,7 +174,11 @@ class DatumTableModel(QAbstractTableModel):
                         # Should me able to make non-editable columns readonly using a
                         # proxy model, e.g.
                         # https://stackoverflow.com/questions/22886912
-                        if column in [
+                        if column == 0:
+                            self.setCheckState(datum)
+                        elif column in [
+                            CHECKED,
+                            DATUM_STATION,
                             DATUM_DATE,
                             DATUM_G,
                             DATUM_SD,
@@ -185,6 +189,7 @@ class DatumTableModel(QAbstractTableModel):
                             if attr:
                                 setattr(datum, attr, vartype(value))
                             self.dataChanged.emit(index, index, [Qt.EditRole])
+                            self.signal_adjust_update_required.emit()
                     except ValueError:
                         pass
             return True
@@ -192,6 +197,9 @@ class DatumTableModel(QAbstractTableModel):
         if role == Qt.UserRole:
             self._data[index.row()] = value
             self.dataChanged.emit(index, index, [])
+            return True
+
+        return True
 
     def flags(self, index):
         return (
@@ -199,6 +207,7 @@ class DatumTableModel(QAbstractTableModel):
             | Qt.ItemIsEnabled
             | Qt.ItemIsSelectable
             | Qt.ItemIsEditable
+            | Qt.ItemIsTristate
         )
 
     def clearDatums(self):

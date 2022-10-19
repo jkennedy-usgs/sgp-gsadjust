@@ -5,9 +5,9 @@ import pytest
 from PyQt5 import QtCore, QtWidgets
 
 import gsadjust
-from gsadjust.gui.dialogs import (
-    AddDatumFromList )
+from gsadjust.gui.dialogs import AddDatumFromList
 import pytestqt
+
 # from tide_correction import tide_correction_agnew
 
 
@@ -15,6 +15,7 @@ import pytestqt
 def test_gui(qtbot, monkeypatch):
     # Not sure why, but need to store and restore the path after this test
     pwd = os.getcwd()
+    print(pwd)
     window = gsadjust.GSadjust.MainProg()
     # window.show()
     qtbot.addWidget(window)
@@ -22,13 +23,14 @@ def test_gui(qtbot, monkeypatch):
     qtbot.wait(1000)
 
     # Open data
-    window.open_raw_data(r'.\tests\test_BurrisData2.txt', 'Burris')
+    window.open_raw_data(r".\tests\test_BurrisData2.txt", "Burris")
     window.init_gui()
     assert window.obsTreeModel.rowCount() == 1
 
     # Update tide correction
     # Not checking that the correction is correct, just that it's been updated.
-    # Burris meters only report correction to nearest microGal, this test will fail if the correction wasn't updated.
+    # Burris meters only report correction to nearest microGal, this test will fail if
+    # the correction wasn't updated.
     # tide_correction_agnew(window, 35.0, -110.0, 1000.0)
     # assert (
     #     np.abs(
@@ -37,9 +39,9 @@ def test_gui(qtbot, monkeypatch):
     #     )
     #     < 0.01
     # )
-    test_workspace = 'test1.gsa'
+    test_workspace = "test1.gsa"
     success = window.obsTreeModel.save_workspace(test_workspace)
-    assert success == 'test1.gsa'
+    assert success == "test1.gsa"
 
     # Divide into loops
     window.divide_survey(8 / 24)
@@ -89,10 +91,10 @@ def test_gui(qtbot, monkeypatch):
     window.tab_widget.setCurrentIndex(2)
 
     # Populate delta and datum tables
-    qtbot.keyClick(window, 'a', modifier=QtCore.Qt.ControlModifier)
+    qtbot.keyClick(window, "a", modifier=QtCore.Qt.ControlModifier)
     qtbot.wait(3000)
     monkeypatch.setattr(
-        AddDatumFromList, 'add_datum', classmethod(lambda *args: 'CDOT')
+        AddDatumFromList, "add_datum", classmethod(lambda *args: "CDOT")
     )
     adj_tab_model = window.tab_adjust.delta_view.model()
     first_adj_tab_delta = adj_tab_model.data(
@@ -102,10 +104,11 @@ def test_gui(qtbot, monkeypatch):
     first_drift_tab_delta = drift_tab_model.data(
         drift_tab_model.index(0, 4), QtCore.Qt.UserRole
     )
-    # TODO: these are sorted differently on the drift and NA tabs, so we can't just grab the first ones.
+    # TODO: these are sorted differently on the drift and NA tabs, so we can't just grab
+    #  the first ones.
     # assert first_adj_tab_delta.dg == first_drift_tab_delta.dg
     # assert first_adj_tab_delta.driftcorr == first_drift_tab_delta.driftcorr
-    qtbot.keyClick(window, 'd', modifier=QtCore.Qt.ControlModifier)
+    qtbot.keyClick(window, "d", modifier=QtCore.Qt.ControlModifier)
     window.adjust_network()
 
     # Verify gravnet input
@@ -116,9 +119,9 @@ def test_gui(qtbot, monkeypatch):
     assert survey.adjustment.adjustmentresults.n_deltas == 83
     assert survey.adjustment.adjustmentresults.n_datums == 1
 
-    test_workspace = 'test1.gsa'
+    test_workspace = "test1.gsa"
     success = window.obsTreeModel.save_workspace(test_workspace)
-    assert success == 'test1.gsa'
+    assert success == "test1.gsa"
 
     window.workspace_clear(confirm=False)
 
@@ -146,28 +149,27 @@ def test_gui(qtbot, monkeypatch):
     window.adjust_network()
 
     for line in survey.adjustment.results_string():
-        elems = line.split(' ')
-        if elems[0] == 'SD':
+        elems = line.split(" ")
+        if elems[0] == "SD":
             sd0 = float(elems[-1])
 
-    # Disable some observations, save workspace, clear and reload, verify that we get the same adjustment results
+    # Disable some observations, save workspace, clear and reload, verify that we get
+    # the same adjustment results
     rows = [1, 3, 5]
     for row in rows:
         survey.deltas[row].checked = 0
 
     window.adjust_network()
     for line in survey.adjustment.results_string():
-        elems = line.split(' ')
-        if elems[0] == 'SD':
+        elems = line.split(" ")
+        if elems[0] == "SD":
             sd1 = float(elems[-1])
 
     # Adjustment results should be different with some observations disabled
     assert abs(sd0 - sd1) > 0.01
     QtCore.QTimer.singleShot(1000, on_timeout)
     success = window.workspace_save()
-    assert success == True
-
-
+    assert success
 
     qtbot.wait(2000)
     window.workspace_clear(confirm=False)
@@ -177,8 +179,8 @@ def test_gui(qtbot, monkeypatch):
     window.workspace_open_json(test_workspace)
     window.adjust_network()
     for line in survey.adjustment.results_string():
-        elems = line.split(' ')
-        if elems[0] == 'SD':
+        elems = line.split(" ")
+        if elems[0] == "SD":
             sd2 = float(elems[-1])
 
     assert abs(sd1 - sd2) < 0.000001

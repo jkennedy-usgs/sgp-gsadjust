@@ -15,7 +15,7 @@ warranty. The software is provided on the condition tha neither the USGS nor the
 Government shall be held liable for any damages resulting from the authorized or
 unauthorized use of the software. """
 import numpy as np
-import scipy
+
 
 class AdjustmentResults:
     """
@@ -23,7 +23,6 @@ class AdjustmentResults:
     """
 
     def __init__(self):
-        self.meter_cal_dict = None
         self.n_deltas, self.n_deltas_notused = 0, 0
         self.n_datums, self.n_datums_notused = 0, 0
         self.n_unknowns = 0
@@ -35,6 +34,12 @@ class AdjustmentResults:
         self.dof = 0
         self.cal_dic, self.netadj_drift_dic = {}, {}
         self.text = []
+
+    def __bool__(self):
+        if self.n_deltas == 0:
+            return False
+        else:
+            return True
 
     def __str__(self):
         return_str = ""
@@ -251,11 +256,11 @@ class Adjustment:
         alpha = self.adjustmentoptions.alpha
         self.adjustmentresults.chi2 = self.VtPV[0][0]
         self.adjustmentresults.dof = self.dof
-        self.adjustmentresults.SDaposteriori = np.sqrt(self.VtPV[0][0]/self.dof)
+        self.adjustmentresults.SDaposteriori = np.sqrt(self.VtPV[0][0] / self.dof)
         t = np.sqrt(2 * np.log(1 / alpha))
         # I verified this produces the same values as scipy.stats.chi2.ppf
-        chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t ** 2) / (
-            1 + 1.432788 * t + 0.189269 * t ** 2 + 0.001308 * t ** 3
+        chi_1_alpha = t - (2.515517 + 0.802853 * t + 0.010328 * t**2) / (
+            1 + 1.432788 * t + 0.189269 * t**2 + 0.001308 * t**3
         )
         dof = float(self.dof)
         self.adjustmentresults.chi2c = (

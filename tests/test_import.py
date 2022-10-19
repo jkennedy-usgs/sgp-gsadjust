@@ -1,6 +1,7 @@
 import pytest
 import os
 import gsadjust
+
 from gsadjust.file.read import read_csv, read_cg6, read_cg6tsoft
 
 
@@ -25,7 +26,7 @@ def test_import_CG6():
         data = read_cg6(fh)
     assert len(data.raw_grav) == 43
 
-    data_file = os.path.join(os.getcwd(), 'tests','test_csv_data.csv')
+    data_file = os.path.join(os.getcwd(), 'tests', 'test_csv_data.csv')
     with pytest.raises(IndexError):
         with open(data_file, 'r') as fh:
             data = read_cg6(fh)

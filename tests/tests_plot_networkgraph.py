@@ -2,11 +2,12 @@ import numpy as np
 
 from gsadjust.plots.network import PlotNetworkGraph
 
+
 def test_PlotNetworkGraph(mainprog, obstreemodel):
     test_plot = PlotNetworkGraph(
         mainprog.obsTreeModel.invisibleRootItem().child(0),
         mainprog.obsTreeModel.station_coords,
-        shape='circular',
+        shape="circular",
         parent=mainprog,
     )
     assert test_plot.figure is not None
@@ -15,7 +16,7 @@ def test_PlotNetworkGraph(mainprog, obstreemodel):
     test_plot = PlotNetworkGraph(
         mainprog.obsTreeModel.invisibleRootItem().child(0),
         mainprog.obsTreeModel.station_coords,
-        shape='map',
+        shape="map",
         parent=mainprog,
     )
     assert test_plot.figure is not None

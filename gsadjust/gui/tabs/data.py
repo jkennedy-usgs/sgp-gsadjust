@@ -521,7 +521,7 @@ class TabData(QtWidgets.QWidget):
             g_threshold = float(autoselec.val.text())
             QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
             g = obstreestation.grav()
-            stabilized_value = obstreestation.gmean()
+            stabilized_value = obstreestation.gmean
             for i in range(self.parent.station_model.rowCount()):
                 indx = self.parent.station_model.index(i, g_column)
                 data = float(self.parent.station_model.data(indx, role=Qt.DisplayRole))
@@ -569,7 +569,7 @@ class TabData(QtWidgets.QWidget):
             self.parent.index_current_station
         )
         g = obstreestation.grav()
-        stabilized_value = obstreestation.gmean()
+        stabilized_value = obstreestation.gmean
         for iiii in range(len(obstreestation.keepdata)):
             indx = self.parent.station_model.index(iiii, 0)
             if selec_grav and abs(g[iiii] - stabilized_value) > g_threshold:
@@ -640,7 +640,7 @@ class TabData(QtWidgets.QWidget):
                 for iii in range(obstreeloop.rowCount()):
                     obstreestation = obstreeloop.child(iii)
                     g = obstreestation.grav()
-                    stabilized_value = obstreestation.gmean()
+                    stabilized_value = obstreestation.gmean
                     for iiii in range(len(obstreestation.keepdata)):
                         indx = self.parent.station_model.index(iiii, 0)
                         if selec_grav and abs(g[iiii] - stabilized_value) > g_threshold:

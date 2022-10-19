@@ -94,6 +94,9 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
             return 0
         return 9
 
+    def deltas(self):
+        return self._data
+
     def data(self, index, role):
         if index.isValid():
             delta = self._data[index.row()]
@@ -166,7 +169,7 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_STATION1: (str, delta.sta1),
                     DELTA_STATION2: (str, delta.sta2),
                     LOOP: (str, delta_station_loop()),
-                    DELTA_TIME: (format_datetime, delta.time()),
+                    DELTA_TIME: (format_datetime, delta.time),
                     DELTA_G: (format, get_g(), "0.1f"),
                     DELTA_DRIFTCORR: (format, *get_driftcorr()),
                     DELTA_SD: (format, delta.sd, "0.1f"),
@@ -205,13 +208,13 @@ class DeltaTableModel(QtCore.QAbstractTableModel):
                     DELTA_STATION1: delta.sta1,
                     DELTA_STATION2: delta.sta2,
                     LOOP: delta_station_loop(),
-                    DELTA_TIME: delta.time(),
+                    DELTA_TIME: delta.time,
                     DELTA_G: get_g(),
                     DELTA_DRIFTCORR: delta.driftcorr,
                     DELTA_SD: delta.sd,
                     DELTA_ADJ_SD: delta.adj_sd,
                     DELTA_RESIDUAL: delta.residual,
-                }.get(column, None )
+                }.get(column, None)
 
                 return value
 

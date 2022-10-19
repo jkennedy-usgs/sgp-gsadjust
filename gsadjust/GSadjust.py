@@ -140,20 +140,21 @@ import sys
 import time
 import traceback
 import webbrowser
+from html import escape
+import datetime
 
 # Modules that must be installed
 import matplotlib
 import numpy as np
+import requests
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
+from PyQt5.QtGui import QPalette, QColor
 from matplotlib.dates import num2date, date2num
 
+#
 from . import resources
-from .data import (
-    ChannelList,
-    Datum,
-    Tare,
-)
+from .data import ChannelList, Datum, Tare, nwis_get_data
 from .data.analysis import compute_gravity_change
 from .data.correction import time_correction
 from .file import (
@@ -164,6 +165,7 @@ from .file import (
     file_reader,
     import_abs_g_complete,
     import_abs_g_simple,
+    a10,
 )
 from .gui.dialogs import (
     AboutDialog,
@@ -182,6 +184,9 @@ from .gui.dialogs import (
     TideCoordinatesDialog,
     TideCorrectionDialog,
     VerticalGradientDialog,
+    PlotGravityAndWLs,
+    PreferencesDialog,
+    DialogUpdateDatums,
 )
 from .gui.logger import LoggerWidget
 from .gui.menus import MENU_STATE, Menus
@@ -204,16 +209,20 @@ from .plots import (
     PlotLoopAnimation,
     PlotNetworkGraph,
 )
-from .tides import tide_correction_agnew, tide_correction_meter
+from .tides import tide_correction_meter
 from .utils import (
     init_station_coords_dict,
 )
 
 matplotlib.use("qt5agg")
-
+matplotlib.rcParams["svg.fonttype"] = "none"
+matplotlib.rcParams["pdf.fonttype"] = "type3"
+matplotlib.rcParams["savefig.dpi"] = 2000
 DOWN = 1
 UP = -1
 DIRECTIONS = (UP, DOWN)
+
+VERSION = "2.0"
 
 
 class MainProg(QtWidgets.QMainWindow):
@@ -241,7 +250,6 @@ class MainProg(QtWidgets.QMainWindow):
 
     label_adjust_update_required_set = False
 
-    gui_obstreeview_popup_menu = None
     menus, selection_model = None, None
     tab_data, tab_drift, tab_adjust = None, None, None
     station_model = None
@@ -250,6 +258,8 @@ class MainProg(QtWidgets.QMainWindow):
     def __init__(self, splash=None):
         super(MainProg, self).__init__()
 
+        # These are settings relevant to the program, not specific to a workspace
+        self.version = VERSION
         self.settings = QSettings("SGP", "GSADJUST")
         self.init_settings()
         self.settings.sync()
@@ -274,7 +284,11 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust = TabAdjust(self)
         self.tab_widget = QtWidgets.QTabWidget()
 
-        # Connect signals.
+        # Connect signals
+        self.obsTreeModel.signal_name_change_duplicate.connect(
+            self.rename_error_duplicate
+        )
+        self.obsTreeModel.signal_name_change_nondate.connect(self.rename_error_nondate)
         self.delta_model.signal_adjust_update_required.connect(
             self.adjust_update_required
         )
@@ -303,6 +317,8 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_treeview_widget = QtWidgets.QWidget()
         self.gui_treeview_box = QtWidgets.QVBoxLayout()
         self.gui_data_treeview = QtWidgets.QTreeView()
+        self.gui_findbox = QtWidgets.QLineEdit()
+        self.gui_findbox.textEdited.connect(self.showCurrentText)
 
         self.qtaction_move_station_up = QtWidgets.QAction(
             QtGui.QIcon(":/icons/up.png"), "Move survey up", self
@@ -340,6 +356,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_toolbar.addAction(self.menus.mnAdjUpdateSD)
 
         self.gui_treeview_box.addWidget(self.gui_toolbar)
+        self.gui_treeview_box.addWidget(self.gui_findbox)
         self.gui_treeview_box.addWidget(self.gui_data_treeview)
         self.gui_treeview_widget.setLayout(self.gui_treeview_box)
 
@@ -368,6 +385,7 @@ class MainProg(QtWidgets.QMainWindow):
             "Loop properties...", slot=self.properties_loop
         )
         self.menus.mnRename = self.menus.create_action("Rename", slot=self.rename)
+        self.menus.mnTides = self.menus.create_action("Update tides", slot=self.tide)
         self.menus.mnDeleteStation = self.menus.create_action(
             "Delete station(s)", slot=self.delete_station
         )
@@ -383,10 +401,32 @@ class MainProg(QtWidgets.QMainWindow):
         self.menus.mnLoopAnimate = self.menus.create_action(
             "Animate loop", slot=self.animate_loop
         )
-
+        self.init_popup()
         self.update_menus()
-        self.path_install = os.path.abspath(os.path.join(os.path.dirname(__file__),'..')) # os.getcwd()
+        self.path_install = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )  # os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
+
+    def showCurrentText(self, text):
+        allitems = self.obsTreeModel.findItems(
+            "", QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive
+        )
+        if text != "":
+            selected_items = self.obsTreeModel.findItems(
+                text, QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive
+            )
+            for item in allitems:
+                try:
+                    d = item.display_name() if item in selected_items else False
+                except AttributeError:
+                    d = False
+                item.setHighlight(d)
+        else:
+            for item in allitems:
+                item.setHighlight(False)
+
+        self.obsTreeModel.layoutChanged.emit()
 
     def init_gui(self):
         """
@@ -413,7 +453,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.customContextMenuRequested.connect(
             self.treeview_context_menu
         )
-        self.gui_data_treeview.setItemDelegate(BoldDelegate(self))
+        self.gui_data_treeview.setItemDelegate(HTMLDelegate(self))
         self.gui_data_treeview.doubleClicked.connect(self.activate_survey_or_loop)
         self.gui_data_treeview.setObjectName("data")
         self.gui_data_treeview.setEditTriggers(QtWidgets.QTreeView.EditKeyPressed)
@@ -439,6 +479,33 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_data_tab()
         self.gui_data_treeview.setFocus()
 
+    def init_popup(self):
+        """
+        Right-click context menu on tree view
+        """
+        self.gui_data_treeview_popup_menu = QtWidgets.QMenu("Menu", None)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnRename)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnTides)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
+        self.gui_data_treeview_popup_menu.addAction(
+            self.menus.mnVerticalGradientWriteAction
+        )
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
+        self.gui_data_treeview_popup_menu.addSeparator()
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteStation)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
+        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
+
+    def ws_settings(self):
+        dlg = PreferencesDialog(self.settings)
+        if dlg.exec_():
+            self.settings = dlg.settings
+            self.settings.sync()
+
     def toggle_logview(self):
         if self.logview.isVisible():
             self.logview.hide()
@@ -453,7 +520,6 @@ class MainProg(QtWidgets.QMainWindow):
         self.label_adjust_update_required.setPixmap(self.update_adjust_icon)
         self.label_adjust_update_required.setToolTip("Update network adjustment")
         self.set_window_title_asterisk()
-        self.update_menus()
 
     def adjust_update_not_required(self):
         """
@@ -485,11 +551,13 @@ class MainProg(QtWidgets.QMainWindow):
         obstreestation = self.obsTreeModel.itemFromIndex(self.index_current_station)
         obstreeloop = obstreestation.parent()
         station = obstreestation
+        self.reset_station_cache(station)
+        self.reset_delta_cache()
         if obstreeloop.meter_type in ["CG5", "Scintrex", "CG6", "csv", "CG6Tsoft"]:
             self.station_model = ScintrexTableModel(station)
         elif obstreeloop.meter_type == "Burris":
             self.station_model = BurrisTableModel(station)
-        self.station_model.dataChanged.connect(self.update_data_tab)
+        self.station_model.dataChanged.connect(self.station_model_data_changed)
         self.station_model.signal_update_coordinates.connect(
             self.populate_station_coords
         )
@@ -504,12 +572,49 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
         self.tab_data.update_station_plot(station, obstreeloop.meter_type)
 
+    def station_model_data_changed(self):
+        self.update_data_tab()
+        self.reset_delta_cache()
+
+    def delta_clear(self, delta):
+        if hasattr(delta, "time"):
+            del delta.time
+        if hasattr(delta, "dg"):
+            del delta.dg
+        if hasattr(delta, "sd"):
+            del delta.sd
+
+    def reset_delta_cache(self):
+        for survey in self.obsTreeModel.surveys():
+            for loop in survey.loops():
+                for delta in loop.deltas:
+                    self.delta_clear(delta)
+                    if type(delta.station2) == list:
+                        for d in delta.station2:
+                            self.delta_clear(d)
+            # for delta in survey.deltas:
+            #     self.delta_clear(delta)
+        # self.update_drift_tables_and_plots()
+        #
+        # model = self.tab_drift.plot_drift(update=False, )
+        # self.update_delta_model(method, model)
+        # # Don't want to update if only switching between loops
+        # if update_adjust_tables:
+        #     self.update_deltas_on_adj_tab(obstreeloop)
+        # self.parent.adjust_update_required()
+
+    def reset_station_cache(self, station):
+        if hasattr(station, "gmean"):
+            del station.gmean
+        if hasattr(station, "tmean"):
+            del station.tmean
+
     def uncheck_station(self):
         """
         Unchecks station in the tree view.
 
-        Called when all samples at a station are unchecked; in that case we want to exclude
-        that station from the deltas.
+        Called when all samples at a station are unchecked; in that case we want to
+        exclude that station from the deltas.
 
         Returns
         -------
@@ -522,8 +627,8 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Checks station in the tree view.
 
-        Called when one or more samples at a station are unchecked; in that case we want to exclude
-        that station from the deltas.
+        Called when one or more samples at a station are unchecked; in that case we want
+        to exclude that station from the deltas.
 
         Returns
         -------
@@ -549,13 +654,15 @@ class MainProg(QtWidgets.QMainWindow):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
             caption="Open file",
             directory=self.settings.value("current_dir"),
-            filter="Data files (*.csv *.txt)",
+            filter="Data files (*.csv *.txt *.dat *.tsf)",
         )
 
         if fname:
+            self.workspace_savename = None
             self.settings.setValue("current_dir", os.path.dirname(fname))
             if self.open_raw_data(fname, open_type):
-                self.init_gui()
+                if open_type != "loop" and open_type != "survey":
+                    self.init_gui()
 
     def open_raw_data(self, fname, open_type):
         """
@@ -611,7 +718,7 @@ class MainProg(QtWidgets.QMainWindow):
                     # Loads all survey data into a single loop.
                     new_loop_idx = obstreesurvey.populate(
                         self.all_survey_data,
-                        name=str(obstreesurvey.loop_count),
+                        name=self.get_new_loop_name(obstreesurvey),
                         source=os.path.basename(fname),
                     )
                 else:
@@ -660,7 +767,6 @@ class MainProg(QtWidgets.QMainWindow):
                     self.populate_station_coords()
                 self.workspace_loaded = True
                 self.set_window_title_asterisk()
-                self.update_menus()
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.restoreOverrideCursor()
             else:
@@ -733,7 +839,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.workspace_loaded = True
             QtWidgets.QApplication.restoreOverrideCursor()
             self.set_window_title_asterisk()
-            self.update_menus()
 
     def workspace_clear(self, confirm=True):
         """
@@ -870,6 +975,8 @@ class MainProg(QtWidgets.QMainWindow):
         end = time.time()
         logging.info("Load duration %s: %.2f secs", fname, end - start)
         if coords:
+            # Some workspaces are saved with coords as list instead of tuple
+            coords = {key: tuple(lst) for key, lst in coords.items()}
             self.obsTreeModel.station_coords = coords
         self.update_menus()
 
@@ -942,10 +1049,26 @@ class MainProg(QtWidgets.QMainWindow):
             new_deltas = self.obsTreeModel.deltas()
             new_deltas_dict = {d.key: d for d in new_deltas}
 
+            # import csv
+            # with open('sdd.csv', 'w+') as output:
+            #     writer = csv.writer(output)
+            #     for key1, value in saved_deltas_dict.items():
+            #         writer.writerow([key1, value[0], value[1], value[2]])
+            # with open('ndd.csv', 'w+') as output:
+            #     writer = csv.writer(output)
+            #
+            #
+            #     for key1, value in new_deltas_dict.items():
+            #         lst = [key1]
+            #         lst += str.split(str(value))
+            #         writer.writerow(lst)
             # Update adj_sd and checked
             for key, delta in saved_deltas_dict.items():
-                new_deltas_dict[key].adj_sd = delta[1]
-                new_deltas_dict[key].checked = delta[0]
+                try:
+                    new_deltas_dict[key].adj_sd = delta[1]
+                    new_deltas_dict[key].checked = delta[0]
+                except Exception as e:
+                    continue
 
             # Create type = 'assigned' deltas
             for key, delta in saved_assigned_deltas_dict.items():
@@ -955,7 +1078,7 @@ class MainProg(QtWidgets.QMainWindow):
             QtWidgets.QApplication.restoreOverrideCursor()
             MessageBox.warning(
                 "Import warning",
-                "This workspaced was saved by an "
+                "This workspace was saved by an "
                 "earlier version of GSadjust. The station data and "
                 "drift options will be loaded, but not the deltas "
                 "on the adjust tab, which will need to be re-created"
@@ -1035,31 +1158,23 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
         elif populate_type == "selectedloop":
             selected_idx = self.gui_data_treeview.selectedIndexes()
-            # There may be one, or multiple loops selected. If only one is
-            # selected, we'll populate the delta table based on the
-            # currentLoopIndex (which will be in bold but not necessarily highlighted).
-            if len(selected_idx) >= 4:
-                selected_items = []
-                for i in selected_idx:
-                    selected_items.append(self.obsTreeModel.itemFromIndex(i))
-                # selected_items will contain 3 entries for every tree view
-                # item (one for the name, plus 2 for
-                # g and std. dev. First, decimate to just the name entries
-                selected_items = selected_items[::3]
-                loops = [item for item in selected_items if type(item) == ObsTreeLoop]
-                first = True
-                for loop in loops:
-                    self.update_loop_drift_plots(loop)
-                    survey = loop.parent()
-                    if first:
-                        table_updated = survey.populate_delta_model(loop, clear=True)
-                        first = False
-                    else:
-                        table_updated = survey.populate_delta_model(loop, clear=False)
-            else:
-                loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+            selected_items = []
+            for i in selected_idx:
+                selected_items.append(self.obsTreeModel.itemFromIndex(i))
+            # selected_items will contain 3 entries for every tree view
+            # item (one for the name, plus 2 for
+            # g and std. dev. First, decimate to just the name entries
+            selected_items = selected_items[::3]
+            loops = [item for item in selected_items if type(item) == ObsTreeLoop]
+            first = True
+            for loop in loops:
+                self.update_loop_drift_plots(loop)
                 survey = loop.parent()
-                table_updated = survey.populate_delta_model(loop, clear=True)
+                if first:
+                    table_updated = survey.populate_delta_model(loop, clear=True)
+                    first = False
+                else:
+                    table_updated = survey.populate_delta_model(loop, clear=False)
             self.set_adj_sd(survey, survey.adjustment.adjustmentoptions)
 
         if table_updated:
@@ -1084,21 +1199,21 @@ class MainProg(QtWidgets.QMainWindow):
             # If a loop:
             if type(item) == ObsTreeLoop:
                 if self.previous_loop is not None:
-                    self.previous_loop.fontweight = QtGui.QFont.Normal
+                    self.previous_loop.fontweight = "normal"  # QtGui.QFont.Normal
                     self.previous_loop.cellcolor = Qt.white
                 self.previous_loop = item
                 item.cellcolor = Qt.lightGray
-                item.fontweight = QtGui.QFont.Bold
+                item.fontweight = "bold"  # QtGui.QFont.Bold
                 self.index_current_loop = index
                 self.update_drift_tables_and_plots(update_adjust_tables=False)
 
             # If a survey
             elif type(item) == ObsTreeSurvey:
                 if self.previous_survey is not None:
-                    self.previous_survey.fontweight = QtGui.QFont.Normal
+                    self.previous_survey.fontweight = "normal"  # QtGui.QFont.Normal
                 self.previous_survey = item
                 self.index_current_survey = index
-                item.fontweight = QtGui.QFont.Bold
+                item.fontweight = "bold"  # QtGui.QFont.Bold
                 self.update_adjust_tables()
         except Exception as e:
             logging.exception(e, exc_info=True)
@@ -1119,6 +1234,7 @@ class MainProg(QtWidgets.QMainWindow):
         if last_char != "*":
             title += "*"
         self.setWindowTitle(title)
+        self.update_menus()
 
     def update_menus(self):
         """
@@ -1195,6 +1311,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.delta_model.init_data(survey.deltas)
             self.datum_model.init_data(survey.datums)
             self.results_model.init_data(survey.results)
+
             stats_model = QtGui.QStandardItemModel()
             if survey.adjustment.adjustmentresults.n_unknowns > 0:  # Numpy adjustment
                 stats_model.setColumnCount(2)
@@ -1244,7 +1361,6 @@ class MainProg(QtWidgets.QMainWindow):
 
         """
         current_loop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
-        current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
 
         drift_method = current_loop.drift_method
         self.tab_drift.driftmethod_combobox.setCurrentIndex(
@@ -1252,7 +1368,6 @@ class MainProg(QtWidgets.QMainWindow):
         )
         self.tab_drift.tare_view.model().init_data(current_loop.tares)
         self.tab_drift.set_drift_method(update, update_adjust_tables)
-        # self.set_adj_sd(current_survey, current_survey.adjustment.ao, loop=current_loop)
         self.adjust_update_required()
 
     def on_obs_checked_change(self, selected):
@@ -1265,6 +1380,7 @@ class MainProg(QtWidgets.QMainWindow):
         selected : list
             List of selected indexes
         """
+        QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         if selected.model() is not None:
             self.adjust_update_required()
             # if self.tab_widget.currentIndex() == 0:
@@ -1275,7 +1391,7 @@ class MainProg(QtWidgets.QMainWindow):
             self.update_drift_tables_and_plots()
             # self.tab_adjust.delta_view.update()
         self.set_window_title_asterisk()
-        self.update_menus()
+        QtWidgets.QApplication.restoreOverrideCursor()
 
     def on_obs_tree_change(self, selected):
         """
@@ -1467,9 +1583,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.delta_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
         self.tab_adjust.results_view.update()
-        obstreesurvey = self.obsTreeModel.itemFromIndex(
-                    self.index_current_survey
-            )
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         obstreesurvey.deltas = []
         self.clear_adjustment_text()
         self.set_window_title_asterisk()
@@ -1496,9 +1610,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.tab_adjust.datum_view.model().sourceModel().init_data([])
         self.tab_adjust.datum_view.update()
         self.tab_adjust.results_view.model().sourceModel().init_data([])
-        obstreesurvey = self.obsTreeModel.itemFromIndex(
-                    self.index_current_survey
-            )
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         obstreesurvey.datums = []
         self.clear_adjustment_text()
         self.set_window_title_asterisk()
@@ -1508,9 +1620,7 @@ class MainProg(QtWidgets.QMainWindow):
         Remove all results from results model shown on network adjustment tab.
         """
         self.tab_adjust.results_view.model().sourceModel().init_data([])
-        obstreesurvey = self.obsTreeModel.itemFromIndex(
-                    self.index_current_survey
-            )
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         obstreesurvey.results = []
         self.update_adjust_tables()
 
@@ -1528,7 +1638,7 @@ class MainProg(QtWidgets.QMainWindow):
                 for station in loop.checked_stations():
                     lat.append(coords[station.station_name][1])
                     lon.append(coords[station.station_name][0])
-                    dates.append(station.tmean())
+                    dates.append(station.tmean)
                 self._plot_loop_animation = PlotLoopAnimation([lat, lon, dates])
                 self._plot_loop_animation.show()
             except Exception:
@@ -1604,7 +1714,6 @@ class MainProg(QtWidgets.QMainWindow):
                 self.update_data_tab()
         self.activate_survey_or_loop(self.index_current_survey)
         self.set_window_title_asterisk()
-        self.update_menus()
 
     def delete_loop(self):
         """
@@ -1649,7 +1758,6 @@ class MainProg(QtWidgets.QMainWindow):
         ]
         self.update_adjust_tables()
         self.set_window_title_asterisk()
-        self.update_menus()
 
     def delete_station(self):
         """
@@ -1682,6 +1790,17 @@ class MainProg(QtWidgets.QMainWindow):
         self.update_adjust_tables()
         self.update_menus()
 
+    def rename_error_duplicate(self):
+        MessageBox.information(
+            "Duplicate name", "Please choose a unique name when renaming."
+        )
+
+    def rename_error_nondate(self):
+        MessageBox.information(
+            "Non-date name",
+            "Could not parse survey name. Please use the format 'YYYY-MM-DD'.",
+        )
+
     def rename(self):
         """
         Rename station; same as F2.
@@ -1693,6 +1812,14 @@ class MainProg(QtWidgets.QMainWindow):
         self.gui_data_treeview.edit(index, trigger, event)
         self.set_window_title_asterisk()
 
+    def tide(self):
+        indexes = self.gui_data_treeview.selectedIndexes()
+        index = indexes[0]
+        item = index.model().itemFromIndex(index)
+        trigger = self.gui_data_treeview.EditKeyPressed
+        event = None
+        self.dialog_tide_correction(item)
+
     def delete_tare(self):
         """
         Called when user right-clicks a tare and selects delete from the context menu
@@ -1701,9 +1828,7 @@ class MainProg(QtWidgets.QMainWindow):
         for idx in reversed(index):
             self.tab_drift.tare_view.model().removeRow(idx)
         self.tab_drift.tare_view.update()
-        self.process_tares(
-            self.obsTreeModel.itemFromIndex(self.index_current_loop)
-        )
+        self.process_tares(self.obsTreeModel.itemFromIndex(self.index_current_loop))
         self.update_drift_tables_and_plots()
         self.set_window_title_asterisk()
 
@@ -1725,6 +1850,7 @@ class MainProg(QtWidgets.QMainWindow):
         threshold indicates a break between loops.
         """
         # Prompt user to select time threshold
+
         loopdialog = LoopTimeThresholdDialog()
         if loopdialog.exec_():
             loop_thresh = loopdialog.dt_edit.dateTime()
@@ -1732,7 +1858,8 @@ class MainProg(QtWidgets.QMainWindow):
             # i.e., if the time set in the loop dialog is 8:00, loop thresh is a
             # Qdatetime equal to (2000,1,1,8,0).
             loop_thresh = (
-                int(loop_thresh.toString("H")) / 24 + int(loop_thresh.toString("d")) - 1
+                float(loop_thresh.toString("H")) / 24
+                + float(loop_thresh.toString("m")) / 1440
             )
         else:
             return
@@ -1821,6 +1948,7 @@ class MainProg(QtWidgets.QMainWindow):
 
         QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
         obstreeloop = self.obsTreeModel.itemFromIndex(self.index_current_loop)
+        obstreesurvey = obstreeloop.parent()
         indexes = []
         pbar = ProgressBar(total=obstreeloop.rowCount() - 1, textmess="Divide loop")
         pbar.show()
@@ -1830,16 +1958,17 @@ class MainProg(QtWidgets.QMainWindow):
         pbar_idx = list(range(obstreeloop.rowCount()))
         pbar_idx.reverse()
         for i in range(obstreeloop.rowCount() - 1, 1, -1):
+            new_name = self.get_new_loop_name(obstreesurvey)
             station2 = obstreeloop.child(i)
             station1 = obstreeloop.child(i - 1)
             pbar.progressbar.setValue(pbar_idx[i])
             QtWidgets.QApplication.processEvents()
             # Check time difference between successive stations
-            tdiff = station2.tmean() - station1.tmean()
+            tdiff = station2.tmean - station1.tmean
             if tdiff > loop_thresh:
                 for ii in range(i, obstreeloop.rowCount()):
                     indexes.append(obstreeloop.child(ii).index())
-                self.new_loop_from_indexes(indexes)
+                self.new_loop_from_indexes(indexes, new_name)
                 indexes = []
         self.index_current_loop = original_loop_index
         self.update_all_drift_plots()
@@ -1847,6 +1976,18 @@ class MainProg(QtWidgets.QMainWindow):
         self.obsTreeModel.layoutChanged.emit()
         QtWidgets.QApplication.restoreOverrideCursor()
         self.set_window_title_asterisk()
+
+    def get_new_loop_name(self, survey):
+        all_int_names = []
+        for n in survey.loop_names:
+            try:
+                all_int_names.append(int(n))
+            except ValueError as e:
+                pass
+        if all_int_names:
+            return str(max(all_int_names) + 1)
+        else:
+            return "0"
 
     def duplicate_station(self):
         """
@@ -1911,14 +2052,15 @@ class MainProg(QtWidgets.QMainWindow):
         """
         Creates a new loop in tree view
         """
+        obstreesurvey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
         indexes = self.gui_data_treeview.selectedIndexes()
-        self.new_loop_from_indexes(indexes)
+        self.new_loop_from_indexes(indexes, self.get_new_loop_name(obstreesurvey))
         self.activate_survey_or_loop(self.index_current_loop)
         self.update_drift_tables_and_plots(update=True)
         self.update_data_tab()
         self.set_window_title_asterisk()
 
-    def new_loop_from_indexes(self, indexes):
+    def new_loop_from_indexes(self, indexes, new_loop_name):
         """
         Moves stations at the specified indexes to a new loop.
 
@@ -1926,12 +2068,13 @@ class MainProg(QtWidgets.QMainWindow):
         ----------
         indexes : list
             List of PyQt indexes of selected stations
+        new_loop_name : str
+            Name of the new loop (usually an int as string)
         """
         if len(indexes) > 0:
             model = indexes[0].model()
             obstreeloop = model.itemFromIndex(indexes[0].parent())
             obstreesurvey = obstreeloop.parent()
-            new_loop_name = str(obstreesurvey.rowCount())
             # new loop, increment from loop parent
             new_obstreeloop = ObsTreeLoop(new_loop_name)
 
@@ -1979,24 +2122,6 @@ class MainProg(QtWidgets.QMainWindow):
             self.set_window_title_asterisk()
 
     def treeview_context_menu(self, point):
-        """
-        Right-click context menu on tree view
-        """
-        self.gui_data_treeview_popup_menu = QtWidgets.QMenu("Menu", self)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnRename)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteSurvey)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteLoop)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopProperties)
-        self.gui_data_treeview_popup_menu.addAction(
-            self.menus.mnVerticalGradientWriteAction
-        )
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnLoopAnimate)
-        self.gui_data_treeview_popup_menu.addSeparator()
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDeleteStation)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnStationDuplicate)
-        self.gui_data_treeview_popup_menu.addAction(self.menus.mnDataNewLoop)
         # enable as appropriate
         indexes = self.gui_data_treeview.selectedIndexes()
 
@@ -2090,6 +2215,40 @@ class MainProg(QtWidgets.QMainWindow):
             win = ShowCalCoeffs(cal_coeffs, parent=self)
             win.show()
 
+    def show_nwis_plot(self):
+        win = PlotGravityAndWLs(self)
+        if win.show():
+            for row_idx in range(win.tableWidgetNWIS.rowCount()):
+                item = win.tableWidgetNWIS.item(row_idx, 0)
+                if item.checkState() == 2:
+                    nwis_station = item.text()
+                    break
+            else:
+                nwis_station = win.nwis_station_line_edit.text()[:16]
+            g_station = win.station_comboBox.currentText()
+            data = compute_gravity_change(self.obsTreeModel, table_type="list")
+            dates_temp = [
+                data[1][1][idx]
+                for (idx, sta) in enumerate(data[1][0])
+                if sta == g_station
+            ]
+            dates = [datetime.datetime.strptime(d, "%Y-%m-%d") for d in dates_temp]
+            g = [
+                data[1][2][idx]
+                for (idx, sta) in enumerate(data[1][0])
+                if sta == g_station
+            ]
+            sd = [
+                data[1][3][idx]
+                for (idx, sta) in enumerate(data[1][0])
+                if sta == g_station
+            ]
+
+            nwis_data = nwis_get_data(nwis_station)
+            if data:
+                plt = self.plot_nwis(nwis_station, g_station, nwis_data, (dates, g))
+                plt.show()
+
     def plot_network_graph_circular(self):
         """
         Show circular network graph
@@ -2122,8 +2281,8 @@ class MainProg(QtWidgets.QMainWindow):
         plt = PlotDgResidualHistogram(survey, self)
         plt.show()
 
-    def plot_gravity_change(self, dates, table, parent):
-        plt = PlotGravityChange(dates, table, parent)
+    def plot_gravity_change(self, table, parent):
+        plt = PlotGravityChange(table, parent)
         plt.show()
 
     def set_adj_sd(self, survey, ao, loop=None):
@@ -2134,6 +2293,8 @@ class MainProg(QtWidgets.QMainWindow):
         ----------
         survey : ObsTreeSurvey
         ao : AdjustmentOptions
+        loop: ObsTreeLoop
+            If true, only apply to the specified loop
         """
         if loop:
             for delta in loop.deltas:
@@ -2227,12 +2388,114 @@ class MainProg(QtWidgets.QMainWindow):
         else:
             return
 
+    def dialog_update_datums(self):
+        """
+        Update existing datums from .project.txt files at user-specified path.
+
+        Useful for when the database has been updated, e.g., a laser correction
+        applied.
+        """
+        path = QtWidgets.QFileDialog.getExistingDirectory(
+            self,
+            self.settings.value("abs_g_path"),
+        )
+        dlg_text = []
+        reload_data = True
+        if hasattr(self, "abs_update_path"):
+            if self.abs_update_path == path:
+                reply = QtWidgets.QMessageBox.question(
+                    self,
+                    "GSadjust",
+                    "Re-use previous datums from this directory?",
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.No,
+                )
+
+                if reply == QtWidgets.QMessageBox.Yes:
+                    datums = self.abs_update_list
+                    reload_data = False
+        if reload_data:
+            datums = dict()
+            n_files = 100
+            pbar = ProgressBar(total=n_files, textmess="Scanning directory...")
+            ctr = 1
+            pbar.show()
+            for dirname, _, fileList in os.walk(path):
+                if dirname.find("unpublished") != -1:
+                    continue
+                for name in fileList:
+                    pbar.progressbar.setValue(ctr)
+                    QtWidgets.QApplication.processEvents()
+
+                    if ".project.txt" not in name:
+                        continue
+                    ctr += 1
+                    if ctr > 100:
+                        ctr = 1
+                    d = a10.A10(os.path.join(dirname, name))
+                    datum = Datum(
+                        d.stationname,
+                        g=float(d.gravity),
+                        sd=float(d.setscatter),
+                        date=d.date,
+                        meas_height=float(d.transferht),
+                        gradient=float(d.gradient),
+                        checked=0,
+                    )
+                    datum.coord = [d.long, d.lat, d.elev]
+                    datum.n_sets = d.processed
+                    datum.time = d.time
+                    # self.table_model.insertRows(datum, 0)
+                    # self.path = path
+                    #
+                    if datum.key in datums.keys():
+                        datums[datum.key].append(datum)
+                    else:
+                        datums[datum.key] = [datum]
+        current_survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        datums_to_delete, datums_to_add = [], []
+        datums_to_update = dict()
+        current_survey_datums = current_survey.datums
+        for d in current_survey_datums:
+            if current_survey_datums.count(d) > 1:
+                dlg_text.append(f"Duplicate {k} datums, skipping")
+                continue
+            elif d.key in datums.keys():
+                k = d.key
+                if len(datums[k]) > 1:
+                    dlg_text.append(f"More than one A10 value for {k}, skipping")
+                elif d.g != datums[k][0].g:
+                    datums_to_update[k] = (
+                        datums[k][0].g,
+                        datums[k][0].sd,
+                        datums[k][0].gradient,
+                    )
+                    # datums_to_delete.append(d)
+                    # datums_to_add.append(datums[k][0])
+                    dlg_text.append(
+                        f"{k} will update from {d.g:.1f} to {datums[k][0].g:.1f}"
+                    )
+                else:
+                    dlg_text.append(f"{k} identical, no update")
+        dialog = DialogUpdateDatums(dlg_text)
+        self.abs_update_list = datums
+        self.abs_update_path = path
+        if dialog.exec_():
+            for d in datums_to_update:
+                for d1 in current_survey_datums:
+                    if d1.key == d:
+                        d1.g = datums_to_update[d][0]
+                        d1.sd = datums_to_update[d][1]
+                        d1.gradient = datums_to_update[d][2]
+
+        return True
+
     def dialog_import_abs_g_direct(self):
         """
         Opens a PyQt dialog to select a directory with .project.txt files.
         """
         if self.obsTreeModel.rowCount() == 0:
-            MessageBox(
+            MessageBox.critical(
                 "Import error",
                 "Please load a survey before loading absolute-gravity data.",
             )
@@ -2250,7 +2513,12 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue("abs_g_path", selectabsg.path)
             if nds:
                 survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
-                survey.datums += nds
+                for nd in nds:
+                    dc = copy.deepcopy(nd)
+                    survey.datums.append(dc)
+                # Add coordinates
+                if nd.station not in self.obsTreeModel.station_coords.keys():
+                    self.obsTreeModel.station_coords[nd.station] = nd.coord
                 self.set_window_title_asterisk()
         else:
             self.abs_import_table_model = selectabsg.table_model
@@ -2310,11 +2578,24 @@ class MainProg(QtWidgets.QMainWindow):
             logging.info("Datum station added: {}".format(station))
             self.set_window_title_asterisk()
 
+    def build_survey_cal_dict(self, survey):
+        new_dict = {}
+        if survey.adjustment.adjustmentresults:
+            for k, v in survey.adjustment.adjustmentresults.cal_dic.items():
+                new_dict[k] = v[0]
+        else:
+            for meter in survey.unique_meters:
+                new_dict[meter] = 1.0
+        return new_dict
+
     def dialog_adjustment_properties(self):
         """
         Opens PyQt dialog to set adjustment options
         """
         survey = self.obsTreeModel.itemFromIndex(self.index_current_survey)
+        survey.adjustment.adjustmentoptions.meter_cal_dict = self.build_survey_cal_dict(
+            survey
+        )
         adjust_options = AdjustOptions(
             survey.__str__(), survey.adjustment.adjustmentoptions, parent=self
         )
@@ -2332,14 +2613,18 @@ class MainProg(QtWidgets.QMainWindow):
                     survey.adjustment.adjustmentoptions = ao
                     self.set_adj_sd(survey, adjust_options.ao)
             self.set_window_title_asterisk()
+            self.adjust_update_required()
 
-    def dialog_tide_correction(self):
+    def dialog_tide_correction(self, item=None):
         """
         Opens PyQt dialog to specify correction type
         """
         tide_correction_dialog = TideCorrectionDialog()
         tide_correction_dialog.msg.exec_()
-        correction_type = tide_correction_dialog.correction_type
+        try:
+            correction_type = tide_correction_dialog.correction_type
+        except AttributeError:  # User clicked close button
+            return
         if correction_type == "Cancel":
             return
         elif correction_type == "Meter-supplied":
@@ -2375,12 +2660,19 @@ class MainProg(QtWidgets.QMainWindow):
 
             tc = TideCoordinatesDialog(lat, lon, elev)
             if tc.exec_():
-                tide_correction_agnew(
-                    self,
+                item.update_tide(
                     float(tc.lat.text()),
                     float(tc.lon.text()),
                     float(tc.elev.text()),
+                    correction_type,
                 )
+                # tide_correction_agnew(
+                #     self,
+                #     float(tc.lat.text()),
+                #     float(tc.lon.text()),
+                #     float(tc.elev.text()),
+                #     item=item
+                # )
             self.adjust_update_required()
         self.update_data_tab()
 
@@ -2393,7 +2685,10 @@ class MainProg(QtWidgets.QMainWindow):
         coordinates_dialog = CoordinatesTable(self.obsTreeModel.station_coords)
         accept = coordinates_dialog.exec_()
         if accept == 1:
+            if self.obsTreeModel.station_coords == coordinates_dialog.coords():
+                return
             self.obsTreeModel.station_coords = coordinates_dialog.coords()
+            self.set_window_title_asterisk()
 
     def load_station_coordinates(self):
         """
@@ -2422,13 +2717,11 @@ class MainProg(QtWidgets.QMainWindow):
         Shows compiled help file created using Dr. Explain in default browser
         """
         help_path = os.path.join(self.path_install, "docs", "index.htm")
+        logging.info(f"Opening help:{help_path}")
         webbrowser.open(help_path)
 
     def dialog_about(self):
-        if hasattr(self, "commit"):
-            AboutDialog(self.commit)
-        else:
-            AboutDialog("")
+        AboutDialog(self.version)
 
     def check_for_updates(self, show_uptodate_msg):
         """
@@ -2442,63 +2735,91 @@ class MainProg(QtWidgets.QMainWindow):
         bool
             whether or not to start GSadjust (True=yes)
         """
+        # Ignore updating if running in the debugger
+        # (comment-out if trying to debug this section)
+        # if sys.gettrace() is not None:
+        #     return True
         try:
-            gitpath = (
-                os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\mingw64\\bin"
-            )
-            os.environ["PATH"] += os.pathsep + gitpath
-            from git import Repo
-
-            logging.info("Checking for updates")
-            repo = Repo(self.path_install)
-            if not repo.active_branch.name == "master":
-                return True
-            fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == "origin/master"][0]
-            for f in fetch:
-                logging.info("Git fetched: {}".format(f))
-            self.commit = str(repo.head.commit)[:5]
-            if repo.head.commit != master.commit:
+            download_URL = r"https://code.usgs.gov/sgp/gsadjust/-/tags"
+            tag_URL = r"https://code.usgs.gov/api/v4/projects/4933/repository/tags/"
+            tag_json = requests.get(tag_URL)
+            most_recent = float(
+                tag_json.json()[0]["name"]
+            )  # Default is sort by update date
+            if most_recent < float(self.version):
                 msg = (
-                    "An update is available for GSadjust.\nWould you like to install"
-                    " now?"
+                    "An update is available for GSadjust (Version"
+                    f" {self.version}).\nPlease download from {download_URL}"
                 )
                 confirm = MessageBox.question(
                     "Update Available",
                     msg,
                 )
-                if confirm == QtWidgets.QMessageBox.Yes:
-                    return self.update_from_github()
-            elif show_uptodate_msg:
-                logging.info("Git checked, GSadjust is up to date.")
-                msg = "GSadjust is up to date."
-                MessageBox.information("No Update Needed", msg)
-                return True
+            else:
+                msg = (
+                    f"GSadjust is up to date (Version) {self.version}"
+                )
+                confirm = MessageBox.question(
+                    "",
+                    msg,
+                )
             return True
 
+            # gitpath = (
+            #     os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\MinGit\\cmd\\git.exe"
+            # )
+            # os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = gitpath
+            # # os.environ["PATH"] = gitpath + os.pathsep + os.environ["PATH"]
+            # from git import Repo
+            #
+            # repo = Repo(self.path_install)
+            # logging.info(f"Current branch:{repo.active_branch.name}")
+            # # This seems to work no non-DOI networks without SSH. I didn't get the ssh
+            # # to work. Trying to use it as a deploy key on Github.
+            # # ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_pub'
+            #
+            # with repo.git.custom_environment(): #GIT_SSH_COMMAND=ssh_cmd):
+            #     logging.info("Checking for updates")
+            #
+            #     fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
+            #     master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
+            #     logging.info(f"Git fetched: {repo.head.commit}")
+            #     # Commit hash is displayed in about dialog
+            #     self.commit = str(repo.head.commit)[:5]
+            #     if repo.head.commit != master.commit:
+            #         msg = (
+            #             "An update is available for GSadjust.\nWould you like to install"
+            #             " now?"
+            #         )
+            #         confirm = MessageBox.question(
+            #             "Update Available",
+            #             msg,
+            #         )
+            #         if confirm == QtWidgets.QMessageBox.Yes:
+            #             return self.update_from_github(repo)
+            #     elif show_uptodate_msg:
+            #         logging.info("Git checked, GSadjust is up to date.")
+            #         msg = "GSadjust is up to date."
+            #         MessageBox.information("No Update Needed", msg)
+            #         return True
+            #     return True
+
         except BaseException as e:
-            logging.info("Git update failed: {}".format(e))
+            logging.info("Update failed: {}".format(e))
             if show_uptodate_msg:
-                msg = "Problem Encountered Updating from GitHub\n\nError Message:\n"
+                msg = "Error Message:\n"
                 msg += str(e)
                 MessageBox.information("Update results", msg)
             return True  # Update didn't work, start GSadjust anyway
 
-    def update_from_github(self):
+    def update_from_github(self, repo):
         """
         Merge the latest version into the local repo
         """
 
         try:
-            from git import Repo
-
-            repo = Repo(
-                self.path_install,
-            )
-            fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            master = [f for f in fetch if f.name == "origin/master"][0]
             repo.git.reset("--hard")
-            repo.git.merge(master.name)
+            repo.git.merge(repo.active_branch.name)
             logging.info("Git update successful")
             msg = (
                 "Updated successfully downloaded from GitHub. Please\nrestart GSadjust."
@@ -2540,6 +2861,103 @@ class MainProg(QtWidgets.QMainWindow):
             self.settings.setValue("results_table_column_widths", None)
         if self.settings.value("data_table_column_widths") is None:
             self.settings.setValue("data_table_column_widths", None)
+        if self.settings.value("include_all_datums_in_results") is None:
+            self.settings.setValue("include_all_datums_in_results", True)
+
+
+class HTMLDelegate(QtWidgets.QStyledItemDelegate):
+    # from https://stackoverflow.com/questions/51613638/highlight-search-results-in-
+    # qtablewidgetselect-and-highlight-that-text-or-chara
+
+    def __init__(self, parent=None):
+        super(HTMLDelegate, self).__init__(parent)
+        self.doc = QtGui.QTextDocument(self)
+
+    def paint(self, painter, option, index):
+        m = index.model().itemFromIndex(index)
+        # decide here if item should be bold and set font weight to bold if needed
+        if not hasattr(m, "fontweight"):
+            setattr(m, "fontweight", "normal")
+            # option.font.setWeight(QtGui.QFont.Normal)
+            m.cellcolor = Qt.white
+        elif type(m.fontweight) == int:
+            m.fontweight = "normal"
+        # else:
+        #     option.font.setWeight(m.fontweight)
+        # painter.fillRect(option.rect, m.cellcolor)
+        # QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
+        try:
+            highlight = m.highlight
+        except AttributeError as e:
+            highlight = False
+
+        painter.save()
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+        res = ""
+        color = QtGui.QColor("orange")
+        if highlight:
+            res = """<p style="font-weight:{}; background-color:{};">{}</p>""".format(
+                m.fontweight, color.name(QtGui.QColor.HexRgb), escape(highlight)
+            )
+        # This code would allow character-by-character coloring. However, you can't
+        # change the background color char-by-char without spans for each char.
+        # Much easier to just highlight the whole cell.
+        # if substring:
+        #     ss = options.text.split(substring)
+        #     substrings = [s if s == '' else s + "p__tag" for s in ss]
+        #     res = """<font color={}>{}</font>""".format(
+        #         color.name(QtGui.QColor.HexRgb), substring
+        #     ).join(list(map(escape, substrings)))
+        #     res = res.replace('p__tag', '</p>')
+        #     # res += "</p"
+        else:
+            res = """<p style="font-weight:{};">{}</p>""".format(
+                m.fontweight, options.text
+            )
+        self.doc.setHtml(res)
+
+        # Not sure how much of the following is necessary
+        options.text = ""
+        style = (
+            QtWidgets.QApplication.style()
+            if options.widget is None
+            else options.widget.style()
+        )
+        style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, options, painter)
+
+        ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
+        if option.state & QtWidgets.QStyle.State_Selected:
+            ctx.palette.setColor(
+                QtGui.QPalette.Text,
+                option.palette.color(
+                    QtGui.QPalette.Active, QtGui.QPalette.HighlightedText
+                ),
+            )
+        else:
+            ctx.palette.setColor(
+                QtGui.QPalette.Text,
+                option.palette.color(QtGui.QPalette.Active, QtGui.QPalette.Text),
+            )
+
+        textRect = style.subElementRect(QtWidgets.QStyle.SE_ItemViewItemText, options)
+
+        if index.column() != 0:
+            textRect.adjust(5, 0, 0, 0)
+
+        constant = 4
+        margin = (option.rect.height() - options.fontMetrics.height()) // 2
+        margin = margin - constant
+        textRect.setTop(textRect.top() + margin)
+
+        painter.translate(textRect.topLeft())
+        painter.setClipRect(textRect.translated(-textRect.topLeft()))
+        self.doc.documentLayout().draw(painter, ctx)
+
+        painter.restore()
+
+    # def sizeHint(self, option, index):
+    #     return QtCore.QSize(self.doc.idealWidth(), self.doc.size().height())
 
 
 class BoldDelegate(QtWidgets.QStyledItemDelegate):
@@ -2586,16 +3004,40 @@ def except_hook2(cls, exception, traceback):
 
 def main():
     # QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+    sys_argv = sys.argv
+    sys_argv += ["--style", "material"]
+    # app = QGuiApplication(sys_argv)
     app = QtWidgets.QApplication(sys.argv)
+    # app.setStyle("Material")
+
+    # Now use a palette to switch to dark colors:
+    # palette = QPalette()
+    # palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    # palette.setColor(QPalette.WindowText, Qt.white)
+    # palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    # palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    # palette.setColor(QPalette.ToolTipBase, Qt.black)
+    # palette.setColor(QPalette.ToolTipText, Qt.white)
+    # palette.setColor(QPalette.Text, Qt.white)
+    # palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    # palette.setColor(QPalette.ButtonText, Qt.white)
+    # palette.setColor(QPalette.BrightText, Qt.red)
+    # palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    # palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    # palette.setColor(QPalette.HighlightedText, Qt.black)
+    # app.setPalette(palette)
 
     # Needed to show icon in Windows Taskbar:
     import ctypes
+
     myappid = "usgs.sgp.gsadjust.1.0"  # arbitrary string
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     # start log file
     fn = os.path.join(
-        os.path.dirname(__file__),'..','..',
+        os.path.dirname(__file__),
+        "..",
+        "..",
         "GSadjustLog_{}.txt".format(time.strftime("%Y%m%d-%H%M")),
     )
     try:
@@ -2615,6 +3057,7 @@ def main():
     app.processEvents()
     splash.finish(ex)
     app.setWindowIcon(QtGui.QIcon(":/icons/app.ico"))
+
     if not DEBUG:
         if ex.check_for_updates(False):
             ex.showMaximized()

@@ -17,6 +17,13 @@ img\i\blocks\search\loading.gif
 img\i\blocks\interface-icons\interface-icons-sprite.png
 img\i\blocks\interface-icons\interface-icons-sprite-8.png
 img\i\null.gif
+img\i\blocks\work-zone
+img\i\blocks\tree
+img\i\blocks\splitter
+img\i\blocks\search
+img\i\blocks\interface-icons
+img\i\blocks
+img\i
 multiple_meters.htm
 saving_and_loading_the_workspace.htm
 vertical_gradients.htm
@@ -149,6 +156,12 @@ img\drex_data_tab_control_4.png
 img\drex_data_tab_screen.png
 data_tab.htm
 data_sets_included_with_gsadjust.htm
+img\drex_nwis_example_custom_5.png
+img\drex_nwis_example_custom_4.png
+img\drex_nwis_example_custom_3.png
+img\drex_nwis_example_custom_2.png
+img\drex_nwis_example_custom.png
+nwis_example.htm
 img\drex_complete_example_custom_23.png
 img\drex_complete_example_custom_22.png
 img\drex_complete_example_custom_21.png
@@ -222,4 +235,7 @@ overview.htm
 img\drex_header_custom.png
 img\drex_index_custom.png
 index.htm
+css
+js
+img
 drex_file_list

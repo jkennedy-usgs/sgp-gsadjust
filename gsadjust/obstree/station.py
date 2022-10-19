@@ -18,11 +18,13 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 import copy
+import functools
 
 import numpy as np
 from matplotlib.dates import num2date
 
 from .base import ObsTreeItemBase
+from ..tides.synthetic import earth_tide
 
 # Constants for column headers
 STATION_NAME, STATION_DATETIME, STATION_MEAN = range(3)
@@ -54,6 +56,9 @@ class ObsTreeStation(ObsTreeItemBase):
     def __str__(self):
         return self.station_name
 
+    def __hash__(self):
+        return self.__dict__
+
     def _weights_(self):
         """
         weights for Scintrex data are calculated based on the sample standard
@@ -83,9 +88,18 @@ class ObsTreeStation(ObsTreeItemBase):
             ]
             return w
 
+    def update_tide(self, lat, lon, elev, correction_type):
+        if correction_type == "Agnew":
+            tides = (
+                np.round(np.array([earth_tide(lat, lon, t) for t in self.t]) * 10000)
+                / 10000.0
+            )
+            tides *= 1000  # convert milligal to microgal
+            self.etc = tides.tolist()
+
     @property
     def key(self):
-        return (self.station_name, self.tmean())
+        return self.station_name, self.tmean
 
     def grav(self):
         """
@@ -93,7 +107,7 @@ class ObsTreeStation(ObsTreeItemBase):
 
         Returns
         -------
-        list
+        list8
             list of gravity samples at a station (floats)
         """
         data = [a - b + c for (a, b, c) in zip(self.raw_grav, self.tare, self.etc)]
@@ -107,13 +121,13 @@ class ObsTreeStation(ObsTreeItemBase):
         Removes null values
         """
         return (
-            num2date(self.tmean()).strftime("%Y-%m-%d %H:%M:%S")
-            if self.tmean() != -999
-            else self.tmean()
+            num2date(self.tmean).strftime("%Y-%m-%d %H:%M:%S")
+            if self.tmean != -999
+            else self.tmean
         )
 
     def display_mean_stddev(self):
-        return "{:.1f} ± {:.1f}".format(self.gmean(), self.stdev())
+        return "{:.1f} ± {:.1f}".format(self.gmean, self.stdev())
 
     @property
     def display_column_map(self):
@@ -133,6 +147,7 @@ class ObsTreeStation(ObsTreeItemBase):
         """
         return [v for i, v in enumerate(d) if self.keepdata[i] == 1]
 
+    @functools.cached_property
     def gmean(self):
         """
         Average gravity value
@@ -141,15 +156,18 @@ class ObsTreeStation(ObsTreeItemBase):
         """
         g = self.grav()
         try:
-            gtmp = self._filter(g)
-            d = sum(self._weights_())
-            w = self._weights_()
-            wg = [g * w for (g, w) in zip(gtmp, w)]
-            gmean = sum(wg) / d
-            return gmean
+            if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
+                gtmp = self._filter(g)
+                return sum(gtmp) / len(gtmp)
+            else:
+                gtmp = self._filter(g)
+                w = self._weights_()
+                wg = [g * w for (g, w) in zip(gtmp, w)]
+                return sum(wg) / sum(self._weights_())
         except:
             return -999
 
+    @functools.cached_property
     def tmean(self):
         """
         Average observation time.
@@ -157,12 +175,17 @@ class ObsTreeStation(ObsTreeItemBase):
         The try-except block handles errors when all keepdata == 0.
         """
         try:
-            ttmp = self._filter(self.t)
-            d = sum(self._weights_())
-            w = self._weights_()
-            wt = [g * w for (g, w) in zip(ttmp, w)]
-            tmean = sum(wt) / d
-            return tmean
+            if self.meter_type == "Burris" or self.meter_type == "CG6Tsoft":
+                ttmp = self._filter(self.t)
+                self.stored_tmean = sum(ttmp) / len(ttmp)
+                return self.stored_tmean
+            else:
+                ttmp = self._filter(self.t)
+                d = sum(self._weights_())
+                w = self._weights_()
+                wt = [g * w for (g, w) in zip(ttmp, w)]
+                self.stored_tmean = sum(wt) / d
+                return self.stored_tmean
         except:
             return -999
 
@@ -257,10 +280,10 @@ class ObsTreeStation(ObsTreeItemBase):
 
     @property
     def summary_str(self):
-        if self.tmean() == -999:
-            tm = self.tmean()
+        if self.tmean == -999:
+            tm = self.tmean
         else:
-            tm = num2date(self.tmean()).strftime("%Y-%m-%d %H:%M:%S")
+            tm = num2date(self.tmean).strftime("%Y-%m-%d %H:%M:%S")
         if len(self.lat) == 0:
             self.lat, self.long, self.elev = [0], [0], [0]
         summary_str = "{} {} {} {} {} {} {} {:0.3f} {:0.3f}\n".format(
@@ -271,7 +294,7 @@ class ObsTreeStation(ObsTreeItemBase):
             self.lat[0],
             self.long[0],
             self.elev[0],
-            self.gmean(),
+            self.gmean,
             self.stdev(),
         )
         return summary_str

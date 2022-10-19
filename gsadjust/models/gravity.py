@@ -33,14 +33,9 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
     def __init__(self, header, table, table_type="simple", parent=None):
         QtCore.QAbstractTableModel.__init__(self, parent)
         self._headers = {n: col for n, col in enumerate(header)}
-        self.createArrayData(table, table_type)
-
-    def createArrayData(self, table, table_type):
-        if table_type == "simple" or table_type == "list":
-            array = np.array(table).transpose()
-        elif table_type == "full":
-            array = np.array(table)
-        self.arraydata = array
+        # self.createArrayData(table, table_type)
+        self.arraydata = np.array(table)
+        self.table_type = table_type
 
     def rowCount(self, parent=None):
         return self.arraydata.shape[0]
@@ -59,7 +54,12 @@ class GravityChangeModel(QtCore.QAbstractTableModel):
             column = index.column()
             try:
                 value = float(self.arraydata[row][column])
-                return format(value, "0.1f")
+                if self.table_type != 'full':
+                    return format(value, "0.2f")
+                elif column != 1 and column != 2:
+                    return format(value, "0.2f")
+                else:
+                    return format(value, "0.5f")
             except ValueError:
                 return str(self.arraydata[row][column])
 

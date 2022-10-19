@@ -20,24 +20,28 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-import datetime as dt
+
 import logging
 import os
+import datetime
 
-import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.dates import date2num
-from matplotlib.figure import Figure
-
 from .messages import MessageBox
 from .utils import copy_cells_to_clipboard
 from .widgets import IncrMinuteTimeEdit, ProgressBar
+from .map import GravityChangeMap
 from ..data import Datum, analysis
 from ..file import a10
-from ..models import DatumTableModel, GravityChangeModel, MeterCalibrationModel
+from ..models import (
+    DatumTableModel,
+    GravityChangeModel,
+    MeterCalibrationModel,
+    CheckBoxDelegate,
+)
 from ..utils import init_cal_coeff_dict
+from ..data.nwis import search_nwis, nwis_get_data, filter_ts
+from ..data.analysis import compute_gravity_change
+from ..plots import PlotNwis
 
 
 class CoordinatesTable(QtWidgets.QDialog):
@@ -93,7 +97,6 @@ class CoordinatesTable(QtWidgets.QDialog):
 
         self.table.setSortingEnabled(True)
         self.table.resizeColumnsToContents()
-        # self.adjustSize()
 
         vlayout.addWidget(button_box)
         self.setLayout(vlayout)
@@ -129,18 +132,28 @@ class CoordinatesTable(QtWidgets.QDialog):
             if e.key() == QtCore.Qt.Key_V:
                 clipboard = QtWidgets.QApplication.clipboard()
                 s = clipboard.text()
-                rows = s.split("\n")
+                rows = s.split("\n")[:-1]  # Excel includes trailing "\n"
+                # Check the clipboard is the right number of columns. The number of rows
+                # can be different: rows will be added or deleted as needed.
+                if len(rows[0].split('\t')) != 4:
+                    return
                 for idx, r in enumerate(rows):
-                    if r != "":
-                        elems = r.split("\t")
-                        table_item_station = QtWidgets.QTableWidgetItem(elems[0])
-                        table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
-                        table_item_long = QtWidgets.QTableWidgetItem(elems[2])
-                        table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
-                        self.table.setItem(idx, 0, table_item_station)
-                        self.table.setItem(idx, 1, table_item_lat)
-                        self.table.setItem(idx, 2, table_item_long)
-                        self.table.setItem(idx, 3, table_item_elev)
+                    if r == "":
+                        continue
+                    elems = r.split("\t")
+                    table_item_station = QtWidgets.QTableWidgetItem(elems[0])
+                    table_item_lat = QtWidgets.QTableWidgetItem(elems[1])
+                    table_item_long = QtWidgets.QTableWidgetItem(elems[2])
+                    table_item_elev = QtWidgets.QTableWidgetItem(elems[3])
+                    if idx >= self.table.rowCount():
+                        self.table.insertRow(idx)
+                    self.table.setItem(idx, 0, table_item_station)
+                    self.table.setItem(idx, 1, table_item_lat)
+                    self.table.setItem(idx, 2, table_item_long)
+                    self.table.setItem(idx, 3, table_item_elev)
+                # Delete excesss rows
+                while idx < self.table.rowCount() - 1:
+                    self.table.removeRow(self.table.rowCount())
 
     def coords(self):
         """
@@ -349,7 +362,7 @@ class AdjustOptions(QtWidgets.QDialog):
             grid.addWidget(self.alpha_text, 7, 0)
             grid.addWidget(self.alpha_edit, 7, 1)
 
-            # This isn't working? Column 1 always seems to be stretching, regardless of the vales
+            # This isn't working? Column 1 always seems to be stretching
             grid.setColumnStretch(0, 1)
             grid.setColumnStretch(1, 0)
             gridwidget.setLayout(grid)
@@ -508,6 +521,342 @@ class DialogOverwrite(QtWidgets.QMessageBox):
         self.accept()
 
 
+class PlotGravityAndWLs(QtWidgets.QDialog):
+    def __init__(self, MainProg):
+        super(PlotGravityAndWLs, self).__init__(MainProg)
+        self.obstreemodel = MainProg.obsTreeModel
+        self.stations = MainProg.obsTreeModel.results_stations()
+        self.coords = MainProg.obsTreeModel.station_coords
+        self.setWindowModality(QtCore.Qt.NonModal)
+        self.init_gui()
+
+    def init_gui(self):
+        self.setWindowTitle("Groundwater level/storage-change comparison")
+        self.station_comboBox = QtWidgets.QComboBox(self)
+        for s in sorted(self.stations):
+            self.station_comboBox.addItem(s)
+        self.station_comboBox.currentIndexChanged.connect(self.populateGravTable)
+        layout = QtWidgets.QVBoxLayout()
+
+        criteria_box = QtWidgets.QVBoxLayout()
+        criteria_box_parent = QtWidgets.QWidget()
+
+        interpolate_threshold_box = QtWidgets.QHBoxLayout()
+        interpolate_threshold_box.addWidget(
+            QtWidgets.QLabel("Interpolate gaps less than (days):")
+        )
+        self.threshold_spinbox = QtWidgets.QSpinBox()
+        self.threshold_spinbox.setValue(30)
+        self.threshold_spinbox.setMaximum(1000)
+        self.threshold_spinbox.setMinimum(0)
+        interpolate_threshold_box.addWidget(self.threshold_spinbox)
+        criteria_box.addLayout(interpolate_threshold_box)
+
+        gwl_timelag_box = QtWidgets.QHBoxLayout()
+        gwl_timelag_box.addWidget(
+            QtWidgets.QLabel("Time lag for groundwater levels (days):")
+        )
+        self.timelag_spinbox = QtWidgets.QSpinBox()
+        self.timelag_spinbox.setValue(0)
+        self.timelag_spinbox.setMinimum(-365)
+        gwl_timelag_box.addWidget(self.timelag_spinbox)
+        criteria_box.addLayout(gwl_timelag_box)
+
+        find_optimal_timelag_box = QtWidgets.QHBoxLayout()
+        find_optimal_timelag_box.addWidget(
+            QtWidgets.QLabel("Find optimal time lag (maximize r<sup>2</sup>)")
+        )
+        self.cb_find_optimal = QtWidgets.QCheckBox()
+        find_optimal_timelag_box.addWidget(self.cb_find_optimal)
+        criteria_box.addLayout(find_optimal_timelag_box)
+
+        filter_data_box = QtWidgets.QHBoxLayout()
+        filter_data_box.addWidget(QtWidgets.QLabel("Filter groundwater-level data"))
+        self.cb_filter_data = QtWidgets.QCheckBox()
+        filter_data_box.addWidget(self.cb_filter_data)
+        criteria_box.addLayout(filter_data_box)
+
+        filter_edit_box = QtWidgets.QHBoxLayout()
+        filter_edit_box.addWidget(QtWidgets.QLabel("Window (days):"))
+        self.filter_spinbox = QtWidgets.QSpinBox()
+        self.filter_spinbox.setMaximum(2000)
+        self.filter_spinbox.setValue(700)
+        filter_edit_box.addWidget(self.filter_spinbox)
+        criteria_box.addLayout(filter_edit_box)
+
+        divider = QtWidgets.QFrame()
+        divider.setFrameShape(QtWidgets.QFrame.HLine)
+        criteria_box.addWidget(divider)
+
+        # Consider all water-level changes, only rising, or only falling
+        bg = QtWidgets.QButtonGroup()
+        self.button_all = QtWidgets.QRadioButton("All groundwater levels")
+        self.button_rising = QtWidgets.QRadioButton("Rising groundwater level only")
+        self.button_falling = QtWidgets.QRadioButton("Falling groundwater level only")
+        bg.addButton(self.button_all)
+        bg.addButton(self.button_rising)
+        bg.addButton(self.button_falling)
+        self.button_all.setChecked(True)
+
+        button_box = QtWidgets.QVBoxLayout()
+        button_box.addWidget(self.button_all)
+        button_box.addWidget(self.button_rising)
+        button_box.addWidget(self.button_falling)
+        criteria_box.addLayout(button_box)
+        criteria_box.addWidget(divider)
+
+        g_station_box = QtWidgets.QHBoxLayout()
+        g_station_box.addWidget(QtWidgets.QLabel("Gravity Station"))
+        g_station_box.addWidget(self.station_comboBox)
+        criteria_box.addLayout(g_station_box)
+
+        criteria_box_parent.setLayout(criteria_box)
+        layout.addWidget(criteria_box_parent)
+
+        self.createGravTable()
+        layout.addWidget(self.tableWidgetGrav)
+
+        layout.addStretch()
+        nwis_station_box = QtWidgets.QHBoxLayout()
+        nwis_station_box_widget = QtWidgets.QWidget()
+        nwis_station_box.addWidget(QtWidgets.QLabel("NWIS Station ID"))
+        self.nwis_station_line_edit = QtWidgets.QLineEdit()
+        btn_search_nwis = QtWidgets.QToolButton()
+        btn_search_nwis.setIcon(QtGui.QIcon(":/icons/mag.png"))
+        btn_search_nwis.clicked.connect(self.search_for_nwis_stations)
+        nwis_station_box.addWidget(self.nwis_station_line_edit)
+        nwis_station_box.addWidget(btn_search_nwis)
+        nwis_station_box_widget.setLayout(nwis_station_box)
+        layout.addWidget(nwis_station_box_widget)
+
+        self.createNWISTable()
+        layout.addWidget(self.tableWidgetNWIS)
+
+        # Button box
+        ok_button = QtWidgets.QPushButton("Ok")
+        ok_button.clicked.connect(self.process)
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+
+        button_box = QtWidgets.QHBoxLayout()
+        button_box.addStretch(1)
+        button_box.addWidget(cancel_button)
+        button_box.addWidget(ok_button)
+        button_widget = QtWidgets.QWidget()
+        button_widget.setLayout(button_box)
+
+        layout.addWidget(button_widget)
+        self.setLayout(layout)
+        self.resize(750, 700)
+
+        self.populateGravTable()
+
+    def process(self):
+        if self.nwis_station_line_edit.text() == "":
+            MessageBox.warning(
+                "Invalid NWIS station", "Please enter an NWIS station ID"
+            )
+            return
+        for row_idx in range(self.tableWidgetNWIS.rowCount()):
+            item = self.tableWidgetNWIS.item(row_idx, 0)
+            if item.checkState() == 2:
+                nwis_station = item.text()
+                break
+        else:
+            nwis_station = self.nwis_station_line_edit.text()[:16]
+        g_station = self.station_comboBox.currentText()
+        dates, g = self.get_checked_data()
+        # sd = [data[1][3][idx] for (idx, sta) in enumerate(data[1][0]) if
+        #       sta == g_station]
+
+        nwis_data = nwis_get_data(nwis_station)
+        if self.cb_filter_data.isChecked():
+            nwis_data = filter_ts(nwis_data, int(self.filter_spinbox.text()))
+        if self.timelag_spinbox.text() != 0 and not self.cb_find_optimal.isChecked():
+            t_offset = int(self.timelag_spinbox.text()) * -1
+            nwis_data["continuous_x"] = [
+                a + datetime.timedelta(t_offset) for a in nwis_data["continuous_x"]
+            ]
+            nwis_data["discrete_x"] = [
+                a + datetime.timedelta(t_offset) for a in nwis_data["discrete_x"]
+            ]
+        else:
+            t_offset = None
+        if dates:
+            try:
+                if self.button_all.isChecked():
+                    rise_or_fall = "all"
+                elif self.button_rising.isChecked():
+                    rise_or_fall = "rise"
+                elif self.button_falling.isChecked():
+                    rise_or_fall = "fall"
+                optimize = self.cb_find_optimal.isChecked()
+                plt = PlotNwis(
+                    nwis_station,
+                    g_station,
+                    nwis_data,
+                    (dates, g),
+                    t_offset=t_offset,
+                    optimize=optimize,
+                    t_threshold=int(self.threshold_spinbox.text()),
+                    rising=rise_or_fall,
+                    parent=self,
+                )
+                plt.show()
+            except IndexError as e:
+                pass
+
+    def get_checked_data(self):
+        dates, g = [], []
+        for r in range(self.tableWidgetGrav.rowCount()):
+            item = self.tableWidgetGrav.item(r, 0)
+            if item.checkState() == 2:
+                d = self.tableWidgetGrav.item(r, 1)
+                dates.append(datetime.datetime.strptime(d.text(), "%Y-%m-%d"))
+                g_val = self.tableWidgetGrav.item(r, 2)
+                g.append(float(g_val.text()))
+        return dates, g
+
+    def get_g_data(self, g_station):
+        header, data, _ = compute_gravity_change(self.obstreemodel, table_type="list")
+        dates = [
+            datetime.datetime.strptime(date, "%Y-%m-%d")
+            for station, date, g, s in data
+            if station == g_station
+        ]
+        g = [g for station, date, g, sd in data if station == g_station]
+        return data, dates, g
+
+    # def plot_nwis(self, nwis_station, g_station, nwis, data):
+    #     plt = PlotNwis(nwis_station, g_station, nwis, data, parent=self)
+    #     return plt
+    # return
+
+    def search_for_nwis_stations(self):
+        coords = self.coords[self.station_comboBox.currentText()]
+        ID_dict = search_nwis(coords)
+        if len(ID_dict) > 0:
+            try:
+                self.populateTable(ID_dict)
+                nwis_string = next(iter(ID_dict.items()))[0]
+                self.nwis_station_line_edit.setText(nwis_string)
+            except:
+                self.nwis_station_line_edit.setText("Error")
+        else:
+            self.nwis_station_line_edit.setText("No stations found")
+
+    def populateTable(self, ID_dict):
+        self.tableWidgetNWIS.setRowCount(len(ID_dict))
+        row = 0
+        for k, v in ID_dict.items():
+            item = QtWidgets.QTableWidgetItem(k)
+            item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            if row == 0:
+                item.setCheckState(QtCore.Qt.Checked)
+            else:
+                item.setCheckState(QtCore.Qt.Unchecked)
+            self.tableWidgetNWIS.setItem(row, 0, item)
+
+            for idx, content in enumerate(v):
+                item = QtWidgets.QTableWidgetItem(str(content))
+                item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+                self.tableWidgetNWIS.setItem(row, idx + 1, item)
+            row += 1
+        self.tableWidgetNWIS.cellChanged.connect(self.onCellChanged)
+        self.tableWidgetNWIS.setSortingEnabled(True)
+
+    def populateGravTable(self):
+        self.tableWidgetGrav.clearContents()
+        row = 0
+        g_station = self.station_comboBox.currentText()
+        data, dates, g = self.get_g_data(g_station)
+        dg = [(x - g[0]) / 41.9 for x in g]
+        self.tableWidgetGrav.setRowCount(len(dates))
+        for idx, v in enumerate(dates):
+            item = QtWidgets.QTableWidgetItem(g_station)
+            item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            item.setCheckState(QtCore.Qt.Checked)
+            self.tableWidgetGrav.setItem(row, 0, item)
+
+            item = QtWidgets.QTableWidgetItem(str(v.strftime("%Y-%m-%d")))
+            self.tableWidgetGrav.setItem(row, 1, item)
+            item = QtWidgets.QTableWidgetItem(f"{g[idx]:0.1f}")
+            self.tableWidgetGrav.setItem(row, 2, item)
+            item = QtWidgets.QTableWidgetItem(f"{dg[idx]:0.2f}")
+            self.tableWidgetGrav.setItem(row, 3, item)
+            # item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            # self.tableWidgetNWIS.setItem(row, idx + 1, item)
+            row += 1
+        self.tableWidgetGrav.setSortingEnabled(True)
+
+    # Create table
+    def createNWISTable(self):
+        self.tableWidgetNWIS = QtWidgets.QTableWidget()
+
+        # Row count
+        self.tableWidgetNWIS.setRowCount(0)
+
+        # Column count
+        self.tableWidgetNWIS.setColumnCount(6)
+        # Table will fit the screen horizontally
+        self.tableWidgetNWIS.horizontalHeader().setStretchLastSection(True)
+        # self.tableWidget.horizontalHeader().setSectionResizeMode(
+        #     QtWidgets.QHeaderView.Stretch)
+        self.tableWidgetNWIS.setColumnWidth(0, 120)
+        self.tableWidgetNWIS.setColumnWidth(1, 180)
+        self.tableWidgetNWIS.setColumnWidth(2, 80)
+        self.tableWidgetNWIS.setColumnWidth(3, 90)
+        self.tableWidgetNWIS.setColumnWidth(4, 90)
+        self.tableWidgetNWIS.setHorizontalHeaderLabels(
+            [
+                "Station",
+                "Name",
+                "Distance (m)",
+                "First data",
+                "Last data",
+                "Well depth (ft)",
+            ]
+        )
+
+    def createGravTable(self):
+        self.tableWidgetGrav = QtWidgets.QTableWidget()
+
+        # Row count
+        self.tableWidgetGrav.setRowCount(10)
+
+        # Column count
+        self.tableWidgetGrav.setColumnCount(5)
+        # Table will fit the screen horizontally
+        self.tableWidgetGrav.horizontalHeader().setStretchLastSection(True)
+        # self.tableWidget.horizontalHeader().setSectionResizeMode(
+        #     QtWidgets.QHeaderView.Stretch)
+        self.tableWidgetGrav.setColumnWidth(0, 100)
+        self.tableWidgetGrav.setColumnWidth(1, 100)
+        self.tableWidgetGrav.setColumnWidth(2, 100)
+        self.tableWidgetGrav.setColumnWidth(3, 100)
+        self.tableWidgetGrav.setHorizontalHeaderLabels(
+            ["Station", "Date", "g", "Storage change", ""]
+        )
+
+    def onCellChanged(self, row, column):
+        item = self.tableWidgetNWIS.item(row, column)
+        # lastState = item.data(LastStateRole)
+
+        if column != 0:
+            return
+
+        currentState = item.checkState()
+        try:
+            if currentState == QtCore.Qt.Checked:
+                self.nwis_station_line_edit.setText(item.text())
+                for row_idx in range(self.tableWidgetNWIS.rowCount()):
+                    if row_idx != row:
+                        temp_item = self.tableWidgetNWIS.item(row_idx, 0)
+                        temp_item.setCheckState(QtCore.Qt.Unchecked)
+        except:
+            return
+
+
 class GravityChangeTable(QtWidgets.QDialog):
     """
     Floating window to show gravity-change results
@@ -555,9 +904,7 @@ class GravityChangeTable(QtWidgets.QDialog):
         btn_map.clicked.connect(self.map_change_window)
         btn_plot = QtWidgets.QPushButton("Plot")
         btn_plot.clicked.connect(
-            lambda state, x=(self.dates, self.table): MainProg.plot_gravity_change(
-                x[0], x[1], self
-            )
+            lambda: MainProg.plot_gravity_change(self.list_table, self)
         )
         btn1 = QtWidgets.QPushButton("Copy to clipboard")
         btn1.clicked.connect(lambda: copy_cells_to_clipboard(self.table_view))
@@ -578,16 +925,6 @@ class GravityChangeTable(QtWidgets.QDialog):
         self.setLayout(layout)
         self.setWindowTitle("Gravity Change")
         self.setGeometry(200, 200, 600, 800)
-
-    @classmethod
-    def show_full_table(cls, index, MainProg):
-        MainProg.popup.close()
-        cls(MainProg, table_type="full")
-
-    @classmethod
-    def show_simple_table(cls, index, MainProg):
-        MainProg.popup.close()
-        cls(MainProg, table_type="simple")
 
     def table_changed(self, index):
         if self.type_comboBox.itemText(index) == "simple dg":
@@ -620,415 +957,6 @@ class GravityChangeTable(QtWidgets.QDialog):
                 ' Geos and Proj libraries. Please install with homebrew ("brew install'
                 ' geos proj").',
             )
-
-
-class GravityChangeMap(QtWidgets.QDialog):
-    """
-    Map window for showing gravity-change results
-
-    Parameters
-    ----------
-    table
-    header
-    coords
-    full_table
-    full_header
-
-    """
-
-    station_label = None
-    try:
-        import cartopy.crs as ccrs
-        import cartopy.io.img_tiles as cimgt
-    except ImportError as e:
-        logging.info(e)
-
-    def __init__(self, table, header, coords, full_table, full_header, parent=None):
-        super(GravityChangeMap, self).__init__(parent)
-        # a figure instance to plot on
-        self.table = table
-        self.header = header
-        self.coords = coords
-        self.full_table = full_table
-        self.full_header = full_header
-        self.figure = Figure(figsize=(10, 8))
-        self.n_surveys = (len(self.table) - 1) / 2
-        self.surveys = self.get_survey_dates(header)
-        self.axlim = self.get_axis_lims_from_data(coords)
-
-        # this is the Canvas Widget that displays the `figure`
-        # it takes the `figure` instance as a parameter to __init__
-        self.canvas_widget = QtWidgets.QWidget()
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas.setParent(self.canvas_widget)
-        # this is the Navigation widget
-        # it takes the Canvas widget and a parent
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        # self.toolbar._actions['zoom'].changed.connect(self.update_plot)
-        self.time_widget = QtWidgets.QWidget()
-        self.btnIncremental = QtWidgets.QRadioButton("Incremental", self)
-        self.btnIncremental.setChecked(True)
-        self.btnReference = QtWidgets.QRadioButton("Change relative to", self)
-        self.drpReference = QtWidgets.QComboBox()
-        self.btnTrend = QtWidgets.QRadioButton("Trend", self)
-        self.btnIncremental.toggled.connect(self.plot)
-        self.btnReference.toggled.connect(self.plot)
-        self.drpReference.currentIndexChanged.connect(self.plot)
-        self.btnTrend.toggled.connect(self.plot)
-        bbox = QtWidgets.QHBoxLayout()
-        bbox.addWidget(self.btnIncremental)
-        bbox.addSpacing(10)
-        bbox.addWidget(self.btnReference)
-        bbox.addWidget(self.drpReference)
-        bbox.addSpacing(10)
-        bbox.addWidget(self.btnTrend)
-        bbox.addStretch(1)
-        self.time_widget.setLayout(bbox)
-
-        self.basemap_widget = QtWidgets.QWidget()
-        self.cbBasemap = QtWidgets.QCheckBox("Show Basemap", self)
-        self.cbBasemap.setChecked(False)
-        self.cbBasemap.stateChanged.connect(self.plot)
-        self.drpBasemap = QtWidgets.QComboBox()
-        self.drpBasemap.currentIndexChanged.connect(self.plot)
-        self.sliderResolution = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sliderResolution.setMinimum(5)
-        self.sliderResolution.setMaximum(17)
-        self.sliderResolution.setValue(12)
-        btnRefresh = QtWidgets.QPushButton("Refresh")
-        btnRefresh.clicked.connect(self.resolution_slider_changed)
-        bbox = QtWidgets.QHBoxLayout()
-        bbox.addWidget(self.cbBasemap)
-        bbox.addSpacing(10)
-        bbox.addWidget(self.drpBasemap)
-        bbox.addSpacing(40)
-        bbox.addWidget(QtWidgets.QLabel("Resolution"))
-        bbox.addWidget(self.sliderResolution)
-        bbox.addSpacing(10)
-        bbox.addWidget(btnRefresh)
-        bbox.addStretch(1)
-        self.basemap_widget.setLayout(bbox)
-
-        self.units_widget = QtWidgets.QWidget()
-        self.cbUnits = QtWidgets.QCheckBox("Show change in meters of water", self)
-        self.cbUnits.setChecked(False)
-        self.cbUnits.stateChanged.connect(self.plot)
-        self.sliderColorRange = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.sliderColorRange.valueChanged.connect(self.update_plot)
-        self.sliderColorRange.setMinimum(1)
-        self.sliderColorRange.setMaximum(15)
-        self.sliderColorRange.setValue(100)
-        self.sliderColorRange.resize(100, 20)
-        self.sliderColorRange.setTickInterval(10)
-        bbox = QtWidgets.QHBoxLayout()
-        bbox.addWidget(self.cbUnits)
-        bbox.addSpacing(40)
-        bbox.addWidget(QtWidgets.QLabel("Color range"))
-        bbox.addWidget(self.sliderColorRange)
-        bbox.addStretch(1)
-        self.units_widget.setLayout(bbox)
-
-        # Date slider
-        self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.slider.valueChanged.connect(self.update_plot)
-        self.slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-
-        self.slider_label = QtWidgets.QLabel(self.header[1])
-        # set the layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(self.toolbar)
-        layout.addWidget(self.time_widget)
-        layout.addWidget(self.basemap_widget)
-        layout.addWidget(self.units_widget)
-        layout.addStretch(1)
-        layout.addWidget(self.canvas)
-        layout.addWidget(self.slider_label)
-        self.setWindowTitle("Gravity Change Map")
-        layout.addWidget(self.slider)
-        layout.addStretch(1)
-        self.setLayout(layout)
-
-        for s in self.surveys:
-            self.drpReference.addItem(s)
-
-        self.maps = [
-            "NatGeo_World_Map",
-            "USA_Topo_Maps",
-            "World_Imagery",
-            "World_Shaded_Relief",
-            "World_Street_Map",
-            "World_Topo_Map",
-        ]
-
-        for map in self.maps:
-            self.drpBasemap.addItem(map)
-        self.plot()
-
-    def resolution_slider_changed(self):
-        if self.cbBasemap.isChecked():
-            self.plot()
-
-    def get_survey_dates(self, header):
-        dates = []
-        first = True
-        for title in header:
-            if first:
-                first = False
-                continue
-            d = title.split("_to_")
-            dates.append(d[0])
-            dates.append(d[1])
-        return sorted(list(set(dates)))
-
-    def update_plot(self):
-        if hasattr(self, "points"):
-            self.cb.remove()
-            self.points.remove()
-            x, y, d, name = self.get_data()
-            clim = self.get_color_lims(self.table)
-            self.points = self.ax.scatter(
-                x,
-                y,
-                c=d,
-                s=200,
-                vmin=clim[0],
-                vmax=clim[1],
-                cmap="RdBu",
-                picker=5,
-                zorder=10,
-            )
-            self.cb = self.figure.colorbar(self.points)
-            self.set_cb_label()
-            self.points.name = name
-            self.slider_label.setText(self.get_name())
-            self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
-            self.canvas.draw()
-
-    def get_datenums(self, full_header):
-        obs_idxs, obs_dates = [], []
-        for item in full_header:
-            if item[-2:] == "_g":
-                try:
-                    obs_dates.append(
-                        date2num(dt.datetime.strptime(item[:-2], "%Y-%m-%d"))
-                    )
-                    obs_idxs.append(full_header.index(item))
-                except:
-                    pass
-        return obs_dates, obs_idxs
-
-    def get_data(self):
-        x, y, value, name = [], [], [], []
-
-        if self.btnIncremental.isChecked():
-            data = self.table[self.slider.value()]
-            stations = self.table[0]
-            for sta_idx, sta in enumerate(stations):
-                datum = float(data[sta_idx])
-                if datum > -998:
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    if self.cbUnits.isChecked():
-                        datum /= 41.9
-                    value.append(datum)
-                    name.append(sta)
-
-        elif self.btnReference.isChecked():
-            ref_survey = (
-                self.drpReference.currentData(role=QtCore.Qt.DisplayRole) + "_g"
-            )
-            ref_col_idx = self.full_header.index(ref_survey)
-            current_survey = self.surveys[self.slider.value() - 1] + "_g"
-            current_col_idx = self.full_header.index(current_survey)
-            for r in self.full_table:
-                sta = r[0]
-                ref_g = float(r[ref_col_idx])
-                surv_g = float(r[current_col_idx])
-                if ref_g > -998 and surv_g > -998:
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    if current_survey < ref_survey:
-                        datum = ref_g - surv_g
-                    else:
-                        datum = surv_g - ref_g
-                    if self.cbUnits.isChecked():
-                        value.append(datum / 41.9)
-                    else:
-                        value.append(datum)
-                    name.append(sta)
-
-        elif self.btnTrend.isChecked():
-            obs_dates, obs_idxs = self.get_datenums(self.full_header)
-            for r in self.full_table:
-                sta = r[0]
-                X = []
-                Y = [float(r[idx]) for idx in obs_idxs if float(r[idx]) > -998]
-                for idx, obs_idx in enumerate(obs_idxs):
-                    if float(r[obs_idx]) > -998:
-                        X.append(obs_dates[idx])
-                if len(X) > 1:
-                    z = np.polyfit(X, Y, 1)
-                    x.append(self.coords[sta][0])
-                    y.append(self.coords[sta][1])
-                    uGal_per_year = z[0] * 365.25
-                    if self.cbUnits.isChecked():
-                        value.append(uGal_per_year / 41.9)
-                    else:
-                        value.append(uGal_per_year)
-                    name.append(sta)
-
-        return x, y, value, name
-
-    def get_name(self):
-        if self.btnTrend.isChecked():
-            title = "{} to {}".format(self.surveys[0], self.surveys[-1])
-            return title
-        elif self.btnIncremental.isChecked():
-            name = self.header[self.slider.value()]
-            return name.replace("_", " ")
-        elif not self.btnIncremental.isChecked():
-            ref_survey = self.drpReference.currentData(role=QtCore.Qt.DisplayRole)
-            current_survey = self.surveys[self.slider.value() - 1]
-            if dt.datetime.strptime(current_survey, "%Y-%m-%d") < dt.datetime.strptime(
-                ref_survey, "%Y-%m-%d"
-            ):
-                return "{} to {}".format(current_survey, ref_survey)
-            else:
-                return "{} to {}".format(ref_survey, current_survey)
-
-    def plot(self):
-        clim = self.get_color_lims(self.table)
-
-        if self.btnTrend.isChecked():
-            self.slider.setEnabled(False)
-        if self.btnIncremental.isChecked():
-            self.slider.setEnabled(True)
-            self.slider.setRange(1, self.n_surveys)
-        elif not self.btnIncremental.isChecked():
-            self.slider.setEnabled(True)
-            self.slider.setRange(1, self.n_surveys + 1)
-
-        self.figure.clf()
-        self.ax = self.figure.add_subplot(
-            1,
-            1,
-            1,
-            position=[0.15, 0.15, 0.75, 0.75],
-            projection=self.ccrs.PlateCarree(),
-        )
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        self.points = []
-        x, y, d, names = self.get_data()
-        self.points = self.ax.scatter(
-            x,
-            y,
-            c=d,
-            s=200,
-            vmin=clim[0],
-            vmax=clim[1],
-            cmap="RdBu",
-            picker=5,
-            zorder=10,
-        )
-        self.points.name = names
-
-        QtWidgets.QApplication.restoreOverrideCursor()
-        self.ax.set_title(self.get_name(), fontsize=16, fontweight="bold")
-        self.cb = self.figure.colorbar(self.points)
-        self.ax.set_xlabel("Distance, in meters", fontsize=16)
-        self.set_cb_label()
-        self.ax.set_extent(self.axlim)
-        self.show_background(self.sliderResolution.value())
-        self.ax.callbacks.connect("xlim_changed", self.on_lims_change)
-        self.ax.callbacks.connect("ylim_changed", self.on_lims_change)
-        self.slider_label.setText(self.get_name())
-
-        # refresh canvas
-        self.figure.canvas.mpl_connect("pick_event", self.show_point_label)
-        self.canvas.draw()
-
-    def set_cb_label(self):
-        if self.btnTrend.isChecked():
-            if not self.cbUnits.isChecked():
-                self.cb.set_label("Gravity trend, in µGal/yr", fontsize=16)
-            else:
-                self.cb.set_label("Gravity trend, in meters of water/yr", fontsize=16)
-        else:
-            if not self.cbUnits.isChecked():
-                self.cb.set_label("Gravity change, in µGal", fontsize=16)
-            elif self.cbUnits.isChecked():
-                self.cb.set_label(
-                    "Aquifer-storage change,\n in meters of water", fontsize=16
-                )
-
-    def on_lims_change(self, axes):
-        self.axlim = self.ax.get_extent()
-        return
-
-    def show_background(self, zoom):
-        if self.cbBasemap.isChecked():
-            self.stamen_terrain = self.cimgt.GoogleTiles(
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/"
-                + self.maps[self.drpBasemap.currentIndex()]
-                + "/MapServer/tile/{z}/{y}/{x}.jpg"
-            )
-            self.ax.add_image(self.stamen_terrain, zoom)
-
-    def show_point_label(self, event):
-        """
-        Shows the station name in the upper left of the drift plot when a
-        line is clicked.
-
-        Parameters
-        ----------
-        event : Matplotlib event
-        axes : Current axes
-            Differs for none|netadj|roman vs continuous
-
-        """
-
-        thispoint = event.artist
-        if self.station_label is not None:
-            self.station_label.set_text("")
-        self.station_label = self.ax.text(
-            0.1,
-            0.95,
-            thispoint.name[event.ind[0]],
-            horizontalalignment="center",
-            verticalalignment="center",
-            transform=self.ax.transAxes,
-        )
-        self.canvas.draw()
-
-    def get_color_lims(self, table):
-        slider_val = self.sliderColorRange.value() * 10
-        clim = (slider_val * -1, slider_val)
-        if self.cbUnits.isChecked():
-            clim = (clim[0] / 41.9, clim[1] / 41.9)
-        return clim
-
-    def get_axis_lims_from_data(self, coords):
-        ratio = 1.2  # width to height
-        margin = 0.25
-        x, y = [], []
-        for c in coords.values():
-            x.append(c[0])
-            y.append(c[1])
-
-        xrange = abs(max(x) - min(x))
-        yrange = abs(max(y) - min(y))
-
-        if xrange > yrange:
-            yrange = xrange / ratio
-        else:
-            xrange = yrange / ratio
-
-        xmin = min(x) - xrange * margin
-        xmax = max(x) + xrange * margin
-        ymin = min(y) - yrange * margin
-        ymax = max(y) + yrange * margin
-
-        return xmin, xmax, ymin, ymax
 
 
 class VerticalGradientDialog(QtWidgets.QInputDialog):
@@ -1266,14 +1194,14 @@ class SelectAbsg(QtWidgets.QDialog):
         self.splitter_window = QtWidgets.QSplitter(QtCore.Qt.Horizontal, self)
         self.tree_model = QtWidgets.QDirModel()
         self.tree = QtWidgets.QTreeView()
-        self.table_model = DatumTableModel()
         self.tree_model.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
         self.table = QtWidgets.QTableView()
 
         self.ProxyModel = QtCore.QSortFilterProxyModel()
+
         self.table.setModel(self.ProxyModel)
         self.table.setSortingEnabled(True)
-        self.init_ui()
+
         if datum_table_model is not None:
             self.table_model = datum_table_model
             for i in range(self.table_model.rowCount()):
@@ -1281,15 +1209,20 @@ class SelectAbsg(QtWidgets.QDialog):
                 self.table_model.setData(
                     idx, QtCore.Qt.Unchecked, QtCore.Qt.CheckStateRole
                 )
-            self.ProxyModel.setSourceModel(self.table_model)
-            QtWidgets.QApplication.processEvents()
+        else:
+            self.table_model = DatumTableModel()
+        self.ProxyModel.setSourceModel(self.table_model)
+        delegate = CheckBoxDelegate(None)
+        self.table.setItemDelegateForColumn(0, delegate)
+        QtWidgets.QApplication.processEvents()
+        self.init_ui()
 
     def export_and_close(self):
         for i in range(self.ProxyModel.rowCount()):
             ndi = self.ProxyModel.index(i, 0)
             nd = self.ProxyModel.data(ndi, role=QtCore.Qt.UserRole)
             chk = self.ProxyModel.data(ndi, role=QtCore.Qt.CheckStateRole)
-            if chk == 2:
+            if chk == 2 or chk == 1:
                 self.new_datums.append(nd)
         self.accept()
 
@@ -1334,7 +1267,7 @@ class SelectAbsg(QtWidgets.QDialog):
         button_box_right.addWidget(self.cancel_button)
         button_box_right.addWidget(self.ok_button)
 
-        self.ProxyModel.setSourceModel(self.table_model)
+        # self.ProxyModel.setSourceModel(self.table_model)
         self.tree.resizeColumnToContents(0)
 
         # Hide file size, date modified columns
@@ -1400,31 +1333,56 @@ class SelectAbsg(QtWidgets.QDialog):
                 and dirname.find("unpublished") != -1
             ):
                 continue
-            else:
-                for name in fileList:
-                    pbar.progressbar.setValue(ctr)
-                    QtWidgets.QApplication.processEvents()
+            for name in fileList:
+                pbar.progressbar.setValue(ctr)
+                QtWidgets.QApplication.processEvents()
 
-                    if ".project.txt" in name:
-                        ctr += 1
-                        if ctr > 100:
-                            ctr = 1
-                        files_found = True
-                        d = a10.A10(os.path.join(dirname, name))
-                        datum = Datum(
-                            d.stationname,
-                            g=float(d.gravity),
-                            sd=float(d.setscatter),
-                            date=d.date,
-                            meas_height=float(d.transferht),
-                            gradient=float(d.gradient),
-                            checked=0,
-                        )
-                        datum.n_sets = d.processed
-                        datum.time = d.time
-                        self.table_model.insertRows(datum, 0)
-                        self.path = path
+                if ".project.txt" not in name:
+                    continue
+                ctr += 1
+                if ctr > 100:
+                    ctr = 1
+                files_found = True
+                d = a10.A10(os.path.join(dirname, name))
+                datum = Datum(
+                    d.stationname,
+                    g=float(d.gravity),
+                    sd=float(d.setscatter),
+                    date=d.date,
+                    meas_height=float(d.transferht),
+                    gradient=float(d.gradient),
+                    checked=0,
+                )
+                datum.coord = [d.long, d.lat, d.elev]
+                datum.n_sets = d.processed
+                datum.time = d.time
+                self.table_model.insertRows(datum, 0)
+                self.path = path
         return files_found
+
+
+class DialogUpdateDatums(QtWidgets.QMessageBox):
+    """
+    Dialog to confirm workspace overwrite
+    """
+
+    def __init__(self, dlg_text):
+        super(DialogUpdateDatums, self).__init__()
+        self.overwrite = False
+        self.setText("\n".join(dlg_text))
+        self.setWindowTitle("GSadjust")
+
+        ok_button = QtWidgets.QPushButton("Update")
+        ok_button.clicked.connect(self.onClicked)
+
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+        self.addButton(cancel_button, 0)
+        self.addButton(ok_button, 1)
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def onClicked(self, btn):
+        self.accept()
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -1434,13 +1392,13 @@ class AboutDialog(QtWidgets.QDialog):
         msg1 = (
             "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
             + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
-            + "<br><br>Commit "
+            + "<br><br>Version "
             + version
             + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
             + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"
             + '<br><a href="mailto:jkennedy@usgs.gov">jkennedy@usgs.gov</a>'
         )
-        ok = QtWidgets.QMessageBox.about(None, "GSadust", msg1)
+        QtWidgets.QMessageBox.about(None, "GSadust", msg1)
 
 
 class ShowCalCoeffs(QtWidgets.QDialog):
@@ -1483,6 +1441,64 @@ class ShowCalCoeffs(QtWidgets.QDialog):
             view.setFixedSize(340, h + 40)
         self.setLayout(vlayout)
         self.resize(self.sizeHint())
+
+
+class PreferencesDialog(QtWidgets.QDialog):
+    """
+    Dialog to show all preferences
+    """
+
+    def __init__(self, settings):
+        super(PreferencesDialog, self).__init__()
+        self.left = 100
+        self.top = 100
+        self.width = 400
+        self.height = 200
+        self.settings = settings
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle("GSadjust Preferences")
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        layout = QtWidgets.QVBoxLayout()
+
+        include_datums = QtWidgets.QHBoxLayout()
+        include_datums.addWidget(
+            QtWidgets.QLabel("Include non-network datums in results")
+        )
+        include_datums.addStretch(1)
+        self.cb_include_datums = QtWidgets.QCheckBox()
+        if self.settings.value("include_all_datums_in_results"):
+            self.cb_include_datums.setChecked(True)
+        else:
+            self.cb_include_datums.setChecked(False)
+        include_datums.addWidget(self.cb_include_datums)
+        layout.addLayout(include_datums)
+        layout.addStretch(1)
+
+        # Button box
+        ok_button = QtWidgets.QPushButton("Ok")
+        ok_button.clicked.connect(self.set_settings)
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+
+        button_box = QtWidgets.QHBoxLayout()
+        button_box.addStretch(1)
+        button_box.addWidget(cancel_button)
+        button_box.addWidget(ok_button)
+        button_widget = QtWidgets.QWidget()
+        button_widget.setLayout(button_box)
+
+        layout.addWidget(button_widget)
+        self.setLayout(layout)
+
+    def set_settings(self):
+        if self.cb_include_datums.isChecked():
+            self.settings.setValue("include_all_datums_in_results", True)
+        else:
+            self.settings.setValue("include_all_datums_in_results", False)
+        self.close()
 
 
 class DialogApplyTimeCorrection(QtWidgets.QDialog):

@@ -155,10 +155,10 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self.points_red,
             self.lines_gray,
         ]
-        for l in lines:
-            l.set_data([], [])
-        for l in self.lines_red:
-            l.set_data([], [])
+        for ln in lines:
+            ln.set_data([], [])
+        for ln in self.lines_red:
+            ln.set_data([], [])
 
     def addData(self, x, value, date):
         self.addedX.append(x)
@@ -181,7 +181,7 @@ class CustomFigCanvas(FigureCanvas, TimedAnimation):
             self.lines_gray.set_data(self.addedX, self.addedY)
             xHiRes, yHiRes = highResPoints(self.addedX[-2:], self.addedY[-2:], 1)
             for idx, line in enumerate(self.lines_red):
-                line.set_data(xHiRes[idx : idx + 2], yHiRes[idx : idx + 2])
+                line.set_data(xHiRes[idx: idx + 2], yHiRes[idx: idx + 2])
         # This is the drawing order
         self._drawn_artists = []
         self._drawn_artists.append(self.lines_gray)

@@ -29,7 +29,7 @@ class PlotDgResidualHistogram(QtWidgets.QDialog):
         super(PlotDgResidualHistogram, self).__init__(parent)
         self.survey = survey
 
-        self.setWindowTitle("GSadjust results")
+        self.setWindowTitle("Delta-g Residual Histogram")
         self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
 

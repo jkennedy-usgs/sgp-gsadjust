@@ -54,6 +54,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         self.station_coords = None
 
     signal_name_changed = QtCore.pyqtSignal()
+    signal_name_change_duplicate = QtCore.pyqtSignal()
+    signal_name_change_nondate = QtCore.pyqtSignal()
 
     def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
         return 3
@@ -76,8 +78,9 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     m = index.model().itemFromIndex(index.sibling(index.row(), 0))
                 else:
                     m = index.model().itemFromIndex(index)
-                try:  # Was getting "AttributeError: 'QStandardItem' object has no attribute 'display_column_map'"
-                    # after deleting a survey
+                # Was getting "AttributeError: 'QStandardItem' object has no attribute
+                # 'display_column_map'" after deleting a survey
+                try:
                     fn, *args = m.display_column_map.get(
                         column, (format_numeric_column, column)
                     )
@@ -154,12 +157,20 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         """
         new_name = str(value)
         old_name = item.name
-        logging.info("Loop renamed from {} to {}".format(old_name, new_name))
-        item.name = new_name
-        return True
+        survey = item.parent()
+        if new_name not in survey.loop_names:
+            item.name = new_name
+            logging.info("Loop renamed from {} to {}".format(old_name, new_name))
+            return True
+        else:
+            self.signal_name_change_duplicate.emit()
+            return False
 
     def _handler_edit_ObsTreeSurvey(self, item, value):
         new_name = str(value)
+        if new_name in self.survey_names():
+            self.signal_name_change_duplicate.emit()
+            return False
         try:
             name_as_date = dt.datetime.strptime(new_name, "%Y-%m-%d")
             old_name = name_as_date
@@ -167,6 +178,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             item.name = new_name
             return True
         except Exception as e:
+            self.signal_name_change_nondate.emit()
             return False
 
     def checked_surveys(self):
@@ -243,8 +255,16 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         # Populate PyQt objects. First, create obstreesurvey
         for survey in surveys:
             obstreesurvey = ObsTreeSurvey.from_json(survey)
+            loop_set = set()
             for loop in survey["loops"]:
                 obstreeloop = ObsTreeLoop.from_json(loop)
+
+                while obstreeloop.name in loop_set:
+                    try:
+                        obstreeloop.name = str(int(obstreeloop.name) + 1)
+                    except:
+                        return
+                loop_set.add(obstreeloop.name)
                 for station in loop["stations"]:
                     if (
                         "station_name" in station
@@ -264,6 +284,8 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                                 QtGui.QStandardItem("0"),
                             ]
                         )
+                    else:
+                        jeff = 1
                 # stations is provided by loop.stations(), it doesn't need to be
                 # stored separately in the ObsTreeLoop object. This deals with old
                 # workspace:
@@ -274,7 +296,14 @@ class ObsTreeModel(QtGui.QStandardItemModel):
                     [obstreeloop, QtGui.QStandardItem("0"), QtGui.QStandardItem("0")]
                 )
             obstreesurveys.append(obstreesurvey)
-        return (obstreesurveys, coords)
+        return obstreesurveys, coords
+
+    def survey_names(self):
+        surveys = []
+        for i in range(self.rowCount()):
+            obstreesurvey = self.itemFromIndex(self.index(i, 0))
+            surveys.append(obstreesurvey.name)
+        return surveys
 
     def surveys(self):
         survey_list = []
@@ -289,11 +318,19 @@ class ObsTreeModel(QtGui.QStandardItemModel):
             delta_list += obstreesurvey.deltas
         return delta_list
 
-    def stations(self):
+    def treeview_stations(self):
         station_list = []
-        for obstreesurvey in self.surveys():
+        for obstreesurvey in self.checked_surveys():
             for obstreeloop in obstreesurvey.loops():
                 station_list += obstreeloop.stations()
+        names = [s.station_name for s in station_list]
+        return list(set(names))
+
+    def results_stations(self):
+        station_list = []
+        for obstreesurvey in self.checked_surveys():
+            stations = [adjsta.station for adjsta in obstreesurvey.results]
+            station_list += stations
         return list(set(station_list))
 
     def reset_assigned_sd(self):
@@ -320,11 +357,7 @@ class ObsTreeModel(QtGui.QStandardItemModel):
         str
             filename (same as input)
         """
-        surveys = []
-        for i in range(self.rowCount()):
-            obstreesurvey = self.itemFromIndex(self.index(i, 0))
-            surveys.append(obstreesurvey)
-        workspace_data = [surveys, self.station_coords]
+        workspace_data = [self.surveys(), self.station_coords]
         with open(fname, "w") as f:
             json.dump(jsons.dump(workspace_data), f)
         logging.info("Saving JSON workspace to {}".format(fname))

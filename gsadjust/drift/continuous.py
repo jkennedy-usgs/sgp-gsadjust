@@ -250,7 +250,7 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
         if drift_stats:
             station.assigned_sd = np.sqrt(
                 station.original_sd ** 2
-                + ((station.tmean() - drift_stats["t0"]) * 24) ** 2
+                + ((station.tmean - drift_stats["t0"]) * 24) ** 2
                 * drift_stats["sigma_d"] ** 2
                 + np.sqrt(station.t_stdev ** 2 + data[0].t_stdev ** 2)
                 * drift_stats["mean_drift"] ** 2
@@ -258,10 +258,10 @@ def calc_cont_dg(xp, yp, data, loop_name, drift_stats):
         else:
             station.assigned_sd = None
         drift1_idx = min(
-            range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean())
+            range(len(xp)), key=lambda i: abs(xp[i] - prev_station.tmean)
         )
         drift1 = yp[drift1_idx]
-        drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean()))
+        drift2_idx = min(range(len(xp)), key=lambda i: abs(xp[i] - station.tmean))
         drift2 = yp[drift2_idx]
         delta = DeltaNormal(
             prev_station, station, driftcorr=drift2 - drift1, loop=loop_name

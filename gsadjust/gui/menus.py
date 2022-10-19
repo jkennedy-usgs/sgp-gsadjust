@@ -70,7 +70,6 @@ _ENABLED_MENUS = {
         ("mnAdjImportAbsSimple", False),
         ("mnAdjImportAbsFull", False),
         ("mnAdjImportAbsDatabase", False),
-        ("mnAdjClearDatumTable", False),
         ("mnAdjPlotHist", False),
         ("mnAdjPlotCompareDatum", False),
         ("mnAdjPlotObservedAdjustedAbs", False),
@@ -91,6 +90,7 @@ _ENABLED_MENUS = {
         ("mnEditShowCoordinates", True),
         ("mnEditLoadCoordinates", True),
         ("mnAdjClearDatumTable", True),
+        ("mnAdjUpdateDatums", True),
         ("mnAdjUpdateDeltas", True),
         ("mnAdjUpdateDeltasCurrentSurvey", True),
         ("mnAdjOptions", True),
@@ -104,7 +104,7 @@ _ENABLED_MENUS = {
         ("mnAdjImportAbsSimple", True),
         ("mnAdjImportAbsFull", True),
         ("mnAdjImportAbsDatabase", True),
-        ("mnAdjClearDatumTable", True),
+        ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.ACTIVE_WORKSPACE: [
         ("mnFileSaveWorkspace", True),
@@ -115,7 +115,6 @@ _ENABLED_MENUS = {
     MENU_STATE.SURVEY_HAS_DELTAS: [
         ("mnToolsNGCircular", True),
         ("mnToolsNGMap", True),
-        ("mnToolsComputeGravityChangeAction", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_DELTAS: [
         ("mnToolsNGCircular", False),
@@ -132,6 +131,8 @@ _ENABLED_MENUS = {
         ("mnAdjPlotObservedAdjustedAbs", True),
         ("mnAdjUpdateSD", True),
         ("mnToolsShowCalCoeffTimeSeries", True),
+        ("mnToolsWaterLevelPlot", True),
+        ("mnToolsComputeGravityChangeAction", True),
     ],
     MENU_STATE.SURVEY_HAS_NO_RESULTS: [
         ("mnAdjPlotHist", False),
@@ -142,6 +143,8 @@ _ENABLED_MENUS = {
         ("mnToolsWriteMetadataText", False),
         ("mnAdjPlotObservedAdjustedAbs", False),
         ("mnAdjUpdateSD", False),
+        ("mnToolsWaterLevelPlot", False),
+        ("mnToolsComputeGravityChangeAction", False),
     ],
     MENU_STATE.CALCULATE_CHANGE: [
         ("mnToolsComputeGravityChangeAction", True),
@@ -169,6 +172,7 @@ _ENABLED_MENUS = {
         ("mnDeleteStation", True),
         ("mnStationDuplicate", True),
         ("mnRename", True),
+        ("mnTides", True),
         ("mnDataNewLoop", True),
         ("mnLoopAnimate", False),
         ("mnVerticalGradientWriteAction", False),
@@ -180,6 +184,7 @@ _ENABLED_MENUS = {
         ("mnDeleteStation", False),
         ("mnStationDuplicate", False),
         ("mnRename", True),
+        ("mnTides", True),
         ("mnDataNewLoop", False),
         ("mnLoopAnimate", True),
         ("mnVerticalGradientWriteAction", True),
@@ -191,6 +196,7 @@ _ENABLED_MENUS = {
         ("mnDeleteStation", False),
         ("mnStationDuplicate", False),
         ("mnRename", True),
+        ("mnTides", True),
         ("mnDataNewLoop", False),
         ("mnLoopAnimate", False),
         ("mnVerticalGradientWriteAction", False),
@@ -202,6 +208,7 @@ _ENABLED_MENUS = {
         ("mnDeleteStation", False),
         ("mnStationDuplicate", False),
         ("mnRename", False),
+        ("mnTides", False),
         ("mnDataNewLoop", False),
         ("mnLoopAnimate", False),
         ("mnVerticalGradientWriteAction", False),
@@ -213,6 +220,7 @@ _ENABLED_MENUS = {
         ("mnDeleteStation", True),
         ("mnStationDuplicate", False),
         ("mnRename", False),
+        ("mnTides", True),
         ("mnDataNewLoop", True),
         ("mnLoopAnimate", False),
         ("mnVerticalGradientWriteAction", False),
@@ -224,6 +232,7 @@ _ENABLED_MENUS = {
         ("mnDeleteStation", False),
         ("mnStationDuplicate", False),
         ("mnRename", False),
+        ("mnTides", True),
         ("mnDataNewLoop", False),
         ("mnLoopAnimate", False),
         ("mnVerticalGradientWriteAction", False),
@@ -393,6 +402,11 @@ class Menus:
             slot=self.mainProg.divide_by_height,
             enabled=True,
         )
+        self.mnEditWSsettings = self.create_action(
+            "Workspace settings...",
+            slot=self.mainProg.ws_settings,
+            enabled=True
+        )
         # add actions to menu
         self.add_actions(
             self.mnEdit,
@@ -409,6 +423,8 @@ class Menus:
                 None,
                 self.mnEditVerticalGradientIntervalAction,
                 self.mnEditVerticalGradientWriteAction,
+                None,
+                # self.mnEditWSsettings
             ),
         )
 
@@ -490,6 +506,11 @@ class Menus:
             slot=self.mainProg.dialog_import_abs_g_direct,
             enabled=True,
         )
+        self.mnAdjUpdateDatums = self.create_action(
+            "Update datums from directory...",
+            slot=self.mainProg.dialog_update_datums,
+            enabled=False,
+        )
         self.mnAdjClearDatumTable = self.create_action(
             "Clear datum table", slot=self.mainProg.clear_datum_model, enabled=False
         )
@@ -534,6 +555,7 @@ class Menus:
                 self.mnAdjImportAbsFull,
                 self.mnAdjImportAbsDatabase,
                 self.mnAdjClearDatumTable,
+                self.mnAdjUpdateDatums,
                 None,
                 self.mnAdjPlotHist,
                 self.mnAdjPlotCompareDatum,
@@ -571,6 +593,11 @@ class Menus:
             slot=self.mainProg.show_cal_coeff,
             enabled=False,
         )
+        self.mnToolsWaterLevelPlot = self.create_action(
+            "Plot dg vs. NWIS gwl",
+            slot=self.mainProg.show_nwis_plot,
+            enabled=False
+        )
 
         self.add_actions(
             self.mnTools,
@@ -585,6 +612,8 @@ class Menus:
                 self.mnToolsWriteMetadataText,
                 self.mnToolsWriteTabularOutput,
                 self.mnToolsWriteSummary,
+                None,
+                self.mnToolsWaterLevelPlot
             ),
         )
 

@@ -41,6 +41,7 @@ class ChannelList:
         # .raw_grav, .etc, and .tare as a property in the ObsTreeFunction class
         self.raw_grav = []  # gravity reading WITHOUT Earth tide correction
                             # (etc is removed when data are read)
+
         self.sd = []        # Standard deviation (Scintrex only)
         self.etc = []       # Earth tide correction - can be updated to another model
         self.meter_etc = [] # Earth tide correction from meter
@@ -95,6 +96,6 @@ class ChannelList:
         templist = ChannelList()
         # Burris and Scintrex have different fields. This only returns non-empty fields.
         for field, value in self:
-            temp = value[start_idx : end_idx + 1]
+            temp = value[start_idx: end_idx + 1]
             setattr(templist, field, temp)
         return templist

@@ -132,9 +132,9 @@ class BurrisTableModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             row = index.row()
             column = index.column()
-            try:
+            if column in [BURRIS_DATE, BURRIS_TIDE]:
                 value = float(self.arraydata[row][column])
-            except ValueError:
+            else:
                 value = self.arraydata[row][column]
 
             def format_datetime(dt):
@@ -143,7 +143,7 @@ class BurrisTableModel(QAbstractTableModel):
             fn, *args = {
                 BURRIS_DATE: (format_datetime, value),
                 BURRIS_TIDE: (format, value, "0.1f"),
-            }.get(column, (str, value))
+            }.get(column, (str, value))  # Default value
 
             return fn(*args)
 

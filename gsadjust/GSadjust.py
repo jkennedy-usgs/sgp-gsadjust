@@ -222,7 +222,7 @@ DOWN = 1
 UP = -1
 DIRECTIONS = (UP, DOWN)
 
-VERSION = "2.9"
+VERSION = "2.0"
 
 
 class MainProg(QtWidgets.QMainWindow):

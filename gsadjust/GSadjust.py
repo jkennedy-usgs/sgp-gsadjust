@@ -151,7 +151,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 from PyQt5.QtGui import QPalette, QColor
 from matplotlib.dates import num2date, date2num
-
+import pkg_resources
 #
 from . import resources
 from .data import ChannelList, Datum, Tare, nwis_get_data
@@ -222,7 +222,7 @@ DOWN = 1
 UP = -1
 DIRECTIONS = (UP, DOWN)
 
-VERSION = "2.0"
+VERSION = "2.9"
 
 
 class MainProg(QtWidgets.QMainWindow):
@@ -2743,66 +2743,25 @@ class MainProg(QtWidgets.QMainWindow):
             download_URL = r"https://code.usgs.gov/sgp/gsadjust/-/tags"
             tag_URL = r"https://code.usgs.gov/api/v4/projects/4933/repository/tags/"
             tag_json = requests.get(tag_URL)
-            most_recent = float(
-                tag_json.json()[0]["name"]
-            )  # Default is sort by update date
-            if most_recent < float(self.version):
+            # Default is sort by update date (ie index 0 should be newest)
+            most_recent = pkg_resources.parse_version(tag_json.json()[0]["name"])
+            current = pkg_resources.parse_version(self.version)
+            # pkg_resources should take care of version numbers (eg 2.10 > 2.9)
+            if most_recent > current:
+                # For some reason adding a newline after the first string below
+                # breaks the hyperlink
                 msg = (
-                    "An update is available for GSadjust (Version"
-                    f" {self.version}).\nPlease download from {download_URL}"
+                    f"An update is available (Version {most_recent}) " +
+                    f"<a href='{download_URL}'>{download_URL}</a>"
                 )
-                confirm = MessageBox.question(
-                    "Update Available",
-                    msg,
-                )
+                if show_uptodate_msg:
+                    MessageBox.information("Update Available", msg)
             else:
-                msg = (
-                    f"GSadjust is up to date (Version) {self.version}"
-                )
-                confirm = MessageBox.question(
-                    "",
-                    msg,
-                )
-            return True
+                msg = f"GSadjust is up to date (Version {self.version})."
+                if show_uptodate_msg:
+                    MessageBox.information("", msg)
 
-            # gitpath = (
-            #     os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\MinGit\\cmd\\git.exe"
-            # )
-            # os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = gitpath
-            # # os.environ["PATH"] = gitpath + os.pathsep + os.environ["PATH"]
-            # from git import Repo
-            #
-            # repo = Repo(self.path_install)
-            # logging.info(f"Current branch:{repo.active_branch.name}")
-            # # This seems to work no non-DOI networks without SSH. I didn't get the ssh
-            # # to work. Trying to use it as a deploy key on Github.
-            # # ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_pub'
-            #
-            # with repo.git.custom_environment(): #GIT_SSH_COMMAND=ssh_cmd):
-            #     logging.info("Checking for updates")
-            #
-            #     fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-            #     master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
-            #     logging.info(f"Git fetched: {repo.head.commit}")
-            #     # Commit hash is displayed in about dialog
-            #     self.commit = str(repo.head.commit)[:5]
-            #     if repo.head.commit != master.commit:
-            #         msg = (
-            #             "An update is available for GSadjust.\nWould you like to install"
-            #             " now?"
-            #         )
-            #         confirm = MessageBox.question(
-            #             "Update Available",
-            #             msg,
-            #         )
-            #         if confirm == QtWidgets.QMessageBox.Yes:
-            #             return self.update_from_github(repo)
-            #     elif show_uptodate_msg:
-            #         logging.info("Git checked, GSadjust is up to date.")
-            #         msg = "GSadjust is up to date."
-            #         MessageBox.information("No Update Needed", msg)
-            #         return True
-            #     return True
+            return True
 
         except BaseException as e:
             logging.info("Update failed: {}".format(e))
@@ -2994,9 +2953,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logging.error(error + " at line {:d} of file {}".format(line, filename))
 
 
-DEBUG = False
-
-
 def except_hook2(cls, exception, traceback):
     logging.exception("%s %s", cls, exception, exc_info=True)
     sys.__excepthook__(cls, exception, traceback)
@@ -3004,12 +2960,12 @@ def except_hook2(cls, exception, traceback):
 
 def main():
     # QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-    sys_argv = sys.argv
-    sys_argv += ["--style", "material"]
-    # app = QGuiApplication(sys_argv)
-    app = QtWidgets.QApplication(sys.argv)
-    # app.setStyle("Material")
 
+    app = QtWidgets.QApplication(sys.argv)
+
+    # sys_argv = sys.argv
+    # sys_argv += ["--style", "material"]
+    # app = QGuiApplication(sys_argv)
     # Now use a palette to switch to dark colors:
     # palette = QPalette()
     # palette.setColor(QPalette.Window, QColor(53, 53, 53))
@@ -3058,14 +3014,6 @@ def main():
     splash.finish(ex)
     app.setWindowIcon(QtGui.QIcon(":/icons/app.ico"))
 
-    if not DEBUG:
-        if ex.check_for_updates(False):
-            ex.showMaximized()
-            app.processEvents()
-            app.exec_()
-        else:
-            ex.close()
-    else:
-        ex.showMaximized()
-        app.processEvents()
-        sys.exit(app.exec_())
+    ex.showMaximized()
+    app.processEvents()
+    app.exec_()

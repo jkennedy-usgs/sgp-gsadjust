@@ -2739,42 +2739,46 @@ class MainProg(QtWidgets.QMainWindow):
         # if sys.gettrace() is not None:
         #     return True
         try:
-
-            gitpath = (
-                os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\MinGit\\cmd\\git.exe"
-            )
-            os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = gitpath
-            # os.environ["PATH"] = gitpath + os.pathsep + os.environ["PATH"]
-            from git import Repo
-
-            repo = Repo(self.path_install)
-            logging.info(f"Current branch:{repo.active_branch.name}")
-            # ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_'
-            with repo.git.custom_environment():#GIT_SSH_COMMAND=ssh_cmd):
-                logging.info("Checking for updates")
-
-                fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
-                master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
-                logging.info(f"Git fetched: {repo.head.commit}")
-                # Commit hash is displayed in about dialog
-                self.commit = str(repo.head.commit)[:5]
-                if repo.head.commit != master.commit:
-                    msg = (
-                        "An update is available for GSadjust.\nWould you like to install"
-                        " now?"
-                    )
-                    confirm = MessageBox.question(
-                        "Update Available",
-                        msg,
-                    )
-                    if confirm == QtWidgets.QMessageBox.Yes:
-                        return self.update_from_github(repo)
-                elif show_uptodate_msg:
-                    logging.info("Git checked, GSadjust is up to date.")
-                    msg = "GSadjust is up to date."
-                    MessageBox.information("No Update Needed", msg)
-                    return True
-                return True
+            self.commit = 'JEFF'
+            return True
+            # gitpath = (
+            #     os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\MinGit\\cmd\\git.exe"
+            # )
+            # os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = gitpath
+            # # os.environ["PATH"] = gitpath + os.pathsep + os.environ["PATH"]
+            # from git import Repo
+            #
+            # repo = Repo(self.path_install)
+            # logging.info(f"Current branch:{repo.active_branch.name}")
+            # # This seems to work no non-DOI networks without SSH. I didn't get the ssh
+            # # to work. Trying to use it as a deploy key on Github.
+            # # ssh_cmd = 'ssh -i \\sgp-gsadjust\\dist\\gh_gsa_pub'
+            #
+            # with repo.git.custom_environment(): #GIT_SSH_COMMAND=ssh_cmd):
+            #     logging.info("Checking for updates")
+            #
+            #     fetch = [r for r in repo.remotes if r.name == "origin"][0].fetch()
+            #     master = [f for f in fetch if f.name == f"origin/{repo.active_branch.name}"][0]
+            #     logging.info(f"Git fetched: {repo.head.commit}")
+            #     # Commit hash is displayed in about dialog
+            #     self.commit = str(repo.head.commit)[:5]
+            #     if repo.head.commit != master.commit:
+            #         msg = (
+            #             "An update is available for GSadjust.\nWould you like to install"
+            #             " now?"
+            #         )
+            #         confirm = MessageBox.question(
+            #             "Update Available",
+            #             msg,
+            #         )
+            #         if confirm == QtWidgets.QMessageBox.Yes:
+            #             return self.update_from_github(repo)
+            #     elif show_uptodate_msg:
+            #         logging.info("Git checked, GSadjust is up to date.")
+            #         msg = "GSadjust is up to date."
+            #         MessageBox.information("No Update Needed", msg)
+            #         return True
+            #     return True
 
         except BaseException as e:
             logging.info("Git update failed: {}".format(e))

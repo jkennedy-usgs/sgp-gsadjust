@@ -1,0 +1,13 @@
+You chose to open a Scintrex CG-6 file. The parser couldn't understand line {}:
+
+{}
+Header lines, including the column names, should be preceeded by a "/" character.
+
+Fields are delimited by tab characters.
+
+The expected format is
+
+Station	Date	Time	CorrGrav	Line	StdDev	StdErr	RawGrav	X	Y	SensorTemp	TideCorr	TiltCorr	TempCorr	DriftCorr	MeasurDur	InstrHeight	LatUser	LonUser	ElevUser	LatGPS	LonGPS	ElevGPS	Corrections[drift-temp-na-tide-tilt]
+
+For example, 
+AA	2017-04-17	15:30:55	2066.1898	1	0.0128	0.0012	2058.5220	0.9	1.5	43.2662	-0.0488	0.0001	5.4077	2.3088	120	0.000	39.978928	-105.067955	1577.00	--	--	--	11011

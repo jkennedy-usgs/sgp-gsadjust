@@ -1,0 +1,25 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="icons">
+        <file alias="up.png">up.png</file>
+        <file alias="down.png">down.png</file>
+        <file alias="ca.png">ca.png</file>
+        <file alias="ea.png">ea.png</file>
+        <file alias="ac.png">ac.png</file>
+        <file alias="aa.png">aa.png</file>
+        <file alias="ua.png">ua.png</file>
+        <file alias="app.ico">g.ico</file>
+        <file alias="ico1.png">ico1.png</file>
+        <file alias="ico2.png">ico2.png</file>
+        <file alias="ico3.png">ico3.png</file>
+        <file alias="Splash.png">Splash.png</file>
+        <file alias="mag.png">mag.png</file>
+    </qresource>
+    <qresource prefix="text">
+        <file alias="err_Burris.txt">err_Burris.txt</file>
+        <file alias="err_CG5.txt">err_CG5.txt</file>
+        <file alias="err_CG6.txt">err_CG6.txt</file>
+        <file alias="err_CG6Tsoft.txt">err_CG6Tsoft.txt</file>
+        <file alias="err_csv.txt">err_csv.txt</file>       
+    </qresource>        
+</RCC>

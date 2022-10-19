@@ -1,0 +1,19 @@
+August 25, 2022 - v2.0
+Workspaces saved in version 2.0 can NOT be opened in earlier versions of GSadjust.
+
+Various bug fixes and performance enhancements
+
+Search bar above tree view highlights the respective station(s)
+
+"Update datums from directory..." command added; checks datum values in the workspace
+against observed values in .project.txt files
+
+"Compute gravity change: map"
+Various enhancements to change plot style and plot USGS National Water Information
+System (NWIS) groundwater-level data, including hydrographs. 
+
+"Plot dg vs. NWIS gwl" - tool to plot gravity and groundwater-level data time series
+using data retrieved from NWIS. Plots storage change vs gwl change and estimates
+specific yield.
+
+December 20,2020 - Initial Release

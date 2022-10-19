@@ -11,8 +11,8 @@ DR_EXPLAIN.dataManager = (function() {
     var drex_node_child_start = data_menu.DREX_NODE_CHILD_START;
     var drex_node_child_end = data_menu.DREX_NODE_CHILD_END;
 
-    var drex_node_parent = [];
-    var drex_node_deep = [];
+    var drex_node_parent = new Array();
+    var drex_node_deep = new Array();
 
     var drex = {};
 
@@ -25,7 +25,7 @@ DR_EXPLAIN.dataManager = (function() {
       this.deep = drex_node_deep[this.node_index];
 
       this.children = function(){
-        var result = [];
+        var result = new Array();
         for (var i = drex_node_child_start[this.node_index]; i < drex_node_child_end[this.node_index]; i++)
           result.push(new drex_node(i));
         return result;
@@ -45,7 +45,7 @@ DR_EXPLAIN.dataManager = (function() {
             return false;
         return (this.node_index == drex.active_node.node_index);
       };
-    }
+    };
 
     var initMenu = function() {
 
@@ -60,7 +60,7 @@ DR_EXPLAIN.dataManager = (function() {
           }
         }
 
-        drex = {};
+        drex = new Object();
         drex.nodes_count = drex_node_names.length;
 
         drex.root_node = function()
@@ -89,7 +89,7 @@ DR_EXPLAIN.dataManager = (function() {
       this.deep = drex_keyword_deep[this.keyword_index];
 
       this.children = function(){
-        var result = [];
+        var result = new Array();
         for (var i = drex_keyword_child_start[this.keyword_index]; i < drex_keyword_child_end[this.keyword_index]; i++)
           result.push(new drex_keyword(i));
         return result;
@@ -116,7 +116,7 @@ DR_EXPLAIN.dataManager = (function() {
         return new drex_keyword(drex_keyword_parent[this.keyword_index]);
       };
       this.nodes = function(){
-        var result = [];
+        var result = new Array();
         for (var i = drex_keyword_nodes_start[this.keyword_index]; i < drex_keyword_nodes_end[this.keyword_index]; i++)
           result.push(new drex_node(drex_keyword_nodes[i]));
         return result;
@@ -124,7 +124,7 @@ DR_EXPLAIN.dataManager = (function() {
       this.isActive = function(){
         return this.keyword_index != 0;
       };
-    }
+    };
 
 
 
@@ -139,8 +139,8 @@ DR_EXPLAIN.dataManager = (function() {
     var drex_keyword_child_start = data_index.DREX_KEYWORD_CHILD_START;
     var drex_keyword_child_end = data_index.DREX_KEYWORD_CHILD_END;
 
-    var drex_keyword_parent = [];
-    var drex_keyword_deep = [];
+    var drex_keyword_parent = new Array();
+    var drex_keyword_deep = new Array();
 
     var drex_keyword_nodes = new Array(drex_node_keywords.length);
     var drex_keyword_nodes_start = new Array(drex_keyword_names.length);
@@ -190,7 +190,7 @@ DR_EXPLAIN.dataManager = (function() {
 
 
         drex_node.prototype.keywords = function(){
-            var result = [];
+            var result = new Array();
             for (var i = drex_node_keywords_start[this.node_index]; i < drex_node_keywords_end[this.node_index]; i++)
               result.push(new drex_keyword(drex_node_keywords[i]));
             return result;
@@ -614,8 +614,8 @@ DR_EXPLAIN.wordSplitter = (function() {
     }
     var Ranges = function() {
         this.filled = false;
-        this.starts = [];
-        this.ends = [];
+        this.starts = new Array();
+        this.ends = new Array();
         this.contains
     };
     Ranges.prototype.addRange = function(start, end)
@@ -764,8 +764,8 @@ DR_EXPLAIN.wordSplitter = (function() {
     function splitString(str)
     {
         var chars = toCodePoints(str);
-        var result = [];
-        var word = [];
+        var result = new Array();
+        var word = new Array();
         for (var i = 0; i <= chars.length; ++i)
         {
             if (i != chars.length && isWordSymbol(chars[i]) && !isPunctuationSymbol(chars[i]))
@@ -777,7 +777,7 @@ DR_EXPLAIN.wordSplitter = (function() {
                 if (word.length != 0)
                 {
                     result.push(fromCodePoints(word));
-                    word = [];
+                    word = new Array();
                 }
             }
         }
@@ -912,10 +912,10 @@ DR_EXPLAIN.searchEngine = (function() {
     var strSearchInProgress = "Searching...";
     */
 
-    var IndexOfFiles = [];
-    var StringsForSearch = [];
-    var StringPairArray = [];
-    var SearchResults=[];
+    var IndexOfFiles = new Array();
+    var StringsForSearch = new Array();
+    var StringPairArray = new Array();
+    var SearchResults=new Array();
     var iStringToSearch=0;
     var HTTP = {};
 
@@ -965,8 +965,8 @@ DR_EXPLAIN.searchEngine = (function() {
                 catch(e)
                 {
                     //Something is wrong, abort search
-                    SearchResults = [];
-                    SearchResults[0] = [];
+                    SearchResults = new Array();
+                    SearchResults[0] = new Array();
                     SearchResults[0][0] = "Error!";
                     SearchResults[0][1] = "mailto:help@drexplain.com";
                     getSearchResultOutput();
@@ -977,7 +977,7 @@ DR_EXPLAIN.searchEngine = (function() {
                 for (var i = 0; i < SearchResults.length; i++)
                 {
                     id = SearchResults[i];
-                    SearchResults[i] = [];
+                    SearchResults[i] = new Array();
                     SearchResults[i][0] = arrFileId[id][0];
                     SearchResults[i][1] = arrFileId[id][1];
                 }
@@ -1012,7 +1012,7 @@ DR_EXPLAIN.searchEngine = (function() {
 
         var isFirstIteration = true;
         var wasFound        = false;
-        var curResults = [];
+        var curResults = new Array();
         for (var i = 0; i < arrFileStrings.length; i++)
         {
             if (arrFileStrings[i].s.indexOf(stToSearch) == 0)
@@ -1119,11 +1119,11 @@ DR_EXPLAIN.searchEngine = (function() {
             }
 
             //Replace strings for search with pairs (string,index file)
-            StringPairArray[i] = [];
+            StringPairArray[i] = new Array();
             StringPairArray[i][0]=st;
             StringPairArray[i][1]=IndexOfFiles[j].fileName;
         }
-        SearchResults=[];
+        SearchResults=new Array();
         iStringToSearch=0;
         SearchForNextString();
     }
@@ -1132,7 +1132,7 @@ DR_EXPLAIN.searchEngine = (function() {
     //Fills IndexOfFiles array
     function GetIndex()
     {
-        SearchResults=[];
+        SearchResults=new Array();
         NextStringToSearch=0; //?
         var sURL = dirname() + "/de_search/prefixes.json";
         request.open("GET", sURL);
@@ -1206,12 +1206,12 @@ DR_EXPLAIN.searchEngine = (function() {
     function searchmain(str)
     {
         $( document ).trigger( "searchBegin" );
-        SearchResults=[];
+        SearchResults=new Array();
         iStringToSearch=0;
 
         //Split the string into words
         var strs = DR_EXPLAIN.wordSplitter.splitString(str);
-        StringsForSearch = [];
+        StringsForSearch = new Array();
         for (var i = 0; i < strs.length; ++i)
             if (!isEmpty(strs[i]))
                 StringsForSearch.push(strs[i]);
@@ -1584,7 +1584,7 @@ DR_EXPLAIN.highlightManager = (function(){
 
         show: function( wordsArr ) {
             this.hide();
-            var tempArr = [];
+            var tempArr = new Array();
             for ( var index = 0; index < wordsArr.length; index += 1 )
                 tempArr.push(wordsArr[index]);
             tempArr.sort(function(a, b){
@@ -3401,13 +3401,13 @@ DR_EXPLAIN.navTree_Menu = (function(){
         for (var i = 0; i < VarTOpnd.length; i++)
             menuMinimized[i] ^= VarTOpnd[i];
 
-        var bits = [];
+        var bits = new Array();
         for (var i = 0; i < menuMinimized.length; i++)
             bits.push(menuMinimized[i]);
 
 
         var bytes = this.utils.bitsToByte(bits, 7);
-        bits = [];
+        bits = new Array();
         for (var i = 0; i < bytes.length; i++)
             if (bytes[i] == 0)
                 bits.push(0);
@@ -3448,7 +3448,7 @@ DR_EXPLAIN.navTree_Menu = (function(){
 
             var prefixLen = this.utils.encodingPrefixLen(VarTOpnd.length, 7);
             var readPos = prefixLen;
-            var result = [];
+            var result = new Array();
             for (var i = 0; i < prefixLen * 8; i++)
                 if (bits[i] == 0)
                     result.push(0);

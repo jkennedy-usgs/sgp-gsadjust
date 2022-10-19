@@ -146,6 +146,7 @@ import datetime
 # Modules that must be installed
 import matplotlib
 import numpy as np
+import requests
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QSettings, Qt
 from PyQt5.QtGui import QPalette, QColor
@@ -221,6 +222,7 @@ DOWN = 1
 UP = -1
 DIRECTIONS = (UP, DOWN)
 
+VERSION = "2.0"
 
 class MainProg(QtWidgets.QMainWindow):
     """
@@ -256,7 +258,7 @@ class MainProg(QtWidgets.QMainWindow):
         super(MainProg, self).__init__()
 
         # These are settings relevant to the program, not specific to a workspace
-        self.commit = None
+        self.version = VERSION
         self.settings = QSettings("SGP", "GSADJUST")
         self.init_settings()
         self.settings.sync()
@@ -401,7 +403,7 @@ class MainProg(QtWidgets.QMainWindow):
         self.init_popup()
         self.update_menus()
         self.path_install = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..")
+            os.path.join(os.path.dirname(__file__), "..", "..")
         )  # os.getcwd()
         self.menus.set_state(MENU_STATE.UNINIT)
 
@@ -2714,13 +2716,11 @@ class MainProg(QtWidgets.QMainWindow):
         Shows compiled help file created using Dr. Explain in default browser
         """
         help_path = os.path.join(self.path_install, "docs", "index.htm")
+        logging.info(f"Opening help:{help_path}")
         webbrowser.open(help_path)
 
     def dialog_about(self):
-        if hasattr(self, "commit"):
-            AboutDialog(self.commit)
-        else:
-            AboutDialog("")
+        AboutDialog(self.version)
 
     def check_for_updates(self, show_uptodate_msg):
         """
@@ -2739,8 +2739,20 @@ class MainProg(QtWidgets.QMainWindow):
         # if sys.gettrace() is not None:
         #     return True
         try:
-            self.commit = 'JEFF'
+            download_URL = r"https://code.usgs.gov/sgp/gsadjust/-/tags"
+            tag_URL = r'https://code.usgs.gov/api/v4/projects/4933/repository/tags/'
+            tag_json = requests.get(tag_URL)
+            most_recent = float(tag_json.json()[0]['name'])  # Default is sort by update date
+            if most_recent < float(self.version):
+                msg = (
+                    f"An update is available for GSadjust.\nPlease download from {download_URL}"
+                )
+                confirm = MessageBox.question(
+                    "Update Available",
+                    msg,
+                )
             return True
+
             # gitpath = (
             #     os.path.dirname(self.path_install) + "\\gsadjust-env\\Lib\\MinGit\\cmd\\git.exe"
             # )
@@ -2781,9 +2793,9 @@ class MainProg(QtWidgets.QMainWindow):
             #     return True
 
         except BaseException as e:
-            logging.info("Git update failed: {}".format(e))
+            logging.info("Update failed: {}".format(e))
             if show_uptodate_msg:
-                msg = "Problem Encountered Updating from GitHub\n\nError Message:\n"
+                msg = "Error Message:\n"
                 msg += str(e)
                 MessageBox.information("Update results", msg)
             return True  # Update didn't work, start GSadjust anyway
@@ -3033,6 +3045,7 @@ def main():
     app.processEvents()
     splash.finish(ex)
     app.setWindowIcon(QtGui.QIcon(":/icons/app.ico"))
+
     if not DEBUG:
         if ex.check_for_updates(False):
             ex.showMaximized()

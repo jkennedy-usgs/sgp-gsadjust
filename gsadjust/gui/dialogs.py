@@ -1392,7 +1392,7 @@ class AboutDialog(QtWidgets.QDialog):
         msg1 = (
             "<html>GSadjust, a product of the USGS Southwest Gravity Program<br>"
             + '<a href ="http://go.usa.gov/xqBnQ">http://go.usa.gov/xqBnQ</a>'
-            + "<br><br>Commit "
+            + "<br><br>Version "
             + version
             + '<br><br><a href ="https://github.com/jkennedy-usgs/sgp-gsadjust">'
             + "https://github.com/jkennedy-usgs/sgp-gsadjust</a>"

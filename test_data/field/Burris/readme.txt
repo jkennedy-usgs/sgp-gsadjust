@@ -1,4 +1,0 @@
-sgp-gsadjust\test_data\field\Burris
-These data were collected using two ZLS Corporation Burris meters. Two surveys were carried out, one in December 2017 and one in February 2018. The coordinates have been changed by about 0.15 degree, so if the tide model is updated it will not correspond to the exact study area. There is corresponding absolute-gravity data for this data in the field\Absolute directory. These data are used in the "Complete example" in the help. 
-
-Files complete_example1.p and complete_example2.p are saved, partially worked workspaces that allow the user to skip steps in the tutorial.

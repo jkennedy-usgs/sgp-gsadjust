@@ -1,1 +1,0 @@
-These data were included in the original release of PyGrav (Hector and Hinderer, 2016). 
